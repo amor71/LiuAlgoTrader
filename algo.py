@@ -5,6 +5,7 @@ from ta.trend import macd
 import numpy as np
 from datetime import datetime, timedelta
 from pytz import timezone
+import subprocess
 from google.cloud import logging
 
 client = logging.Client()
