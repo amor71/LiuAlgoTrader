@@ -403,6 +403,7 @@ if __name__ == "__main__":
     logger.log_text(f"markets close {market_close}")
     # Wait until just before we might want to trade
     current_dt = datetime.today().astimezone(nyc)
+    logger.log_text(f"current time {current_dt}")
     since_market_open = current_dt - market_open
     logger.log_text(f"waiting {since_market_open // 60} minutes ")
     while since_market_open.seconds // 60 <= 14:
