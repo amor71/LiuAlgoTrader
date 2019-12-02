@@ -376,8 +376,9 @@ def run_ws(conn, channels):
 
 
 if __name__ == "__main__":
+    label = subprocess.check_output(["git", "describe --tags"]).strip()
     fname = os.path.basename(__file__)
-    msg = f"{fname} starting!"
+    msg = f"{fname} {label} starting!"
     logger.log_text(msg)
     print(msg)
 
