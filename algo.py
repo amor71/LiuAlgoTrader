@@ -7,9 +7,8 @@ from datetime import datetime, timedelta
 from pytz import timezone
 from google.cloud import logging
 
-
-
-
+client = logging.Client()
+logger = client.logger('algo')
 
 # Replace these with your API connection info from the dashboard
 base_url = 'https://paper-api.alpaca.markets'
@@ -375,10 +374,7 @@ def run_ws(conn, channels):
 
 
 if __name__ == "__main__":
-    client = logging.Client()
-    logger = client.logger('algo')
-
-    logger.log_text("hello hello!")
+    logger.log_text("Algo starting!")
     # Get when the market opens or opened today
     nyc = timezone('America/New_York')
     today = datetime.today().astimezone(nyc)
