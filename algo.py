@@ -409,4 +409,4 @@ if __name__ == "__main__":
 
     run(get_tickers(), market_open, market_close)
     logger.log_text("Done.")
-    print("Done."")
+    print("Done.")
