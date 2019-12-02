@@ -1,0 +1,5 @@
+Cython
+alpaca-trade-api>=0.25
+ta
+sklearn
+google-cloud-logging
