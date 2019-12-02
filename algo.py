@@ -1,5 +1,6 @@
 import alpaca_trade_api as tradeapi
 import requests
+import os
 import time
 from ta.trend import macd
 import numpy as np
@@ -375,7 +376,12 @@ def run_ws(conn, channels):
 
 
 if __name__ == "__main__":
-    logger.log_text("Algo starting!")
+    label = subprocess.check_output(["git", "describe", "--tags"]).strip()
+    fname = os.path.basename(__file__)
+    msg = f"{fname} {label} starting!"
+    logger.log_text(msg)
+    print(msg)
+
     # Get when the market opens or opened today
     nyc = timezone('America/New_York')
     today = datetime.today().astimezone(nyc)
@@ -403,3 +409,4 @@ if __name__ == "__main__":
 
     run(get_tickers(), market_open, market_close)
     logger.log_text("Done.")
+    print("Done."")
