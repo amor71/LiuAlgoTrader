@@ -406,7 +406,7 @@ if __name__ == "__main__":
     logger.log_text(f"current time {current_dt}")
     since_market_open = current_dt - market_open
     logger.log_text(f"waiting {since_market_open // 60} minutes ")
-    while since_market_open.seconds // 60 <= 14:
+    while since_market_open < 0 or since_market_open.seconds // 60 <= 14:
         time.sleep(1)
         since_market_open = current_dt - market_open
 
