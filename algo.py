@@ -401,16 +401,26 @@ if __name__ == "__main__":
     )
     market_close = market_close.astimezone(nyc)
     logger.log_text(f"markets close {market_close}")
+
     # Wait until just before we might want to trade
     current_dt = datetime.today().astimezone(nyc)
     logger.log_text(f"current time {current_dt}")
-    since_market_open = current_dt - market_open
-    logger.log_text(f"waiting {since_market_open.total_seconds() // 60} minutes ")
-    while since_market_open.total_seconds() < 0 or since_market_open.seconds // 60 <= 14:
-        time.sleep(1)
-        since_market_open = datetime.today().astimezone(nyc) - market_open
 
-    logger.log_text("ready to start!")
-    run(get_tickers(), market_open, market_close)
+    if current_dt < market_open:
+        logger.log_text(f"market not open yet... let's wait")
+
+        since_market_open = current_dt - market_open
+        logger.log_text(f"waiting {since_market_open.total_seconds() // 60} minutes ")
+
+        while since_market_open.total_seconds() // 60 <= 14:
+            time.sleep(1)
+            since_market_open = datetime.today().astimezone(nyc) - market_open
+
+        logger.log_text("ready to start!")
+        run(get_tickers(), market_open, market_close)
+    else:
+        logger.log_text(
+            f"OH, missed the entry time, try again next trading day")
+            
     logger.log_text("Done.")
     print("Done.")
