@@ -405,10 +405,10 @@ if __name__ == "__main__":
     current_dt = datetime.today().astimezone(nyc)
     logger.log_text(f"current time {current_dt}")
     since_market_open = current_dt - market_open
-    logger.log_text(f"waiting {since_market_open // 60} minutes ")
-    while since_market_open < 0 or since_market_open.seconds // 60 <= 14:
+    logger.log_text(f"waiting {since_market_open.total_seconds() // 60} minutes ")
+    while since_market_open.total_seconds() < 0 or since_market_open.seconds // 60 <= 14:
         time.sleep(1)
-        since_market_open = current_dt - market_open
+        since_market_open = datetime.today().astimezone(nyc) - market_open
 
     logger.log_text("ready to start!")
     run(get_tickers(), market_open, market_close)
