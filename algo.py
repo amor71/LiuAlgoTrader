@@ -409,10 +409,13 @@ if __name__ == "__main__":
     if current_dt < market_open:
         logger.log_text(f"market not open yet... let's wait")
 
-        since_market_open = current_dt - market_open
-        logger.log_text(f"waiting {since_market_open.total_seconds() // 60} minutes ")
+        to_market_open = market_open - current_dt
+        logger.log_text(f"waiting for market open {to_market_open} minutes ")
+        time.sleep(to_market_open.total_seconds() + 1)
 
-        while since_market_open.total_seconds() // 60 <= 14:
+        logger.log_text(f"market open! wait ~14 minutes")
+        since_market_open = datetime.today().astimezone(nyc) - market_open
+        while since_market_open.seconds // 60 <= 14:
             time.sleep(1)
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
@@ -421,6 +424,6 @@ if __name__ == "__main__":
     else:
         logger.log_text(
             f"OH, missed the entry time, try again next trading day")
-            
+
     logger.log_text("Done.")
     print("Done.")
