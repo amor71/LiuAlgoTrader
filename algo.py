@@ -410,7 +410,7 @@ if __name__ == "__main__":
         logger.log_text(f"market not open yet... let's wait")
 
         to_market_open = market_open - current_dt
-        logger.log_text(f"waiting for market open {to_market_open} minutes ")
+        logger.log_text(f"waiting for market open: {to_market_open} ")
         time.sleep(to_market_open.total_seconds() + 1)
 
         logger.log_text(f"market open! wait ~14 minutes")
