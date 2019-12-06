@@ -101,6 +101,7 @@ def run(tickers, market_open_dt, market_close_dt):
     existing_orders = api.list_orders(limit=500)
     for order in existing_orders:
         if order.symbol in symbols:
+            logger.log_text(f"cancel open order of {order.symbol}")
             api.cancel_order(order.id)
 
     stop_prices = {}
@@ -127,6 +128,7 @@ def run(tickers, market_open_dt, market_close_dt):
         symbol = data.order['symbol']
         last_order = open_orders.get(symbol)
         if last_order is not None:
+            logger.log_text(f'trade update for {symbol}')
             event = data.event
             if event == 'partial_fill':
                 qty = int(data.order['filled_qty'])
@@ -154,7 +156,6 @@ def run(tickers, market_open_dt, market_close_dt):
 
     @conn.on(r'A$')
     async def handle_second_bar(conn, channel, data):
-        logger.log_text(f"handle_second_bar:{data}")
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -193,6 +194,8 @@ def run(tickers, market_open_dt, market_close_dt):
             order_lifetime = ts - submission_ts
             if order_lifetime.seconds // 60 > 1:
                 # Cancel it so we can try again for a fill
+                logger.log_text(
+                    f'Cancel order id {existing_order.id} for {symbol}')
                 api.cancel_order(existing_order.id)
             return
 
@@ -266,9 +269,9 @@ def run(tickers, market_open_dt, market_close_dt):
                 if shares_to_buy <= 0:
                     return
 
-                logger.log_text('Submitting buy for {} shares of {} at {}'.format(
-                    shares_to_buy, symbol, data.close
-                ))
+                logger.log_text(
+                    'Submitting buy for {} shares of {} at {}'.format(
+                        shares_to_buy, symbol, data.close))
                 try:
                     o = api.submit_order(
                         symbol=symbol, qty=str(shares_to_buy), side='buy',
@@ -304,9 +307,9 @@ def run(tickers, market_open_dt, market_close_dt):
                 (data.close >= target_prices[symbol] and hist[-1] <= 0) or
                 (data.close <= latest_cost_basis[symbol] and hist[-1] <= 0)
             ):
-                logger.log_text('Submitting sell for {} shares of {} at {}'.format(
-                    position, symbol, data.close
-                ))
+                logger.log_text(
+                    'Submitting sell for {} shares of {} at {}'.format(
+                        position, symbol, data.close))
                 try:
                     o = api.submit_order(
                         symbol=symbol, qty=str(position), side='sell',
@@ -327,9 +330,9 @@ def run(tickers, market_open_dt, market_close_dt):
             except Exception as e:
                 # Exception here indicates that we have no position
                 return
-            logger.log_text('Trading over, liquidating remaining position in {}'.format(
-                symbol)
-            )
+            logger.log_text(
+                'Trading over, liquidating remaining position in {}'.format(
+                symbol))
             api.submit_order(
                 symbol=symbol, qty=position.qty, side='sell',
                 type='market', time_in_force='day'
@@ -337,6 +340,8 @@ def run(tickers, market_open_dt, market_close_dt):
             symbols.remove(symbol)
             if len(symbols) <= 0:
                 conn.close()
+
+            logger.log_text('deregistering channels')
             conn.deregister([
                 'A.{}'.format(symbol),
                 'AM.{}'.format(symbol)
@@ -345,7 +350,6 @@ def run(tickers, market_open_dt, market_close_dt):
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r'AM$')
     async def handle_minute_bar(conn, channel, data):
-        logger.log_text(f"handle_minute_bar:{data}")
         ts = data.start
         ts -= timedelta(microseconds=ts.microsecond)
         minute_history[data.symbol].loc[ts] = [
