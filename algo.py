@@ -45,7 +45,7 @@ def get_1000m_history_data(symbols):
             size="minute", symbol=symbol, limit=1000
         ).df
         c += 1
-        logger.log_text('{}/{}'.format(c, len(symbols)))
+        logger.log_text(f'{symbol} {c}/{len(symbols)}')
     logger.log_text('Success.')
     return minute_history
 
@@ -224,6 +224,9 @@ def run(tickers, market_open_dt, market_close_dt):
                 # index can get messy until it's healed by the minute bars
                 return
 
+            logger.log_text(
+                f'In trade window for {symbol} high_15m={high_15m} data.close={data.close}')
+
             # Get the change since yesterday's market close
             daily_pct_change = (
                 (data.close - prev_closes[symbol]) / prev_closes[symbol]
@@ -233,6 +236,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 data.close > high_15m and
                 volume_today[symbol] > 30000
             ):
+                loggr.text(f'{symbol} check MACD')
                 # check for a positive, increasing MACD
                 hist = macd(
                     minute_history[symbol]['close'].dropna(),
@@ -324,6 +328,7 @@ def run(tickers, market_open_dt, market_close_dt):
         elif (
             until_market_close.seconds // 60 <= 15
         ):
+            logger.log_text(f'15 minute to market close {symbol}')    
             # Liquidate remaining positions on watched symbols at market
             try:
                 position = api.get_position(symbol)
