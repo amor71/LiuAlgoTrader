@@ -4,16 +4,18 @@ Momentum Trading Algorithm
 import os
 import time
 from datetime import datetime, timedelta
-import subprocess
-from pytz import timezone
-import requests
-import numpy as np
-from google.cloud import logging
-from ta.trend import macd
+
 import alpaca_trade_api as tradeapi
+import git
+import numpy as np
+import requests
+from google.cloud import logging
+from pytz import timezone
+from ta.trend import macd
 
 client = logging.Client()
 logger = client.logger("algo")
+
 
 # Replace these with your API connection info from the dashboard
 base_url = "https://paper-api.alpaca.markets"
@@ -75,7 +77,7 @@ def get_tickers():
 def find_stop(current_value, minute_history, now):
     """calculate stop loss"""
     series = minute_history["low"][-100:].dropna().resample("5min").min()
-    series = series[now.floor("1D"):]
+    series = series[now.floor("1D") :]
     diff = np.diff(series.values)
     low_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
     if len(low_index) > 0:
@@ -236,8 +238,6 @@ def run(tickers, market_open_dt, market_close_dt):
                 # index can get messy until it's healed by the minute bars
                 return
 
-
-
             # Get the change since yesterday's market close
             daily_pct_change = (
                 data.close - prev_closes[symbol]
@@ -248,7 +248,8 @@ def run(tickers, market_open_dt, market_close_dt):
                 and volume_today[symbol] > 30000
             ):
                 logger.log_text(
-                    f"{symbol} high_15m={high_15m} data.close={data.close}")
+                    f"{symbol} high_15m={high_15m} data.close={data.close}"
+                )
                 # check for a positive, increasing MACD
                 hist = macd(
                     minute_history[symbol]["close"].dropna(),
@@ -282,7 +283,10 @@ def run(tickers, market_open_dt, market_close_dt):
 
                 logger.log_text(
                     "Submitting buy for {} shares of {} at {} target {}".format(
-                        shares_to_buy, symbol, data.close, target_prices[symbol]
+                        shares_to_buy,
+                        symbol,
+                        data.close,
+                        target_prices[symbol],
                     )
                 )
                 try:
@@ -408,9 +412,8 @@ def run_ws(conn, channels):
 
 
 if __name__ == "__main__":
-    label = (
-        subprocess.check_output(["git", "describe"]).strip().decode("utf-8")
-    )
+    r = git.repo.Repo("./")
+    label = r.git.describe()
     fname = os.path.basename(__file__)
     msg = f"{fname} {label} starting!"
     logger.log_text(msg)
