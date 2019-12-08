@@ -386,7 +386,9 @@ def run(tickers, market_open_dt, market_close_dt):
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
         channels += symbol_channels
     logger.log_text("Watching {} symbols.".format(len(symbols)))
-    run_ws(conn, channels)
+
+    if len(symbols) > 0:
+        run_ws(conn, channels)
 
 
 def run_ws(conn, channels):
