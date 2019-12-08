@@ -236,9 +236,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 # index can get messy until it's healed by the minute bars
                 return
 
-            logger.log_text(
-                f"{symbol} high_15m={high_15m} data.close={data.close}"
-            )
+
 
             # Get the change since yesterday's market close
             daily_pct_change = (
@@ -249,7 +247,8 @@ def run(tickers, market_open_dt, market_close_dt):
                 and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
-                logger.log_text(f"{symbol} check MACD")
+                logger.log_text(
+                    f"{symbol} high_15m={high_15m} data.close={data.close}")
                 # check for a positive, increasing MACD
                 hist = macd(
                     minute_history[symbol]["close"].dropna(),
@@ -282,8 +281,8 @@ def run(tickers, market_open_dt, market_close_dt):
                     return
 
                 logger.log_text(
-                    "Submitting buy for {} shares of {} at {}".format(
-                        shares_to_buy, symbol, data.close
+                    "Submitting buy for {} shares of {} at {} target {}".format(
+                        shares_to_buy, symbol, data.close, target_prices[symbol]
                     )
                 )
                 try:
