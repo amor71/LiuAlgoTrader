@@ -233,7 +233,7 @@ def run(tickers, market_open_dt, market_close_dt):
             try:
                 high_15m = minute_history[symbol][lbound:ubound]["high"].max()
             except Exception as e:
-                logger.log_text(e)
+                logger.log_text(str(e))
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
                 return
@@ -301,7 +301,8 @@ def run(tickers, market_open_dt, market_close_dt):
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
                 except Exception as e:
-                    logger.log_text(e)
+                    logger.log_text(str(e))
+
         elif (
             since_market_open.seconds // 60 >= 24
             and until_market_close.seconds // 60 > 15
@@ -341,7 +342,7 @@ def run(tickers, market_open_dt, market_close_dt):
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
                 except Exception as e:
-                    logger.log_text(e)
+                    logger.log_text(str(e))
         elif until_market_close.seconds // 60 <= 15:
             logger.log_text(f"15 minute to market close {symbol}")
             # Liquidate remaining positions on watched symbols at market
@@ -349,7 +350,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 position = api.get_position(symbol)
             except Exception as e:
                 # Exception here indicates that we have no position
-                logger.log_text(e)
+                logger.log_text(str(e))
                 return
 
             logger.log_text(
@@ -401,7 +402,7 @@ def run_ws(conn, channels):
         logger.log_text("starting webscoket loop")
         conn.run(channels)
     except Exception as e:
-        logger.log_text(e)
+        logger.log_text(str(e))
         conn.close()
 
         # re-establish streaming connection
