@@ -347,24 +347,32 @@ def run(tickers, market_open_dt, market_close_dt):
             logger.log_text(f"15 minute to market close {symbol}")
             # Liquidate remaining positions on watched symbols at market
             try:
+                position_exists = True
                 position = api.get_position(symbol)
-            except Exception as e:
+            except Exception:
                 # Exception here indicates that we have no position
-                logger.log_text(str(e))
+                position_exists = False
+
+            if position_exists:
+                logger.log_text(
+                    "Trading over, trying to liquidating remaining position in {}".format(
+                        symbol
+                    )
+                )
+                try:
+                    o = api.submit_order(
+                        symbol=symbol,
+                        qty=position.qty,
+                        side="sell",
+                        type="market",
+                        time_in_force="day",
+                    )
+                    open_orders[symbol] = o
+                    latest_cost_basis[symbol] = data.close
+                except Exception as e:
+                    logger.log_text(str(e))
                 return
 
-            logger.log_text(
-                "Trading over, liquidating remaining position in {}".format(
-                    symbol
-                )
-            )
-            api.submit_order(
-                symbol=symbol,
-                qty=position.qty,
-                side="sell",
-                type="market",
-                time_in_force="day",
-            )
             symbols.remove(symbol)
             if len(symbols) <= 0:
                 conn.close()
