@@ -378,7 +378,8 @@ def run(tickers, market_open_dt, market_close_dt):
                 conn.close()
 
             logger.log_text("deregistering channels")
-            conn.deregister(["A.{}".format(symbol), "AM.{}".format(symbol)])
+            conn.deregister(f"A.{symbol}")
+            conn.deregister(f"AM.{symbol}")
 
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r"AM$")
