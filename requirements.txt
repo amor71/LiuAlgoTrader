@@ -9,3 +9,4 @@ ta
 sklearn
 google-cloud-logging
 therapist
+jupyter

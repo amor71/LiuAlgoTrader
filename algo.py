@@ -9,13 +9,13 @@ import alpaca_trade_api as tradeapi
 import git
 import numpy as np
 import requests
-from google.cloud import logging
+from google.cloud import error_reporting, logging
 from pytz import timezone
 from ta.trend import macd
 
 client = logging.Client()
 logger = client.logger("algo")
-
+error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
 base_url = "https://paper-api.alpaca.markets"
@@ -232,8 +232,8 @@ def run(tickers, market_open_dt, market_close_dt):
             high_15m = 0
             try:
                 high_15m = minute_history[symbol][lbound:ubound]["high"].max()
-            except Exception as e:
-                logger.log_text(str(e))
+            except Exception:
+                client.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
                 return
@@ -258,6 +258,8 @@ def run(tickers, market_open_dt, market_close_dt):
                 )
                 if hist[-1] < 0 or not hist[-3] < hist[-2] < hist[-1]:
                     return
+                logger.text(f"MACD(12,26) for {symbol} trending up!")
+
                 hist = macd(
                     minute_history[symbol]["close"].dropna(),
                     n_fast=40,
@@ -265,6 +267,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 )
                 if hist[-1] < 0 or np.diff(hist)[-1] < 0:
                     return
+                logger.text(f"MACD(40,60) for {symbol} trending up!")
 
                 # Stock has passed all checks; figure out how much to buy
                 stop_price = find_stop(data.close, minute_history[symbol], ts)
@@ -300,8 +303,8 @@ def run(tickers, market_open_dt, market_close_dt):
                     )
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
-                except Exception as e:
-                    logger.log_text(str(e))
+                except Exception:
+                    error_logger.report_exception()
 
         elif (
             since_market_open.seconds // 60 >= 24
@@ -341,8 +344,9 @@ def run(tickers, market_open_dt, market_close_dt):
                     )
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
-                except Exception as e:
-                    logger.log_text(str(e))
+                except Exception:
+                    error_logger.report_exception()
+
         elif until_market_close.seconds // 60 <= 15:
             logger.log_text(f"15 minute to market close {symbol}")
             # Liquidate remaining positions on watched symbols at market
@@ -369,8 +373,8 @@ def run(tickers, market_open_dt, market_close_dt):
                     )
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
-                except Exception as e:
-                    logger.log_text(str(e))
+                except Exception:
+                    error_logger.report_exception()
                 return
 
             symbols.remove(symbol)
@@ -378,8 +382,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 conn.close()
 
             logger.log_text("deregistering channels")
-            conn.deregister(f"A.{symbol}")
-            conn.deregister(f"AM.{symbol}")
+            conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
 
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r"AM$")
@@ -410,8 +413,8 @@ def run_ws(conn, channels):
     try:
         logger.log_text("starting webscoket loop")
         conn.run(channels)
-    except Exception as e:
-        logger.log_text(str(e))
+    except Exception:
+        error_logger.report_exception()
         conn.close()
 
         # re-establish streaming connection
