@@ -233,7 +233,7 @@ def run(tickers, market_open_dt, market_close_dt):
             try:
                 high_15m = minute_history[symbol][lbound:ubound]["high"].max()
             except Exception:
-                client.report_exception()
+                error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
                 return
