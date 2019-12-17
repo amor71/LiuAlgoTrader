@@ -217,7 +217,7 @@ def run(tickers, market_open_dt, market_close_dt):
         until_market_close = market_close_dt - ts
         if (
             since_market_open.seconds // 60 > 15
-            and since_market_open.seconds // 60 < 60
+            and since_market_open.seconds // 60 < 120
         ):
             # Check for buy signals
 
@@ -258,7 +258,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 )
                 if hist[-1] < 0 or not hist[-3] < hist[-2] < hist[-1]:
                     return
-                logger.text(f"MACD(12,26) for {symbol} trending up!")
+                logger.log_text(f"MACD(12,26) for {symbol} trending up!")
 
                 hist = macd(
                     minute_history[symbol]["close"].dropna(),
@@ -267,7 +267,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 )
                 if hist[-1] < 0 or np.diff(hist)[-1] < 0:
                     return
-                logger.text(f"MACD(40,60) for {symbol} trending up!")
+                logger.log_text(f"MACD(40,60) for {symbol} trending up!")
 
                 # Stock has passed all checks; figure out how much to buy
                 stop_price = find_stop(data.close, minute_history[symbol], ts)
