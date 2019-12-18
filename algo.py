@@ -11,7 +11,7 @@ import numpy as np
 import requests
 from google.cloud import error_reporting, logging
 from pytz import timezone
-from ta.trend import macd
+from talib import MACD
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -215,10 +215,7 @@ def run(tickers, market_open_dt, market_close_dt):
         # Now we check to see if it might be time to buy or sell
         since_market_open = ts - market_open_dt
         until_market_close = market_close_dt - ts
-        if (
-            since_market_open.seconds // 60 > 15
-            and since_market_open.seconds // 60 < 120
-        ):
+        if 120 > since_market_open.seconds // 60 > 15:
             # Check for buy signals
 
             # See if we've already bought in first
@@ -251,20 +248,14 @@ def run(tickers, market_open_dt, market_close_dt):
                     f"{symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                hist = macd(
-                    minute_history[symbol]["close"].dropna(),
-                    n_fast=12,
-                    n_slow=26,
-                )
+                hist = MACD(minute_history[symbol]["close"].dropna())[0]
                 if hist[-1] < 0 or not hist[-3] < hist[-2] < hist[-1]:
                     return
                 logger.log_text(f"MACD(12,26) for {symbol} trending up!")
 
-                hist = macd(
-                    minute_history[symbol]["close"].dropna(),
-                    n_fast=40,
-                    n_slow=60,
-                )
+                hist = MACD(minute_history[symbol]["close"].dropna(), 40, 60)[
+                    0
+                ]
                 if hist[-1] < 0 or np.diff(hist)[-1] < 0:
                     return
                 logger.log_text(f"MACD(40,60) for {symbol} trending up!")
@@ -322,9 +313,7 @@ def run(tickers, market_open_dt, market_close_dt):
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            hist = macd(
-                minute_history[symbol]["close"].dropna(), n_fast=13, n_slow=21
-            )
+            hist = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
             if (
                 data.close <= stop_prices[symbol]
                 or (data.close >= target_prices[symbol] and hist[-1] <= 0)
@@ -358,6 +347,7 @@ def run(tickers, market_open_dt, market_close_dt):
             except Exception:
                 # Exception here indicates that we have no position
                 position_exists = False
+                position = None
 
             if position_exists:
                 logger.log_text(
