@@ -18,9 +18,9 @@ logger = client.logger("algo")
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
-base_url = "https://paper-api.alpaca.markets"
-api_key_id = "PKAWDZ1B1UO4JS9EP373"
-api_secret = "8NTlw1SuEPjpBQ0cPbwyNXEdJRklTe/HF7Rf90zE"
+base_url = "https://api.alpaca.markets"
+api_key_id = "AKVKN4TLUUS5MZO5KYLM"
+api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La"
 
 api = tradeapi.REST(
     base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -285,24 +285,26 @@ def run(tickers, market_open_dt, market_close_dt):
                     return
 
                 logger.log_text(
-                    "Submitting buy for {} shares of {} at {} target {}".format(
+                    "Submitting buy for {} shares of {} at {} target {} stop {}".format(
                         shares_to_buy,
                         symbol,
                         data.close,
                         target_prices[symbol],
+                        stop_price,
                     )
                 )
                 try:
-                    o = api.submit_order(
-                        symbol=symbol,
-                        qty=str(shares_to_buy),
-                        side="buy",
-                        type="limit",
-                        time_in_force="day",
-                        limit_price=str(data.close),
-                    )
-                    open_orders[symbol] = o
-                    latest_cost_basis[symbol] = data.close
+                    #                   o = api.submit_order(
+                    #                       symbol=symbol,
+                    #                       qty=str(shares_to_buy),
+                    #                       side="buy",
+                    #                       type="limit",
+                    #                       time_in_force="day",
+                    #                       limit_price=str(data.close),
+                    #                   )
+                    #                   open_orders[symbol] = o
+                    #                   latest_cost_basis[symbol] = data.close
+                    pass
                 except Exception:
                     error_logger.report_exception()
 
@@ -382,7 +384,10 @@ def run(tickers, market_open_dt, market_close_dt):
                 conn.close()
 
             logger.log_text("deregistering channels")
-            conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+            try:
+                conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+            except Exception:
+                error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r"AM$")
