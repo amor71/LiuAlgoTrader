@@ -20,7 +20,7 @@ error_logger = error_reporting.Client()
 # Replace these with your API connection info from the dashboard
 base_url = "https://api.alpaca.markets"
 api_key_id = "AKVKN4TLUUS5MZO5KYLM"
-api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La"
+api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
 
 api = tradeapi.REST(
     base_url=base_url, key_id=api_key_id, secret_key=api_secret
