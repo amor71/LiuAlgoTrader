@@ -66,8 +66,7 @@ def get_tickers():
         for ticker in tickers
         if (
             ticker.ticker in symbols
-            and ticker.lastTrade["p"] >= min_share_price
-            and ticker.lastTrade["p"] <= max_share_price
+            and max_share_price >= ticker.lastTrade["p"] >= min_share_price
             and ticker.prevDay["v"] * ticker.lastTrade["p"] > min_last_dv
             and ticker.todaysChangePerc >= 3.5
         )
@@ -85,7 +84,7 @@ def find_stop(current_value, minute_history, now):
     return current_value * default_stop
 
 
-def run(tickers, market_open_dt, market_close_dt):
+async def run(tickers, market_open_dt, market_close_dt):
     """main loop"""
     # Establish streaming connection
     conn = tradeapi.StreamConn(
@@ -375,7 +374,7 @@ def run(tickers, market_open_dt, market_close_dt):
 
             logger.log_text("deregistering channels")
             try:
-                conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
             except Exception:
                 error_logger.report_exception()
 
@@ -400,10 +399,10 @@ def run(tickers, market_open_dt, market_close_dt):
     logger.log_text("Watching {} symbols.".format(len(symbols)))
 
     if len(symbols) > 0:
-        run_ws(conn, channels)
+        await run_ws(conn, channels)
 
 
-def run_ws(conn, channels):
+async def run_ws(conn, channels):
     """Handle failed websocket connections by reconnecting"""
     try:
         logger.log_text("starting webscoket loop")
@@ -416,7 +415,7 @@ def run_ws(conn, channels):
         conn = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
-        run_ws(conn, channels)
+        await run_ws(conn, channels)
 
 
 if __name__ == "__main__":
