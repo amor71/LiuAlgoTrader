@@ -1,6 +1,7 @@
 """
 Momentum Trading Algorithm
 """
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta
@@ -84,7 +85,7 @@ def find_stop(current_value, minute_history, now):
     return current_value * default_stop
 
 
-async def run(tickers, market_open_dt, market_close_dt):
+def run(tickers, market_open_dt, market_close_dt):
     """main loop"""
     # Establish streaming connection
     conn = tradeapi.StreamConn(
@@ -399,24 +400,25 @@ async def run(tickers, market_open_dt, market_close_dt):
     logger.log_text("Watching {} symbols.".format(len(symbols)))
 
     if len(symbols) > 0:
-        await run_ws(conn, channels)
+        run_ws(conn, channels)
 
 
-async def run_ws(conn, channels):
+def run_ws(conn, channels):
     """Handle failed websocket connections by reconnecting"""
     try:
         logger.log_text("starting webscoket loop")
-        conn.run(channels)
-    except Exception:
-        error_logger.report_exception()
+        loop = asyncio.get_event_loop()
+        loop(conn.run(channels))
+    except Exception as e:
+        print(str(e))
+        #error_logger.report_exception()
+        loop.close()
         conn.close()
-
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
-        await run_ws(conn, channels)
-
+        run_ws(conn, channels)
 
 if __name__ == "__main__":
     r = git.repo.Repo("./")
@@ -448,12 +450,13 @@ if __name__ == "__main__":
     current_dt = datetime.today().astimezone(nyc)
     logger.log_text(f"current time {current_dt}")
 
-    if current_dt < market_open:
+    if current_dt < market_open + timedelta(minutes=45):
         logger.log_text(f"market not open yet... let's wait")
 
         to_market_open = market_open - current_dt
         logger.log_text(f"waiting for market open: {to_market_open} ")
-        time.sleep(to_market_open.total_seconds() + 1)
+        if to_market_open.total_seconds() > 0:
+            time.sleep(to_market_open.total_seconds() + 1)
 
         logger.log_text(f"market open! wait ~14 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
@@ -470,3 +473,4 @@ if __name__ == "__main__":
 
     logger.log_text("Done.")
     print("Done.")
+
