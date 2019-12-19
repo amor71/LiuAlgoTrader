@@ -361,15 +361,15 @@ def run(tickers, market_open_dt, market_close_dt):
                     error_logger.report_exception()
                 return
 
-            symbols.remove(symbol)
             if len(symbols) <= 0:
                 await conn.close()
-
-            logger.log_text("unsubscribe channels")
-            try:
-                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-            except Exception:
-                error_logger.report_exception()
+            else:
+                logger.log_text("unsubscribe channels")
+                try:
+                    symbols.remove(symbol)
+                    await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                except Exception:
+                    error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r"AM$")
@@ -401,9 +401,6 @@ def run_ws(conn, channels):
 
         if loop:
             loop.close()
-
-        if conn:
-            await conn.close()
 
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
