@@ -139,9 +139,6 @@ def run(tickers, market_open_dt, market_close_dt):
         channels += symbol_channels
     logger.log_text("Watching {} symbols.".format(len(symbols)))
 
-    if len(symbols) > 0:
-        run_ws(conn, channels)
-
     # Use trade updates to keep track of our portfolio
     @conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
@@ -387,6 +384,9 @@ def run(tickers, market_open_dt, market_close_dt):
             data.volume,
         ]
         volume_today[data.symbol] += data.volume
+
+    if len(symbols) > 0:
+        run_ws(conn, channels)
 
 
 def run_ws(conn, channels):
