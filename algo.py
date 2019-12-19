@@ -425,7 +425,9 @@ if __name__ == "__main__":
     msg = f"{fname} {label} starting!"
     logger.log_text(msg)
     print(msg)
-
+    print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    print(f"base_url: {base_url}")
+    print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
