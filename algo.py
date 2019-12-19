@@ -18,9 +18,9 @@ logger = client.logger("algo")
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
-base_url = "https://api.alpaca.markets"
-api_key_id = "AKVKN4TLUUS5MZO5KYLM"
-api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
+base_url = "https://paper-api.alpaca.markets"
+api_key_id = "PK9C21VXOA9CAIXNJ355"
+api_secret = "nq/ZP/YOCod8La/fZVMT7zLpMrTcWnnFCx4ewO0p"
 
 api = tradeapi.REST(
     base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -30,7 +30,7 @@ session = requests.session()
 
 # We only consider stocks with per-share prices inside this range
 min_share_price = 2.0
-max_share_price = 13.0
+max_share_price = 20.0
 # Minimum previous-day dollar volume for a stock we might consider
 min_last_dv = 500000
 # Stop limit to default to
@@ -286,17 +286,17 @@ def run(tickers, market_open_dt, market_close_dt):
                                 )
                             )
                             try:
-                                #                   o = api.submit_order(
-                                #                       symbol=symbol,
-                                #                       qty=str(shares_to_buy),
-                                #                       side="buy",
-                                #                       type="limit",
-                                #                       time_in_force="day",
-                                #                       limit_price=str(data.close),
-                                #                   )
-                                #                   open_orders[symbol] = o
-                                #                   latest_cost_basis[symbol] = data.close
-                                # return
+                                o = api.submit_order(
+                                    symbol=symbol,
+                                    qty=str(shares_to_buy),
+                                    side="buy",
+                                    type="limit",
+                                    time_in_force="day",
+                                    limit_price=str(data.close),
+                                )
+                                open_orders[symbol] = o
+                                latest_cost_basis[symbol] = data.close
+                                return
                                 pass
                             except Exception:
                                 error_logger.report_exception()
@@ -361,15 +361,17 @@ def run(tickers, market_open_dt, market_close_dt):
                     error_logger.report_exception()
                 return
 
-            if len(symbols) <= 0:
-                await conn.close()
-            else:
-                logger.log_text("unsubscribe channels")
-                try:
-                    symbols.remove(symbol)
-                    await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                except Exception:
-                    error_logger.report_exception()
+            logger.log_text(f"unsubscribe channels for {symbol}")
+            try:
+                symbols.remove(symbol)
+                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                logger.log_text(f"{len(symbols)} channels left")
+
+                if len(symbols) <= 0:
+                    logger.log_text("last channel! closing connection")
+                    await conn.close()
+            except Exception:
+                error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
     @conn.on(r"AM$")
@@ -392,15 +394,12 @@ def run(tickers, market_open_dt, market_close_dt):
 def run_ws(conn, channels):
     """Handle failed websocket connections by reconnecting"""
     logger.log_text("starting webscoket loop")
-    loop = None
+
     try:
         conn.run(channels)
     except Exception as e:
         print(str(e))
         error_logger.report_exception()
-
-        if loop:
-            loop.close()
 
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
