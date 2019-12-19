@@ -1,7 +1,6 @@
 """
 Momentum Trading Algorithm
 """
-import asyncio
 import os
 import time
 from datetime import datetime, timedelta
@@ -224,14 +223,11 @@ def run(tickers, market_open_dt, market_close_dt):
         # Now we check to see if it might be time to buy or sell
         since_market_open = ts - market_open_dt
         until_market_close = market_close_dt - ts
-        if 120 > since_market_open.seconds // 60 > 15:
+
+        # do we have a position?
+        symbol_position = positions.get(symbol, 0)
+        if 120 > since_market_open.seconds // 60 > 15 and not symbol_position:
             # Check for buy signals
-
-            # See if we've already bought in first
-            position = positions.get(symbol, 0)
-            if position > 0:
-                return
-
             # See how high the price went during the first 15 minutes
             lbound = market_open_dt
             ubound = lbound + timedelta(minutes=15)
@@ -257,86 +253,82 @@ def run(tickers, market_open_dt, market_close_dt):
                     f"{symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                hist = MACD(minute_history[symbol]["close"].dropna())[0]
-                if hist[-1] < 0 or not hist[-3] < hist[-2] < hist[-1]:
-                    return
-                logger.log_text(f"MACD(12,26) for {symbol} trending up!")
+                macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
+                if macd1[-1] > 0 and macd1[-3] < macd1[-2] < macd1[-1]:
+                    logger.log_text(f"MACD(12,26) for {symbol} trending up!")
+                    macd2 = MACD(
+                        minute_history[symbol]["close"].dropna(), 40, 60
+                    )[0]
+                    if macd2[-1] > 0 and np.diff(macd2)[-1] > 0:
+                        logger.log_text(
+                            f"MACD(40,60) for {symbol} trending up!"
+                        )
 
-                hist = MACD(minute_history[symbol]["close"].dropna(), 40, 60)[
-                    0
-                ]
-                if hist[-1] < 0 or np.diff(hist)[-1] < 0:
-                    return
-                logger.log_text(f"MACD(40,60) for {symbol} trending up!")
+                        # Stock has passed all checks; figure out how much to buy
+                        stop_price = find_stop(
+                            data.close, minute_history[symbol], ts
+                        )
+                        stop_prices[symbol] = stop_price
+                        target_prices[symbol] = (
+                            data.close + (data.close - stop_price) * 3
+                        )
+                        shares_to_buy = (
+                            portfolio_value * risk // (data.close - stop_price)
+                        )
+                        if not shares_to_buy:
+                            shares_to_buy = 1
+                        shares_to_buy -= positions.get(symbol, 0)
+                        if shares_to_buy > 0:
+                            logger.log_text(
+                                "Submitting buy for {} shares of {} at {} target {} stop {}".format(
+                                    shares_to_buy,
+                                    symbol,
+                                    data.close,
+                                    target_prices[symbol],
+                                    stop_price,
+                                )
+                            )
+                            try:
+                                #                   o = api.submit_order(
+                                #                       symbol=symbol,
+                                #                       qty=str(shares_to_buy),
+                                #                       side="buy",
+                                #                       type="limit",
+                                #                       time_in_force="day",
+                                #                       limit_price=str(data.close),
+                                #                   )
+                                #                   open_orders[symbol] = o
+                                #                   latest_cost_basis[symbol] = data.close
+                                # return
+                                pass
+                            except Exception:
+                                error_logger.report_exception()
 
-                # Stock has passed all checks; figure out how much to buy
-                stop_price = find_stop(data.close, minute_history[symbol], ts)
-                stop_prices[symbol] = stop_price
-                target_prices[symbol] = data.close + (
-                    (data.close - stop_price) * 3
-                )
-                shares_to_buy = (
-                    portfolio_value * risk // (data.close - stop_price)
-                )
-                if shares_to_buy == 0:
-                    shares_to_buy = 1
-                shares_to_buy -= positions.get(symbol, 0)
-                if shares_to_buy <= 0:
-                    return
-
-                logger.log_text(
-                    "Submitting buy for {} shares of {} at {} target {} stop {}".format(
-                        shares_to_buy,
-                        symbol,
-                        data.close,
-                        target_prices[symbol],
-                        stop_price,
-                    )
-                )
-                try:
-                    #                   o = api.submit_order(
-                    #                       symbol=symbol,
-                    #                       qty=str(shares_to_buy),
-                    #                       side="buy",
-                    #                       type="limit",
-                    #                       time_in_force="day",
-                    #                       limit_price=str(data.close),
-                    #                   )
-                    #                   open_orders[symbol] = o
-                    #                   latest_cost_basis[symbol] = data.close
-                    pass
-                except Exception:
-                    error_logger.report_exception()
-
-        elif (
+        if (
             since_market_open.seconds // 60 >= 24
             and until_market_close.seconds // 60 > 15
+            and symbol_position > 0
         ):
             # Check for liquidation signals
-
-            # We can't liquidate if there's no position
-            position = positions.get(symbol, 0)
-            if position == 0:
-                return
 
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            hist = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
+            macd = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
             if (
                 data.close <= stop_prices[symbol]
-                or (data.close >= target_prices[symbol] and hist[-1] <= 0)
-                or (data.close <= latest_cost_basis[symbol] and hist[-1] <= 0)
+                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
+                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
             ):
                 logger.log_text(
                     "Submitting sell for {} shares of {} at {}".format(
-                        position, symbol, data.close
+                        symbol_position, symbol, data.close
                     )
                 )
                 try:
                     o = api.submit_order(
                         symbol=symbol,
-                        qty=str(position),
+                        qty=str(symbol_position),
                         side="sell",
                         type="limit",
                         time_in_force="day",
@@ -344,21 +336,15 @@ def run(tickers, market_open_dt, market_close_dt):
                     )
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
+                    return
                 except Exception:
                     error_logger.report_exception()
 
-        elif until_market_close.seconds // 60 <= 15:
-            logger.log_text(f"15 minute to market close {symbol}")
-            # Liquidate remaining positions on watched symbols at market
-            try:
-                position_exists = True
-                position = api.get_position(symbol)
-            except Exception:
-                # Exception here indicates that we have no position
-                position_exists = False
-                position = None
-
-            if position_exists:
+        if until_market_close.seconds // 60 <= 15:
+            logger.log_text(
+                f"{until_market_close.seconds // 60} minutes to market close for {symbol}"
+            )
+            if symbol_position:
                 logger.log_text(
                     "Trading over, trying to liquidating remaining position in {}".format(
                         symbol
@@ -367,7 +353,7 @@ def run(tickers, market_open_dt, market_close_dt):
                 try:
                     o = api.submit_order(
                         symbol=symbol,
-                        qty=position.qty,
+                        qty=str(symbol_position),
                         side="sell",
                         type="market",
                         time_in_force="day",
@@ -380,9 +366,9 @@ def run(tickers, market_open_dt, market_close_dt):
 
             symbols.remove(symbol)
             if len(symbols) <= 0:
-                conn.close()
+                await conn.close()
 
-            logger.log_text("deregistering channels")
+            logger.log_text("unsubscribe channels")
             try:
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
             except Exception:
@@ -405,19 +391,19 @@ def run(tickers, market_open_dt, market_close_dt):
 
 def run_ws(conn, channels):
     """Handle failed websocket connections by reconnecting"""
+    logger.log_text("starting webscoket loop")
+    loop = None
     try:
-        logger.log_text("starting webscoket loop")
-        loop = None
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(conn.run(channels))
+        conn.run(channels)
     except Exception as e:
         print(str(e))
         error_logger.report_exception()
+
         if loop:
             loop.close()
 
         if conn:
-            conn.close()
+            await conn.close()
 
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
