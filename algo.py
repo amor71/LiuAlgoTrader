@@ -134,6 +134,15 @@ def run(tickers, market_open_dt, market_close_dt):
     target_prices = {}
     partial_fills = {}
 
+    channels = ["trade_updates"]
+    for symbol in symbols:
+        symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
+        channels += symbol_channels
+    logger.log_text("Watching {} symbols.".format(len(symbols)))
+
+    if len(symbols) > 0:
+        run_ws(conn, channels)
+
     # Use trade updates to keep track of our portfolio
     @conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
@@ -177,7 +186,7 @@ def run(tickers, market_open_dt, market_close_dt):
             current = minute_history[data.symbol].loc[ts]
         except KeyError:
             current = None
-        new_data = []
+
         if current is None:
             new_data = [
                 data.open,
@@ -226,11 +235,11 @@ def run(tickers, market_open_dt, market_close_dt):
             # See how high the price went during the first 15 minutes
             lbound = market_open_dt
             ubound = lbound + timedelta(minutes=15)
-            high_15m = 0
             try:
                 high_15m = minute_history[symbol][lbound:ubound]["high"].max()
             except Exception:
                 error_logger.report_exception()
+                error_logger.report(str(minute_history[symbol][lbound:ubound]))
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
                 return
@@ -393,32 +402,29 @@ def run(tickers, market_open_dt, market_close_dt):
         ]
         volume_today[data.symbol] += data.volume
 
-    channels = ["trade_updates"]
-    for symbol in symbols:
-        symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
-        channels += symbol_channels
-    logger.log_text("Watching {} symbols.".format(len(symbols)))
-
-    if len(symbols) > 0:
-        run_ws(conn, channels)
-
 
 def run_ws(conn, channels):
     """Handle failed websocket connections by reconnecting"""
     try:
         logger.log_text("starting webscoket loop")
+        loop = None
         loop = asyncio.get_event_loop()
-        loop(conn.run(channels))
+        loop.run_until_complete(conn.run(channels))
     except Exception as e:
         print(str(e))
-        #error_logger.report_exception()
-        loop.close()
-        conn.close()
+        error_logger.report_exception()
+        if loop:
+            loop.close()
+
+        if conn:
+            conn.close()
+
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
         run_ws(conn, channels)
+
 
 if __name__ == "__main__":
     r = git.repo.Repo("./")
@@ -426,6 +432,7 @@ if __name__ == "__main__":
     fname = os.path.basename(__file__)
     msg = f"{fname} {label} starting!"
     logger.log_text(msg)
+    print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(f"base_url: {base_url}")
@@ -473,4 +480,3 @@ if __name__ == "__main__":
 
     logger.log_text("Done.")
     print("Done.")
-
