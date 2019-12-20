@@ -312,11 +312,10 @@ def run(tickers, market_open_dt, market_close_dt):
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
             macd = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
-            if (
-                data.close <= stop_prices[symbol]
-                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
-                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
-            ):
+            if data.close <= stop_prices[symbol] or macd[-1] <= 0:
+                #                data.close <= stop_prices[symbol]
+                #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
+                #                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
                 logger.log_text(
                     "Submitting sell for {} shares of {} at {}".format(
                         symbol_position, symbol, data.close
