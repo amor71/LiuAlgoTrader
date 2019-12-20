@@ -264,8 +264,8 @@ def run(tickers, market_open_dt, market_close_dt):
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
 
-                        if rsi[-1] < 70:
-                            logger.log_text(f"RSI {rsi[-1]} < 70")
+                        if rsi[-1] < 60:
+                            logger.log_text(f"RSI {rsi[-1]} < 60")
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history[symbol], ts
@@ -319,7 +319,11 @@ def run(tickers, market_open_dt, market_close_dt):
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
             macd = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
-            if data.close <= stop_prices[symbol] or macd[-1] <= 0:
+            if (
+                data.close <= stop_prices[symbol]
+                or macd[-1] <= 0
+                or data.close >= target_prices[symbol]
+            ):
                 #                data.close <= stop_prices[symbol]
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 #                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
