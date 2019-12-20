@@ -11,7 +11,7 @@ import numpy as np
 import requests
 from google.cloud import error_reporting, logging
 from pytz import timezone
-from talib import MACD
+from talib import MACD, RSI
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -261,45 +261,52 @@ def run(tickers, market_open_dt, market_close_dt):
                             f"MACD(40,60) for {symbol} trending up!"
                         )
 
-                        # Stock has passed all checks; figure out how much to buy
-                        stop_price = find_stop(
-                            data.close, minute_history[symbol], ts
-                        )
-                        stop_prices[symbol] = stop_price
-                        target_prices[symbol] = (
-                            data.close + (data.close - stop_price) * 3
-                        )
-                        shares_to_buy = (
-                            portfolio_value * risk // (data.close - stop_price)
-                        )
-                        if not shares_to_buy:
-                            shares_to_buy = 1
-                        shares_to_buy -= positions.get(symbol, 0)
-                        if shares_to_buy > 0:
-                            logger.log_text(
-                                "Submitting buy for {} shares of {} at {} target {} stop {}".format(
-                                    shares_to_buy,
-                                    symbol,
-                                    data.close,
-                                    target_prices[symbol],
-                                    stop_price,
-                                )
+                        # check RSI does not indicate overbought
+                        rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
+
+                        if rsi[-1] < 70:
+                            logger.log_text(f"RSI {rsi[-1]} < 70")
+                            # Stock has passed all checks; figure out how much to buy
+                            stop_price = find_stop(
+                                data.close, minute_history[symbol], ts
                             )
-                            try:
-                                o = api.submit_order(
-                                    symbol=symbol,
-                                    qty=str(shares_to_buy),
-                                    side="buy",
-                                    type="limit",
-                                    time_in_force="day",
-                                    limit_price=str(data.close),
+                            stop_prices[symbol] = stop_price
+                            target_prices[symbol] = (
+                                data.close + (data.close - stop_price) * 3
+                            )
+                            shares_to_buy = (
+                                portfolio_value
+                                * risk
+                                // (data.close - stop_price)
+                            )
+                            if not shares_to_buy:
+                                shares_to_buy = 1
+                            shares_to_buy -= positions.get(symbol, 0)
+                            if shares_to_buy > 0:
+                                logger.log_text(
+                                    "Submitting buy for {} shares of {} at {} target {} stop {}".format(
+                                        shares_to_buy,
+                                        symbol,
+                                        data.close,
+                                        target_prices[symbol],
+                                        stop_price,
+                                    )
                                 )
-                                open_orders[symbol] = o
-                                latest_cost_basis[symbol] = data.close
-                                return
-                                pass
-                            except Exception:
-                                error_logger.report_exception()
+                                try:
+                                    o = api.submit_order(
+                                        symbol=symbol,
+                                        qty=str(shares_to_buy),
+                                        side="buy",
+                                        type="limit",
+                                        time_in_force="day",
+                                        limit_price=str(data.close),
+                                    )
+                                    open_orders[symbol] = o
+                                    latest_cost_basis[symbol] = data.close
+                                    return
+                                    pass
+                                except Exception:
+                                    error_logger.report_exception()
 
         if (
             since_market_open.seconds // 60 >= 24
