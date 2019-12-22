@@ -439,14 +439,14 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
     env = os.getenv("TRADE", "PAPER")
-    base_url = paper_base_url if env == "PAPER" else prod_base_url
-    api_key_id = paper_api_key_id if env == "PAPER" else prod_api_key_id
-    api_secret = paper_api_secret if env == "PAPER" else prod_api_secret
+    base_url = prod_base_url if env != "PAPER" else paper_base_url
+    api_key_id = prod_api_key_id if env != "PAPER" else paper_api_key_id
+    api_secret = prod_api_secret if env != "PAPER" else paper_api_secret
 
     api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
-    print(f"Trading env {env} with base_url: {base_url}")
+    print(f"TRADE environment {env} with base_url: {base_url}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
