@@ -463,22 +463,24 @@ if __name__ == "__main__":
         hour=calendar.open.hour, minute=calendar.open.minute, second=0
     )
     logger.log_text(f"markets open {market_open}")
+    print(f"markets open {market_open}")
     market_open = market_open.astimezone(nyc)
     market_close = today.replace(
         hour=calendar.close.hour, minute=calendar.close.minute, second=0
     )
     market_close = market_close.astimezone(nyc)
     logger.log_text(f"markets close {market_close}")
+    print(f"markets close {market_close}")
 
     # Wait until just before we might want to trade
     current_dt = datetime.today().astimezone(nyc)
     logger.log_text(f"current time {current_dt}")
 
     if current_dt < market_close:
-        logger.log_text(f"market not open yet... let's wait")
-
         to_market_open = market_open - current_dt
-        logger.log_text(f"waiting for market open: {to_market_open} ")
+        logger.log_text(f"waiting for market open: {to_market_open}")
+        print(f"waiting for market open: {to_market_open}")
+
         if to_market_open.total_seconds() > 0:
             time.sleep(to_market_open.total_seconds() + 1)
 
@@ -501,8 +503,9 @@ if __name__ == "__main__":
         )
     else:
         logger.log_text(
-            f"OH, missed the entry time, try again next trading day"
+            "OH, missed the entry time, try again next trading day"
         )
+        print("OH, missed the entry time, try again next trading day")
 
     logger.log_text("Done.")
     print("Done.")
