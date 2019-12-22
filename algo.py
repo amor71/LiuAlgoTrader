@@ -92,6 +92,7 @@ def run(
     base_url,
     api_key_id,
     api_secret,
+    trade_buy_window,
 ):
     """main loop"""
     # Establish streaming connection
@@ -231,7 +232,10 @@ def run(
 
         # do we have a position?
         symbol_position = positions.get(symbol, 0)
-        if 120 > since_market_open.seconds // 60 > 15 and not symbol_position:
+        if (
+            trade_buy_window > since_market_open.seconds // 60 > 15
+            and not symbol_position
+        ):
             # Check for buy signals
             # See how high the price went during the first 15 minutes
             lbound = market_open_dt
@@ -437,17 +441,19 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-
     env = os.getenv("TRADE", "PAPER")
+    trade_buy_window = int(os.getenv("TRADE_BUY_WINDOW", "120"))
     base_url = prod_base_url if env == "PROD" else paper_base_url
     api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
     api_secret = prod_api_secret if env == "PROD" else paper_api_secret
-
     api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
-    print(f"TRADE environment {env} with base_url: {base_url}")
+    print(f"TRADE environment {env}")
+    print(f"TRADE_BUY_WINDOW {trade_buy_window}")
+    print(f"base_url: {base_url}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
@@ -468,7 +474,7 @@ if __name__ == "__main__":
     current_dt = datetime.today().astimezone(nyc)
     logger.log_text(f"current time {current_dt}")
 
-    if current_dt < market_open + timedelta(minutes=45):
+    if current_dt < market_close:
         logger.log_text(f"market not open yet... let's wait")
 
         to_market_open = market_open - current_dt
@@ -491,6 +497,7 @@ if __name__ == "__main__":
             base_url,
             api_key_id,
             api_secret,
+            trade_buy_window,
         )
     else:
         logger.log_text(
