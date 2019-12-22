@@ -18,13 +18,13 @@ logger = client.logger("algo")
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
-base_url = "https://paper-api.alpaca.markets"
-api_key_id = "PK9C21VXOA9CAIXNJ355"
-api_secret = "nq/ZP/YOCod8La/fZVMT7zLpMrTcWnnFCx4ewO0p"
+paper_base_url = "https://paper-api.alpaca.markets"
+paper_api_key_id = "PK9C21VXOA9CAIXNJ355"
+paper_api_secret = "nq/ZP/YOCod8La/fZVMT7zLpMrTcWnnFCx4ewO0p"
 
-api = tradeapi.REST(
-    base_url=base_url, key_id=api_key_id, secret_key=api_secret
-)
+prod_base_url = "https://api.alpaca.markets"
+prod_api_key_id = "AKVKN4TLUUS5MZO5KYLM"
+prod_api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
 
 session = requests.session()
 
@@ -39,7 +39,7 @@ default_stop = 0.95
 risk = 0.001
 
 
-def get_1000m_history_data(symbols):
+def get_1000m_history_data(api, symbols):
     """get ticker history"""
     logger.log_text("Getting historical data...")
     minute_history = {}
@@ -54,7 +54,7 @@ def get_1000m_history_data(symbols):
     return minute_history
 
 
-def get_tickers():
+def get_tickers(api):
     """get all tickets"""
     logger.log_text("Getting current ticker data...")
     tickers = api.polygon.all_tickers()
@@ -84,7 +84,15 @@ def find_stop(current_value, minute_history, now):
     return current_value * default_stop
 
 
-def run(tickers, market_open_dt, market_close_dt):
+def run(
+    tickers,
+    market_open_dt,
+    market_close_dt,
+    api,
+    base_url,
+    api_key_id,
+    api_secret,
+):
     """main loop"""
     # Establish streaming connection
     conn = tradeapi.StreamConn(
@@ -400,10 +408,10 @@ def run(tickers, market_open_dt, market_close_dt):
         volume_today[data.symbol] += data.volume
 
     if len(symbols) > 0:
-        run_ws(conn, channels)
+        run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
-def run_ws(conn, channels):
+def run_ws(base_url, api_key_id, api_secret, conn, channels):
     """Handle failed websocket connections by reconnecting"""
     logger.log_text("starting webscoket loop")
 
@@ -417,7 +425,7 @@ def run_ws(conn, channels):
         conn = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
-        run_ws(conn, channels)
+        run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
 if __name__ == "__main__":
@@ -429,7 +437,16 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-    print(f"base_url: {base_url}")
+
+    env = os.getenv("TRADE", "PAPER")
+    base_url = paper_base_url if env == "PAPER" else prod_base_url
+    api_key_id = paper_api_key_id if env == "PAPER" else prod_api_key_id
+    api_secret = paper_api_secret if env == "PAPER" else prod_api_secret
+
+    api = tradeapi.REST(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret
+    )
+    print(f"Trading env {env} with base_url: {base_url}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
@@ -466,7 +483,15 @@ if __name__ == "__main__":
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
         logger.log_text("ready to start!")
-        run(get_tickers(), market_open, market_close)
+        run(
+            get_tickers(api),
+            market_open,
+            market_close,
+            api,
+            base_url,
+            api_key_id,
+            api_secret,
+        )
     else:
         logger.log_text(
             f"OH, missed the entry time, try again next trading day"

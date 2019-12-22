@@ -1,3 +1,5 @@
+requests
+numpy
 mypy
 gitpython
 black
@@ -5,7 +7,6 @@ flake8
 pylint
 Cython
 alpaca-trade-api>=0.25
-ta
 sklearn
 google-cloud-logging
 therapist
