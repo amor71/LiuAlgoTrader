@@ -439,9 +439,9 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
     env = os.getenv("TRADE", "PAPER")
-    base_url = prod_base_url if env != "PAPER" else paper_base_url
-    api_key_id = prod_api_key_id if env != "PAPER" else paper_api_key_id
-    api_secret = prod_api_secret if env != "PAPER" else paper_api_secret
+    base_url = prod_base_url if env == "PROD" else paper_base_url
+    api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
+    api_secret = prod_api_secret if env == "PROD" else paper_api_secret
 
     api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
