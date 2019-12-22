@@ -11,3 +11,4 @@ google-cloud-logging
 therapist
 jupyter
 ta-lib
+influxdb
