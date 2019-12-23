@@ -110,7 +110,7 @@ def run(
 
     symbols = [ticker.ticker for ticker in tickers]
     logger.log_text("Tracking {} symbols.".format(len(symbols)))
-    minute_history = get_1000m_history_data(symbols)
+    minute_history = get_1000m_history_data(api, symbols)
 
     portfolio_value = float(api.get_account().portfolio_value)
 
