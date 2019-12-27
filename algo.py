@@ -244,7 +244,6 @@ def run(
                 high_15m = minute_history[symbol][lbound:ubound]["high"].max()
             except Exception:
                 error_logger.report_exception()
-                error_logger.report(str(minute_history[symbol][lbound:ubound]))
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
                 return
@@ -491,6 +490,7 @@ if __name__ == "__main__":
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
         logger.log_text("ready to start!")
+        print("ready to start!")
         run(
             get_tickers(api),
             market_open,
