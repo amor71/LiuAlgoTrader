@@ -262,7 +262,10 @@ def run(
                 )
                 # check for a positive, increasing MACD
                 macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
-                if macd1[-1] > 0 and macd1[-3] < macd1[-2] < macd1[-1]:
+                if (
+                    macd1[-1] > 0
+                    and macd1[-4] <= macd1[-3] < macd1[-2] < macd1[-1]
+                ):
                     logger.log_text(f"MACD(12,26) for {symbol} trending up!")
                     macd2 = MACD(
                         minute_history[symbol]["close"].dropna(), 40, 60
