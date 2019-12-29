@@ -213,18 +213,24 @@ def run(
         # Next, check for existing orders for the stock
         existing_order = open_orders.get(symbol)
         if existing_order is not None:
-            # Make sure the order's not too old
-            submission_ts = existing_order.submitted_at.astimezone(
-                timezone("America/New_York")
-            )
-            order_lifetime = ts - submission_ts
-            if order_lifetime.seconds // 60 > 1:
-                # Cancel it so we can try again for a fill
-                logger.log_text(
-                    f"Cancel order id {existing_order.id} for {symbol}"
+            try:
+                # Make sure the order's not too old
+                submission_ts = existing_order.submitted_at.astimezone(
+                    timezone("America/New_York")
                 )
-                api.cancel_order(existing_order.id)
-            return
+                order_lifetime = ts - submission_ts
+                if order_lifetime.seconds // 60 > 1:
+                    # Cancel it so we can try again for a fill
+                    logger.log_text(
+                        f"Cancel order id {existing_order.id} for {symbol}"
+                    )
+                    api.cancel_order(existing_order.id)
+                return
+            except AttributeError:
+                error_logger.report_exception()
+                logger.log_text(
+                    f"Attribute Error in symbol {symbol} w/ {existing_order}"
+                )
 
         # Now we check to see if it might be time to buy or sell
         since_market_open = ts - market_open_dt
