@@ -187,6 +187,26 @@ def run(
         # First, aggregate 1s bars for up-to-date MACD calculations
         ts = data.start
         ts -= timedelta(seconds=ts.second, microseconds=ts.microsecond)
+        since_market_open = ts - market_open_dt
+        until_market_close = market_close_dt - ts
+
+        # see if it's time to go home
+        if until_market_close.seconds // 60 <= 1:
+            logger.log_text(
+                f"last minutes for  {symbol} not trying to liquidate, only unsubscribe"
+            )
+            try:
+                symbols.remove(symbol)
+                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                logger.log_text(f"{len(symbols)} channels left")
+
+                if len(symbols) <= 0:
+                    logger.log_text("last channel! closing connection")
+                    await conn.close()
+            except Exception:
+                error_logger.report_exception()
+            return
+
         try:
             current = minute_history[data.symbol].loc[ts]
         except KeyError:
@@ -233,8 +253,6 @@ def run(
                 )
 
         # Now we check to see if it might be time to buy or sell
-        since_market_open = ts - market_open_dt
-        until_market_close = market_close_dt - ts
 
         # do we have a position?
         symbol_position = positions.get(symbol, 0)
