@@ -9,6 +9,7 @@ import alpaca_trade_api as tradeapi
 import git
 import numpy as np
 import requests
+from alpaca_trade_api.entity import Order
 from google.cloud import error_reporting, logging
 from pytz import timezone
 from talib import MACD, RSI
@@ -165,7 +166,7 @@ def run(
                 ) - partial_fills.get(symbol, 0)
                 partial_fills[symbol] = qty
                 positions[symbol] += qty
-                open_orders[symbol] = data.order
+                open_orders[symbol] = Order(data.order)
             elif event == "fill":
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
@@ -203,6 +204,7 @@ def run(
                 if len(symbols) <= 0:
                     logger.log_text("last channel! closing connection")
                     await conn.close()
+                    await conn.loop.close()
             except Exception:
                 error_logger.report_exception()
             return
@@ -420,6 +422,7 @@ def run(
                 if len(symbols) <= 0:
                     logger.log_text("last channel! closing connection")
                     await conn.close()
+                    await conn.loop.close()
             except Exception:
                 error_logger.report_exception()
 
