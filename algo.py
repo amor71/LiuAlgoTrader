@@ -16,6 +16,7 @@ from talib import MACD, RSI
 
 client = logging.Client()
 logger = client.logger("algo")
+env = ""
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
@@ -42,7 +43,8 @@ risk = 0.001
 
 def get_1000m_history_data(api, symbols):
     """get ticker history"""
-    logger.log_text("Getting historical data...")
+    global env
+    logger.log_text(f"[{env}] Getting historical data...")
     minute_history = {}
     c = 0
     for symbol in symbols:
@@ -50,16 +52,15 @@ def get_1000m_history_data(api, symbols):
             size="minute", symbol=symbol, limit=1000
         ).df
         c += 1
-        logger.log_text(f"{symbol} {c}/{len(symbols)}")
-    logger.log_text("Success.")
+        logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
     return minute_history
 
 
 def get_tickers(api):
     """get all tickets"""
-    logger.log_text("Getting current ticker data...")
+    global env
+    logger.log_text(f"[{env}] Getting current ticker data...")
     tickers = api.polygon.all_tickers()
-    logger.log_text("Success.")
     assets = api.list_assets()
     symbols = [asset.symbol for asset in assets if asset.tradable]
     return [
@@ -96,6 +97,9 @@ def run(
     trade_buy_window,
 ):
     """main loop"""
+
+    global env
+
     # Establish streaming connection
     conn = tradeapi.StreamConn(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -110,7 +114,7 @@ def run(
         volume_today[symbol] = ticker.day["v"]
 
     symbols = [ticker.ticker for ticker in tickers]
-    logger.log_text("Tracking {} symbols.".format(len(symbols)))
+    logger.log_text("[{}] Tracking {} symbols.".format(env, len(symbols)))
     minute_history = get_1000m_history_data(api, symbols)
 
     portfolio_value = float(api.get_account().portfolio_value)
@@ -122,7 +126,7 @@ def run(
     existing_orders = api.list_orders(limit=500)
     for order in existing_orders:
         if order.symbol in symbols:
-            logger.log_text(f"cancel open order of {order.symbol}")
+            logger.log_text(f"[{env}] cancel open order of {order.symbol}")
             api.cancel_order(order.id)
 
     stop_prices = {}
@@ -147,15 +151,16 @@ def run(
     for symbol in symbols:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
         channels += symbol_channels
-    logger.log_text("Watching {} symbols.".format(len(symbols)))
+    logger.log_text("[{}] Watching {} symbols.".format(env, len(symbols)))
 
     # Use trade updates to keep track of our portfolio
     @conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
+        global env
         symbol = data.order["symbol"]
         last_order = open_orders.get(symbol)
         if last_order is not None:
-            logger.log_text(f"trade update for {symbol}")
+            logger.log_text(f"[{env}] trade update for {symbol}")
             event = data.event
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
@@ -183,6 +188,7 @@ def run(
 
     @conn.on(r"A$")
     async def handle_second_bar(conn, channel, data):
+        global env
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -194,15 +200,17 @@ def run(
         # see if it's time to go home
         if until_market_close.seconds // 60 <= 1:
             logger.log_text(
-                f"last minutes for  {symbol} not trying to liquidate, only unsubscribe"
+                f"[{env}] last minutes for  {symbol} not trying to liquidate, only unsubscribe"
             )
             try:
                 symbols.remove(symbol)
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                logger.log_text(f"{len(symbols)} channels left")
+                logger.log_text(f"[{env}] {len(symbols)} channels left")
 
                 if len(symbols) <= 0:
-                    logger.log_text("last channel! closing connection")
+                    logger.log_text(
+                        f"[{env}] last channel! closing connection"
+                    )
                     await conn.close()
                     await conn.loop.close()
             except Exception:
@@ -244,14 +252,14 @@ def run(
                 if order_lifetime.seconds // 60 > 1:
                     # Cancel it so we can try again for a fill
                     logger.log_text(
-                        f"Cancel order id {existing_order.id} for {symbol}"
+                        f"[{env}] Cancel order id {existing_order.id} for {symbol}"
                     )
                     api.cancel_order(existing_order.id)
                 return
             except AttributeError:
                 error_logger.report_exception()
                 logger.log_text(
-                    f"Attribute Error in symbol {symbol} w/ {existing_order}"
+                    f"[{env}] Attribute Error in symbol {symbol} w/ {existing_order}"
                 )
 
         # Now we check to see if it might be time to buy or sell
@@ -284,7 +292,7 @@ def run(
                 and volume_today[symbol] > 30000
             ):
                 logger.log_text(
-                    f"{symbol} high_15m={high_15m} data.close={data.close}"
+                    f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
                 macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
@@ -292,20 +300,22 @@ def run(
                     macd1[-1] > 0
                     and macd1[-4] <= macd1[-3] < macd1[-2] < macd1[-1]
                 ):
-                    logger.log_text(f"MACD(12,26) for {symbol} trending up!")
+                    logger.log_text(
+                        f"[{env}] MACD(12,26) for {symbol} trending up!"
+                    )
                     macd2 = MACD(
                         minute_history[symbol]["close"].dropna(), 40, 60
                     )[0]
                     if macd2[-1] > 0 and np.diff(macd2)[-1] > 0:
                         logger.log_text(
-                            f"MACD(40,60) for {symbol} trending up!"
+                            f"[{env}] MACD(40,60) for {symbol} trending up!"
                         )
 
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
 
                         if rsi[-1] < 60:
-                            logger.log_text(f"RSI {rsi[-1]} < 60")
+                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 60")
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history[symbol], ts
@@ -324,7 +334,8 @@ def run(
                             shares_to_buy -= positions.get(symbol, 0)
                             if shares_to_buy > 0:
                                 logger.log_text(
-                                    "Submitting buy for {} shares of {} at {} target {} stop {}".format(
+                                    "[{}] Submitting buy for {} shares of {} at {} target {} stop {}".format(
+                                        env,
                                         shares_to_buy,
                                         symbol,
                                         data.close,
@@ -370,8 +381,8 @@ def run(
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 #                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
                 logger.log_text(
-                    "Submitting sell for {} shares of {} at {}".format(
-                        symbol_position, symbol, data.close
+                    "[{}] Submitting sell for {} shares of {} at {}".format(
+                        env, symbol_position, symbol, data.close
                     )
                 )
                 try:
@@ -391,12 +402,12 @@ def run(
 
         if until_market_close.seconds // 60 <= 15:
             logger.log_text(
-                f"{until_market_close.seconds // 60} minutes to market close for {symbol}"
+                f"[{env}] {until_market_close.seconds // 60} minutes to market close for {symbol}"
             )
             if symbol_position:
                 logger.log_text(
-                    "Trading over, trying to liquidating remaining position in {}".format(
-                        symbol
+                    "[{}] Trading over, trying to liquidating remaining position in {}".format(
+                        env, symbol
                     )
                 )
                 try:
@@ -413,14 +424,16 @@ def run(
                     error_logger.report_exception()
                 return
 
-            logger.log_text(f"unsubscribe channels for {symbol}")
+            logger.log_text(f"[{env}] unsubscribe channels for {symbol}")
             try:
                 symbols.remove(symbol)
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                logger.log_text(f"{len(symbols)} channels left")
+                logger.log_text(f"[{env}] {len(symbols)} channels left")
 
                 if len(symbols) <= 0:
-                    logger.log_text("last channel! closing connection")
+                    logger.log_text(
+                        f"[{env}] last channel! closing connection"
+                    )
                     await conn.close()
                     await conn.loop.close()
             except Exception:
@@ -446,7 +459,8 @@ def run(
 
 def run_ws(base_url, api_key_id, api_secret, conn, channels):
     """Handle failed websocket connections by reconnecting"""
-    logger.log_text("starting webscoket loop")
+    global env
+    logger.log_text(f"[{env}] starting webscoket loop")
 
     try:
         conn.run(channels)
@@ -470,6 +484,7 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    global env
     env = os.getenv("TRADE", "PAPER")
     trade_buy_window = int(os.getenv("TRADE_BUY_WINDOW", "120"))
     base_url = prod_base_url if env == "PROD" else paper_base_url
@@ -491,35 +506,35 @@ if __name__ == "__main__":
     market_open = today.replace(
         hour=calendar.open.hour, minute=calendar.open.minute, second=0
     )
-    logger.log_text(f"markets open {market_open}")
+    logger.log_text(f"[{env}] markets open {market_open}")
     print(f"markets open {market_open}")
     market_open = market_open.astimezone(nyc)
     market_close = today.replace(
         hour=calendar.close.hour, minute=calendar.close.minute, second=0
     )
     market_close = market_close.astimezone(nyc)
-    logger.log_text(f"markets close {market_close}")
+    logger.log_text(f"[{env}] markets close {market_close}")
     print(f"markets close {market_close}")
 
     # Wait until just before we might want to trade
     current_dt = datetime.today().astimezone(nyc)
-    logger.log_text(f"current time {current_dt}")
+    logger.log_text(f"[{env}] current time {current_dt}")
 
     if current_dt < market_close:
         to_market_open = market_open - current_dt
-        logger.log_text(f"waiting for market open: {to_market_open}")
+        logger.log_text(f"[{env}] waiting for market open: {to_market_open}")
         print(f"waiting for market open: {to_market_open}")
 
         if to_market_open.total_seconds() > 0:
             time.sleep(to_market_open.total_seconds() + 1)
 
-        logger.log_text(f"market open! wait ~14 minutes")
+        logger.log_text(f"[{env}] market open! wait ~14 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
         while since_market_open.seconds // 60 <= 14:
             time.sleep(1)
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
-        logger.log_text("ready to start!")
+        logger.log_text(f"[{env}] ready to start!")
         print("ready to start!")
         run(
             get_tickers(api),
@@ -533,9 +548,9 @@ if __name__ == "__main__":
         )
     else:
         logger.log_text(
-            "OH, missed the entry time, try again next trading day"
+            f"[{env}] OH, missed the entry time, try again next trading day"
         )
         print("OH, missed the entry time, try again next trading day")
 
-    logger.log_text("Done.")
+    logger.log_text(f"[{env}] Done.")
     print("Done.")
