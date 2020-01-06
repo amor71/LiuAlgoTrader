@@ -16,7 +16,6 @@ from talib import MACD, RSI
 
 client = logging.Client()
 logger = client.logger("algo")
-env = ""
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
