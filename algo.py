@@ -1,6 +1,7 @@
 """
 Momentum Trading Algorithm
 """
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta
@@ -211,6 +212,8 @@ def run(
                         f"[{env}] last channel! closing connection"
                     )
                     await conn.close()
+                    for task in asyncio.Task.all_tasks():
+                        task.cancel()
                     await conn.loop.close()
             except Exception:
                 error_logger.report_exception()
@@ -434,6 +437,8 @@ def run(
                         f"[{env}] last channel! closing connection"
                     )
                     await conn.close()
+                    for task in asyncio.Task.all_tasks():
+                        task.cancel()
                     await conn.loop.close()
             except Exception:
                 error_logger.report_exception()
