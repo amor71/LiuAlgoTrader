@@ -47,12 +47,30 @@ def get_1000m_history_data(api, symbols):
     logger.log_text(f"[{env}] Getting historical data...")
     minute_history = {}
     c = 0
+    exclude_symbols = []
     for symbol in symbols:
-        minute_history[symbol] = api.polygon.historic_agg(
-            size="minute", symbol=symbol, limit=1000
-        ).df
+        retry = True
+        retry_counter = 5
+        while retry:
+            try:
+                minute_history[symbol] = api.polygon.historic_agg(
+                    size="minute", symbol=symbol, limit=1000
+                ).df
+                retry = False
+            except requests.exceptions.HTTPError:
+                if retry_counter > 0:
+                    retry_counter -= 1
+                    retry = True
+                else:
+                    error_logger.report_exception()
+                    exclude_symbols.append(symbol)
+                    retry = False
         c += 1
         logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
+
+    for x in exclude_symbols:
+        symbols.remove(x)
+
     return minute_history
 
 
@@ -214,6 +232,7 @@ def run(
                     await conn.close()
                     for task in asyncio.all_tasks():
                         task.cancel()
+                    await asyncio.sleep(5)
                     await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
@@ -439,6 +458,7 @@ def run(
                     await conn.close()
                     for task in asyncio.all_tasks():
                         task.cancel()
+                    await asyncio.sleep(5)
                     await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
