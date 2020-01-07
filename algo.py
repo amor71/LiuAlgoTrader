@@ -212,9 +212,9 @@ def run(
                         f"[{env}] last channel! closing connection"
                     )
                     await conn.close()
-                    for task in asyncio.Task.all_tasks():
+                    for task in asyncio.all_tasks():
                         task.cancel()
-                    await conn.loop.close()
+                    await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
             return
@@ -300,7 +300,7 @@ def run(
                 macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
                 if (
                     macd1[-1] > 0
-                    and macd1[-4] <= macd1[-3] < macd1[-2] < macd1[-1]
+                    and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
                 ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
@@ -437,9 +437,9 @@ def run(
                         f"[{env}] last channel! closing connection"
                     )
                     await conn.close()
-                    for task in asyncio.Task.all_tasks():
+                    for task in asyncio.all_tasks():
                         task.cancel()
-                    await conn.loop.close()
+                    await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
 
