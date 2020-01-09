@@ -294,7 +294,10 @@ def run(
                 )
                 # check for a positive, increasing MACD
                 macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
-                if macd1[-1] > 0 and macd1[-3] < macd1[-2] < macd1[-1]:
+                if (
+                    macd1[-1] > 0
+                    and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
+                ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
                     )
@@ -305,7 +308,6 @@ def run(
                         logger.log_text(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
                         )
-
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
 
@@ -360,7 +362,6 @@ def run(
             and symbol_position > 0
         ):
             # Check for liquidation signals
-
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
@@ -424,16 +425,6 @@ def run(
                 symbols.remove(symbol)
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
                 logger.log_text(f"[{env}] {len(symbols)} channels left")
-
-            #               if len(symbols) <= 0:
-            #                   logger.log_text(
-            #                       f"[{env}] last channel! closing connection"
-            #                   )
-            #                   await conn.close()
-            #                   for task in asyncio.all_tasks():
-            #                       task.cancel()
-            #                   await asyncio.sleep(5)
-            #                   await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
 
@@ -489,6 +480,9 @@ async def _teardown_job(market_close: datetime):
 
     try:
         if conn is not None:
+            for task in asyncio.all_tasks():
+                task.cancel()
+            await asyncio.sleep(5)
             await conn.loop.stop()
     except Exception:
         error_logger.report_exception()
