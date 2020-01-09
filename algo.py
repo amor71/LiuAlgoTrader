@@ -117,7 +117,7 @@ def run(
     """main loop"""
 
     global env
-
+    global conn
     # Establish streaming connection
     conn = tradeapi.StreamConn(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -214,29 +214,6 @@ def run(
         ts -= timedelta(seconds=ts.second, microseconds=ts.microsecond)
         since_market_open = ts - market_open_dt
         until_market_close = market_close_dt - ts
-
-        # see if it's time to go home
-        if until_market_close.seconds // 60 <= 1:
-            logger.log_text(
-                f"[{env}] last minutes for  {symbol} not trying to liquidate, only unsubscribe"
-            )
-            try:
-                symbols.remove(symbol)
-                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                logger.log_text(f"[{env}] {len(symbols)} channels left")
-
-                if len(symbols) <= 0:
-                    logger.log_text(
-                        f"[{env}] last channel! closing connection"
-                    )
-                    await conn.close()
-                    for task in asyncio.all_tasks():
-                        task.cancel()
-                    await asyncio.sleep(5)
-                    await conn.loop.stop()
-            except Exception:
-                error_logger.report_exception()
-            return
 
         try:
             current = minute_history[data.symbol].loc[ts]
@@ -454,15 +431,15 @@ def run(
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
                 logger.log_text(f"[{env}] {len(symbols)} channels left")
 
-                if len(symbols) <= 0:
-                    logger.log_text(
-                        f"[{env}] last channel! closing connection"
-                    )
-                    await conn.close()
-                    for task in asyncio.all_tasks():
-                        task.cancel()
-                    await asyncio.sleep(5)
-                    await conn.loop.stop()
+            #               if len(symbols) <= 0:
+            #                   logger.log_text(
+            #                       f"[{env}] last channel! closing connection"
+            #                   )
+            #                   await conn.close()
+            #                   for task in asyncio.all_tasks():
+            #                       task.cancel()
+            #                   await asyncio.sleep(5)
+            #                   await conn.loop.stop()
             except Exception:
                 error_logger.report_exception()
 
@@ -502,6 +479,29 @@ def run_ws(base_url, api_key_id, api_secret, conn, channels):
         run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
+async def _teardown_job(market_close: datetime):
+    global conn
+
+    dt = datetime.today().astimezone(nyc)
+    to_market_close = market_close - dt
+
+    logger.log_text(
+        f"[{env}] tear-down task waiting for market close: {to_market_close}"
+    )
+    print(f"tear down waiting for market close: {to_market_close}")
+
+    await asyncio.sleep(to_market_close.total_seconds())
+    logger.log_text("tear down task starting")
+
+    try:
+        if conn is not None:
+            await conn.loop.stop()
+    except Exception:
+        error_logger.report_exception()
+
+    logger.log_text("tear down task done")
+
+
 if __name__ == "__main__":
     r = git.repo.Repo("./")
     label = r.git.describe()
@@ -526,6 +526,7 @@ if __name__ == "__main__":
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
     # Get when the market opens or opened today
+    conn = None
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
     today_str = datetime.today().astimezone(nyc).strftime("%Y-%m-%d")
@@ -555,14 +556,16 @@ if __name__ == "__main__":
         if to_market_open.total_seconds() > 0:
             time.sleep(to_market_open.total_seconds() + 1)
 
-        logger.log_text(f"[{env}] market open! wait ~14 minutes")
+        logger.log_text(f"[{env}] market open! wait ~15 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
-        while since_market_open.seconds // 60 <= 14:
+        while since_market_open.seconds // 60 <= 15:
             time.sleep(1)
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
         logger.log_text(f"[{env}] ready to start!")
         print("ready to start!")
+        _task = asyncio.ensure_future(_teardown_job(market_close))
+
         run(
             get_tickers(api),
             market_open,
