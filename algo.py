@@ -17,8 +17,6 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
 
-from polygon.entity import Aggs
-
 client = logging.Client()
 logger = client.logger("algo")
 error_logger = error_reporting.Client()
@@ -34,7 +32,7 @@ prod_api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
 
 session = requests.session()
 symbols: List[str] = []
-minute_history: Dict[str, Aggs] = {}
+minute_history: Dict[str, object] = {}
 volume_today = {}
 prev_closes = {}
 env = os.getenv("TRADE", "PAPER")
