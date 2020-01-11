@@ -5,6 +5,7 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import git
@@ -13,7 +14,10 @@ import requests
 from alpaca_trade_api.entity import Order
 from google.cloud import error_reporting, logging
 from pytz import timezone
+from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
+
+from polygon.entity import Aggs
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -29,6 +33,12 @@ prod_api_key_id = "AKVKN4TLUUS5MZO5KYLM"
 prod_api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
 
 session = requests.session()
+symbols: List[str] = []
+minute_history: Dict[str, Aggs] = {}
+volume_today = {}
+prev_closes = {}
+env = os.getenv("TRADE", "PAPER")
+channels = ["trade_updates"]
 
 # We only consider stocks with per-share prices inside this range
 min_share_price = 2.0
@@ -41,37 +51,37 @@ default_stop = 0.95
 risk = 0.001
 
 
-def get_1000m_history_data(api, symbols):
+def get_1000m_history_data(api):
     """get ticker history"""
     global env
+    global minute_history
+    global symbols
     logger.log_text(f"[{env}] Getting historical data...")
-    minute_history = {}
     c = 0
     exclude_symbols = []
     for symbol in symbols:
-        retry = True
-        retry_counter = 5
-        while retry:
-            try:
-                minute_history[symbol] = api.polygon.historic_agg(
-                    size="minute", symbol=symbol, limit=1000
-                ).df
-                retry = False
-            except requests.exceptions.HTTPError:
-                if retry_counter > 0:
-                    retry_counter -= 1
-                    retry = True
-                else:
-                    error_logger.report_exception()
-                    exclude_symbols.append(symbol)
+        if symbol not in minute_history:
+            retry = True
+            retry_counter = 5
+            while retry:
+                try:
+                    minute_history[symbol] = api.polygon.historic_agg(
+                        size="minute", symbol=symbol, limit=1000
+                    ).df
                     retry = False
-        c += 1
-        logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
+                except requests.exceptions.HTTPError:
+                    if retry_counter > 0:
+                        retry_counter -= 1
+                        retry = True
+                    else:
+                        error_logger.report_exception()
+                        exclude_symbols.append(symbol)
+                        retry = False
+            c += 1
+            logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
 
     for x in exclude_symbols:
         symbols.remove(x)
-
-    return minute_history
 
 
 def get_tickers(api):
@@ -80,12 +90,12 @@ def get_tickers(api):
     logger.log_text(f"[{env}] Getting current ticker data...")
     tickers = api.polygon.all_tickers()
     assets = api.list_assets()
-    symbols = [asset.symbol for asset in assets if asset.tradable]
+    tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
     return [
         ticker
         for ticker in tickers
         if (
-            ticker.ticker in symbols
+            ticker.ticker in tradable_symbols
             and max_share_price >= ticker.lastTrade["p"] >= min_share_price
             and ticker.prevDay["v"] * ticker.lastTrade["p"] > min_last_dv
             and ticker.todaysChangePerc >= 3.5
@@ -115,25 +125,26 @@ def run(
     trade_buy_window,
 ):
     """main loop"""
-
     global env
     global conn
+    global symbols
+    global minute_history
+    global volume_today
+    global prev_closes
+    global channels
+
     # Establish streaming connection
     conn = tradeapi.StreamConn(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
-
     # Update initial state with information from tickers
-    volume_today = {}
-    prev_closes = {}
     for ticker in tickers:
         symbol = ticker.ticker
         prev_closes[symbol] = ticker.prevDay["c"]
         volume_today[symbol] = ticker.day["v"]
-
     symbols = [ticker.ticker for ticker in tickers]
     logger.log_text("[{}] Tracking {} symbols.".format(env, len(symbols)))
-    minute_history = get_1000m_history_data(api, symbols)
+    get_1000m_history_data(api)
 
     portfolio_value = float(api.get_account().portfolio_value)
 
@@ -165,7 +176,6 @@ def run(
     target_prices = {}
     partial_fills = {}
 
-    channels = ["trade_updates"]
     for symbol in symbols:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
         channels += symbol_channels
@@ -311,8 +321,8 @@ def run(
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
 
-                        if rsi[-1] < 60:
-                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 60")
+                        if rsi[-1] < 75:
+                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 75")
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history[symbol], ts
@@ -371,7 +381,7 @@ def run(
                 data.close <= stop_prices[symbol]
                 or macd[-1] <= 0
                 or data.close >= target_prices[symbol]
-                or rsi[-1] >= 77
+                or rsi[-1] >= 80
             ):
                 #                data.close <= stop_prices[symbol]
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
@@ -448,8 +458,7 @@ def run(
 
 def run_ws(base_url, api_key_id, api_secret, conn, channels):
     """Handle failed websocket connections by reconnecting"""
-    global env
-    logger.log_text(f"[{env}] starting webscoket loop")
+    logger.log_text(f"[{env}] starting web-socket loop")
 
     try:
         conn.run(channels)
@@ -464,10 +473,69 @@ def run_ws(base_url, api_key_id, api_secret, conn, channels):
         run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
-async def _teardown_job(market_close: datetime):
+async def harvest_task(
+    api: tradeapi.REST,
+    tz: DstTzInfo,
+    start_time: datetime,
+    end_time: datetime,
+):
+    global env
+    global symbols
+    global prev_closes
+    global volume_today
+    global conn
+    global channels
+    dt = datetime.today().astimezone(tz)
+    to_start_time = start_time - dt
+
+    logger.log_text(
+        f"[{env}] harvest task waiting for start time: {to_start_time}"
+    )
+    print(f"harvest task waiting for start time: {to_start_time}")
+    await asyncio.sleep(to_start_time.total_seconds())
+
+    dt = datetime.today().astimezone(tz)
+    added_tickers_count = 0
+
+    while dt < end_time:
+        added_tickers_count_in_cycle = 0
+        symbols_channels = []
+        new_tickers = get_tickers(api)
+        for candidate_ticker in new_tickers:
+            symbol = candidate_ticker.ticker
+            if symbol not in symbols:
+                symbols.append(symbol)
+                prev_closes[symbol] = candidate_ticker.prevDay["c"]
+                volume_today[symbol] = candidate_ticker.day["v"]
+                added_tickers_count += 1
+                added_tickers_count_in_cycle += 1
+                symbols_channels.append(
+                    ["A.{}".format(symbol), "AM.{}".format(symbol)]
+                )
+
+        get_1000m_history_data(api)
+        for symbol_channels in symbols_channels:
+            conn.subscribe(symbol_channels)
+            channels += symbol_channels
+
+        logger.log_text(
+            f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
+        )
+        await asyncio.sleep(60)
+        dt = datetime.today().astimezone(tz)
+
+    print(
+        f"harvest task completed. total stocks {len(symbols)} total added {added_tickers_count}"
+    )
+    logger.log_text(
+        f"[{env}] harvest task completed. total stocks: {len(symbols)} total added {added_tickers_count}"
+    )
+
+
+async def teardown_task(tz: DstTzInfo, market_close: datetime):
     global conn
 
-    dt = datetime.today().astimezone(nyc)
+    dt = datetime.today().astimezone(tz)
     to_market_close = market_close - dt
 
     logger.log_text(
@@ -477,30 +545,31 @@ async def _teardown_job(market_close: datetime):
 
     await asyncio.sleep(to_market_close.total_seconds())
     logger.log_text("tear down task starting")
-
+    print("tear down task starting")
     try:
         if conn is not None:
+            current_task = asyncio.current_task
             for task in asyncio.all_tasks():
-                task.cancel()
+                if task != current_task:
+                    task.cancel()
             await asyncio.sleep(5)
-            await conn.loop.stop()
     except Exception:
         error_logger.report_exception()
 
-    logger.log_text("tear down task done")
+    await conn.loop.stop()
+    logger.log_text(f"[{env}]tear down task done.")
+    print("tear down task done.")
 
 
 if __name__ == "__main__":
     r = git.repo.Repo("./")
     label = r.git.describe()
-    fname = os.path.basename(__file__)
-    msg = f"{fname} {label} starting!"
+    filename = os.path.basename(__file__)
+    msg = f"{filename} {label} starting!"
     logger.log_text(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-    global env
-    env = os.getenv("TRADE", "PAPER")
     trade_buy_window = int(os.getenv("TRADE_BUY_WINDOW", "120"))
     base_url = prod_base_url if env == "PROD" else paper_base_url
     api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
@@ -552,8 +621,15 @@ if __name__ == "__main__":
 
         logger.log_text(f"[{env}] ready to start!")
         print("ready to start!")
-        _task = asyncio.ensure_future(_teardown_job(market_close))
-
+        _task_1 = asyncio.ensure_future(
+            harvest_task(
+                api,
+                nyc,
+                market_open + timedelta(minutes=30),
+                market_open + timedelta(minutes=60),
+            )
+        )
+        _task_2 = asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
             get_tickers(api),
             market_open,
