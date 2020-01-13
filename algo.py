@@ -59,22 +59,21 @@ def get_1000m_history_data(api):
     exclude_symbols = []
     for symbol in symbols:
         if symbol not in minute_history:
-            retry = True
             retry_counter = 5
-            while retry:
+            while retry_counter > 0:
                 try:
                     minute_history[symbol] = api.polygon.historic_agg(
                         size="minute", symbol=symbol, limit=1000
                     ).df
-                    retry = False
-                except requests.exceptions.HTTPError:
-                    if retry_counter > 0:
-                        retry_counter -= 1
-                        retry = True
-                    else:
+                    break
+                except (
+                    requests.exceptions.HTTPError,
+                    requests.exceptions.ConnectionError,
+                ):
+                    retry_counter -= 1
+                    if retry_counter == 0:
                         error_logger.report_exception()
                         exclude_symbols.append(symbol)
-                        retry = False
             c += 1
             logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
 
