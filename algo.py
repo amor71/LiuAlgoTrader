@@ -513,7 +513,7 @@ async def harvest_task(
 
         get_1000m_history_data(api)
         for symbol_channels in symbols_channels:
-            conn.subscribe(symbol_channels)
+            await conn.subscribe(symbol_channels)
             channels += symbol_channels
 
         logger.log_text(
