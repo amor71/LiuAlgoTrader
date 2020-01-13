@@ -86,19 +86,35 @@ def get_tickers(api):
     """get all tickets"""
     global env
     logger.log_text(f"[{env}] Getting current ticker data...")
-    tickers = api.polygon.all_tickers()
-    assets = api.list_assets()
-    tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
-    return [
-        ticker
-        for ticker in tickers
-        if (
-            ticker.ticker in tradable_symbols
-            and max_share_price >= ticker.lastTrade["p"] >= min_share_price
-            and ticker.prevDay["v"] * ticker.lastTrade["p"] > min_last_dv
-            and ticker.todaysChangePerc >= 3.5
-        )
-    ]
+    max_retries = 5
+    while max_retries > 0:
+        tickers = api.polygon.all_tickers()
+        assets = api.list_assets()
+        tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
+
+        if len(tradable_symbols) > 0:
+            return [
+                ticker
+                for ticker in tickers
+                if (
+                    ticker.ticker in tradable_symbols
+                    and max_share_price
+                    >= ticker.lastTrade["p"]
+                    >= min_share_price
+                    and ticker.prevDay["v"] * ticker.lastTrade["p"]
+                    > min_last_dv
+                    and ticker.todaysChangePerc >= 3.5
+                )
+            ]
+
+        logger.log_text(f"[{env}] got no data :-( waiting then re-trying")
+        print("no tickers :-( waiting and retrying")
+        time.sleep(30)
+        max_retries -= 1
+
+    logger.log_text(f"[{env}] got no data :-( giving up")
+    print("got no data :-( giving up")
+    return None
 
 
 def find_stop(current_value, minute_history, now):
@@ -123,6 +139,9 @@ def run(
     trade_buy_window,
 ):
     """main loop"""
+
+    if tickers is None:
+        return
     global env
     global conn
     global symbols
@@ -450,8 +469,7 @@ def run(
         ]
         volume_today[data.symbol] += data.volume
 
-    if len(symbols) > 0:
-        run_ws(base_url, api_key_id, api_secret, conn, channels)
+    run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
 def run_ws(base_url, api_key_id, api_secret, conn, channels):
@@ -472,10 +490,7 @@ def run_ws(base_url, api_key_id, api_secret, conn, channels):
 
 
 async def harvest_task(
-    api: tradeapi.REST,
-    tz: DstTzInfo,
-    start_time: datetime,
-    end_time: datetime,
+    api: tradeapi.REST, tz: DstTzInfo, start_time: datetime, end_time: datetime
 ):
     global env
     global symbols
@@ -499,26 +514,27 @@ async def harvest_task(
         added_tickers_count_in_cycle = 0
         symbols_channels = []
         new_tickers = get_tickers(api)
-        for candidate_ticker in new_tickers:
-            symbol = candidate_ticker.ticker
-            if symbol not in symbols:
-                symbols.append(symbol)
-                prev_closes[symbol] = candidate_ticker.prevDay["c"]
-                volume_today[symbol] = candidate_ticker.day["v"]
-                added_tickers_count += 1
-                added_tickers_count_in_cycle += 1
-                symbols_channels.append(
-                    ["A.{}".format(symbol), "AM.{}".format(symbol)]
-                )
+        if new_tickers is not None:
+            for candidate_ticker in new_tickers:
+                symbol = candidate_ticker.ticker
+                if symbol not in symbols:
+                    symbols.append(symbol)
+                    prev_closes[symbol] = candidate_ticker.prevDay["c"]
+                    volume_today[symbol] = candidate_ticker.day["v"]
+                    added_tickers_count += 1
+                    added_tickers_count_in_cycle += 1
+                    symbols_channels.append(
+                        ["A.{}".format(symbol), "AM.{}".format(symbol)]
+                    )
 
-        get_1000m_history_data(api)
-        for symbol_channels in symbols_channels:
-            await conn.subscribe(symbol_channels)
-            channels += symbol_channels
+            get_1000m_history_data(api)
+            for symbol_channels in symbols_channels:
+                await conn.subscribe(symbol_channels)
+                channels += symbol_channels
 
-        logger.log_text(
-            f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
-        )
+            logger.log_text(
+                f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
+            )
         await asyncio.sleep(60)
         dt = datetime.today().astimezone(tz)
 
@@ -611,22 +627,22 @@ if __name__ == "__main__":
         if to_market_open.total_seconds() > 0:
             time.sleep(to_market_open.total_seconds() + 1)
 
-        logger.log_text(f"[{env}] market open! wait ~15 minutes")
+        logger.log_text(f"[{env}] market open! wait ~14 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
-        while since_market_open.seconds // 60 <= 15:
+        while since_market_open.seconds // 60 <= 14:
             time.sleep(1)
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
         logger.log_text(f"[{env}] ready to start!")
         print("ready to start!")
-        _task_1 = asyncio.ensure_future(
-            harvest_task(
-                api,
-                nyc,
-                market_open + timedelta(minutes=30),
-                market_open + timedelta(minutes=60),
-            )
-        )
+        # _task_1 = asyncio.ensure_future(
+        #    harvest_task(
+        #        api,
+        #        nyc,
+        #        market_open + timedelta(minutes=15),
+        #        market_open + timedelta(minutes=90),
+        #    )
+        # )
         _task_2 = asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
             get_tickers(api),
