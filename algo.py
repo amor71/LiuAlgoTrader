@@ -91,21 +91,19 @@ def get_tickers(api):
         tickers = api.polygon.all_tickers()
         assets = api.list_assets()
         tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
+        rc = [
+            ticker
+            for ticker in tickers
+            if (
+                ticker.ticker in tradable_symbols
+                and max_share_price >= ticker.lastTrade["p"] >= min_share_price
+                and ticker.prevDay["v"] * ticker.lastTrade["p"] > min_last_dv
+                and ticker.todaysChangePerc >= 3.5
+            )
+        ]
 
-        if len(tradable_symbols) > 0:
-            return [
-                ticker
-                for ticker in tickers
-                if (
-                    ticker.ticker in tradable_symbols
-                    and max_share_price
-                    >= ticker.lastTrade["p"]
-                    >= min_share_price
-                    and ticker.prevDay["v"] * ticker.lastTrade["p"]
-                    > min_last_dv
-                    and ticker.todaysChangePerc >= 3.5
-                )
-            ]
+        if len(rc) > 0:
+            return rc
 
         logger.log_text(f"[{env}] got no data :-( waiting then re-trying")
         print("no tickers :-( waiting and retrying")
