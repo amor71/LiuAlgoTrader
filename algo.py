@@ -317,7 +317,11 @@ def run(
                     f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                macd1 = MACD(minute_history[symbol]["close"].dropna())[0]
+                macd1 = MACD(
+                    minute_history[symbol]["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                )[0]
                 if (
                     macd1[-1] > 0
                     and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
@@ -326,14 +330,23 @@ def run(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
                     )
                     macd2 = MACD(
-                        minute_history[symbol]["close"].dropna(), 40, 60
+                        minute_history[symbol]["close"]
+                        .dropna()
+                        .between_time("9:30", "16:00"),
+                        40,
+                        60,
                     )[0]
                     if macd2[-1] > 0 and np.diff(macd2)[-1] > 0:
                         logger.log_text(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
+                        rsi = RSI(
+                            minute_history[symbol]["close"]
+                            .dropna()
+                            .between_time("9:30", "16:00"),
+                            14,
+                        )
 
                         if rsi[-1] < 75:
                             logger.log_text(f"[{env}] RSI {rsi[-1]} < 75")
@@ -557,15 +570,15 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     await asyncio.sleep(to_market_close.total_seconds())
     logger.log_text("tear down task starting")
     print("tear down task starting")
-    try:
-        if conn is not None:
-            current_task = asyncio.current_task
-            for task in asyncio.all_tasks():
-                if task != current_task:
-                    task.cancel()
-            await asyncio.sleep(5)
-    except Exception:
-        error_logger.report_exception()
+    # try:
+    #    if conn is not None:
+    #        current_task = asyncio.current_task
+    #        for task in asyncio.all_tasks():
+    #            if task != current_task:
+    #                task.cancel()
+    #        await asyncio.sleep(5)
+    # except Exception:
+    #    error_logger.report_exception()
 
     await conn.loop.stop()
     logger.log_text(f"[{env}]tear down task done.")
