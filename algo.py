@@ -459,7 +459,8 @@ def run(
 
             logger.log_text(f"[{env}] unsubscribe channels for {symbol}")
             try:
-                symbols.remove(symbol)
+                if symbol in symbol:
+                    symbols.remove(symbol)
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
                 logger.log_text(f"[{env}] {len(symbols)} channels left")
             except Exception:
