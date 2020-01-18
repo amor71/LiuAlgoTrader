@@ -13,3 +13,4 @@ therapist
 jupyter
 ta-lib
 influxdb
+asyncpg
