@@ -42,6 +42,8 @@ env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
 conn = None
+db_conn = None
+run_details = None
 
 # We only consider stocks with per-share prices inside this range
 min_share_price = 2.0
@@ -514,6 +516,9 @@ async def harvest_task(
     global volume_today
     global conn
     global channels
+    global db_conn
+    global run_details
+
     dt = datetime.today().astimezone(tz)
     to_start_time = start_time - dt
 
@@ -603,28 +608,23 @@ async def main():
     print(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     trade_buy_window = int(os.getenv("TRADE_BUY_WINDOW", "120"))
-    base_url = prod_base_url if env == "PROD" else paper_base_url
-    api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
-    api_secret = prod_api_secret if env == "PROD" else paper_api_secret
-    api = tradeapi.REST(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret
-    )
     print(f"TRADE environment {env}")
     print(f"TRADE_BUY_WINDOW {trade_buy_window}")
     print(f"DSN: {dsn}")
-    print(f"base_url: {base_url}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-
     run_details = AlgoRun(
         filename, env, label, {"TRADE_BUY_WINDOW": trade_buy_window}
     )
-    db_conn = None
-    if dsn:
-        db_conn = await asyncpg.connect(dsn=dsn)
+    db_conn = await asyncpg.connect(dsn=dsn)
+    await run_details.save(db_connection=db_conn)
 
-    if db_conn:
-        await run_details.save(db_connection=db_conn)
+    base_url = prod_base_url if env == "PROD" else paper_base_url
+    api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
+    api_secret = prod_api_secret if env == "PROD" else paper_api_secret
 
+    api = tradeapi.REST(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret
+    )
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
@@ -688,8 +688,21 @@ async def main():
         )
         print("OH, missed the entry time, try again next trading day")
 
-    logger.log_text(f"[{env}] Done.")
-    print("Done.")
 
+"""
+starting
+"""
 
-asyncio.get_event_loop().run_until_complete(main())
+try:
+    asyncio.get_event_loop().run_until_complete(main())
+except KeyboardInterrupt:
+    print("Caught keyboard interrupt")
+    if run_details:
+        run_details.update_end_time(db_conn)
+    asyncio.get_event_loop().run_forever()
+
+finally:
+    asyncio.get_event_loop().close()
+
+logger.log_text(f"[{env}] Done.")
+print("Done.")

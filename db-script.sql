@@ -4,11 +4,12 @@ CREATE SEQUENCE IF NOT EXISTS transaction_id_seq START 1;
 
 CREATE TABLE IF NOT EXISTS algo_run (
     algo_run_id serial PRIMARY KEY,
-    algo_name text UNIQUE NOT NULL,
+    algo_name text NOT NULL,
     algo_env text NOT NULL,
     build_number text NOT NULL,
     parameters jsonb,
-    start_time  , timestamp DEFAULT current_timestamp
+    start_time timestamp DEFAULT current_timestamp,
+    end_time timestamp
 );
 
 
