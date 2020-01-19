@@ -704,8 +704,11 @@ starting
 
 try:
     asyncio.get_event_loop().run_until_complete(main())
-except KeyboardInterrupt as e:
-    print(f"Caught exception {e}")
+except KeyboardInterrupt:
+    print(f"Caught KeyboardInterrupt")
+    asyncio.get_event_loop().run_until_complete(end_time("KeyboardInterrupt"))
+except Exception as e:
+    print(f"Caught exception {str(e)}")
     asyncio.get_event_loop().run_until_complete(end_time(str(e)))
 finally:
     asyncio.get_event_loop().close()
