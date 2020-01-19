@@ -599,6 +599,7 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
 
 
 async def end_time():
+    global run_details
     await run_details.update_end_time(db_conn)
 
 
