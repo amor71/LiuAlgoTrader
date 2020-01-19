@@ -1,5 +1,7 @@
 import json
 
+import asyncpg
+
 
 class AlgoRun:
     def __init__(
@@ -11,7 +13,7 @@ class AlgoRun:
         self.parameters = parameters
         self.algo_run_id = None
 
-    async def save(self, db_connection):
+    async def save(self, db_connection: asyncpg.Connection):
         async with db_connection.transaction():
             self.algo_run_id = await db_connection.fetchval(
                 """
@@ -25,12 +27,15 @@ class AlgoRun:
                 json.dumps(self.parameters),
             )
 
-    async def update_end_time(self, db_connection):
+    async def update_end_time(
+        self, db_connection: asyncpg.Connection, end_reason: str
+    ):
         async with db_connection.transaction():
             self.algo_run_id = await db_connection.fetchval(
                 """
-                    UPDATE algo_run SET end_time = 'now()'
-                    WHERE algo_run_id = $1
+                    UPDATE algo_run SET end_time='now()',end_reason=$1
+                    WHERE algo_run_id = $2
                 """,
+                end_reason,
                 self.algo_run_id,
             )
