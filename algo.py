@@ -20,6 +20,8 @@ from talib import MACD, RSI
 
 from models.algo_run import AlgoRun
 
+# from models.trades import Trade
+
 client = logging.Client()
 logger = client.logger("algo")
 error_logger = error_reporting.Client()
@@ -42,7 +44,7 @@ env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
 conn = None
-db_conn = None
+db_conn_pool = None
 run_details = None
 
 # We only consider stocks with per-share prices inside this range
@@ -230,6 +232,15 @@ def run(
                 ) - partial_fills.get(symbol, 0)
                 partial_fills[symbol] = 0
                 positions[symbol] += qty
+
+                # if data.order["side"] == "buy":
+                #    global run_details
+                #    trades[symbol] = Trade(
+                #        algo_run_id=run_details.algo_run_id,
+                #        symbol=symbol,
+                #        qty = qty,
+                #        price=
+                #    )
                 open_orders[symbol] = None
             elif event in ("canceled", "rejected"):
                 partial_fills[symbol] = 0
@@ -579,23 +590,33 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     )
     print(f"tear down waiting for market close: {to_market_close}")
 
-    await asyncio.sleep(to_market_close.total_seconds())
-    logger.log_text("tear down task starting")
-    print("tear down task starting")
-
-    await end_time("market close")
-
-    if conn:
-        await conn.loop.stop()
-    logger.log_text(f"[{env}]tear down task done.")
-    print("tear down task done.")
+    try:
+        await asyncio.sleep(to_market_close.total_seconds())
+    except asyncio.CancelledError:
+        print("teardown_task() cancelled during sleep")
+        logger.log_text("teardown_task() cancelled during sleep")
+    else:
+        logger.log_text("tear down task starting")
+        print("tear down task starting")
+        await end_time("market close")
+        asyncio.get_event_loop().close()
+    finally:
+        logger.log_text(f"[{env}]tear down task done.")
+        print("tear down task done.")
 
 
 async def end_time(reason: str):
     global run_details
-    global db_conn
+    global db_conn_pool
     if run_details is not None:
-        await run_details.update_end_time(db_conn, end_reason=reason)
+        await run_details.update_end_time(pool=db_conn_pool, end_reason=reason)
+
+
+async def set_db_connection(dsn: str):
+    global db_conn_pool
+    db_conn_pool = await asyncpg.create_pool(
+        dsn=dsn, min_size=20, max_size=200
+    )
 
 
 async def main():
@@ -616,9 +637,9 @@ async def main():
     run_details = AlgoRun(
         filename, env, label, {"TRADE_BUY_WINDOW": trade_buy_window}
     )
-    global db_conn
-    db_conn = await asyncpg.connect(dsn=dsn)
-    await run_details.save(db_connection=db_conn)
+    await set_db_connection(dsn)
+    global db_conn_pool
+    await run_details.save(pool=db_conn_pool)
 
     base_url = prod_base_url if env == "PROD" else paper_base_url
     api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
@@ -694,7 +715,6 @@ async def main():
 """
 starting
 """
-
 try:
     asyncio.get_event_loop().run_until_complete(main())
 except KeyboardInterrupt:
@@ -703,8 +723,6 @@ except KeyboardInterrupt:
 except Exception as e:
     print(f"Caught exception {str(e)}")
     asyncio.get_event_loop().run_until_complete(end_time(str(e)))
-finally:
-    asyncio.get_event_loop().close()
 
 logger.log_text(f"[{env}] Done.")
 print("Done.")

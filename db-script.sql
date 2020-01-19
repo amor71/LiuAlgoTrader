@@ -16,15 +16,17 @@ CREATE TABLE IF NOT EXISTS algo_run (
 
 CREATE TABLE IF NOT EXISTS trades (
     trade_id serial PRIMARY KEY,
-    transaction_id integer NOT NULL,
+    algo_run_id integer REFERENCES algo_run(algo_run_id),
+    is_win bool,
     symbol text NOT NULL,
-    op trade_operation NOT NULL,
     qty integer NOT NULL check (qty > 0),
-    price decimal (8, 2) NOT NULL,
-    indicators jsonb NOT NULL,
-    fill_time   timestamp DEFAULT current_timestamp,
-    algo_run_id integer REFERENCES algo_run(algo_run_id)
+    buy_price decimal (8, 2) NOT NULL,
+    buy_indicators jsonb NOT NULL,
+    buy_time timestamp DEFAULT current_timestamp,
+    sell_price decimal (8, 2),
+    sell_indicators jsonb,
+    sell_time timestamp
 );
-CREATE INDEX ON trades(transaction_id);
 CREATE INDEX ON trades(symbol);
 CREATE INDEX ON trades(algo_run_id);
+CREATE INDEX ON trades(is_win);
