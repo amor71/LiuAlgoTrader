@@ -4,7 +4,7 @@ class AlgoRun:
     ):
         self.name = name
         self.environment = environment
-        self.build = (build,)
+        self.build = build
         self.parameters = parameters
 
     async def save(self, db_connection):
