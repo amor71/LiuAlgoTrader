@@ -653,7 +653,7 @@ async def main():
         print(f"waiting for market open: {to_market_open}")
 
         if to_market_open.total_seconds() > 0:
-            time.sleep(to_market_open.total_seconds() + 1)
+            await asyncio.sleep(to_market_open.total_seconds() + 1)
 
         logger.log_text(f"[{env}] market open! wait ~14 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
