@@ -598,10 +598,11 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     print("tear down task done.")
 
 
-async def end_time():
+async def end_time(reason: str):
     global run_details
     global db_conn
-    await run_details.update_end_time(db_conn)
+    if run_details is not None:
+        await run_details.update_end_time(db_conn, end_reason=reason)
 
 
 async def main():
@@ -703,9 +704,9 @@ starting
 
 try:
     asyncio.get_event_loop().run_until_complete(main())
-except KeyboardInterrupt:
+except Exception as e:
     print("Caught keyboard interrupt")
-    asyncio.get_event_loop().run_until_complete(end_time())
+    asyncio.get_event_loop().run_until_complete(end_time(str(e)))
 finally:
     asyncio.get_event_loop().close()
 

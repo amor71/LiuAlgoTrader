@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS algo_run (
     build_number text NOT NULL,
     parameters jsonb,
     start_time timestamp DEFAULT current_timestamp,
-    end_time timestamp
+    end_time timestamp,
+    end_reason text
 );
 
 
