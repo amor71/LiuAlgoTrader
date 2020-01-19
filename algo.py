@@ -582,15 +582,8 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     await asyncio.sleep(to_market_close.total_seconds())
     logger.log_text("tear down task starting")
     print("tear down task starting")
-    # try:
-    #    if conn is not None:
-    #        current_task = asyncio.current_task
-    #        for task in asyncio.all_tasks():
-    #            if task != current_task:
-    #                task.cancel()
-    #        await asyncio.sleep(5)
-    # except Exception:
-    #    error_logger.report_exception()
+
+    await end_time("market close")
 
     if conn:
         await conn.loop.stop()
