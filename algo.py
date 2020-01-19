@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
+import asyncpg
 import git
 import numpy as np
 import requests
@@ -16,6 +17,8 @@ from google.cloud import error_reporting, logging
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
+
+from models.algo_run import AlgoRun
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -36,7 +39,9 @@ minute_history: Dict[str, object] = {}
 volume_today = {}
 prev_closes = {}
 env = os.getenv("TRADE", "PAPER")
+dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
+conn = None
 
 # We only consider stocks with per-share prices inside this range
 min_share_price = 2.0
@@ -540,8 +545,9 @@ async def harvest_task(
 
             get_1000m_history_data(api)
             for symbol_channels in symbols_channels:
-                await conn.subscribe(symbol_channels)
-                channels += symbol_channels
+                if conn:
+                    await conn.subscribe(symbol_channels)
+                    channels += symbol_channels
 
             logger.log_text(
                 f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
@@ -581,12 +587,13 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     # except Exception:
     #    error_logger.report_exception()
 
-    await conn.loop.stop()
+    if conn:
+        await conn.loop.stop()
     logger.log_text(f"[{env}]tear down task done.")
     print("tear down task done.")
 
 
-if __name__ == "__main__":
+async def main():
     r = git.repo.Repo("./")
     label = r.git.describe()
     filename = os.path.basename(__file__)
@@ -604,11 +611,21 @@ if __name__ == "__main__":
     )
     print(f"TRADE environment {env}")
     print(f"TRADE_BUY_WINDOW {trade_buy_window}")
+    print(f"DSN: {dsn}")
     print(f"base_url: {base_url}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
+    run_details = AlgoRun(
+        filename, env, label, {"TRADE_BUY_WINDOW": trade_buy_window}
+    )
+    db_conn = None
+    if dsn:
+        db_conn = await asyncpg.connect(dsn)
+
+    if db_conn:
+        await run_details.save(db_connection=db_conn)
+
     # Get when the market opens or opened today
-    conn = None
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
     today_str = datetime.today().astimezone(nyc).strftime("%Y-%m-%d")
@@ -654,7 +671,7 @@ if __name__ == "__main__":
         #        market_open + timedelta(minutes=90),
         #    )
         # )
-        _task_2 = asyncio.ensure_future(teardown_task(nyc, market_close))
+        asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
             get_tickers(api),
             market_open,
@@ -673,3 +690,6 @@ if __name__ == "__main__":
 
     logger.log_text(f"[{env}] Done.")
     print("Done.")
+
+
+asyncio.get_event_loop().run_until_complete(main())

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS algo_run (
     algo_env text NOT NULL,
     build_number text NOT NULL,
     parameters jsonb,
-    start_time   timestamp DEFAULT current_timestamp
+    start_time  , timestamp DEFAULT current_timestamp
 );
 
 
