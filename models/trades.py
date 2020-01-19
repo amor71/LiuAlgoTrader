@@ -5,6 +5,10 @@ from asyncpg.pool import Pool
 
 
 class Trade:
+    sell_price: float
+    sell_indicators: Dict
+    is_win: bool
+
     def __init__(
         self,
         algo_run_id: int,
@@ -22,16 +26,12 @@ class Trade:
         :param price: buy price
         :param indicators: buy indicators
         """
-
         self.algo_run_id = algo_run_id
         self.symbol = symbol
         self.qty = qty
         self.buy_price = price
         self.buy_indicators = indicators
         self.trade_id = None
-        self.sell_price: float
-        self.sell_indicators: Dict
-        self.is_win: bool
 
     async def save_buy(self, pool: Pool):
         async with pool.acquire() as con:

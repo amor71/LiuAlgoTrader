@@ -19,8 +19,7 @@ from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
 
 from models.algo_run import AlgoRun
-
-# from models.trades import Trade
+from models.trades import Trade
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -40,6 +39,9 @@ symbols: List[str] = []
 minute_history: Dict[str, object] = {}
 volume_today = {}
 prev_closes = {}
+buy_indicators: Dict[str, Dict] = {}
+sell_indicators: Dict[str, Dict] = {}
+trades = {}
 env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
@@ -109,7 +111,6 @@ def get_tickers(api):
                 and ticker.todaysChangePerc >= 3.5
             )
         ]
-
         if len(rc) > 0:
             return rc
 
@@ -208,6 +209,11 @@ def run(
     @conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
         global env
+        global run_details
+        global trades
+        global buy_indicators
+        global db_conn_pool
+
         symbol = data.order["symbol"]
         last_order = open_orders.get(symbol)
         if last_order is not None:
@@ -233,14 +239,25 @@ def run(
                 partial_fills[symbol] = 0
                 positions[symbol] += qty
 
-                # if data.order["side"] == "buy":
-                #    global run_details
-                #    trades[symbol] = Trade(
-                #        algo_run_id=run_details.algo_run_id,
-                #        symbol=symbol,
-                #        qty = qty,
-                #        price=
-                #    )
+                if data.order["side"] == "buy":
+                    trades[symbol] = Trade(
+                        algo_run_id=run_details.algo_run_id,
+                        symbol=symbol,
+                        qty=qty,
+                        price=float(data.order["price"]),
+                        indicators=buy_indicators[symbol],
+                    )
+                    trades[symbol].save_buy(db_conn_pool)
+                    buy_indicators[symbol] = None
+                if data.order["side"] == "sell":
+                    trades[symbol].save_sell(
+                        db_conn_pool,
+                        float(data.order["price"]),
+                        sell_indicators[symbol],
+                    )
+                    trades[symbol] = None
+                    sell_indicators[symbol] = None
+
                 open_orders[symbol] = None
             elif event in ("canceled", "rejected"):
                 partial_fills[symbol] = 0
@@ -396,6 +413,11 @@ def run(
                                     )
                                 )
                                 try:
+                                    buy_indicators[symbol] = {
+                                        "rsi": rsi[-1],
+                                        "macd1": macd1[-5:],
+                                        "macd2": macd2[-5:],
+                                    }
                                     o = api.submit_order(
                                         symbol=symbol,
                                         qty=str(shares_to_buy),
@@ -437,6 +459,14 @@ def run(
                     )
                 )
                 try:
+                    sell_indicators[symbol] = {
+                        "rsi": rsi[-1],
+                        "data.close <= stop_prices": data.close
+                        <= stop_prices[symbol],
+                        "macd": macd[-5:],
+                        "data.close >= target_prices": data.close
+                        >= target_prices[symbol],
+                    }
                     o = api.submit_order(
                         symbol=symbol,
                         qty=str(symbol_position),
