@@ -600,6 +600,7 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
 
 async def end_time():
     global run_details
+    global db_conn
     await run_details.update_end_time(db_conn)
 
 
@@ -617,9 +618,11 @@ async def main():
     print(f"TRADE_BUY_WINDOW {trade_buy_window}")
     print(f"DSN: {dsn}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    global run_details
     run_details = AlgoRun(
         filename, env, label, {"TRADE_BUY_WINDOW": trade_buy_window}
     )
+    global db_conn
     db_conn = await asyncpg.connect(dsn=dsn)
     await run_details.save(db_connection=db_conn)
 

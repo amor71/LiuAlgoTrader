@@ -30,7 +30,7 @@ class AlgoRun:
             self.algo_run_id = await db_connection.fetchval(
                 """
                     UPDATE algo_run SET end_time = 'now()'
-                    WHERE algo_run_id
+                    WHERE algo_run_id = $1
                 """,
                 self.algo_run_id,
             )
