@@ -3,6 +3,7 @@ Momentum Trading Algorithm
 """
 import asyncio
 import os
+import ssl
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -620,7 +621,9 @@ async def main():
     )
     db_conn = None
     if dsn:
-        db_conn = await asyncpg.connect(dsn=dsn, ssl=True)
+        db_conn = await asyncpg.connect(
+            dsn=dsn, ssl=ssl.create_default_context(capath="~/.postgresql")
+        )
 
     if db_conn:
         await run_details.save(db_connection=db_conn)
