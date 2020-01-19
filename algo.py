@@ -598,6 +598,10 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     print("tear down task done.")
 
 
+async def end_time():
+    await run_details.update_end_time(db_conn)
+
+
 async def main():
     r = git.repo.Repo("./")
     label = r.git.describe()
@@ -697,9 +701,7 @@ try:
     asyncio.get_event_loop().run_until_complete(main())
 except KeyboardInterrupt:
     print("Caught keyboard interrupt")
-    for task in asyncio.all_tasks():
-        task.cancel()
-    asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(end_time())
 finally:
     asyncio.get_event_loop().close()
 
