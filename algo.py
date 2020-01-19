@@ -697,10 +697,9 @@ try:
     asyncio.get_event_loop().run_until_complete(main())
 except KeyboardInterrupt:
     print("Caught keyboard interrupt")
-    if run_details:
-        run_details.update_end_time(db_conn)
+    for task in asyncio.all_tasks():
+        task.cancel()
     asyncio.get_event_loop().run_forever()
-
 finally:
     asyncio.get_event_loop().close()
 
