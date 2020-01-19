@@ -620,7 +620,7 @@ async def main():
     )
     db_conn = None
     if dsn:
-        db_conn = await asyncpg.connect(dsn)
+        db_conn = await asyncpg.connect(dsn=dsn, ssl=True)
 
     if db_conn:
         await run_details.save(db_connection=db_conn)
