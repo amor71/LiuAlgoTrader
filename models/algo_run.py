@@ -1,3 +1,6 @@
+import json
+
+
 class AlgoRun:
     def __init__(
         self, name: str, environment: str, build: str, parameters: dict
@@ -17,5 +20,5 @@ class AlgoRun:
                 self.name,
                 self.environment,
                 self.build,
-                self.parameters,
+                json.dumps(self.parameters),
             )

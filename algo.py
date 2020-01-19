@@ -595,7 +595,7 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
 
 async def main():
     r = git.repo.Repo("./")
-    label = r.git.describe()[0]
+    label = r.git.describe()
     filename = os.path.basename(__file__)
     msg = f"{filename} {label} starting!"
     logger.log_text(msg)
