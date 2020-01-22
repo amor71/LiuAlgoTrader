@@ -240,19 +240,20 @@ def run(
                 positions[symbol] += qty
 
                 if data.order["side"] == "buy":
+                    print(data.order)
                     trades[symbol] = Trade(
                         algo_run_id=run_details.algo_run_id,
                         symbol=symbol,
                         qty=qty,
-                        price=float(data.order["price"]),
+                        price=float(data.order["filled_avg_price"]),
                         indicators=buy_indicators[symbol],
                     )
-                    trades[symbol].save_buy(db_conn_pool)
+                    await trades[symbol].save_buy(db_conn_pool)
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
-                    trades[symbol].save_sell(
+                    await trades[symbol].save_sell(
                         db_conn_pool,
-                        float(data.order["price"]),
+                        float(data.order["filled_avg_price"]),
                         sell_indicators[symbol],
                     )
                     trades[symbol] = None
@@ -414,9 +415,9 @@ def run(
                                 )
                                 try:
                                     buy_indicators[symbol] = {
-                                        "rsi": rsi[-1],
-                                        "macd1": macd1[-5:],
-                                        "macd2": macd2[-5:],
+                                        "rsi": rsi[-1].tolist(),
+                                        "macd1": macd1[-5:].tolist(),
+                                        "macd2": macd2[-5:].tolist(),
                                     }
                                     o = api.submit_order(
                                         symbol=symbol,
@@ -460,12 +461,12 @@ def run(
                 )
                 try:
                     sell_indicators[symbol] = {
-                        "rsi": rsi[-1],
-                        "data.close <= stop_prices": data.close
-                        <= stop_prices[symbol],
-                        "macd": macd[-5:],
-                        "data.close >= target_prices": data.close
-                        >= target_prices[symbol],
+                        "rsi": rsi[-1].tolist(),
+                        "data.close <= stop_prices": int(data.close
+                        <= stop_prices[symbol]),
+                        "macd": macd[-5:].tolist(),
+                        "data.close >= target_prices": int(data.close
+                        >= target_prices[symbol]),
                     }
                     o = api.submit_order(
                         symbol=symbol,
@@ -615,6 +616,12 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     dt = datetime.today().astimezone(tz)
     to_market_close = market_close - dt
 
+    global run_details
+    run_details = AlgoRun("1", "1", "1", {})
+    await set_db_connection(dsn)
+    global db_conn_pool
+    await run_details.save(pool=db_conn_pool)
+
     logger.log_text(
         f"[{env}] tear-down task waiting for market close: {to_market_close}"
     )
@@ -649,7 +656,7 @@ async def set_db_connection(dsn: str):
     )
 
 
-async def main():
+def main():
     r = git.repo.Repo("./")
     label = r.git.describe()
     filename = os.path.basename(__file__)
@@ -663,13 +670,6 @@ async def main():
     print(f"TRADE_BUY_WINDOW {trade_buy_window}")
     print(f"DSN: {dsn}")
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-    global run_details
-    run_details = AlgoRun(
-        filename, env, label, {"TRADE_BUY_WINDOW": trade_buy_window}
-    )
-    await set_db_connection(dsn)
-    global db_conn_pool
-    await run_details.save(pool=db_conn_pool)
 
     base_url = prod_base_url if env == "PROD" else paper_base_url
     api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
@@ -706,12 +706,12 @@ async def main():
         print(f"waiting for market open: {to_market_open}")
 
         if to_market_open.total_seconds() > 0:
-            await asyncio.sleep(to_market_open.total_seconds() + 1)
+            time.sleep(to_market_open.total_seconds() + 1)
 
         logger.log_text(f"[{env}] market open! wait ~14 minutes")
         since_market_open = datetime.today().astimezone(nyc) - market_open
         while since_market_open.seconds // 60 <= 14:
-            await asyncio.sleep(1)
+            time.sleep(1)
             since_market_open = datetime.today().astimezone(nyc) - market_open
 
         logger.log_text(f"[{env}] ready to start!")
@@ -746,7 +746,7 @@ async def main():
 starting
 """
 try:
-    asyncio.get_event_loop().run_until_complete(main())
+    main()
 except KeyboardInterrupt:
     print(f"Caught KeyboardInterrupt")
     asyncio.get_event_loop().run_until_complete(end_time("KeyboardInterrupt"))
