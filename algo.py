@@ -363,7 +363,7 @@ def run(
                 if (
                     macd1[-1] > 0
                     and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
-                    and macd1[-1] > macd_signal[-1]
+                    and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
