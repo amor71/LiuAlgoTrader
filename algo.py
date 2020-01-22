@@ -353,14 +353,17 @@ def run(
                     f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                macd1 = MACD(
+                macds = MACD(
                     minute_history[symbol]["close"]
                     .dropna()
                     .between_time("9:30", "16:00")
-                )[0]
+                )
+                macd1 = macds[0]
+                macd_signal = macds[1]
                 if (
                     macd1[-1] > 0
                     and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
+                    and macd1[-1] > macd_signal[-1]
                 ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
@@ -418,6 +421,9 @@ def run(
                                         "rsi": rsi[-1].tolist(),
                                         "macd1": macd1[-5:].tolist(),
                                         "macd2": macd2[-5:].tolist(),
+                                        "macd_signal": macd_signal[
+                                            -5:
+                                        ].tolist(),
                                     }
                                     o = api.submit_order(
                                         symbol=symbol,
