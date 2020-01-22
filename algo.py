@@ -443,13 +443,18 @@ def run(
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            macd = MACD(minute_history[symbol]["close"].dropna(), 13, 21)[0]
+            macds = MACD(minute_history[symbol]["close"].dropna(), 13, 21)
+
+            macd = macds[0]
+            macd_signal = macds[1]
+
             rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
             if (
                 data.close <= stop_prices[symbol]
                 or macd[-1] <= 0
                 or data.close >= target_prices[symbol]
                 or rsi[-1] >= 80
+                or macd[-1] < macd_signal[-1]
             ):
                 #                data.close <= stop_prices[symbol]
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
@@ -462,11 +467,14 @@ def run(
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
-                        "data.close <= stop_prices": int(data.close
-                        <= stop_prices[symbol]),
+                        "data.close <= stop_prices": int(
+                            data.close <= stop_prices[symbol]
+                        ),
                         "macd": macd[-5:].tolist(),
-                        "data.close >= target_prices": int(data.close
-                        >= target_prices[symbol]),
+                        "data.close >= target_prices": int(
+                            data.close >= target_prices[symbol]
+                        ),
+                        "macd_signal": macd_signal[-5:].tolist(),
                     }
                     o = api.submit_order(
                         symbol=symbol,
@@ -617,8 +625,8 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     to_market_close = market_close - dt
 
     global run_details
-    run_details = AlgoRun("1", "1", "1", {})
-    await set_db_connection(dsn)
+    run_details = AlgoRun("2", "2", "2", {})
+    await set_db_connection(str(dsn))
     global db_conn_pool
     await run_details.save(pool=db_conn_pool)
 
