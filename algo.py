@@ -310,7 +310,7 @@ def run(
                 if order_lifetime.seconds // 60 > 1:
                     # Cancel it so we can try again for a fill
                     logger.log_text(
-                        f"[{env}] Cancel order id {existing_order.id} for {symbol}"
+                        f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={ts} submission_ts={submission_ts}"
                     )
                     api.cancel_order(existing_order.id)
                 return
@@ -380,12 +380,7 @@ def run(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(
-                            minute_history[symbol]["close"]
-                            .dropna()
-                            .between_time("9:30", "16:00"),
-                            14,
-                        )
+                        rsi = RSI(minute_history[symbol]["close"], 14)
 
                         if rsi[-1] < 75:
                             logger.log_text(f"[{env}] RSI {rsi[-1]} < 75")
@@ -449,17 +444,23 @@ def run(
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            macds = MACD(minute_history[symbol]["close"].dropna(), 13, 21)
+            macds = MACD(
+                minute_history[symbol]["close"]
+                .dropna()
+                .between_time("9:30", "16:00"),
+                13,
+                21,
+            )
 
             macd = macds[0]
             macd_signal = macds[1]
 
-            rsi = RSI(minute_history[symbol]["close"].dropna(), 14)
+            rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
                 or macd[-1] <= 0
                 or data.close >= target_prices[symbol]
-                or rsi[-1] >= 80
+                or rsi[-1] >= 78
                 or macd[-1] < macd_signal[-1]
             ):
                 #                data.close <= stop_prices[symbol]
