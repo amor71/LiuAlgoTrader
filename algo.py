@@ -270,7 +270,7 @@ def run(
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
-        ts = data.start
+        original_ts = ts = data.start
         ts -= timedelta(seconds=ts.second, microseconds=ts.microsecond)
         since_market_open = ts - market_open_dt
         until_market_close = market_close_dt - ts
@@ -306,11 +306,11 @@ def run(
                 submission_ts = existing_order.submitted_at.astimezone(
                     timezone("America/New_York")
                 )
-                order_lifetime = ts - submission_ts
+                order_lifetime = original_ts - submission_ts
                 if order_lifetime.seconds // 60 > 1:
                     # Cancel it so we can try again for a fill
                     logger.log_text(
-                        f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={ts} submission_ts={submission_ts}"
+                        f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"
                     )
                     api.cancel_order(existing_order.id)
                 return
@@ -436,7 +436,7 @@ def run(
                                     error_logger.report_exception()
 
         if (
-            since_market_open.seconds // 60 >= 24
+            since_market_open.seconds // 60 >= 15
             and until_market_close.seconds // 60 > 15
             and symbol_position > 0
         ):
