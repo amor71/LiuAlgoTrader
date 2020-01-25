@@ -255,6 +255,7 @@ def run(
                         db_conn_pool,
                         float(data.order["filled_avg_price"]),
                         sell_indicators[symbol],
+                        data.timestamp,
                     )
                     trades[symbol] = None
                     sell_indicators[symbol] = None
