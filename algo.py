@@ -456,6 +456,12 @@ def run(
             macd = macds[0]
             macd_signal = macds[1]
 
+            # d1 = macd[-4] - macd_signal[-4]
+            d2 = macd[-3] - macd_signal[-3]
+            d3 = macd[-2] - macd_signal[-2]
+            d4 = macd[-1] - macd_signal[-1]
+
+            too_close = True if (d4 < d3 < d2 and d4 < 0.01) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
@@ -463,6 +469,7 @@ def run(
                 or data.close >= target_prices[symbol]
                 or rsi[-1] >= 78
                 or macd[-1] < macd_signal[-1]
+                or too_close
             ):
                 #                data.close <= stop_prices[symbol]
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
@@ -483,6 +490,8 @@ def run(
                             data.close >= target_prices[symbol]
                         ),
                         "macd_signal": macd_signal[-5:].tolist(),
+                        "too_close": int(too_close),
+                        "distance_macd_to_signal_macd": d4,
                     }
                     o = api.submit_order(
                         symbol=symbol,
