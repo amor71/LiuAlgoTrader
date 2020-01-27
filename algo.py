@@ -255,7 +255,9 @@ def run(
                         db_conn_pool,
                         float(data.order["filled_avg_price"]),
                         sell_indicators[symbol],
-                        datetime.fromisoformat(data.timestamp),
+                        datetime.strptime(
+                            data.timestamp, "%Y-%m-%d %H:%M:%S.%f"
+                        ),
                     )
                     trades[symbol] = None
                     sell_indicators[symbol] = None
