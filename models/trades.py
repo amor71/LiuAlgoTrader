@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from typing import Dict
 
 from asyncpg.pool import Pool
@@ -51,7 +50,7 @@ class Trade:
                 )
 
     async def save_sell(
-        self, pool: Pool, price: float, indicators: dict, sell_time: datetime
+        self, pool: Pool, price: float, indicators: dict, client_sell_time: str
     ):
         self.sell_price = price
         self.sell_indicators = indicators
@@ -60,12 +59,12 @@ class Trade:
             async with con.transaction():
                 await con.execute(
                     """
-                        UPDATE trades SET sell_time=$5, sell_price=$1, sell_indicators=$2, is_win=$3
+                        UPDATE trades SET client_sell_time=$5, sell_price=$1, sell_indicators=$2, is_win=$3, sell_time='now()'
                         WHERE trade_id = $4
                     """,
                     self.sell_price,
                     json.dumps(self.sell_indicators),
                     self.is_win,
                     self.trade_id,
-                    sell_time,
+                    client_sell_time,
                 )

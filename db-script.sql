@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS trades (
     buy_time timestamp DEFAULT current_timestamp,
     sell_price decimal (8, 2),
     sell_indicators jsonb,
-    sell_time timestamp
+    sell_time timestamp,
+    client_sell_time timestamp
 );
 CREATE INDEX ON trades(symbol);
 CREATE INDEX ON trades(algo_run_id);
