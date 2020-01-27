@@ -256,7 +256,7 @@ def run(
                         float(data.order["filled_avg_price"]),
                         sell_indicators[symbol],
                         datetime.strptime(
-                            data.timestamp, "%Y-%m-%d %H:%M:%S.%f"
+                            data.timestamp, "%Y-%m-%d %H:%M:%S.%fZ"
                         ),
                     )
                     trades[symbol] = None
