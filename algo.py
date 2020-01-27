@@ -248,7 +248,7 @@ def run(
                         price=float(data.order["filled_avg_price"]),
                         indicators=buy_indicators[symbol],
                     )
-                    await trades[symbol].save_buy(db_conn_pool)
+                    await trades[symbol].save_buy(db_conn_pool, data.timestamp)
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
                     await trades[symbol].save_sell(
@@ -308,7 +308,10 @@ def run(
                     timezone("America/New_York")
                 )
                 order_lifetime = original_ts - submission_ts
-                if order_lifetime.seconds // 60 > 1:
+                if (
+                    submission_ts > original_ts
+                    and order_lifetime.seconds // 60 > 1
+                ):
                     # Cancel it so we can try again for a fill
                     logger.log_text(
                         f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"

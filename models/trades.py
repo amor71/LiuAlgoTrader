@@ -33,13 +33,13 @@ class Trade:
         self.buy_indicators = indicators
         self.trade_id = None
 
-    async def save_buy(self, pool: Pool):
+    async def save_buy(self, pool: Pool, client_buy_time: str):
         async with pool.acquire() as con:
             async with con.transaction():
                 self.trade_id = await con.fetchval(
                     """
-                        INSERT INTO trades (algo_run_id, symbol, qty, buy_price, buy_indicators)
-                        VALUES ($1, $2, $3, $4, $5)
+                        INSERT INTO trades (algo_run_id, symbol, qty, buy_price, buy_indicators, client_buy_time)
+                        VALUES ($1, $2, $3, $4, $5, $6)
                         RETURNING trade_id
                     """,
                     self.algo_run_id,
@@ -47,6 +47,7 @@ class Trade:
                     self.qty,
                     self.buy_price,
                     json.dumps(self.buy_indicators),
+                    client_buy_time,
                 )
 
     async def save_sell(
