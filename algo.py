@@ -309,7 +309,7 @@ def run(
                 )
                 order_lifetime = original_ts - submission_ts
                 if (
-                    submission_ts > original_ts
+                    original_ts > submission_ts
                     and order_lifetime.seconds // 60 > 1
                 ):
                     # Cancel it so we can try again for a fill
@@ -366,7 +366,7 @@ def run(
                 macd_signal = macds[1]
                 if (
                     macd1[-1] > 0
-                    and macd1[-4] < macd1[-3] < macd1[-2] < macd1[-1]
+                    and macd1[-3] < macd1[-2] < macd1[-1]
                     and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
@@ -460,11 +460,11 @@ def run(
             macd_signal = macds[1]
 
             # d1 = macd[-4] - macd_signal[-4]
-            d2 = macd[-3] - macd_signal[-3]
+            # d2 = macd[-3] - macd_signal[-3]
             d3 = macd[-2] - macd_signal[-2]
             d4 = macd[-1] - macd_signal[-1]
 
-            too_close = True if (d4 < d3 < d2 and d4 < 0.01) else False
+            too_close = True if (d4 < d3 and d4 < 0.01) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
