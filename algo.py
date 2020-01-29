@@ -310,7 +310,7 @@ def run(
                 order_lifetime = original_ts - submission_ts
                 if (
                     original_ts > submission_ts
-                    and order_lifetime.seconds // 60 > 1
+                    and order_lifetime.seconds // 30 >= 1
                 ):
                     # Cancel it so we can try again for a fill
                     logger.log_text(
@@ -366,7 +366,7 @@ def run(
                 macd_signal = macds[1]
                 if (
                     macd1[-1] > 0
-                    and macd1[-3] < macd1[-2] < macd1[-1]
+                    and macd1[-3] + 0.003 < macd1[-2] + 0.003 < macd1[-1]
                     and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
