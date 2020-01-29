@@ -350,7 +350,7 @@ def run(
             ) / prev_closes[symbol]
             if (
                 daily_pct_change > 0.04
-                and data.close > high_15m
+                # and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
                 logger.log_text(
@@ -365,8 +365,8 @@ def run(
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
-                    macd1[-1] > 0
-                    and macd1[-3] + 0.003 < macd1[-2] + 0.003 < macd1[-1]
+                    # macd1[-1] > 0 and
+                    macd1[-3] < macd1[-2] < macd1[-1]
                     and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
