@@ -367,6 +367,7 @@ def run(
                 if (
                     # macd1[-1] > 0 and
                     macd1[-3] < macd1[-2] < macd1[-1]
+                    and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                     and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
@@ -464,7 +465,7 @@ def run(
             d3 = macd[-2] - macd_signal[-2]
             d4 = macd[-1] - macd_signal[-1]
 
-            too_close = True if (d4 < d3 and d4 < 0.01) else False
+            too_close = True if (d4 < d3 and d4 < 0.001) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
