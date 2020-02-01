@@ -14,3 +14,5 @@ jupyter
 ta-lib
 influxdb
 asyncpg
+psycopg2-binary
+sqlalchemy
