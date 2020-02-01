@@ -1,1 +1,3 @@
 /k8s/
+/.mypy_cache/
+/.ipynb_checkpoints/
