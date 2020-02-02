@@ -368,7 +368,6 @@ def run(
                     # macd1[-1] > 0 and
                     macd1[-3] < macd1[-2] < macd1[-1]
                     and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
-                    and macd1[-1] >= macd_signal[-1]
                 ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
@@ -472,8 +471,6 @@ def run(
                 or macd[-1] <= 0
                 or data.close >= target_prices[symbol]
                 or rsi[-1] >= 78
-                or macd[-1] < macd_signal[-1]
-                or too_close
             ):
                 #                data.close <= stop_prices[symbol]
                 #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
