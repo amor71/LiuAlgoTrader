@@ -310,7 +310,7 @@ def run(
                 order_lifetime = original_ts - submission_ts
                 if (
                     original_ts > submission_ts
-                    and order_lifetime.seconds // 30 >= 1
+                    and order_lifetime.seconds // 60 >= 1
                 ):
                     # Cancel it so we can try again for a fill
                     logger.log_text(
