@@ -438,6 +438,10 @@ def run(
                                     pass
                                 except Exception:
                                     error_logger.report_exception()
+                    else:
+                        logger.log_text(
+                            f"[{env}] failed MACD(40,60) for {symbol}!"
+                        )
 
         if (
             since_market_open.seconds // 60 >= 15
@@ -468,7 +472,7 @@ def run(
             rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
-                or macd[-1] <= 0
+                or (macd[-1] <= 0 and macd[-2] > 0)
                 or data.close >= target_prices[symbol]
                 or rsi[-1] >= 78
             ):
