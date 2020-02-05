@@ -365,9 +365,9 @@ def run(
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
-                    # macd1[-1] > 0 and
-                    macd1[-3] < macd1[-2] < macd1[-1]
-                    and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
+                    macd1[-1] >= 0
+                    and macd1[-3] < macd1[-2] < macd1[-1]
+                    # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!"
@@ -379,7 +379,7 @@ def run(
                         40,
                         60,
                     )[0]
-                    if macd2[-1] > 0 and np.diff(macd2)[-1] > 0:
+                    if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         logger.log_text(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
                         )
@@ -472,8 +472,8 @@ def run(
             rsi = RSI(minute_history[symbol]["close"], 14)
             if (
                 data.close <= stop_prices[symbol]
-                or (macd[-1] <= 0 and macd[-2] > 0)
-                or data.close >= target_prices[symbol]
+                or (macd[-1] <= 0 and data.close <= latest_cost_basis[symbol])
+                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 or rsi[-1] >= 78
             ):
                 #                data.close <= stop_prices[symbol]
