@@ -272,7 +272,9 @@ def run(
 
         # First, aggregate 1s bars for up-to-date MACD calculations
         original_ts = ts = data.start
-        ts -= timedelta(seconds=ts.second, microseconds=ts.microsecond)
+        ts = ts.replace(
+            second=0, microsecond=0
+        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
         since_market_open = ts - market_open_dt
         until_market_close = market_close_dt - ts
 
@@ -542,6 +544,8 @@ def run(
                     symbols.remove(symbol)
                 await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
                 logger.log_text(f"[{env}] {len(symbols)} channels left")
+            except ValueError:
+                pass
             except Exception:
                 error_logger.report_exception()
 
