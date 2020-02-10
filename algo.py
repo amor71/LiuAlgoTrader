@@ -670,7 +670,7 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
         logger.log_text("tear down task starting")
         print("tear down task starting")
         await end_time("market close")
-        asyncio.get_event_loop().close()
+        asyncio.get_running_loop().stop()
     finally:
         logger.log_text(f"[{env}]tear down task done.")
         print("tear down task done.")
