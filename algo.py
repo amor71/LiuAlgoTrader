@@ -217,7 +217,7 @@ def run(
         symbol = data.order["symbol"]
         last_order = open_orders.get(symbol)
         if last_order is not None:
-            logger.log_text(f"[{env}] trade update for {symbol}")
+            logger.log_text(f"[{env}] {data.event} trade update for {symbol}")
             event = data.event
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
