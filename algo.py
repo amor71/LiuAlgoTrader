@@ -647,11 +647,13 @@ async def harvest_task(
 async def save_start(
     name: str, environment: str, build: str, parameters: dict
 ):
+    logger.log_text(f"[{env}] save_start task starting")
     global run_details
     run_details = AlgoRun(name, environment, build, parameters)
     await set_db_connection(str(dsn))
     global db_conn_pool
     await run_details.save(pool=db_conn_pool)
+    logger.log_text(f"[{env}] save_start task ended")
 
 
 async def teardown_task(tz: DstTzInfo, market_close: datetime):
@@ -762,7 +764,7 @@ def main():
         #        market_open + timedelta(minutes=90),
         #    )
         # )
-        asyncio.create_task(
+        asyncio.ensure_future(
             save_start(
                 filename,
                 env,
