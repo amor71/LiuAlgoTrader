@@ -644,17 +644,21 @@ async def harvest_task(
     )
 
 
+async def save_start(
+    name: str, environment: str, build: str, parameters: dict
+):
+    global run_details
+    run_details = AlgoRun(name, environment, build, parameters)
+    await set_db_connection(str(dsn))
+    global db_conn_pool
+    await run_details.save(pool=db_conn_pool)
+
+
 async def teardown_task(tz: DstTzInfo, market_close: datetime):
     global conn
 
     dt = datetime.today().astimezone(tz)
     to_market_close = market_close - dt
-
-    global run_details
-    run_details = AlgoRun("2", "2", "2", {})
-    await set_db_connection(str(dsn))
-    global db_conn_pool
-    await run_details.save(pool=db_conn_pool)
 
     logger.log_text(
         f"[{env}] tear-down task waiting for market close: {to_market_close}"
@@ -758,6 +762,14 @@ def main():
         #        market_open + timedelta(minutes=90),
         #    )
         # )
+        asyncio.create_task(
+            save_start(
+                filename,
+                env,
+                label,
+                {"TRADE_BUY_WINDOW": trade_buy_window, "DSN": dsn},
+            )
+        )
         asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
             get_tickers(api),
