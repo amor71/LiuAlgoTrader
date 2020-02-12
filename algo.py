@@ -264,6 +264,10 @@ def run(
             elif event in ("canceled", "rejected"):
                 partial_fills[symbol] = 0
                 open_orders[symbol] = None
+        else:
+            logger.log_text(
+                f"[{env}] {data.event} trade update for {symbol} WITHOUT ORDER"
+            )
 
     @conn.on(r"A$")
     async def handle_second_bar(conn, channel, data):
@@ -484,9 +488,6 @@ def run(
                 or bail_out
                 or rsi[-1] >= 78
             ):
-                #                data.close <= stop_prices[symbol]
-                #                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
-                #                or (data.close <= latest_cost_basis[symbol] and macd[-1] <= 0)
                 logger.log_text(
                     "[{}] Submitting sell for {} shares of {} at {}".format(
                         env, symbol_position, symbol, data.close
@@ -532,6 +533,16 @@ def run(
                     )
                 )
                 try:
+                    sell_indicators[symbol] = {
+                        "rsi": 0,
+                        "data.close <= stop_prices": 0,
+                        "macd": [],
+                        "data.close >= target_prices": 0,
+                        "macd_signal": [],
+                        "too_close": 0,
+                        "distance_macd_to_signal_macd": 0,
+                        "bail_out": 0,
+                    }
                     o = api.submit_order(
                         symbol=symbol,
                         qty=str(symbol_position),
@@ -675,7 +686,7 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
     print(f"tear down waiting for market close: {to_market_close}")
 
     try:
-        await asyncio.sleep(to_market_close.total_seconds())
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 10)
     except asyncio.CancelledError:
         print("teardown_task() cancelled during sleep")
         logger.log_text("teardown_task() cancelled during sleep")
