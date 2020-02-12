@@ -475,11 +475,14 @@ def run(
             d4 = macd[-1] - macd_signal[-1]
             too_close = True if (d4 < d3 and d4 < 0.001) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
+
+            macd_val = macd[-1].round(2)
+            macd_signal_val = macd_signal[-1].round(2)
             bail_out = (
                 (data.close - latest_cost_basis[symbol])
                 / latest_cost_basis[symbol]
                 > 0.003
-                and macd[-1] == macd_signal[-1]
+                and macd_val <= macd_signal_val
             )
             if (
                 data.close <= stop_prices[symbol]
