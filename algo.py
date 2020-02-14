@@ -475,20 +475,22 @@ def run(
             d4 = macd[-1] - macd_signal[-1]
             too_close = True if (d4 < d3 and d4 < 0.001) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
-
+            movement = (
+                data.close - latest_cost_basis[symbol]
+            ) / latest_cost_basis[symbol]
             macd_val = macd[-1].round(2)
             macd_signal_val = macd_signal[-1].round(2)
-            bail_out = (
-                (data.close - latest_cost_basis[symbol])
-                / latest_cost_basis[symbol]
-                > 0.003
-                and macd_val <= macd_signal_val
-            )
+
+            macd_below_signal = macd_val <= macd_signal_val
+            bail_out = movement > 0.003 and macd_below_signal
+            scalp = movement > 0.02
+            below_cost_base = data.close <= latest_cost_basis[symbol]
             if (
                 data.close <= stop_prices[symbol]
-                or (macd[-1] <= 0 and data.close <= latest_cost_basis[symbol])
+                or ((macd_below_signal or macd_val <= 0) and below_cost_base)
                 or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 or bail_out
+                or scalp
                 or rsi[-1] >= 78
             ):
                 logger.log_text(
@@ -510,6 +512,10 @@ def run(
                         "too_close": int(too_close),
                         "distance_macd_to_signal_macd": d4,
                         "bail_out": int(bail_out),
+                        "scalp": int(scalp),
+                        "below_cost_base": int(below_cost_base),
+                        "macd_below_signal": int(macd_below_signal),
+                        "movement": movement,
                     }
                     o = api.submit_order(
                         symbol=symbol,
