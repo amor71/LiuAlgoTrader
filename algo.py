@@ -251,12 +251,13 @@ def run(
                     await trades[symbol].save_buy(db_conn_pool, data.timestamp)
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
-                    await trades[symbol].save_sell(
-                        db_conn_pool,
-                        float(data.order["filled_avg_price"]),
-                        sell_indicators[symbol],
-                        data.timestamp,
-                    )
+                    if sell_indicators[symbol] is not None:
+                        await trades[symbol].save_sell(
+                            db_conn_pool,
+                            float(data.order["filled_avg_price"]),
+                            sell_indicators[symbol],
+                            data.timestamp,
+                        )
                     trades[symbol] = None
                     sell_indicators[symbol] = None
 
