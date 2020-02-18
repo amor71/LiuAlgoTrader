@@ -27,8 +27,8 @@ error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
 paper_base_url = "https://paper-api.alpaca.markets"
-paper_api_key_id = "PK9C21VXOA9CAIXNJ355"
-paper_api_secret = "nq/ZP/YOCod8La/fZVMT7zLpMrTcWnnFCx4ewO0p"
+paper_api_key_id = "PKO3OSD9LU9GTQPL69GO"
+paper_api_secret = "chnPFlGXbY4Y4QAAZ3Q7MJHxkxBYB30CQZNVZTaj"
 
 prod_base_url = "https://api.alpaca.markets"
 prod_api_key_id = "AKVKN4TLUUS5MZO5KYLM"
