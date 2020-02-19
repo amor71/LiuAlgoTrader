@@ -375,8 +375,10 @@ def run(
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
-                    macd1[-1] >= 0
-                    and macd1[-3] < macd1[-2] < macd1[-1]
+                    macd1[-1].round(2) >= 0
+                    and macd1[-3].round(2)
+                    < macd1[-2].round(2)
+                    < macd1[-1].round(2)
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     logger.log_text(
