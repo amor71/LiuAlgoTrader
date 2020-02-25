@@ -372,6 +372,15 @@ def run(
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
+
+                sell_macds = MACD(
+                    minute_history[symbol]["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00"),
+                    13,
+                    21,
+                )
+
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
@@ -380,10 +389,11 @@ def run(
                     < macd1[-2].round(3)
                     < macd1[-1].round(3)
                     and macd1[-1].round(2) > macd_signal[-1].round(2)
+                    and sell_macds[0][-1].round(2) > sell_macds[1][-1].round(2)
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     logger.log_text(
-                        f"[{env}] MACD(12,26) for {symbol} trending up!"
+                        f"[{env}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
                     macd2 = MACD(
                         minute_history[symbol]["close"]
@@ -434,6 +444,12 @@ def run(
                                         "macd1": macd1[-5:].tolist(),
                                         "macd2": macd2[-5:].tolist(),
                                         "macd_signal": macd_signal[
+                                            -5:
+                                        ].tolist(),
+                                        "sell_macd": sell_macds[0][
+                                            -5:
+                                        ].tolist(),
+                                        "sell_macd_signal": sell_macds[1][
                                             -5:
                                         ].tolist(),
                                     }
