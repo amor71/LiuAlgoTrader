@@ -504,7 +504,7 @@ def run(
             macd_val = macd[-1].round(2)
             macd_signal_val = macd_signal[-1].round(2)
 
-            macd_below_signal = macd_val <= macd_signal_val
+            macd_below_signal = macd_val < macd_signal_val
             bail_out = movement > 0.003 and macd_below_signal
             scalp = movement > 0.02
             below_cost_base = movement <= -0.015
