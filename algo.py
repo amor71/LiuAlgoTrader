@@ -546,7 +546,7 @@ def run(
                         side="sell",
                         type="market",
                         time_in_force="day",
-                        limit_price=str(data.close),
+                        #        limit_price=str(data.close),
                     )
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
