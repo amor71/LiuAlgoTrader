@@ -360,7 +360,7 @@ def run(
             ) / prev_closes[symbol]
             if (
                 daily_pct_change > 0.04
-                # and data.close > high_15m
+                and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
                 logger.log_text(
@@ -390,6 +390,7 @@ def run(
                     < macd1[-1].round(3)
                     and macd1[-1].round(2) > macd_signal[-1].round(2)
                     and sell_macds[0][-1].round(2) > sell_macds[1][-1].round(2)
+                    and data.close > new_data[0]
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     logger.log_text(
