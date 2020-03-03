@@ -507,11 +507,14 @@ def run(
 
             macd_below_signal = macd_val < macd_signal_val
             bail_out = movement > 0.003 and macd_below_signal
-            scalp = movement > 0.03
-            below_cost_base = movement <= -0.01
+            scalp = movement > 0.05
+            below_cost_base = (
+                data.close <= latest_cost_basis[symbol]
+            )  # movement <= -0.045
             if (
                 data.close <= stop_prices[symbol]
-                or ((macd_below_signal or macd_val <= 0) and below_cost_base)
+                # or ((macd_below_signal or macd_val <= 0) and below_cost_base)
+                or (below_cost_base and macd_val <= 0)
                 or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 or bail_out
                 or scalp
