@@ -389,7 +389,7 @@ def run(
                     < macd1[-2].round(3)
                     < macd1[-1].round(3)
                     and macd1[-1].round(2) > macd_signal[-1].round(2)
-                    and sell_macds[0][-1].round(2) > sell_macds[1][-1].round(2)
+                    and sell_macds[0][-1] > 0
                     and data.close > new_data[0]
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
@@ -502,7 +502,7 @@ def run(
             movement = (
                 data.close - latest_cost_basis[symbol]
             ) / latest_cost_basis[symbol]
-            macd_val = macd[-1].round(2)
+            macd_val = macd[-1]
             macd_signal_val = macd_signal[-1].round(2)
 
             macd_below_signal = macd_val < macd_signal_val
