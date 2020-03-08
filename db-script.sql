@@ -32,3 +32,17 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE INDEX ON trades(symbol);
 CREATE INDEX ON trades(algo_run_id);
 CREATE INDEX ON trades(is_win);
+
+CREATE TABLE IF NOT EXISTS new_trades (
+    trade_id serial PRIMARY KEY,
+    algo_run_id integer REFERENCES algo_run(algo_run_id),
+    symbol text NOT NULL,
+    operation trade_operation NOT NULL,
+    qty integer NOT NULL check (qty > 0),
+    price decimal (8, 2) NOT NULL,
+    indicators jsonb NOT NULL,
+    client_time text,
+    tstamp timestamp DEFAULT current_timestamp
+);
+CREATE INDEX ON new_trades(symbol);
+CREATE INDEX ON new_trades(algo_run_id);
