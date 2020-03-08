@@ -19,7 +19,7 @@ from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
 
 from models.algo_run import AlgoRun
-from models.trades import Trade
+from models.new_trades import NewTrade
 
 client = logging.Client()
 logger = client.logger("algo")
@@ -41,7 +41,6 @@ volume_today = {}
 prev_closes = {}
 buy_indicators: Dict[str, Dict] = {}
 sell_indicators: Dict[str, Dict] = {}
-trades = {}
 env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
@@ -210,7 +209,6 @@ def run(
     async def handle_trade_update(conn, channel, data):
         global env
         global run_details
-        global trades
         global buy_indicators
         global db_conn_pool
 
@@ -241,27 +239,27 @@ def run(
 
                 if data.order["side"] == "buy":
                     print(data.order)
-                    trades[symbol] = Trade(
+                    db_trade = NewTrade(
                         algo_run_id=run_details.algo_run_id,
                         symbol=symbol,
                         qty=qty,
+                        operation="buy",
                         price=float(data.order["filled_avg_price"]),
                         indicators=buy_indicators[symbol],
                     )
-                    await trades[symbol].save_buy(db_conn_pool, data.timestamp)
+                    await db_trade.save(db_conn_pool, data.timestamp)
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
-                    if (
-                        trades[symbol] is not None
-                        and sell_indicators[symbol] is not None
-                    ):
-                        await trades[symbol].save_sell(
-                            db_conn_pool,
-                            float(data.order["filled_avg_price"]),
-                            sell_indicators[symbol],
-                            data.timestamp,
+                    if sell_indicators[symbol] is not None:
+                        db_trade = NewTrade(
+                            algo_run_id=run_details.algo_run_id,
+                            symbol=symbol,
+                            qty=qty,
+                            operation="sell",
+                            price=float(data.order["filled_avg_price"]),
+                            indicators=buy_indicators[symbol],
                         )
-                    trades[symbol] = None
+                        await db_trade.save(db_conn_pool, data.timestamp)
                     sell_indicators[symbol] = None
 
                 open_orders[symbol] = None
@@ -507,7 +505,7 @@ def run(
 
             macd_below_signal = macd_val < macd_signal_val
             bail_out = movement > 0.02 and macd_below_signal
-            scalp = movement > 0.05
+            scalp = movement > 0.02
             below_cost_base = data.close <= latest_cost_basis[symbol]
             if (
                 data.close <= stop_prices[symbol]
@@ -544,7 +542,9 @@ def run(
                     }
                     o = api.submit_order(
                         symbol=symbol,
-                        qty=str(symbol_position),
+                        qty=str(symbol_position)
+                        if not scalp
+                        else str(symbol_position / 2),
                         side="sell",
                         type="market",
                         time_in_force="day",
