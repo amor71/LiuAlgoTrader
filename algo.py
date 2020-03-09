@@ -254,10 +254,10 @@ def run(
                         db_trade = NewTrade(
                             algo_run_id=run_details.algo_run_id,
                             symbol=symbol,
-                            qty=qty,
+                            qty=-qty,
                             operation="sell",
                             price=float(data.order["filled_avg_price"]),
-                            indicators=buy_indicators[symbol],
+                            indicators=sell_indicators[symbol],
                         )
                         await db_trade.save(db_conn_pool, data.timestamp)
                     sell_indicators[symbol] = None
