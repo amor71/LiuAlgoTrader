@@ -4,7 +4,7 @@ Momentum Trading Algorithm
 import asyncio
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -72,7 +72,7 @@ def get_1000m_history_data(api):
             retry_counter = 5
             while retry_counter > 0:
                 try:
-                    frm = datetime.today()
+                    frm = date.today()
                     to = frm - timedelta(days=30)
                     minute_history[symbol] = api.polygon.historic_agg_v2(
                         symbol, 1, "minute", str(frm), str(to), limit=1000
