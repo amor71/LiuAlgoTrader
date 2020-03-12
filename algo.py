@@ -72,10 +72,13 @@ def get_1000m_history_data(api):
             retry_counter = 5
             while retry_counter > 0:
                 try:
-                    frm = date.today()
-                    to = frm - timedelta(days=30)
                     minute_history[symbol] = api.polygon.historic_agg_v2(
-                        symbol, 1, "minute", str(frm), str(to), limit=1000
+                        symbol,
+                        1,
+                        "minute",
+                        _from=date.today() - timedelta(days=30),
+                        to=date.today() + timedelta(days=1),
+                        limit=5000,
                     ).df
                     break
                 except (
