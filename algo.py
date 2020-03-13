@@ -204,7 +204,7 @@ def run(
     target_prices = {}
     partial_fills = {}
 
-    for symbol in symbols:
+    for symbol in symbols[:80]:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
         channels += symbol_channels
     logger.log_text("[{}] Watching {} symbols.".format(env, len(symbols)))
