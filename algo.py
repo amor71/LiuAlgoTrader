@@ -549,7 +549,7 @@ def run(
                         symbol=symbol,
                         qty=str(symbol_position)
                         if not scalp
-                        else str(symbol_position / 2),
+                        else str(int(symbol_position / 2)),
                         side="sell",
                         type="market",
                         time_in_force="day",
