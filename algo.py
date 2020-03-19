@@ -413,8 +413,8 @@ def run(
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"], 14)
 
-                        if rsi[-1] < 75:
-                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 75")
+                        if rsi[-1] < 80:
+                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 80")
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history[symbol], ts
