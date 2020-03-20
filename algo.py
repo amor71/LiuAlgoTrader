@@ -456,11 +456,11 @@ def run(
                                 try:
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
-                                        "macd1": macd1[-5:].tolist(),
-                                        "macd2": macd2[-5:].tolist(),
+                                        "macd": macd1[-5:].tolist(),
                                         "macd_signal": macd_signal[
                                             -5:
                                         ].tolist(),
+                                        "slow macd": macd2[-5:].tolist(),
                                         "sell_macd": sell_macds[0][
                                             -5:
                                         ].tolist(),
@@ -506,12 +506,6 @@ def run(
 
             macd = macds[0]
             macd_signal = macds[1]
-
-            # d1 = macd[-4] - macd_signal[-4]
-            # d2 = macd[-3] - macd_signal[-3]
-            d3 = macd[-2] - macd_signal[-2]
-            d4 = macd[-1] - macd_signal[-1]
-            too_close = True if (d4 < d3 and d4 < 0.001) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
             movement = (
                 data.close - latest_cost_basis[symbol]
@@ -523,14 +517,29 @@ def run(
             bail_out = movement > 0.02 and macd_below_signal
             scalp = movement > 0.02
             below_cost_base = data.close <= latest_cost_basis[symbol]
-            if (
-                data.close <= stop_prices[symbol]
-                or (below_cost_base and macd_val <= 0)
-                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
-                or bail_out
-                or scalp
-                or rsi[-1] >= 78
-            ):
+
+            to_sell = False
+            sell_reasons = []
+            if data.close <= stop_prices[symbol]:
+                to_sell = True
+                sell_reasons.append(f"stopped")
+            if below_cost_base and macd_val <= 0:
+                to_sell = True
+                sell_reasons.append(f"below cost & macd negative")
+            if data.close >= target_prices[symbol] and macd[-1] <= 0:
+                to_sell = True
+                sell_reasons.append(f"above target & macd negative")
+            if bail_out:
+                to_sell = True
+                sell_reasons.append(f"bail")
+            if scalp:
+                to_sell = True
+                sell_reasons.append(f"scale-out")
+            if rsi[-1] >= 78:
+                to_sell = True
+                sell_reasons.append(f"rsi max")
+
+            if to_sell:
                 logger.log_text(
                     "[{}] Submitting sell for {} shares of {} at {}".format(
                         env, symbol_position, symbol, data.close
@@ -539,21 +548,12 @@ def run(
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
-                        "data.close <= stop_prices": int(
-                            data.close <= stop_prices[symbol]
-                        ),
-                        "macd": macd[-5:].tolist(),
-                        "data.close >= target_prices": int(
-                            data.close >= target_prices[symbol]
-                        ),
-                        "macd_signal": macd_signal[-5:].tolist(),
-                        "too_close": int(too_close),
-                        "distance_macd_to_signal_macd": d4,
-                        "bail_out": int(bail_out),
-                        "scalp": int(scalp),
-                        "below_cost_base": int(below_cost_base),
-                        "macd_below_signal": int(macd_below_signal),
                         "movement": movement,
+                        "macd": macd[-5:].tolist(),
+                        "macd_signal": macd_signal[-5:].tolist(),
+                        "reasons": " AND ".join(
+                            [str(elem) for elem in sell_reasons]
+                        ),
                     }
                     o = api.submit_order(
                         symbol=symbol,
