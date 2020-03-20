@@ -9,7 +9,7 @@ from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import asyncpg
-import git
+import pygit2
 import numpy as np
 import requests
 from alpaca_trade_api.entity import Order
@@ -764,8 +764,8 @@ async def set_db_connection(dsn: str):
 
 
 def main():
-    r = git.repo.Repo("./")
-    label = r.git.describe()
+    r = pygit2.Repository("./")
+    label = r.describe()
     filename = os.path.basename(__file__)
     msg = f"{filename} {label} starting!"
     logger.log_text(msg)
