@@ -46,3 +46,6 @@ CREATE TABLE IF NOT EXISTS new_trades (
 );
 CREATE INDEX ON new_trades(symbol);
 CREATE INDEX ON new_trades(algo_run_id);
+
+ALTER TABLE new_trades ADD COLUMN stop_price decimal (8, 2);
+ALTER TABLE new_trades ADD COLUMN target_price decimal (8, 2);
