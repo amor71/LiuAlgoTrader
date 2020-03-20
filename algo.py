@@ -13,6 +13,7 @@ import git
 import numpy as np
 import requests
 from alpaca_trade_api.entity import Order
+from asyncpg.pool import Pool
 from google.cloud import error_reporting, logging
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
@@ -45,7 +46,7 @@ env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 channels = ["trade_updates"]
 conn = None
-db_conn_pool = None
+db_conn_pool: Pool
 run_details = None
 
 # We only consider stocks with per-share prices inside this range
@@ -252,7 +253,12 @@ def run(
                         price=float(data.order["filled_avg_price"]),
                         indicators=buy_indicators[symbol],
                     )
-                    await db_trade.save(db_conn_pool, data.timestamp)
+                    await db_trade.save(
+                        db_conn_pool,
+                        data.timestamp,
+                        stop_prices[symbol],
+                        target_prices[symbol],
+                    )
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
                     if sell_indicators[symbol] is not None:
@@ -264,7 +270,12 @@ def run(
                             price=float(data.order["filled_avg_price"]),
                             indicators=sell_indicators[symbol],
                         )
-                        await db_trade.save(db_conn_pool, data.timestamp)
+                        await db_trade.save(
+                            db_conn_pool,
+                            data.timestamp,
+                            stop_prices[symbol],
+                            target_prices[symbol],
+                        )
                     sell_indicators[symbol] = None
 
                 open_orders[symbol] = None
@@ -514,7 +525,6 @@ def run(
             below_cost_base = data.close <= latest_cost_basis[symbol]
             if (
                 data.close <= stop_prices[symbol]
-                # or ((macd_below_signal or macd_val <= 0) and below_cost_base)
                 or (below_cost_base and macd_val <= 0)
                 or (data.close >= target_prices[symbol] and macd[-1] <= 0)
                 or bail_out
