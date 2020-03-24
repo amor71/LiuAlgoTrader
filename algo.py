@@ -9,8 +9,8 @@ from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import asyncpg
-import pygit2
 import numpy as np
+import pygit2
 import requests
 from alpaca_trade_api.entity import Order
 from asyncpg.pool import Pool
@@ -540,11 +540,7 @@ def run(
                 sell_reasons.append(f"rsi max")
 
             if to_sell:
-                logger.log_text(
-                    "[{}] Submitting sell for {} shares of {} at {}".format(
-                        env, symbol_position, symbol, data.close
-                    )
-                )
+
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
@@ -555,16 +551,35 @@ def run(
                             [str(elem) for elem in sell_reasons]
                         ),
                     }
-                    o = api.submit_order(
-                        symbol=symbol,
-                        qty=str(symbol_position)
-                        if not scalp
-                        else str(int(symbol_position / 3)),
-                        side="sell",
-                        type="market",
-                        time_in_force="day",
-                        #        limit_price=str(data.close),
-                    )
+
+                    if not scalp:
+                        logger.log_text(
+                            "[{}] Submitting sell for {} shares of {} at market".format(
+                                env, symbol_position, symbol
+                            )
+                        )
+                        o = api.submit_order(
+                            symbol=symbol,
+                            qty=str(symbol_position),
+                            side="sell",
+                            type="market",
+                            time_in_force="day",
+                        )
+                    else:
+                        logger.log_text(
+                            "[{}] Submitting sell for {} shares of {} at limit of {}".format(
+                                env, symbol_position, symbol, data.close
+                            )
+                        )
+                        o = api.submit_order(
+                            symbol=symbol,
+                            qty=str(int(symbol_position / 3)),
+                            side="sell",
+                            type="limit",
+                            time_in_force="day",
+                            limit_price=str(data.close),
+                        )
+
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
                     return
