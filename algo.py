@@ -77,9 +77,8 @@ def get_1000m_history_data(api):
                         symbol,
                         1,
                         "minute",
-                        _from=date.today() - timedelta(days=30),
+                        _from=date.today() - timedelta(days=14),
                         to=date.today() + timedelta(days=1),
-                        limit=5000,
                     ).df
                     break
                 except (
