@@ -77,7 +77,7 @@ def get_1000m_history_data(api):
                         symbol,
                         1,
                         "minute",
-                        _from=date.today() - timedelta(days=14),
+                        _from=date.today() - timedelta(days=10),
                         to=date.today() + timedelta(days=1),
                     ).df
                     break
@@ -380,19 +380,9 @@ def run(
                     f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                macds = MACD(
-                    minute_history[symbol]["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
+                macds = MACD(minute_history[symbol]["close"])
 
-                sell_macds = MACD(
-                    minute_history[symbol]["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00"),
-                    13,
-                    21,
-                )
+                sell_macds = MACD(minute_history[symbol]["close"], 13, 21,)
 
                 macd1 = macds[0]
                 macd_signal = macds[1]
@@ -409,13 +399,7 @@ def run(
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    macd2 = MACD(
-                        minute_history[symbol]["close"]
-                        .dropna()
-                        .between_time("9:30", "16:00"),
-                        40,
-                        60,
-                    )[0]
+                    macd2 = MACD(minute_history[symbol]["close"], 40, 60,)[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         logger.log_text(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
@@ -495,13 +479,7 @@ def run(
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            macds = MACD(
-                minute_history[symbol]["close"]
-                .dropna()
-                .between_time("9:30", "16:00"),
-                13,
-                21,
-            )
+            macds = MACD(minute_history[symbol]["close"], 13, 21,)
 
             macd = macds[0]
             macd_signal = macds[1]
