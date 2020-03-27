@@ -16,3 +16,4 @@ asyncpg
 psycopg2-binary
 sqlalchemy
 pygit2
+olygon-api-client
