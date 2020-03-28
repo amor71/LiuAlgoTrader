@@ -380,9 +380,19 @@ def run(
                     f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-                macds = MACD(minute_history[symbol]["close"])
+                macds = MACD(
+                    minute_history[symbol]["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                )
 
-                sell_macds = MACD(minute_history[symbol]["close"], 13, 21,)
+                sell_macds = MACD(
+                    minute_history[symbol]["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00"),
+                    13,
+                    21,
+                )
 
                 macd1 = macds[0]
                 macd_signal = macds[1]
@@ -399,7 +409,13 @@ def run(
                     logger.log_text(
                         f"[{env}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    macd2 = MACD(minute_history[symbol]["close"], 40, 60,)[0]
+                    macd2 = MACD(
+                        minute_history[symbol]["close"]
+                        .dropna()
+                        .between_time("9:30", "16:00"),
+                        40,
+                        60,
+                    )[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         logger.log_text(
                             f"[{env}] MACD(40,60) for {symbol} trending up!"
@@ -479,7 +495,13 @@ def run(
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
-            macds = MACD(minute_history[symbol]["close"], 13, 21,)
+            macds = MACD(
+                minute_history[symbol]["close"]
+                .dropna()
+                .between_time("9:30", "16:00"),
+                13,
+                21,
+            )
 
             macd = macds[0]
             macd_signal = macds[1]
@@ -496,40 +518,41 @@ def run(
             below_cost_base = data.close <= latest_cost_basis[symbol]
 
             to_sell = False
+            partial_sell = False
             sell_reasons = []
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append(f"stopped")
-            if below_cost_base and macd_val <= 0:
+            elif below_cost_base and macd_val <= 0:
                 to_sell = True
                 sell_reasons.append(f"below cost & macd negative")
-            if data.close >= target_prices[symbol] and macd[-1] <= 0:
+            elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append(f"above target & macd negative")
-            if bail_out:
-                to_sell = True
-                sell_reasons.append(f"bail")
-            if scalp:
-                to_sell = True
-                sell_reasons.append(f"scale-out")
-            if rsi[-1] >= 78:
+            elif rsi[-1] >= 78:
                 to_sell = True
                 sell_reasons.append(f"rsi max")
+            elif bail_out:
+                to_sell = True
+                sell_reasons.append(f"bail")
+            elif scalp:
+                partial_sell = True
+                to_sell = True
+                sell_reasons.append(f"scale-out")
 
             if to_sell:
-
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
                         "movement": movement,
-                        "macd": macd[-5:].tolist(),
-                        "macd_signal": macd_signal[-5:].tolist(),
+                        "sell_macd": macd[-5:].tolist(),
+                        "sell_macd_signal": macd_signal[-5:].tolist(),
                         "reasons": " AND ".join(
                             [str(elem) for elem in sell_reasons]
                         ),
                     }
 
-                    if not scalp:
+                    if not partial_sell:
                         logger.log_text(
                             "[{}] Submitting sell for {} shares of {} at market".format(
                                 env, symbol_position, symbol
@@ -543,14 +566,15 @@ def run(
                             time_in_force="day",
                         )
                     else:
+                        qty = int(symbol_position / 3)
                         logger.log_text(
                             "[{}] Submitting sell for {} shares of {} at limit of {}".format(
-                                env, symbol_position, symbol, data.close
+                                env, str(qty), symbol, data.close
                             )
                         )
                         o = api.submit_order(
                             symbol=symbol,
-                            qty=str(int(symbol_position / 3)),
+                            qty=str(qty),
                             side="sell",
                             type="limit",
                             time_in_force="day",
