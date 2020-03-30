@@ -60,6 +60,89 @@ default_stop = 0.95
 risk = 0.001
 
 
+def grouper(iterable):
+    prev = None
+    group = []
+    for item in iterable:
+
+        if not prev or -0.01 <= float(item - prev) / prev <= 0.01:
+            group.append(item)
+        else:
+            yield group
+            group = [item]
+        prev = item
+    if group:
+        yield group
+
+
+def find_resistance(current_value, minute_history, now):
+    """calculate next resistance"""
+    minute_history_index = minute_history["high"].index.get_loc(
+        now, method="nearest"
+    )
+    series = (
+        minute_history["high"][
+            minute_history_index - 200 : minute_history_index
+        ]
+        .dropna()
+        .resample("5min")
+        .min()
+    )
+    print(f"current_value={current_value} series = {series.values}")
+    diff = np.diff(series.values)
+    high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+    if len(high_index) > 0:
+        local_maximas = sorted(
+            [series[i] for i in high_index if series[i] > current_value]
+        )
+        print(local_maximas)
+        clusters = dict(enumerate(grouper(local_maximas), 1))
+        print(clusters)
+        resistances = []
+        for key, cluster in clusters.items():
+            if len(cluster) > 1:
+                resistances.append(round(sum(cluster) / len(cluster), 2))
+        resistances = sorted(resistances)
+        print(f"resistances={resistances}")
+        return resistances
+
+    return None
+
+
+def find_support(current_value, minute_history, now):
+    """calculate support"""
+    minute_history_index = minute_history["high"].index.get_loc(
+        now, method="nearest"
+    )
+    series = (
+        minute_history["high"][
+            minute_history_index - 200 : minute_history_index
+        ]
+        .dropna()
+        .resample("5min")
+        .min()
+    )
+    print(f"current_value={current_value} series = {series.values}")
+    diff = np.diff(series.values)
+    high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+    if len(high_index) > 0:
+        local_maximas = sorted(
+            [series[i] for i in high_index if series[i] <= current_value]
+        )
+        print(local_maximas)
+        clusters = dict(enumerate(grouper(local_maximas), 1))
+        print(clusters)
+        supports = []
+        for key, cluster in clusters.items():
+            if len(cluster) > 1:
+                supports.append(round(sum(cluster) / len(cluster), 2))
+        supports = sorted(supports)
+        print(f"supports={supports}")
+        return supports
+
+    return None
+
+
 def get_1000m_history_data(api):
     """get ticker history"""
     global env
@@ -425,6 +508,16 @@ def run(
 
                         if rsi[-1] < 80:
                             logger.log_text(f"[{env}] RSI {rsi[-1]} < 80")
+                            resistance = find_resistance(
+                                data.close, minute_history[symbol], ts
+                            )
+
+                            if resistance is None or resistance == []:
+                                logger.log_text(
+                                    f"[{env}] no resistance for {symbol} -> skip buy"
+                                )
+                                return
+
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history[symbol], ts
