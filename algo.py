@@ -44,7 +44,8 @@ buy_indicators: Dict[str, Dict] = {}
 sell_indicators: Dict[str, Dict] = {}
 env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
-channels = ["trade_updates"]
+trade_channels = ["trade_updates"]
+data_channels = []
 conn = None
 db_conn_pool: Pool
 run_details = None
@@ -243,7 +244,8 @@ def run(
     global minute_history
     global volume_today
     global prev_closes
-    global channels
+    global data_channels
+    global trade_channels
 
     # Establish streaming connection
     trade_conn = tradeapi.StreamConn(
@@ -295,7 +297,7 @@ def run(
 
     for symbol in symbols[:80]:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
-        channels += symbol_channels
+        data_channels += symbol_channels
     logger.log_text("[{}] Watching {} symbols.".format(env, len(symbols)))
 
     # Use trade updates to keep track of our portfolio
@@ -745,81 +747,38 @@ def run(
         ]
         volume_today[data.symbol] += data.volume
 
-    run_ws(base_url, api_key_id, api_secret, trade_conn, data_conn, channels)
+    run_ws(
+        base_url,
+        api_key_id,
+        api_secret,
+        trade_conn,
+        data_conn,
+        trade_channels,
+        data_channels,
+    )
 
 
-def run_ws(base_url, api_key_id, api_secret, trade_conn, data_conn, channels):
+def run_ws(
+    base_url,
+    api_key_id,
+    api_secret,
+    trade_conn,
+    data_conn,
+    trade_channels,
+    data_channels,
+):
     """Handle failed websocket connections by reconnecting"""
     logger.log_text(f"[{env}] starting web-socket loop")
 
     try:
-        trade_conn.loop.run_until_complete(trade_conn.subscribe(channels))
-        data_conn.loop.run_until_complete(trade_conn.subscribe(channels))
+        trade_conn.loop.run_until_complete(
+            trade_conn.subscribe(trade_channels)
+        )
+        data_conn.loop.run_until_complete(trade_conn.subscribe(data_channels))
         data_conn.loop.run_forever()
     except Exception as e:
         print(str(e))
         error_logger.report_exception()
-
-
-async def harvest_task(
-    api: tradeapi.REST, tz: DstTzInfo, start_time: datetime, end_time: datetime
-):
-    global env
-    global symbols
-    global prev_closes
-    global volume_today
-    global conn
-    global channels
-    global db_conn
-    global run_details
-
-    dt = datetime.today().astimezone(tz)
-    to_start_time = start_time - dt
-
-    logger.log_text(
-        f"[{env}] harvest task waiting for start time: {to_start_time}"
-    )
-    print(f"harvest task waiting for start time: {to_start_time}")
-    await asyncio.sleep(to_start_time.total_seconds())
-
-    dt = datetime.today().astimezone(tz)
-    added_tickers_count = 0
-
-    while dt < end_time:
-        added_tickers_count_in_cycle = 0
-        symbols_channels = []
-        new_tickers = get_tickers(api)
-        if new_tickers is not None:
-            for candidate_ticker in new_tickers:
-                symbol = candidate_ticker.ticker
-                if symbol not in symbols:
-                    symbols.append(symbol)
-                    prev_closes[symbol] = candidate_ticker.prevDay["c"]
-                    volume_today[symbol] = candidate_ticker.day["v"]
-                    added_tickers_count += 1
-                    added_tickers_count_in_cycle += 1
-                    symbols_channels.append(
-                        ["A.{}".format(symbol), "AM.{}".format(symbol)]
-                    )
-
-            get_1000m_history_data(api)
-            for symbol_channels in symbols_channels:
-                if conn:
-                    await conn.subscribe(symbol_channels)
-                    channels += symbol_channels
-
-            logger.log_text(
-                f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
-            )
-        await asyncio.sleep(60)
-        dt = datetime.today().astimezone(tz)
-
-    print(
-        f"harvest task completed. total stocks {len(symbols)} total added {added_tickers_count}"
-    )
-    logger.log_text(
-        f"[{env}] harvest task completed. total stocks: {len(symbols)} total added {added_tickers_count}"
-    )
 
 
 async def save_start(
