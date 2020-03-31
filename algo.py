@@ -755,9 +755,7 @@ def run_ws(base_url, api_key_id, api_secret, conn, channels):
 
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
-            base_url=prod_base_url,
-            key_id=prod_api_key_id,
-            secret_key=prod_api_secret,
+            base_url=base_url, key_id=api_key_id, secret_key=api_secret,
         )
         run_ws(base_url, api_key_id, api_secret, conn, channels)
 
