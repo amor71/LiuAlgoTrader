@@ -227,6 +227,7 @@ def run(
     market_open_dt,
     market_close_dt,
     api,
+    prod_api,
     base_url,
     api_key_id,
     api_secret,
@@ -246,7 +247,9 @@ def run(
 
     # Establish streaming connection
     conn = tradeapi.StreamConn(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret
+        base_url=prod_base_url,
+        key_id=prod_api_key_id,
+        secret_key=prod_api_secret,
     )
     # Update initial state with information from tickers
     for ticker in tickers:
@@ -255,7 +258,7 @@ def run(
         volume_today[symbol] = ticker.day["v"]
     symbols = [ticker.ticker for ticker in tickers]
     logger.log_text("[{}] Tracking {} symbols.".format(env, len(symbols)))
-    get_1000m_history_data(api)
+    get_1000m_history_data(prod_api)
 
     portfolio_value = float(api.get_account().portfolio_value)
 
@@ -754,7 +757,9 @@ def run_ws(base_url, api_key_id, api_secret, conn, channels):
 
         # re-establish streaming connection
         conn = tradeapi.StreamConn(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret
+            base_url=prod_base_url,
+            key_id=prod_api_key_id,
+            secret_key=prod_api_secret,
         )
         run_ws(base_url, api_key_id, api_secret, conn, channels)
 
@@ -894,11 +899,16 @@ def main():
     api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
+    prod_api = tradeapi.REST(
+        base_url=prod_base_url,
+        key_id=prod_api_key_id,
+        secret_key=prod_api_secret,
+    )
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
     today_str = datetime.today().astimezone(nyc).strftime("%Y-%m-%d")
-    calendar = api.get_calendar(start=today_str, end=today_str)[0]
+    calendar = prod_api.get_calendar(start=today_str, end=today_str)[0]
     market_open = today.replace(
         hour=calendar.open.hour, minute=calendar.open.minute, second=0
     )
@@ -950,10 +960,11 @@ def main():
         )
         asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
-            get_tickers(api),
+            get_tickers(prod_api),
             market_open,
             market_close,
             api,
+            prod_api,
             base_url,
             api_key_id,
             api_secret,
