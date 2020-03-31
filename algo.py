@@ -246,8 +246,13 @@ def run(
     global channels
 
     # Establish streaming connection
-    conn = tradeapi.StreamConn(
+    trade_conn = tradeapi.StreamConn(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+    )
+    data_conn = tradeapi.StreamConn(
+        base_url=prod_base_url,
+        key_id=prod_api_key_id,
+        secret_key=prod_api_secret,
     )
     # Update initial state with information from tickers
     for ticker in tickers:
@@ -294,7 +299,7 @@ def run(
     logger.log_text("[{}] Watching {} symbols.".format(env, len(symbols)))
 
     # Use trade updates to keep track of our portfolio
-    @conn.on(r"trade_update")
+    @trade_conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
         global env
         global run_details
@@ -370,7 +375,7 @@ def run(
                 f"[{env}] {data.event} trade update for {symbol} WITHOUT ORDER"
             )
 
-    @conn.on(r"A$")
+    @data_conn.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         global env
         symbol = data.symbol
@@ -727,7 +732,7 @@ def run(
                 error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
-    @conn.on(r"AM$")
+    @data_conn.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         ts = data.start
         ts -= timedelta(microseconds=ts.microsecond)
@@ -740,24 +745,20 @@ def run(
         ]
         volume_today[data.symbol] += data.volume
 
-    run_ws(base_url, api_key_id, api_secret, conn, channels)
+    run_ws(base_url, api_key_id, api_secret, trade_conn, data_conn, channels)
 
 
-def run_ws(base_url, api_key_id, api_secret, conn, channels):
+def run_ws(base_url, api_key_id, api_secret, trade_conn, data_conn, channels):
     """Handle failed websocket connections by reconnecting"""
     logger.log_text(f"[{env}] starting web-socket loop")
 
     try:
-        conn.run(channels)
+        trade_conn.loop.run_until_complete(trade_conn.subscribe(channels))
+        data_conn.loop.run_until_complete(trade_conn.subscribe(channels))
+        data_conn.loop.run_forever()
     except Exception as e:
         print(str(e))
         error_logger.report_exception()
-
-        # re-establish streaming connection
-        conn = tradeapi.StreamConn(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret,
-        )
-        run_ws(base_url, api_key_id, api_secret, conn, channels)
 
 
 async def harvest_task(
