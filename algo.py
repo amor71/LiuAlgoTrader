@@ -46,7 +46,8 @@ env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
 trade_channels = ["trade_updates"]
 data_channels = []
-conn = None
+data_conn = None
+trade_conn = None
 db_conn_pool: Pool
 run_details = None
 
@@ -239,7 +240,8 @@ def run(
     if tickers is None:
         return
     global env
-    global conn
+    global data_conn
+    global trade_conn
     global symbols
     global minute_history
     global volume_today
@@ -774,7 +776,7 @@ def run_ws(
         trade_conn.loop.run_until_complete(
             trade_conn.subscribe(trade_channels)
         )
-        data_conn.loop.run_until_complete(trade_conn.subscribe(data_channels))
+        data_conn.loop.run_until_complete(data_conn.subscribe(data_channels))
         data_conn.loop.run_forever()
     except Exception as e:
         print(str(e))
