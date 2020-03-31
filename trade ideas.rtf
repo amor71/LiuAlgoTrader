@@ -2,7 +2,7 @@
 \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
 {\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww18800\viewh12200\viewkind0
+\margl1440\margr1440\vieww11100\viewh8700\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\fs24 \cf0 \
@@ -49,6 +49,19 @@ Next:\
 Calculate support for 9:45am jump and check if it holds.\
 \
 \
+\
+\
+\
+Task exception was never retrieved\
+future: <Task finished name='Task-2' coro=<teardown_task() done, defined at algo.py:798> exception=NameError("name 'db_conn_pool' is not defined")>\
+Traceback (most recent call last):\
+  File "algo.py", line 817, in teardown_task\
+    await end_time("market close")\
+  File "algo.py", line 828, in end_time\
+    await run_details.update_end_time(pool=db_conn_pool, end_reason=reason)\
+NameError: name 'db_conn_pool' is not defined\
+current_value=16.19 series = [15.74   15.6695 15.7    15.8    15.79   15.75   15.66   15.6101 15.6099\
+ 15.66   15.545  15.585  15.56   15.5799 15.71   15.6699 15.626  15.58\
 \
 \
 }
