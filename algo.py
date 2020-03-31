@@ -728,7 +728,8 @@ def run(
             try:
                 if symbol in symbol:
                     symbols.remove(symbol)
-                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                await data_conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                await trade_conn.unsubscribe(trade_channels)
                 logger.log_text(f"[{env}] {len(symbols)} channels left")
             except ValueError:
                 pass
@@ -796,8 +797,6 @@ async def save_start(
 
 
 async def teardown_task(tz: DstTzInfo, market_close: datetime):
-    global conn
-
     dt = datetime.today().astimezone(tz)
     to_market_close = market_close - dt
 
