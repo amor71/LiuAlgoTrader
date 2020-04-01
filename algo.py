@@ -86,8 +86,8 @@ def find_resistance(current_value, minute_history, now):
         minute_history["high"][
             minute_history_index - 200 : minute_history_index
         ]
-        .dropna()
         .resample("5min")
+        .dropna()
         .min()
     )
     print(f"current_value={current_value} series = {series.values}")
@@ -120,8 +120,8 @@ def find_support(current_value, minute_history, now):
         minute_history["high"][
             minute_history_index - 200 : minute_history_index
         ]
-        .dropna()
         .resample("5min")
+        .dropna()
         .min()
     )
     print(f"current_value={current_value} series = {series.values}")
