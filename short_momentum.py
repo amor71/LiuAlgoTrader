@@ -426,7 +426,7 @@ def run(
                                     )
                                 )
                                 try:
-                                    buy_indicators[symbol] = {
+                                    sell_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
                                         "macd": macd1[-5:].tolist(),
                                         "macd_signal": macd_signal[
@@ -493,7 +493,7 @@ def run(
 
             if to_sell:
                 try:
-                    sell_indicators[symbol] = {
+                    buy_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
