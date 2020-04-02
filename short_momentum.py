@@ -1,5 +1,5 @@
 """
-Momentum Trading Algorithm
+Short Momentum Trading Algorithm
 """
 import asyncio
 import os
@@ -9,20 +9,24 @@ from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import asyncpg
-import git
 import numpy as np
+import pygit2
 import requests
 from alpaca_trade_api.entity import Order
+from asyncpg.pool import Pool
 from google.cloud import error_reporting, logging
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 from talib import MACD, RSI
 
+import config
+from market_data import get_historical_data, get_tickers
 from models.algo_run import AlgoRun
-from models.trades import Trade
+from models.new_trades import NewTrade
+from support_resistance import find_resistances, find_supports
 
 client = logging.Client()
-logger = client.logger("algo")
+logger = client.logger("short_momentum")
 error_logger = error_reporting.Client()
 
 # Replace these with your API connection info from the dashboard
@@ -41,98 +45,16 @@ volume_today = {}
 prev_closes = {}
 buy_indicators: Dict[str, Dict] = {}
 sell_indicators: Dict[str, Dict] = {}
-trades = {}
 env = os.getenv("TRADE", "PAPER")
 dsn = os.getenv("DSN", None)
-channels = ["trade_updates"]
-conn = None
-db_conn_pool = None
+trade_channels = ["trade_updates"]
+data_channels = []
+data_conn = None
+trade_conn = None
+db_conn_pool: Pool
 run_details = None
-
-# We only consider stocks with per-share prices inside this range
-min_share_price = 2.0
-max_share_price = 20.0
-# Minimum previous-day dollar volume for a stock we might consider
-min_last_dv = 500000
-# Stop limit to default to
-default_stop = 0.95
-# How much of our portfolio to allocate to any one position
-risk = 0.001
-
-
-def get_1000m_history_data(api):
-    """get ticker history"""
-    global env
-    global minute_history
-    global symbols
-    logger.log_text(f"[{env}] Getting historical data...")
-    c = 0
-    exclude_symbols = []
-    for symbol in symbols:
-        if symbol not in minute_history:
-            retry_counter = 5
-            while retry_counter > 0:
-                try:
-                    minute_history[symbol] = api.polygon.historic_agg(
-                        size="minute", symbol=symbol, limit=1000
-                    ).df
-                    break
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                ):
-                    retry_counter -= 1
-                    if retry_counter == 0:
-                        error_logger.report_exception()
-                        exclude_symbols.append(symbol)
-            c += 1
-            logger.log_text(f"[{env}] {symbol} {c}/{len(symbols)}")
-
-    for x in exclude_symbols:
-        symbols.remove(x)
-
-
-def get_tickers(api):
-    """get all tickets"""
-    global env
-    logger.log_text(f"[{env}] Getting current ticker data...")
-    max_retries = 5
-    while max_retries > 0:
-        tickers = api.polygon.all_tickers()
-        assets = api.list_assets()
-        tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
-        rc = [
-            ticker
-            for ticker in tickers
-            if (
-                ticker.ticker in tradable_symbols
-                and max_share_price >= ticker.lastTrade["p"] >= min_share_price
-                and ticker.prevDay["v"] * ticker.lastTrade["p"] > min_last_dv
-                and ticker.todaysChangePerc >= 3.5
-            )
-        ]
-        if len(rc) > 0:
-            return rc
-
-        logger.log_text(f"[{env}] got no data :-( waiting then re-trying")
-        print("no tickers :-( waiting and retrying")
-        time.sleep(30)
-        max_retries -= 1
-
-    logger.log_text(f"[{env}] got no data :-( giving up")
-    print("got no data :-( giving up")
-    return None
-
-
-def find_stop(current_value, minute_history, now):
-    """calculate stop loss"""
-    series = minute_history["low"][-100:].dropna().resample("5min").min()
-    series = series[now.floor("1D") :]
-    diff = np.diff(series.values)
-    low_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
-    if len(low_index) > 0:
-        return series[low_index[-1]] - 0.01
-    return current_value * default_stop
+strategy_name: str
+resistances: Dict[str, List] = {}
 
 
 def run(
@@ -140,6 +62,7 @@ def run(
     market_open_dt,
     market_close_dt,
     api,
+    prod_api,
     base_url,
     api_key_id,
     api_secret,
@@ -149,17 +72,26 @@ def run(
 
     if tickers is None:
         return
+
     global env
-    global conn
+    global data_conn
+    global trade_conn
     global symbols
     global minute_history
     global volume_today
     global prev_closes
-    global channels
+    global data_channels
+    global trade_channels
+    global strategy_name
 
     # Establish streaming connection
-    conn = tradeapi.StreamConn(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret
+    trade_conn = tradeapi.StreamConn(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+    )
+    data_conn = tradeapi.StreamConn(
+        base_url=prod_base_url,
+        key_id=prod_api_key_id,
+        secret_key=prod_api_secret,
     )
     # Update initial state with information from tickers
     for ticker in tickers:
@@ -167,8 +99,14 @@ def run(
         prev_closes[symbol] = ticker.prevDay["c"]
         volume_today[symbol] = ticker.day["v"]
     symbols = [ticker.ticker for ticker in tickers]
-    logger.log_text("[{}] Tracking {} symbols.".format(env, len(symbols)))
-    get_1000m_history_data(api)
+    logger.log_text(
+        "[{}][{}] Tracking {} symbols.".format(
+            env, strategy_name, len(symbols)
+        )
+    )
+    minute_history = get_historical_data(
+        logger=logger, env=env, strategy_name=strategy_name, api=prod_api
+    )
 
     portfolio_value = float(api.get_account().portfolio_value)
 
@@ -179,7 +117,9 @@ def run(
     existing_orders = api.list_orders(limit=500)
     for order in existing_orders:
         if order.symbol in symbols:
-            logger.log_text(f"[{env}] cancel open order of {order.symbol}")
+            logger.log_text(
+                f"[{env}][{strategy_name}] cancel open order of {order.symbol}"
+            )
             api.cancel_order(order.id)
 
     stop_prices = {}
@@ -193,31 +133,37 @@ def run(
             # Recalculate cost basis and stop price
             latest_cost_basis[position.symbol] = float(position.cost_basis)
             stop_prices[position.symbol] = (
-                float(position.cost_basis) * default_stop
+                float(position.cost_basis) * config.default_stop
             )
 
     # Keep track of what we're buying/selling
     target_prices = {}
     partial_fills = {}
 
-    for symbol in symbols:
+    for symbol in symbols[:80]:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
-        channels += symbol_channels
-    logger.log_text("[{}] Watching {} symbols.".format(env, len(symbols)))
+        data_channels += symbol_channels
+    logger.log_text(
+        "[{}][{}] Watching {} symbols.".format(
+            env, strategy_name, len(symbols)
+        )
+    )
 
     # Use trade updates to keep track of our portfolio
-    @conn.on(r"trade_update")
+    @trade_conn.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
         global env
         global run_details
-        global trades
         global buy_indicators
         global db_conn_pool
+        global strategy_name
 
         symbol = data.order["symbol"]
         last_order = open_orders.get(symbol)
         if last_order is not None:
-            logger.log_text(f"[{env}] {data.event} trade update for {symbol}")
+            logger.log_text(
+                f"[{env}][{strategy_name}] {data.event} trade update for {symbol}"
+            )
             event = data.event
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
@@ -241,27 +187,37 @@ def run(
 
                 if data.order["side"] == "buy":
                     print(data.order)
-                    trades[symbol] = Trade(
+                    db_trade = NewTrade(
                         algo_run_id=run_details.algo_run_id,
                         symbol=symbol,
                         qty=qty,
+                        operation="buy",
                         price=float(data.order["filled_avg_price"]),
                         indicators=buy_indicators[symbol],
                     )
-                    await trades[symbol].save_buy(db_conn_pool, data.timestamp)
+                    await db_trade.save(
+                        db_conn_pool,
+                        data.timestamp,
+                        stop_prices[symbol],
+                        target_prices[symbol],
+                    )
                     buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
-                    if (
-                        trades[symbol] is not None
-                        and sell_indicators[symbol] is not None
-                    ):
-                        await trades[symbol].save_sell(
-                            db_conn_pool,
-                            float(data.order["filled_avg_price"]),
-                            sell_indicators[symbol],
-                            data.timestamp,
+                    if sell_indicators[symbol] is not None:
+                        db_trade = NewTrade(
+                            algo_run_id=run_details.algo_run_id,
+                            symbol=symbol,
+                            qty=-qty,
+                            operation="sell",
+                            price=float(data.order["filled_avg_price"]),
+                            indicators=sell_indicators[symbol],
                         )
-                    trades[symbol] = None
+                        await db_trade.save(
+                            db_conn_pool,
+                            data.timestamp,
+                            stop_prices[symbol],
+                            target_prices[symbol],
+                        )
                     sell_indicators[symbol] = None
 
                 open_orders[symbol] = None
@@ -270,12 +226,13 @@ def run(
                 open_orders[symbol] = None
         else:
             logger.log_text(
-                f"[{env}] {data.event} trade update for {symbol} WITHOUT ORDER"
+                f"[{env}][{strategy_name}] {data.event} trade update for {symbol} WITHOUT ORDER"
             )
 
-    @conn.on(r"A$")
+    @data_conn.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         global env
+        global strategy_name
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -324,14 +281,14 @@ def run(
                 ):
                     # Cancel it so we can try again for a fill
                     logger.log_text(
-                        f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"
+                        f"[{env}][{strategy_name}] Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"
                     )
                     api.cancel_order(existing_order.id)
                 return
             except AttributeError:
                 error_logger.report_exception()
                 logger.log_text(
-                    f"[{env}] Attribute Error in symbol {symbol} w/ {existing_order}"
+                    f"[{env}][{strategy_name}] Attribute Error in symbol {symbol} w/ {existing_order}"
                 )
 
         # Now we check to see if it might be time to buy or sell
@@ -364,7 +321,7 @@ def run(
                 and volume_today[symbol] > 30000
             ):
                 logger.log_text(
-                    f"[{env}] {symbol} high_15m={high_15m} data.close={data.close}"
+                    f"[{env}][{strategy_name}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
                 macds = MACD(
@@ -394,7 +351,7 @@ def run(
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     logger.log_text(
-                        f"[{env}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
+                        f"[{env}][{strategy_name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
                     macd2 = MACD(
                         minute_history[symbol]["close"]
@@ -405,48 +362,73 @@ def run(
                     )[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         logger.log_text(
-                            f"[{env}] MACD(40,60) for {symbol} trending up!"
+                            f"[{env}][{strategy_name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"], 14)
 
-                        if rsi[-1] < 75:
-                            logger.log_text(f"[{env}] RSI {rsi[-1]} < 75")
-                            # Stock has passed all checks; figure out how much to buy
-                            stop_price = find_stop(
-                                data.close, minute_history[symbol], ts
+                        if rsi[-1] > 70:
+                            logger.log_text(
+                                f"[{env}][{strategy_name}] RSI {rsi[-1]} < 80"
                             )
-                            stop_prices[symbol] = stop_price
-                            target_prices[symbol] = (
-                                data.close + (data.close - stop_price) * 3
+                            supports = find_supports(
+                                logger=logger,
+                                env=env,
+                                strategy_name=strategy_name,
+                                current_value=data.close,
+                                minute_history=minute_history[symbol],
+                                now=ts,
                             )
+                            resistances = find_resistances(
+                                logger=logger,
+                                env=env,
+                                strategy_name=strategy_name,
+                                current_value=data.close,
+                                minute_history=minute_history[symbol],
+                                now=ts,
+                            )
+                            if supports is None or supports == []:
+                                logger.log_text(
+                                    f"[{env}][{strategy_name}] no supports for {symbol} -> skip short buy"
+                                )
+                                return
+
+                            if resistances is None or resistances == []:
+                                logger.log_text(
+                                    f"[{env}][{strategy_name}] no resistances for {symbol} -> skip short buy"
+                                )
+                                return
+
+                            stop_prices[symbol] = resistances[0]
+                            target_prices[symbol] = supports[-1]
                             shares_to_buy = (
                                 portfolio_value
-                                * risk
-                                // (data.close - stop_price)
+                                * config.risk
+                                // (stop_prices[symbol] - data.close)
                             )
                             if not shares_to_buy:
                                 shares_to_buy = 1
                             shares_to_buy -= positions.get(symbol, 0)
                             if shares_to_buy > 0:
                                 logger.log_text(
-                                    "[{}] Submitting buy for {} shares of {} at {} target {} stop {}".format(
+                                    "[{}][{}] Submitting short sell for {} shares of {} at {} target {} stop {}".format(
                                         env,
+                                        strategy_name,
                                         shares_to_buy,
                                         symbol,
                                         data.close,
                                         target_prices[symbol],
-                                        stop_price,
+                                        stop_prices[symbol],
                                     )
                                 )
                                 try:
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
-                                        "macd1": macd1[-5:].tolist(),
-                                        "macd2": macd2[-5:].tolist(),
+                                        "macd": macd1[-5:].tolist(),
                                         "macd_signal": macd_signal[
                                             -5:
                                         ].tolist(),
+                                        "slow macd": macd2[-5:].tolist(),
                                         "sell_macd": sell_macds[0][
                                             -5:
                                         ].tolist(),
@@ -457,10 +439,9 @@ def run(
                                     o = api.submit_order(
                                         symbol=symbol,
                                         qty=str(shares_to_buy),
-                                        side="buy",
-                                        type="limit",
+                                        side="sell",
+                                        type="market",
                                         time_in_force="day",
-                                        limit_price=str(data.close),
                                     )
                                     open_orders[symbol] = o
                                     latest_cost_basis[symbol] = data.close
@@ -470,7 +451,7 @@ def run(
                                     error_logger.report_exception()
                     else:
                         logger.log_text(
-                            f"[{env}] failed MACD(40,60) for {symbol}!"
+                            f"[{env}][{strategy_name}] failed MACD(40,60) for {symbol}!"
                         )
 
         if (
@@ -492,66 +473,45 @@ def run(
 
             macd = macds[0]
             macd_signal = macds[1]
-
-            # d1 = macd[-4] - macd_signal[-4]
-            # d2 = macd[-3] - macd_signal[-3]
-            d3 = macd[-2] - macd_signal[-2]
-            d4 = macd[-1] - macd_signal[-1]
-            too_close = True if (d4 < d3 and d4 < 0.001) else False
             rsi = RSI(minute_history[symbol]["close"], 14)
             movement = (
                 data.close - latest_cost_basis[symbol]
             ) / latest_cost_basis[symbol]
-            macd_val = macd[-1]
-            macd_signal_val = macd_signal[-1].round(2)
 
-            macd_below_signal = macd_val < macd_signal_val
-            bail_out = movement > 0.02 and macd_below_signal
-            scalp = movement > 0.05
-            below_cost_base = (
-                data.close <= latest_cost_basis[symbol]
-            )  # movement <= -0.045
-            if (
-                data.close <= stop_prices[symbol]
-                # or ((macd_below_signal or macd_val <= 0) and below_cost_base)
-                or (below_cost_base and macd_val <= 0)
-                or (data.close >= target_prices[symbol] and macd[-1] <= 0)
-                or bail_out
-                or scalp
-                or rsi[-1] >= 78
-            ):
-                logger.log_text(
-                    "[{}] Submitting sell for {} shares of {} at {}".format(
-                        env, symbol_position, symbol, data.close
-                    )
-                )
+            to_sell = False
+            sell_reasons = []
+            if data.close >= stop_prices[symbol]:
+                to_sell = True
+                sell_reasons.append(f"stopped")
+            elif data.close <= target_prices[symbol]:
+                to_sell = True
+                sell_reasons.append(f"target")
+
+            if to_sell:
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-1].tolist(),
-                        "data.close <= stop_prices": int(
-                            data.close <= stop_prices[symbol]
-                        ),
-                        "macd": macd[-5:].tolist(),
-                        "data.close >= target_prices": int(
-                            data.close >= target_prices[symbol]
-                        ),
-                        "macd_signal": macd_signal[-5:].tolist(),
-                        "too_close": int(too_close),
-                        "distance_macd_to_signal_macd": d4,
-                        "bail_out": int(bail_out),
-                        "scalp": int(scalp),
-                        "below_cost_base": int(below_cost_base),
-                        "macd_below_signal": int(macd_below_signal),
                         "movement": movement,
+                        "sell_macd": macd[-5:].tolist(),
+                        "sell_macd_signal": macd_signal[-5:].tolist(),
+                        "reasons": " AND ".join(
+                            [str(elem) for elem in sell_reasons]
+                        ),
                     }
+
+                    logger.log_text(
+                        "[{}][{}] Submitting short buy for {} shares of {} at market".format(
+                            env, strategy_name, symbol_position, symbol
+                        )
+                    )
                     o = api.submit_order(
                         symbol=symbol,
                         qty=str(symbol_position),
-                        side="sell",
+                        side="buy",
                         type="market",
                         time_in_force="day",
-                        #        limit_price=str(data.close),
                     )
+
                     open_orders[symbol] = o
                     latest_cost_basis[symbol] = data.close
                     return
@@ -560,12 +520,12 @@ def run(
 
         if until_market_close.seconds // 60 <= 15:
             logger.log_text(
-                f"[{env}] {until_market_close.seconds // 60} minutes to market close for {symbol}"
+                f"[{env}][{strategy_name}] {until_market_close.seconds // 60} minutes to market close for {symbol}"
             )
             if symbol_position:
                 logger.log_text(
-                    "[{}] Trading over, trying to liquidating remaining position in {}".format(
-                        env, symbol
+                    "[{}][{}] Trading over, trying to liquidating remaining position in {}".format(
+                        env, strategy_name, symbol
                     )
                 )
                 try:
@@ -582,7 +542,7 @@ def run(
                     o = api.submit_order(
                         symbol=symbol,
                         qty=str(symbol_position),
-                        side="sell",
+                        side="buy",
                         type="market",
                         time_in_force="day",
                     )
@@ -592,19 +552,24 @@ def run(
                     error_logger.report_exception()
                 return
 
-            logger.log_text(f"[{env}] unsubscribe channels for {symbol}")
+            logger.log_text(
+                f"[{env}][{strategy_name}] unsubscribe channels for {symbol}"
+            )
             try:
                 if symbol in symbol:
                     symbols.remove(symbol)
-                await conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                logger.log_text(f"[{env}] {len(symbols)} channels left")
+                await data_conn.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+                await trade_conn.unsubscribe(trade_channels)
+                logger.log_text(
+                    f"[{env}][{strategy_name}] {len(symbols)} channels left"
+                )
             except ValueError:
                 pass
             except Exception:
                 error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
-    @conn.on(r"AM$")
+    @data_conn.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         ts = data.start
         ts -= timedelta(microseconds=ts.microsecond)
@@ -617,107 +582,61 @@ def run(
         ]
         volume_today[data.symbol] += data.volume
 
-    run_ws(base_url, api_key_id, api_secret, conn, channels)
+    run_ws(
+        base_url,
+        api_key_id,
+        api_secret,
+        trade_conn,
+        data_conn,
+        trade_channels,
+        data_channels,
+    )
 
 
-def run_ws(base_url, api_key_id, api_secret, conn, channels):
+def run_ws(
+    base_url,
+    api_key_id,
+    api_secret,
+    trade_conn,
+    data_conn,
+    trade_channels,
+    data_channels,
+):
+    global strategy_name
     """Handle failed websocket connections by reconnecting"""
-    logger.log_text(f"[{env}] starting web-socket loop")
+    logger.log_text(f"[{env}][{strategy_name}] starting web-socket loop")
 
     try:
-        conn.run(channels)
+        trade_conn.loop.run_until_complete(
+            trade_conn.subscribe(trade_channels)
+        )
+        data_conn.loop.run_until_complete(data_conn.subscribe(data_channels))
+        data_conn.loop.run_forever()
     except Exception as e:
         print(str(e))
         error_logger.report_exception()
-
-        # re-establish streaming connection
-        conn = tradeapi.StreamConn(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret
-        )
-        run_ws(base_url, api_key_id, api_secret, conn, channels)
-
-
-async def harvest_task(
-    api: tradeapi.REST, tz: DstTzInfo, start_time: datetime, end_time: datetime
-):
-    global env
-    global symbols
-    global prev_closes
-    global volume_today
-    global conn
-    global channels
-    global db_conn
-    global run_details
-
-    dt = datetime.today().astimezone(tz)
-    to_start_time = start_time - dt
-
-    logger.log_text(
-        f"[{env}] harvest task waiting for start time: {to_start_time}"
-    )
-    print(f"harvest task waiting for start time: {to_start_time}")
-    await asyncio.sleep(to_start_time.total_seconds())
-
-    dt = datetime.today().astimezone(tz)
-    added_tickers_count = 0
-
-    while dt < end_time:
-        added_tickers_count_in_cycle = 0
-        symbols_channels = []
-        new_tickers = get_tickers(api)
-        if new_tickers is not None:
-            for candidate_ticker in new_tickers:
-                symbol = candidate_ticker.ticker
-                if symbol not in symbols:
-                    symbols.append(symbol)
-                    prev_closes[symbol] = candidate_ticker.prevDay["c"]
-                    volume_today[symbol] = candidate_ticker.day["v"]
-                    added_tickers_count += 1
-                    added_tickers_count_in_cycle += 1
-                    symbols_channels.append(
-                        ["A.{}".format(symbol), "AM.{}".format(symbol)]
-                    )
-
-            get_1000m_history_data(api)
-            for symbol_channels in symbols_channels:
-                if conn:
-                    await conn.subscribe(symbol_channels)
-                    channels += symbol_channels
-
-            logger.log_text(
-                f"[{env}] harvest cycle completed. added {added_tickers_count_in_cycle}"
-            )
-        await asyncio.sleep(60)
-        dt = datetime.today().astimezone(tz)
-
-    print(
-        f"harvest task completed. total stocks {len(symbols)} total added {added_tickers_count}"
-    )
-    logger.log_text(
-        f"[{env}] harvest task completed. total stocks: {len(symbols)} total added {added_tickers_count}"
-    )
 
 
 async def save_start(
     name: str, environment: str, build: str, parameters: dict
 ):
-    logger.log_text(f"[{env}] save_start task starting")
+    global strategy_name
+    logger.log_text(f"[{env}][{strategy_name}] save_start task starting")
     global run_details
     run_details = AlgoRun(name, environment, build, parameters)
     await set_db_connection(str(dsn))
     global db_conn_pool
     await run_details.save(pool=db_conn_pool)
-    logger.log_text(f"[{env}] save_start task ended")
+    logger.log_text(f"[{env}][{strategy_name}] save_start task ended")
 
 
 async def teardown_task(tz: DstTzInfo, market_close: datetime):
-    global conn
-
+    global strategy_name
     dt = datetime.today().astimezone(tz)
     to_market_close = market_close - dt
 
     logger.log_text(
-        f"[{env}] tear-down task waiting for market close: {to_market_close}"
+        f"[{env}][{strategy_name}] tear-down task waiting for market close: {to_market_close}"
     )
     print(f"tear down waiting for market close: {to_market_close}")
 
@@ -725,14 +644,16 @@ async def teardown_task(tz: DstTzInfo, market_close: datetime):
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 10)
     except asyncio.CancelledError:
         print("teardown_task() cancelled during sleep")
-        logger.log_text("teardown_task() cancelled during sleep")
+        logger.log_text(
+            f"[{strategy_name}]teardown_task() cancelled during sleep"
+        )
     else:
-        logger.log_text("tear down task starting")
+        logger.log_text(f"[{strategy_name}]tear down task starting")
         print("tear down task starting")
         await end_time("market close")
         asyncio.get_running_loop().stop()
     finally:
-        logger.log_text(f"[{env}]tear down task done.")
+        logger.log_text(f"[{env}][{strategy_name}]tear down task done.")
         print("tear down task done.")
 
 
@@ -751,9 +672,11 @@ async def set_db_connection(dsn: str):
 
 
 def main():
-    r = git.repo.Repo("./")
-    label = r.git.describe()
+    r = pygit2.Repository("./")
+    label = r.describe()
     filename = os.path.basename(__file__)
+    global strategy_name
+    strategy_name = filename
     msg = f"{filename} {label} starting!"
     logger.log_text(msg)
     print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
@@ -772,11 +695,16 @@ def main():
     api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
+    prod_api = tradeapi.REST(
+        base_url=prod_base_url,
+        key_id=prod_api_key_id,
+        secret_key=prod_api_secret,
+    )
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")
     today = datetime.today().astimezone(nyc)
     today_str = datetime.today().astimezone(nyc).strftime("%Y-%m-%d")
-    calendar = api.get_calendar(start=today_str, end=today_str)[0]
+    calendar = prod_api.get_calendar(start=today_str, end=today_str)[0]
     market_open = today.replace(
         hour=calendar.open.hour, minute=calendar.open.minute, second=0
     )
@@ -810,14 +738,6 @@ def main():
 
         logger.log_text(f"[{env}] ready to start!")
         print("ready to start!")
-        # _task_1 = asyncio.ensure_future(
-        #    harvest_task(
-        #        api,
-        #        nyc,
-        #        market_open + timedelta(minutes=15),
-        #        market_open + timedelta(minutes=90),
-        #    )
-        # )
         asyncio.ensure_future(
             save_start(
                 filename,
@@ -828,10 +748,16 @@ def main():
         )
         asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
-            get_tickers(api),
+            get_tickers(
+                logger=logger,
+                env=env,
+                strategy_name=strategy_name,
+                api=prod_api,
+            ),
             market_open,
             market_close,
             api,
+            prod_api,
             base_url,
             api_key_id,
             api_secret,

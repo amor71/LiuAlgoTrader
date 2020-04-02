@@ -17,3 +17,4 @@ psycopg2-binary
 sqlalchemy
 pygit2
 polygon-api-client
+google-cloud-error-reporting
