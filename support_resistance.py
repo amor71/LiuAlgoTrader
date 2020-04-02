@@ -65,7 +65,7 @@ def find_resistances(
 
         resistances = []
         for key, cluster in clusters.items():
-            if len(cluster) > 1:
+            if len(cluster) > 0:
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
@@ -121,7 +121,7 @@ def find_supports(
 
         resistances = []
         for key, cluster in clusters.items():
-            if len(cluster) > 1:
+            if len(cluster) > 0:
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
