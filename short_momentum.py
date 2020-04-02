@@ -370,11 +370,11 @@ def run(
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history[symbol]["close"], 14)
+                        logger.log_text(
+                            f"[{env}][{strategy_name}] RSI {rsi[-1]} "
+                        )
+                        if rsi[-1] > 65:
 
-                        if rsi[-1] > 70:
-                            logger.log_text(
-                                f"[{env}][{strategy_name}] RSI {rsi[-1]} < 80"
-                            )
                             supports = find_supports(
                                 logger=logger,
                                 env=env,
