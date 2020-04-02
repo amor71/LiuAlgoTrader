@@ -105,7 +105,11 @@ def run(
         )
     )
     minute_history = get_historical_data(
-        logger=logger, env=env, strategy_name=strategy_name, api=prod_api
+        my_logger=logger,
+        env=env,
+        strategy_name=strategy_name,
+        api=prod_api,
+        symbols=symbols,
     )
 
     portfolio_value = float(api.get_account().portfolio_value)
@@ -749,7 +753,7 @@ def main():
         asyncio.ensure_future(teardown_task(nyc, market_close))
         run(
             get_tickers(
-                logger=logger,
+                my_logger=logger,
                 env=env,
                 strategy_name=strategy_name,
                 api=prod_api,
