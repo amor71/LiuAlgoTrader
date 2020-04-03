@@ -490,6 +490,9 @@ def run(
             elif data.close <= target_prices[symbol]:
                 to_sell = True
                 sell_reasons.append(f"target")
+            elif rsi <= 30.0:
+                to_sell = True
+                sell_reasons.append(f"low RSI")
 
             if to_sell:
                 try:
