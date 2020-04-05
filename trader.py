@@ -278,11 +278,9 @@ async def run(
         volume_today[data.symbol] += data.volume
 
     try:
-        trading_ws.loop.run_until_complete(
-            trading_ws.subscribe(trade_channels)
-        )
-        data_ws.loop.run_until_complete(data_ws.subscribe(data_channels))
-        data_ws.loop.run_forever()
+        await trading_ws.subscribe(trade_channels)
+        await data_ws.subscribe(data_channels)
+
     except Exception as e:
         tlog(f"Exception {e}")
         error_logger.report_exception()
@@ -449,6 +447,7 @@ def main():
         _trade_ws = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret,
         )
+        asyncio.ensure_future(teardown_task(nyc))
 
         asyncio.ensure_future(
             start_strategies(
@@ -458,7 +457,18 @@ def main():
                 data_ws=_data_ws,
             )
         )
-        asyncio.ensure_future(teardown_task(nyc))
+
+        try:
+            asyncio.get_event_loop().run_forever()
+        except KeyboardInterrupt:
+            tlog(f"Caught KeyboardInterrupt")
+            asyncio.get_event_loop().run_until_complete(
+                end_time("KeyboardInterrupt")
+            )
+        except Exception as e:
+            tlog(f"Caught exception {str(e)}")
+            asyncio.get_event_loop().run_until_complete(end_time(str(e)))
+
     else:
         tlog("missed market open time, try again next trading day, or bypass")
 
@@ -466,13 +476,5 @@ def main():
 """
 starting
 """
-try:
-    main()
-except KeyboardInterrupt:
-    tlog(f"Caught KeyboardInterrupt")
-    asyncio.get_event_loop().run_until_complete(end_time("KeyboardInterrupt"))
-except Exception as e:
-    tlog(f"Caught exception {str(e)}")
-    asyncio.get_event_loop().run_until_complete(end_time(str(e)))
-
+main()
 tlog("Done.")
