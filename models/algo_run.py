@@ -20,7 +20,6 @@ class AlgoRun:
                         VALUES ($1, $2, $3, $4)
                         RETURNING algo_run_id
                     """,
-                    "",
                     self.strategy_name,
                     config.env,
                     trading_data.build_label,
