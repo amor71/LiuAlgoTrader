@@ -24,10 +24,6 @@ from market_data import (get_historical_data, get_tickers, prev_closes,
                          volume_today)
 from models.new_trades import NewTrade
 from tlog import tlog
-from trading_data import (buy_indicators, db_conn_pool, latest_cost_basis,
-                          open_order_strategy, open_orders, partial_fills,
-                          positions, sell_indicators, stop_prices, strategies,
-                          target_prices)
 
 from .strategies.base import Strategy
 from .strategies.momentun_short import MomentumShort
@@ -67,9 +63,11 @@ async def run(
     existing_positions = trading_api.list_positions()
     for position in existing_positions:
         if position.symbol in symbols:
-            positions[position.symbol] = float(position.qty)
+            trading_data.positions[position.symbol] = float(position.qty)
             # Recalculate cost basis and stop price
-            latest_cost_basis[position.symbol] = float(position.cost_basis)
+            trading_data.latest_cost_basis[position.symbol] = float(
+                position.cost_basis
+            )
 
     # Keep track of what we're buying/selling
     trade_channels = ["trade_updates"]
@@ -92,67 +90,67 @@ async def run(
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
                     qty = qty * -1
-                positions[symbol] = positions.get(
+                trading_data.positions[symbol] = trading_data.positions.get(
                     symbol, 0
-                ) - partial_fills.get(symbol, 0)
-                partial_fills[symbol] = qty
-                positions[symbol] += qty
+                ) - trading_data.partial_fills.get(symbol, 0)
+                trading_data.partial_fills[symbol] = qty
+                trading_data.positions[symbol] += qty
                 trading_data.open_orders[symbol] = Order(data.order)
             elif event == "fill":
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
                     qty = qty * -1
-                positions[symbol] = positions.get(
+                trading_data.positions[symbol] = trading_data.positions.get(
                     symbol, 0
-                ) - partial_fills.get(symbol, 0)
-                partial_fills[symbol] = 0
-                positions[symbol] += qty
+                ) - trading_data.partial_fills.get(symbol, 0)
+                trading_data.partial_fills[symbol] = 0
+                trading_data.positions[symbol] += qty
 
                 if data.order["side"] == "buy":
                     print(data.order)
                     db_trade = NewTrade(
-                        algo_run_id=open_order_strategy[
+                        algo_run_id=trading_data.open_order_strategy[
                             symbol
                         ].algo_run.run_id,
                         symbol=symbol,
                         qty=qty,
                         operation="buy",
                         price=float(data.order["filled_avg_price"]),
-                        indicators=buy_indicators[symbol],
+                        indicators=trading_data.buy_indicators[symbol],
                     )
                     await db_trade.save(
-                        db_conn_pool,
+                        trading_data.db_conn_pool,
                         data.timestamp,
-                        stop_prices[symbol],
-                        target_prices[symbol],
+                        trading_data.stop_prices[symbol],
+                        trading_data.target_prices[symbol],
                     )
-                    buy_indicators[symbol] = None
+                    trading_data.buy_indicators[symbol] = None
                 if data.order["side"] == "sell":
-                    if sell_indicators[symbol] is not None:
+                    if trading_data.sell_indicators[symbol] is not None:
                         db_trade = NewTrade(
-                            algo_run_id=open_order_strategy[
+                            algo_run_id=trading_data.open_order_strategy[
                                 symbol
                             ].algo_run.run_id,
                             symbol=symbol,
                             qty=-qty,
                             operation="sell",
                             price=float(data.order["filled_avg_price"]),
-                            indicators=sell_indicators[symbol],
+                            indicators=trading_data.sell_indicators[symbol],
                         )
                         await db_trade.save(
-                            db_conn_pool,
+                            trading_data.db_conn_pool,
                             data.timestamp,
-                            stop_prices[symbol],
-                            target_prices[symbol],
+                            trading_data.stop_prices[symbol],
+                            trading_data.target_prices[symbol],
                         )
-                    sell_indicators[symbol] = None
+                    trading_data.sell_indicators[symbol] = None
 
-                open_orders[symbol] = None
-                open_order_strategy[symbol] = None
+                trading_data.open_orders[symbol] = None
+                trading_data.open_order_strategy[symbol] = None
             elif event in ("canceled", "rejected"):
-                partial_fills[symbol] = 0
-                open_orders[symbol] = None
-                open_order_strategy[symbol] = None
+                trading_data.partial_fills[symbol] = 0
+                trading_data.open_orders[symbol] = None
+                trading_data.open_order_strategy[symbol] = None
         else:
             tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
 
@@ -190,7 +188,7 @@ async def run(
         minute_history[symbol].loc[ts] = new_data
 
         # Next, check for existing orders for the stock
-        existing_order = open_orders.get(symbol)
+        existing_order = trading_data.open_orders.get(symbol)
         if existing_order is not None:
             try:
                 # Make sure the order's not too old
@@ -215,7 +213,7 @@ async def run(
         # Now we check to see if it might be time to buy or sell
 
         # do we have a position?
-        symbol_position = positions.get(symbol, 0)
+        symbol_position = trading_data.positions.get(symbol, 0)
 
         # run strategies
         for s in strategies:
@@ -233,7 +231,7 @@ async def run(
                     f"Trading over, trying to liquidating remaining position in {symbol}"
                 )
                 try:
-                    sell_indicators[symbol] = {"liquidation": 1}
+                    trading_data.sell_indicators[symbol] = {"liquidation": 1}
                     if symbol_position < 0:
                         o = trading_api.submit_order(
                             symbol=symbol,
@@ -250,8 +248,8 @@ async def run(
                             type="market",
                             time_in_force="day",
                         )
-                    open_orders[symbol] = o
-                    latest_cost_basis[symbol] = data.close
+                    trading_data.open_orders[symbol] = o
+                    trading_data.latest_cost_basis[symbol] = data.close
                 except Exception as e:
                     error_logger.report_exception()
                     tlog(f"failed to liquidate {symbol} w exception {e}")
@@ -312,12 +310,12 @@ async def start_strategies(
         s = strategy_type(trading_api=trading_api, data_api=data_api)
         await s.create()
 
-        strategies.append(s)
+        trading_data.strategies.append(s)
 
     tickers = await get_tickers(data_api=data_api)
     await run(
         tickers=tickers,
-        strategies=strategies,
+        strategies=trading_data.strategies,
         trading_api=trading_api,
         data_api=data_api,
         data_ws=data_ws,
@@ -328,8 +326,10 @@ async def start_strategies(
 
 
 async def end_time(reason: str):
-    for s in strategies:
-        await s.algo_run.update_end_time(pool=db_conn_pool, end_reason=reason)
+    for s in trading_data.strategies:
+        await s.algo_run.update_end_time(
+            pool=trading_data.db_conn_pool, end_reason=reason
+        )
 
 
 async def teardown_task(tz: DstTzInfo) -> None:
