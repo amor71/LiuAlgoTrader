@@ -4,7 +4,7 @@ from typing import Dict, List
 from alpaca_trade_api.entity import Order
 from asyncpg.pool import Pool
 
-from .strategies.base import Strategy
+from strategies.base import Strategy
 
 #
 # Shared data
