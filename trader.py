@@ -23,10 +23,9 @@ import trading_data
 from market_data import (get_historical_data, get_tickers, prev_closes,
                          volume_today)
 from models.new_trades import NewTrade
+from strategies.base import Strategy
+from strategies.momentun_short import MomentumShort
 from tlog import tlog
-
-from .strategies.base import Strategy
-from .strategies.momentun_short import MomentumShort
 
 error_logger = error_reporting.Client()
 
