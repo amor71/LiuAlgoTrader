@@ -1,7 +1,10 @@
+from datetime import datetime
+
 import numpy as np
-from google.cloud.logging import logger
+from pandas import DataFrame as df
 
 import config
+from tlog import tlog
 
 
 def grouper(iterable):
@@ -25,12 +28,7 @@ def grouper(iterable):
 
 
 def find_resistances(
-    logger: logger.Logger,
-    env: str,
-    strategy_name: str,
-    current_value,
-    minute_history,
-    now,
+    strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
     minute_history_index = minute_history["high"].index.get_loc(
@@ -43,25 +41,14 @@ def find_resistances(
         .resample("5min")
         .min()
     )
-    logger.log_text(
-        f"[{env}][{strategy_name}] find_resistances() - current_value={current_value} series = {series.values}"
-    )
+
     diff = np.diff(series.values)
     high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
     if len(high_index) > 0:
         local_maximas = sorted(
             [series[i] for i in high_index if series[i] > current_value]
         )
-
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_resistances() - local_maximas={local_maximas}"
-        )
-
         clusters = dict(enumerate(grouper(local_maximas), 1))
-
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_resistances() - clusters={clusters}"
-        )
 
         resistances = []
         for key, cluster in clusters.items():
@@ -69,24 +56,18 @@ def find_resistances(
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_resistances() - resistances={resistances}"
-        )
+        if len(resistances) > 0:
+            tlog(
+                f"[{strategy_name}] find_resistances() - resistances={resistances}"
+            )
 
         return resistances
-
-    logger.log_text(f"[{env}][{strategy_name}] find_supports() - None...")
 
     return None
 
 
 def find_supports(
-    logger: logger.Logger,
-    env: str,
-    strategy_name: str,
-    current_value,
-    minute_history,
-    now,
+    strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
     minute_history_index = minute_history["high"].index.get_loc(
@@ -98,9 +79,6 @@ def find_supports(
         ]
         .resample("5min")
         .min()
-    )
-    logger.log_text(
-        f"[{env}][{strategy_name}] find_supports() - current_value={current_value} series = {series.values}"
     )
     diff = np.diff(series.values)
     high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
@@ -109,29 +87,19 @@ def find_supports(
             [series[i] for i in high_index if series[i] <= current_value]
         )
 
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_supports() - local_maximas={local_maximas}"
-        )
-
         clusters = dict(enumerate(grouper(local_maximas), 1))
-
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_supports() - clusters={clusters}"
-        )
-
         resistances = []
         for key, cluster in clusters.items():
             if len(cluster) > 0:
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
-        logger.log_text(
-            f"[{env}][{strategy_name}] find_supports() - resistances={resistances}"
-        )
+        if len(resistances) > 0:
+            tlog(
+                f"[{strategy_name}] find_supports() - resistances={resistances}"
+            )
 
         return resistances
-
-    logger.log_text(f"[{env}][{strategy_name}] find_supports() - None...")
 
     return None
 

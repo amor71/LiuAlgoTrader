@@ -4,25 +4,23 @@ from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import requests
+from alpaca_trade_api.polygon.entity import Ticker
 from google.cloud import error_reporting
-from google.cloud.logging import logger
+from pandas import DataFrame as df
 
 import config
+from tlog import tlog
 
 error_logger = error_reporting.Client()
 
+prev_closes: Dict[str, float] = {}
+volume_today: Dict[str, int] = {}
 
-def get_historical_data(
-    my_logger: logger.Logger,
-    env: str,
-    strategy_name: str,
-    api: tradeapi,
-    symbols: List[str],
-) -> Dict[str, object]:
+
+def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
     """get ticker history"""
 
     minute_history: Dict[str, object] = {}
-    my_logger.log_text(f"[{env}][{strategy_name}]")
     c = 0
     exclude_symbols = []
     for symbol in symbols:
@@ -47,9 +45,7 @@ def get_historical_data(
                         error_logger.report_exception()
                         exclude_symbols.append(symbol)
             c += 1
-            my_logger.log_text(
-                f"[{env}][{strategy_name}] {symbol} {c}/{len(symbols)}"
-            )
+            tlog(f"loaded agg data for {symbol} {c}/{len(symbols)}")
 
     for x in exclude_symbols:
         symbols.remove(x)
@@ -57,18 +53,14 @@ def get_historical_data(
     return minute_history
 
 
-def get_tickers(
-    my_logger: logger.Logger, env: str, strategy_name: str, api: tradeapi
-) -> List[str]:
+async def get_tickers(data_api: tradeapi) -> List[Ticker]:
     """get all tickers"""
 
-    my_logger.log_text(
-        f"[{env}][{strategy_name}] Getting current ticker data..."
-    )
-    max_retries = 5
+    tlog("Getting current ticker data...")
+    max_retries = 50
     while max_retries > 0:
-        tickers = api.polygon.all_tickers()
-        assets = api.list_assets()
+        tickers = data_api.polygon.all_tickers()
+        assets = data_api.list_assets()
         tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
         rc = [
             ticker
@@ -84,17 +76,12 @@ def get_tickers(
             )
         ]
         if len(rc) > 0:
-            my_logger.log_text(
-                f"[{env}][{strategy_name}] loaded {len(rc)} tickers"
-            )
+            tlog(f"loaded {len(rc)} tickers")
             return rc
 
-        my_logger.log_text(
-            f"[{env}][{strategy_name}] got no data :-( waiting then re-trying"
-        )
-        print("no tickers :-( waiting and retrying")
+        tlog("got no data :-( waiting then re-trying")
         time.sleep(30)
         max_retries -= 1
 
-    my_logger.log_text(f"[{env}][{strategy_name}] got no data :-( giving up")
+    tlog("got no data :-( giving up")
     return []
