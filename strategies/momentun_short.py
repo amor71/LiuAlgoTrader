@@ -190,14 +190,14 @@ class MomentumShort(Strategy):
             elif data.close <= target_prices[symbol]:
                 to_sell = True
                 sell_reasons.append(f"target")
-            elif rsi <= 30.0:
+            elif rsi[-1] <= 30.0:
                 to_sell = True
                 sell_reasons.append(f"low RSI")
 
             if to_sell:
                 try:
                     buy_indicators[symbol] = {
-                        "rsi": rsi[-1].tolist(),
+                        "rsi": rsi[-5:].tolist(),
                         "movement": movement,
                         "reasons": " AND ".join(
                             [str(elem) for elem in sell_reasons]
