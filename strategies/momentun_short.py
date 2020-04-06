@@ -121,6 +121,20 @@ class MomentumShort(Strategy):
                             shares_to_buy = 1
                         shares_to_buy -= position
                         if shares_to_buy > 0:
+                            # Check asset availability for shorting
+                            asset = self.trading_api.get_asset(symbol)
+
+                            if (
+                                asset.tradable is False
+                                or asset.shortable is False
+                                or asset.status == "inactive"
+                                or asset.easy_to_borrow is False
+                            ):
+                                tlog(
+                                    f"{self.name} cannot short {symbol}. Asset details:{repr(asset)}"
+                                )
+                                return False
+
                             tlog(
                                 f"[{self.name}] Submitting short sell for {shares_to_buy} shares of {symbol} at {data.close} target {target_price} stop {stop_price}"
                             )
