@@ -46,7 +46,7 @@ async def liquidate(
             if symbol_position < 0:
                 o = trading_api.submit_order(
                     symbol=symbol,
-                    qty=str(symbol_position),
+                    qty=str(-symbol_position),
                     side="buy",
                     type="market",
                     time_in_force="day",
