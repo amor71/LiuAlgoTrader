@@ -35,7 +35,7 @@ class MomentumShort(Strategy):
     ) -> bool:
         since_market_open = now - config.market_open
         until_market_close = config.market_close - now
-        data = minute_history[-1]
+        data = minute_history.iloc[-1]
 
         if (
             config.trade_buy_window > since_market_open.seconds // 60 > 15

@@ -309,7 +309,7 @@ async def start_strategies(
     data_ws: StreamConn,
     trading_ws: StreamConn,
 ):
-    tlog(f"start_strategies() task starting")
+    tlog(f"setting up strategies")
     await create_db_connection(str(config.dsn))
 
     strategy_types = [MomentumShort]
@@ -329,8 +329,7 @@ async def start_strategies(
         data_ws=data_ws,
         trading_ws=trading_ws,
     )
-
-    tlog("start_strategies task ended")
+    tlog("strategies ready to execute")
 
 
 async def end_time(reason: str):
