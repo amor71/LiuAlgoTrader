@@ -70,15 +70,11 @@ class MomentumShort(Strategy):
                     f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
                 )
                 # check for a positive, increasing MACD
-
-                if not config.bypass_market_schedule:
-                    macds = MACD(
-                        minute_history["close"]
-                        .dropna()
-                        .between_time("9:30", "16:00")
-                    )
-                else:
-                    macds = MACD(minute_history["close"].dropna())
+                macds = MACD(
+                    minute_history["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                )
 
                 macd1 = macds[0]
                 macd_signal = macds[1]
