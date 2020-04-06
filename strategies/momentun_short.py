@@ -39,8 +39,8 @@ class MomentumShort(Strategy):
 
         if (
             config.trade_buy_window > since_market_open.seconds // 60 > 15
-            and not position
-        ):
+            or config.bypass_market_schedule
+        ) and not position:
             # Check for buy signals
             # See how high the price went during the first 15 minutes
             lbound = config.market_open
@@ -165,7 +165,10 @@ class MomentumShort(Strategy):
                                 )
 
         if (
-            since_market_open.seconds // 60 >= 15
+            (
+                since_market_open.seconds // 60 >= 15
+                or config.bypass_market_schedule
+            )
             and until_market_close.seconds // 60 > 15
             and position > 0
         ):
