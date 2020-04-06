@@ -43,15 +43,19 @@ class MomentumShort(Strategy):
         ) and not position:
             # Check for buy signals
             # See how high the price went during the first 15 minutes
-            lbound = config.market_open
-            ubound = lbound + timedelta(minutes=15)
-            try:
-                high_15m = minute_history.loc[lbound:ubound]["high"].max()
-            except Exception:
-                error_logger.report_exception()
-                # Because we're aggregating on the fly, sometimes the datetime
-                # index can get messy until it's healed by the minute bars
-                return False
+
+            if not config.bypass_market_schedule:
+                lbound = config.market_open
+                ubound = lbound + timedelta(minutes=15)
+                try:
+                    high_15m = minute_history.loc[lbound:ubound]["high"].max()
+                except Exception:
+                    error_logger.report_exception()
+                    # Because we're aggregating on the fly, sometimes the datetime
+                    # index can get messy until it's healed by the minute bars
+                    return False
+            else:
+                high_15m = prev_closes[symbol]
 
             tlog(
                 f"[{self.name}] [DEBUG] {symbol} high_15m={high_15m} data.close={data.close}"
