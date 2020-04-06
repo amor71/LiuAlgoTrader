@@ -248,7 +248,7 @@ async def run(
                 if await should_cancel_order(existing_order, original_ts):
                     # Cancel it so we can try again for a fill
                     tlog(
-                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={order.submitted_at}"
+                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
                     )
                     trading_api.cancel_order(existing_order.id)
                 return

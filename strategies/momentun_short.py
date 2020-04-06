@@ -106,9 +106,9 @@ class MomentumShort(Strategy):
                             minute_history=minute_history,
                             now=now,
                         )
-                        if supports is None or supports == []:
+                        if supports is None or len(supports) == 0:
                             return False
-                        if resistances is None or resistances == []:
+                        if resistances is None or len(resistances) == 0:
                             return False
 
                         stop_price = resistances[-1]
