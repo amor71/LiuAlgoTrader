@@ -210,7 +210,7 @@ class MomentumShort(Strategy):
 
                     o = self.trading_api.submit_order(
                         symbol=symbol,
-                        qty=str(position),
+                        qty=str(-position),
                         side="buy",
                         type="market",
                         time_in_force="day",
