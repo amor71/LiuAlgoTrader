@@ -53,6 +53,9 @@ class MomentumShort(Strategy):
                 # index can get messy until it's healed by the minute bars
                 return False
 
+            tlog(
+                f"[{self.name}] [DEBUG] {symbol} high_15m={high_15m} data.close={data.close}"
+            )
             # Get the change since yesterday's market close
             daily_pct_change = (
                 data.close - prev_closes[symbol]
