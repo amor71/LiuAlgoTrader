@@ -93,7 +93,7 @@ class MomentumShort(Strategy):
                     # check RSI is high enough
                     rsi = RSI(minute_history["close"], 14)
                     tlog(f"[{self.name}]\t\tRSI {round(rsi[-1], 2)}")
-                    if rsi[-1] > 65:
+                    if rsi[-1] > 75:
                         supports = find_supports(
                             strategy_name=self.name,
                             current_value=data.close,
