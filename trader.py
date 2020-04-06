@@ -129,7 +129,7 @@ async def run(
     for symbol in symbols:
         symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
         data_channels += symbol_channels
-        tlog(f"Watching {len(symbols)} symbols.")
+    tlog(f"Watching {len(symbols)} symbols.")
 
     # Use trade updates to keep track of our portfolio
     @trading_ws.on(r"trade_update")
@@ -269,7 +269,9 @@ async def run(
 
         # run strategies
         for s in strategies:
-            if s.run(symbol, symbol_position, minute_history[symbol], ts):
+            if await s.run(
+                symbol, symbol_position, minute_history[symbol], ts
+            ):
                 tlog(f"executed strategy {s.name} on {symbol}")
                 return
 
