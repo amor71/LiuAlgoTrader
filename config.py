@@ -39,7 +39,7 @@ risk = 0.001
 
 today_change_percent = 3.5
 
-group_margin = 0.01
+group_margin = 0.02
 
 # trade times
 market_cool_down_minutes: int = 15

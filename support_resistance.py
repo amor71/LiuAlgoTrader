@@ -31,7 +31,7 @@ def find_resistances(
     strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
-    minute_history_index = minute_history["high"].index.get_loc(
+    minute_history_index = minute_history["close"].index.get_loc(
         now, method="nearest"
     )
     series = (
@@ -70,7 +70,7 @@ def find_supports(
     strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
-    minute_history_index = minute_history["high"].index.get_loc(
+    minute_history_index = minute_history["close"].index.get_loc(
         now, method="nearest"
     )
     series = (
