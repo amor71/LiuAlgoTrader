@@ -31,16 +31,7 @@ def find_resistances(
     strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
-    minute_history_index = minute_history["close"].index.get_loc(
-        now, method="nearest"
-    )
-    series = (
-        minute_history["high"][
-            minute_history_index - 200 : minute_history_index
-        ]
-        .resample("5min")
-        .min()
-    )
+    series = minute_history["high"][-200:].resample("5min").min()
 
     diff = np.diff(series.values)
     high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
@@ -70,18 +61,9 @@ def find_supports(
     strategy_name: str, current_value: float, minute_history: df, now: datetime
 ):
     """calculate supports"""
-    minute_history_index = minute_history["close"].index.get_loc(
-        now, method="nearest"
-    )
-    series = (
-        minute_history["high"][
-            minute_history_index - 200 : minute_history_index
-        ]
-        .resample("5min")
-        .min()
-    )
+    series = minute_history["low"][-200:].resample("5min").min()
     diff = np.diff(series.values)
-    high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+    high_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
     if len(high_index) > 0:
         local_maximas = sorted(
             [series[i] for i in high_index if series[i] <= current_value]
