@@ -87,12 +87,12 @@ class MomentumShort(Strategy):
                     and data.close > data.open
                 ):
                     tlog(
-                        f"[{self.name}] MACD(12,26) for {symbol} trending up and above signals"
+                        f"[{self.name}]\tMACD(12,26) for {symbol} trending up and above signals"
                     )
 
                     # check RSI is high enough
                     rsi = RSI(minute_history["close"], 14)
-                    tlog(f"[{self.name}] RSI {rsi[-1]}")
+                    tlog(f"[{self.name}]\t\tRSI {round(rsi[-1], 2)}")
                     if rsi[-1] > 65:
                         supports = find_supports(
                             strategy_name=self.name,
@@ -135,12 +135,12 @@ class MomentumShort(Strategy):
                                 or asset.easy_to_borrow is False
                             ):
                                 tlog(
-                                    f"{self.name} cannot short {symbol}. Asset details:{repr(asset)}"
+                                    f"{self.name}\t\t\tcannot short {symbol}. Asset details:{repr(asset)}"
                                 )
                                 return False
 
                             tlog(
-                                f"[{self.name}] Submitting short sell for {shares_to_buy} shares of {symbol} at {data.close} target {target_price} stop {stop_price}"
+                                f"[{self.name}]\t\t\tSubmitting short sell for {shares_to_buy} shares of {symbol} at {data.close} target {target_price} stop {stop_price}"
                             )
                             sell_indicators[symbol] = {
                                 "rsi": rsi[-1].tolist(),
@@ -165,7 +165,7 @@ class MomentumShort(Strategy):
                             except Exception as e:
                                 error_logger.report_exception()
                                 tlog(
-                                    f"failed to sell short {symbol} for reason {e}"
+                                    f"[{self.name}]\t\t\t\tfailed to sell short {symbol} for reason {e}"
                                 )
 
         if (
@@ -205,7 +205,7 @@ class MomentumShort(Strategy):
                     }
 
                     tlog(
-                        f"[{self.name}] Submitting short buy for {position} shares of {symbol} at market"
+                        f"[{self.name}]\tSubmitting short buy for {position} shares of {symbol} at market"
                     )
 
                     o = self.trading_api.submit_order(
@@ -223,6 +223,8 @@ class MomentumShort(Strategy):
 
                 except Exception as e:
                     error_logger.report_exception()
-                    tlog(f"failed to buy short {symbol} for reason {e}")
+                    tlog(
+                        f"[{self.name}]\t\tfailed to buy short {symbol} for reason {e}"
+                    )
 
         return False
