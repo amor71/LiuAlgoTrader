@@ -66,9 +66,9 @@ class MomentumShort(Strategy):
                 and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
-                tlog(
-                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
-                )
+                #               tlog(
+                #                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
+                #                )
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
@@ -174,7 +174,7 @@ class MomentumShort(Strategy):
                 or config.bypass_market_schedule
             )
             and until_market_close.seconds // 60 > 15
-            and position > 0
+            and position
         ):
             # Check for liquidation signals
             rsi = RSI(minute_history["close"], 14)
