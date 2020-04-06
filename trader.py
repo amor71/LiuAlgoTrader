@@ -30,6 +30,61 @@ from tlog import tlog
 error_logger = error_reporting.Client()
 
 
+async def liquidate(
+    symbol: str,
+    symbol_position: int,
+    trading_api: tradeapi,
+    data_ws: StreamConn,
+) -> None:
+
+    if symbol_position:
+        tlog(
+            f"Trading over, trying to liquidating remaining position {symbol_position} in {symbol}"
+        )
+        try:
+            trading_data.sell_indicators[symbol] = {"liquidation": 1}
+            if symbol_position < 0:
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=str(symbol_position),
+                    side="buy",
+                    type="market",
+                    time_in_force="day",
+                )
+            else:
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=str(symbol_position),
+                    side="sell",
+                    type="market",
+                    time_in_force="day",
+                )
+            trading_data.open_orders[symbol] = o
+        except Exception as e:
+            error_logger.report_exception()
+            tlog(f"failed to liquidate {symbol} w exception {e}")
+    else:
+        try:
+            await data_ws.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
+            # await trading_api.unsubscribe(trade_channels)
+        except ValueError as e:
+            tlog(f"failed to unsubscribe {symbol} w ValueError {e}")
+            error_logger.report_exception()
+        except Exception as e:
+            tlog(f"failed to unsubscribe {symbol} w exception {e}")
+            error_logger.report_exception()
+
+
+async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
+    # Make sure the order's not too old
+    submitted_at = order.submitted_at.astimezone(timezone("America/New_York"))
+    order_lifetime = market_clock - submitted_at
+    if market_clock > submitted_at and order_lifetime.seconds // 60 >= 1:
+        return True
+
+    return False
+
+
 async def run(
     tickers: List[Ticker],
     strategies: List[Strategy],
@@ -190,18 +245,10 @@ async def run(
         existing_order = trading_data.open_orders.get(symbol)
         if existing_order is not None:
             try:
-                # Make sure the order's not too old
-                submission_ts = existing_order.submitted_at.astimezone(
-                    timezone("America/New_York")
-                )
-                order_lifetime = original_ts - submission_ts
-                if (
-                    original_ts > submission_ts
-                    and order_lifetime.seconds // 60 >= 1
-                ):
+                if await should_cancel_order(existing_order, original_ts):
                     # Cancel it so we can try again for a fill
                     tlog(
-                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"
+                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={order.submitted_at}"
                     )
                     trading_api.cancel_order(existing_order.id)
                 return
@@ -209,59 +256,22 @@ async def run(
                 error_logger.report_exception()
                 tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
 
-        # Now we check to see if it might be time to buy or sell
-
         # do we have a position?
         symbol_position = trading_data.positions.get(symbol, 0)
+
+        # do we need to liquidate for the day?
+        until_market_close = config.market_close - ts
+        if until_market_close.seconds // 60 <= 15:
+            tlog(
+                f"{until_market_close.seconds // 60} minutes to market close for {symbol}"
+            )
+            await liquidate(symbol, symbol_position, trading_api, data_ws)
 
         # run strategies
         for s in strategies:
             if s.run(symbol, symbol_position, minute_history[symbol], ts):
                 tlog(f"executed strategy {s.name} on {symbol}")
                 return
-
-        until_market_close = config.market_close - ts
-        if until_market_close.seconds // 60 <= 15:
-            tlog(
-                f"{until_market_close.seconds // 60} minutes to market close for {symbol}"
-            )
-            if symbol_position:
-                tlog(
-                    f"Trading over, trying to liquidating remaining position in {symbol}"
-                )
-                try:
-                    trading_data.sell_indicators[symbol] = {"liquidation": 1}
-                    if symbol_position < 0:
-                        o = trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(symbol_position),
-                            side="buy",
-                            type="market",
-                            time_in_force="day",
-                        )
-                    else:
-                        o = trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(symbol_position),
-                            side="sell",
-                            type="market",
-                            time_in_force="day",
-                        )
-                    trading_data.open_orders[symbol] = o
-                    trading_data.latest_cost_basis[symbol] = data.close
-                except Exception as e:
-                    error_logger.report_exception()
-                    tlog(f"failed to liquidate {symbol} w exception {e}")
-            else:
-                try:
-                    await data_ws.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-                    # await trading_api.unsubscribe(trade_channels)
-                except ValueError as e:
-                    tlog(f"failed to unsubscribe {symbol} w ValueError {e}")
-                    error_logger.report_exception()
-                except Exception as e:
-                    tlog(f"failed to unsubscribe {symbol} w exception {e}")
-                    error_logger.report_exception()
 
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
@@ -280,7 +290,6 @@ async def run(
     try:
         await trading_ws.subscribe(trade_channels)
         await data_ws.subscribe(data_channels)
-
     except Exception as e:
         tlog(f"Exception {e}")
         error_logger.report_exception()
@@ -329,7 +338,7 @@ async def end_time(reason: str):
         )
 
 
-async def teardown_task(tz: DstTzInfo) -> None:
+async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
     dt = datetime.today().astimezone(tz)
     to_market_close = config.market_close - dt
 
@@ -341,6 +350,11 @@ async def teardown_task(tz: DstTzInfo) -> None:
     else:
         tlog("tear down task starting")
         await end_time("market close")
+
+        tlog("closing web-sockets")
+        for w in ws:
+            await w.close()
+
         asyncio.get_running_loop().stop()
     finally:
         tlog("tear down task done.")
@@ -447,7 +461,7 @@ def main():
         _trade_ws = tradeapi.StreamConn(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret,
         )
-        asyncio.ensure_future(teardown_task(nyc))
+        asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
 
         asyncio.ensure_future(
             start_strategies(
