@@ -113,6 +113,19 @@ class MomentumShort(Strategy):
 
                         stop_price = resistances[-1]
                         target_price = supports[-1]
+
+                        distance_to_stop = (
+                            stop_price - data.close
+                        ) / data.close
+                        tlog(
+                            f"{self.name} {symbol} distance to stop {round(distance_to_stop, 2)}"
+                        )
+                        if distance_to_stop < 0.02:
+                            tlog(
+                                f"{self.name} {symbol} too close to resistance, skipping short sell"
+                            )
+                            return False
+
                         portfolio_value = float(
                             self.trading_api.get_account().portfolio_value
                         )
