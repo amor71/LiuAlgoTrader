@@ -14,7 +14,7 @@ filename: str
 db_conn_pool: Pool
 
 strategies: List[Strategy] = []
-open_orders: Dict[str, Order] = {}
+open_orders: Dict[str, (Order, str)] = {}
 open_order_strategy: Dict[str, Strategy] = {}
 latest_cost_basis: Dict[str, float] = {}
 sell_indicators: Dict[str, Dict] = {}

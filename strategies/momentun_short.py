@@ -169,7 +169,7 @@ class MomentumShort(Strategy):
                                     type="market",
                                     time_in_force="day",
                                 )
-                                open_orders[symbol] = o
+                                open_orders[symbol] = (o, "sell_short")
                                 latest_cost_basis[symbol] = data.close
                                 target_prices[symbol] = target_price
                                 stop_prices[symbol] = stop_price
@@ -229,7 +229,7 @@ class MomentumShort(Strategy):
                         time_in_force="day",
                     )
 
-                    open_orders[symbol] = o
+                    open_orders[symbol] = (o, "buy_short")
                     latest_cost_basis[symbol] = data.close
                     open_order_strategy[symbol] = self
                     return True
