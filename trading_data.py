@@ -1,5 +1,5 @@
 """Global data shared during trading"""
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from alpaca_trade_api.entity import Order
 from asyncpg.pool import Pool
@@ -14,7 +14,7 @@ filename: str
 db_conn_pool: Pool
 
 strategies: List[Strategy] = []
-open_orders: Dict[str, (Order, str)] = {}
+open_orders: Dict[str, Tuple[Order, str]] = {}
 open_order_strategy: Dict[str, Strategy] = {}
 latest_cost_basis: Dict[str, float] = {}
 sell_indicators: Dict[str, Dict] = {}
