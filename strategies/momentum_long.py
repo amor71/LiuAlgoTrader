@@ -117,7 +117,7 @@ class MomentumLong(Strategy):
 
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
-                                data.close, minute_history[symbol], now
+                                data.close, minute_history, now
                             )
                             stop_prices[symbol] = stop_price
                             target_prices[symbol] = (
@@ -178,16 +178,14 @@ class MomentumLong(Strategy):
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
             macds = MACD(
-                minute_history[symbol]["close"]
-                .dropna()
-                .between_time("9:30", "16:00"),
+                minute_history["close"].dropna().between_time("9:30", "16:00"),
                 13,
                 21,
             )
 
             macd = macds[0]
             macd_signal = macds[1]
-            rsi = RSI(minute_history[symbol]["close"], 14)
+            rsi = RSI(minute_history["close"], 14)
             movement = (
                 data.close - latest_cost_basis[symbol]
             ) / latest_cost_basis[symbol]
