@@ -94,7 +94,7 @@ class MomentumShort(Strategy):
 
     async def _find_target_stop_prices(
         self, close: float, minute_history: df, now: datetime
-    ) -> Any[Tuple[None, None], Tuple[float, float]]:
+    ) -> Any(Tuple[None, None], Tuple[float, float]):  # type: ignore
         supports = find_supports(
             strategy_name=self.name,
             current_value=close,
