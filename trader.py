@@ -246,8 +246,9 @@ async def run(
         minute_history[symbol].loc[ts] = new_data
 
         # Next, check for existing orders for the stock
-        existing_order = trading_data.open_orders.get(symbol)[0]
+        existing_order = trading_data.open_orders.get(symbol)
         if existing_order is not None:
+            existing_order = existing_order[0]
             try:
                 if await should_cancel_order(existing_order, original_ts):
                     # Cancel it so we can try again for a fill
