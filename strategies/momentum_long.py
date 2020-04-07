@@ -56,9 +56,9 @@ class MomentumLong(Strategy):
                 and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
-                tlog(
-                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
-                )
+                #               tlog(
+                #                   f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
+                #               )
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
