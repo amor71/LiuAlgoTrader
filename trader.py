@@ -24,6 +24,7 @@ from market_data import (get_historical_data, get_tickers, prev_closes,
                          volume_today)
 from models.new_trades import NewTrade
 from strategies.base import Strategy
+from strategies.momentum_long import MomentumLong
 from strategies.momentun_short import MomentumShort
 from tlog import tlog
 
@@ -314,7 +315,7 @@ async def start_strategies(
     tlog(f"setting up strategies")
     await create_db_connection(str(config.dsn))
 
-    strategy_types = [MomentumShort]
+    strategy_types = [MomentumShort, MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
         s = strategy_type(trading_api=trading_api, data_api=data_api)
