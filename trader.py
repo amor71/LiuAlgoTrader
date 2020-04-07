@@ -51,6 +51,7 @@ async def liquidate(
                     type="market",
                     time_in_force="day",
                 )
+                op = "buy_short"
             else:
                 o = trading_api.submit_order(
                     symbol=symbol,
@@ -59,7 +60,9 @@ async def liquidate(
                     type="market",
                     time_in_force="day",
                 )
-            trading_data.open_orders[symbol] = o
+                op = "sell"
+
+            trading_data.open_orders[symbol] = (o, op)
         except Exception as e:
             error_logger.report_exception()
             tlog(f"failed to liquidate {symbol} w exception {e}")
@@ -136,7 +139,8 @@ async def run(
     async def handle_trade_update(conn, channel, data):
         symbol = data.order["symbol"]
 
-        last_order = trading_data.open_orders.get(symbol)
+        last_order = trading_data.open_orders.get(symbol)[0]
+        last_op = trading_data.open_orders.get(symbol)[1]
         if last_order is not None:
             tlog(f"trade update for {symbol}")
             event = data.event
@@ -149,7 +153,7 @@ async def run(
                 ) - trading_data.partial_fills.get(symbol, 0)
                 trading_data.partial_fills[symbol] = qty
                 trading_data.positions[symbol] += qty
-                trading_data.open_orders[symbol] = Order(data.order)
+                trading_data.open_orders[symbol] = (Order(data.order), last_op)
             elif event == "fill":
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
@@ -168,7 +172,7 @@ async def run(
                         ].algo_run.run_id,
                         symbol=symbol,
                         qty=qty,
-                        operation="buy",
+                        operation=last_op,
                         price=float(data.order["filled_avg_price"]),
                         indicators=trading_data.buy_indicators[symbol],
                     )
@@ -187,7 +191,7 @@ async def run(
                             ].algo_run.run_id,
                             symbol=symbol,
                             qty=-qty,
-                            operation="sell",
+                            operation=last_op,
                             price=float(data.order["filled_avg_price"]),
                             indicators=trading_data.sell_indicators[symbol],
                         )
@@ -242,7 +246,7 @@ async def run(
         minute_history[symbol].loc[ts] = new_data
 
         # Next, check for existing orders for the stock
-        existing_order = trading_data.open_orders.get(symbol)
+        existing_order = trading_data.open_orders.get(symbol)[0]
         if existing_order is not None:
             try:
                 if await should_cancel_order(existing_order, original_ts):

@@ -49,3 +49,6 @@ CREATE INDEX ON new_trades(algo_run_id);
 
 ALTER TABLE new_trades ADD COLUMN stop_price decimal (8, 2);
 ALTER TABLE new_trades ADD COLUMN target_price decimal (8, 2);
+
+ALTER TYPE trade_operation ADD VALUE 'sell_short';
+ALTER TYPE trade_operation ADD VALUE 'buy_short';
