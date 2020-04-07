@@ -234,7 +234,7 @@ class MomentumLong(Strategy):
 
                     if not partial_sell:
                         tlog(
-                            "[{self.name}] Submitting sell for {symbol_position} shares of {symbol} at market"
+                            f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
                         )
                         o = self.trading_api.submit_order(
                             symbol=symbol,
@@ -246,7 +246,7 @@ class MomentumLong(Strategy):
                     else:
                         qty = int(position / 3)
                         tlog(
-                            "[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
+                            f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
                         o = self.trading_api.submit_order(
                             symbol=symbol,
