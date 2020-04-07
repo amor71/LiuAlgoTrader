@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any, Dict, Tuple
 
 import alpaca_trade_api as tradeapi
 from google.cloud import error_reporting
@@ -30,165 +31,188 @@ class MomentumShort(Strategy):
         await super().create()
         tlog(f"strategy {self.name} created")
 
+    async def _check_buy_signal(
+        self, symbol: str, open: float, close: float, minute_history: df
+    ) -> Tuple[bool, Dict]:
+        # See how high the price went during the first 15 minutes
+        if not config.bypass_market_schedule:
+            lbound = config.market_open
+            ubound = lbound + timedelta(minutes=15)
+            try:
+                high_15m = minute_history.loc[lbound:ubound]["high"].max()  # type: ignore
+            except Exception:
+                error_logger.report_exception()
+                # Because we're aggregating on the fly, sometimes the datetime
+                # index can get messy until it's healed by the minute bars
+                return False, {}
+        else:
+            high_15m = prev_closes[symbol]
+
+        # Get the change since yesterday's market close
+        daily_pct_change = (close - prev_closes[symbol]) / prev_closes[symbol]
+
+        if (
+            daily_pct_change > 0.04
+            and close > high_15m
+            and volume_today[symbol] > 30000
+        ):
+            #               tlog(
+            #                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
+            #                )
+            # check for a positive, increasing MACD
+            macds = MACD(
+                minute_history["close"].dropna().between_time("9:30", "16:00")
+            )
+
+            macd = macds[0]
+            macd_signal = macds[1]
+            if (
+                macd[-1].round(2) > 0
+                and macd[-3].round(3) < macd[-2].round(3) < macd[-1].round(3)
+                and macd[-1].round(2) > macd_signal[-1].round(2)
+                and close > open
+            ):
+                tlog(
+                    f"[{self.name}]\tMACD(12,26) for {symbol} trending up and above signals"
+                )
+
+                # check RSI is high enough
+                rsi = RSI(minute_history["close"], 14)
+                tlog(f"[{self.name}]\t\tRSI for {symbol}={round(rsi[-1], 2)}")
+                if rsi[-1] > 75:
+                    tlog(f"[{self.name}]\t\tRSI for {symbol} is above signal")
+                    return (
+                        True,
+                        {
+                            "rsi": rsi[-1].tolist(),
+                            "macd": macd[-5:].tolist(),
+                            "macd_signal": macd_signal[-5:].tolist(),
+                        },
+                    )
+
+        return False, {}
+
+    async def _find_target_stop_prices(
+        self, close: float, minute_history: df, now: datetime
+    ) -> Any[Tuple[None, None], Tuple[float, float]]:
+        supports = find_supports(
+            strategy_name=self.name,
+            current_value=close,
+            minute_history=minute_history,
+            now=now,
+        )
+        resistances = find_resistances(
+            strategy_name=self.name,
+            current_value=close,
+            minute_history=minute_history,
+            now=now,
+        )
+        if supports is None or len(supports) == 0:
+            return None, None
+        if resistances is None or len(resistances) == 0:
+            return None, None
+
+        target_price = supports[-1]
+        stop_price = resistances[-1]
+        distance_to_stop = (stop_price - close) / close
+
+        if distance_to_stop < 0.02:
+            return False
+
+        return target_price, stop_price
+
+    async def is_not_shortable(self, symbol: str) -> bool:
+        asset = self.trading_api.get_asset(symbol)
+        return (
+            False
+            if asset.tradable is False
+            or asset.shortable is False
+            or asset.status == "inactive"
+            or asset.easy_to_borrow is False
+            else True
+        )
+
+    async def _is_buy_time(self, now: datetime):
+        return (
+            True
+            if config.trade_buy_window
+            > (now - config.market_open).seconds // 60
+            > config.market_cool_down_minutes
+            or config.bypass_market_schedule
+            else False
+        )
+
+    async def _is_sell_time(self, now: datetime):
+        return (
+            True
+            if (
+                (now - config.market_open).seconds // 60
+                >= config.market_cool_down_minutes
+                or config.bypass_market_schedule
+            )
+            and (config.market_close - now).seconds // 60 > 15
+            else False
+        )
+
     async def run(
         self, symbol: str, position: int, minute_history: df, now: datetime
     ) -> bool:
-        since_market_open = now - config.market_open
-        until_market_close = config.market_close - now
         data = minute_history.iloc[-1]
+        if await self._is_buy_time(now) and not position:
+            to_buy, indicators = await self._check_buy_signal(
+                symbol=symbol,
+                open=data.open,
+                close=data.close,
+                minute_history=minute_history,
+            )
+            if not to_buy:
+                return False
 
-        if (
-            config.trade_buy_window > since_market_open.seconds // 60 > 15
-            or config.bypass_market_schedule
-        ) and not position:
-            # Check for buy signals
-            # See how high the price went during the first 15 minutes
+            target_price, stop_price = await self._find_target_stop_prices(
+                close=data.close, minute_history=minute_history, now=now
+            )
+            if target_price is None:
+                return False
 
-            if not config.bypass_market_schedule:
-                lbound = config.market_open
-                ubound = lbound + timedelta(minutes=15)
-                try:
-                    high_15m = minute_history.loc[lbound:ubound]["high"].max()
-                except Exception:
-                    error_logger.report_exception()
-                    # Because we're aggregating on the fly, sometimes the datetime
-                    # index can get messy until it's healed by the minute bars
-                    return False
-            else:
-                high_15m = prev_closes[symbol]
+            portfolio_value = float(
+                self.trading_api.get_account().portfolio_value
+            )
+            shares_to_buy = (
+                portfolio_value * config.risk // data.close
+            ) - position
+            if shares_to_buy <= 0:
+                return False
 
-            # Get the change since yesterday's market close
-            daily_pct_change = (
-                data.close - prev_closes[symbol]
-            ) / prev_closes[symbol]
-            if (
-                daily_pct_change > 0.04
-                and data.close > high_15m
-                and volume_today[symbol] > 30000
-            ):
-                #               tlog(
-                #                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
-                #                )
-                # check for a positive, increasing MACD
-                macds = MACD(
-                    minute_history["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00")
+            if self.is_not_shortable(symbol):
+                tlog(f"{self.name}\t\t\tcannot short {symbol}.")
+                return False
+
+            tlog(
+                f"[{self.name}]\t\t\tSubmitting short sell for {shares_to_buy} shares of {symbol} at {data.close} target {target_price} stop {stop_price}"
+            )
+            sell_indicators[symbol] = indicators
+
+            try:
+                o = self.trading_api.submit_order(
+                    symbol=symbol,
+                    qty=str(shares_to_buy),
+                    side="sell",
+                    type="market",
+                    time_in_force="day",
+                )
+                open_orders[symbol] = (o, "sell_short")
+                latest_cost_basis[symbol] = data.close
+                target_prices[symbol] = target_price
+                stop_prices[symbol] = stop_price
+                open_order_strategy[symbol] = self
+                return True
+            except Exception as e:
+                error_logger.report_exception()
+                tlog(
+                    f"[{self.name}]\t\t\t\tfailed to sell short {symbol} for reason {e}"
                 )
 
-                macd1 = macds[0]
-                macd_signal = macds[1]
-                if (
-                    macd1[-1].round(2) > 0
-                    and macd1[-3].round(3)
-                    < macd1[-2].round(3)
-                    < macd1[-1].round(3)
-                    and macd1[-1].round(2) > macd_signal[-1].round(2)
-                    and data.close > data.open
-                ):
-                    tlog(
-                        f"[{self.name}]\tMACD(12,26) for {symbol} trending up and above signals"
-                    )
-
-                    # check RSI is high enough
-                    rsi = RSI(minute_history["close"], 14)
-                    tlog(f"[{self.name}]\t\tRSI {round(rsi[-1], 2)}")
-                    if rsi[-1] > 75:
-                        supports = find_supports(
-                            strategy_name=self.name,
-                            current_value=data.close,
-                            minute_history=minute_history,
-                            now=now,
-                        )
-                        resistances = find_resistances(
-                            strategy_name=self.name,
-                            current_value=data.close,
-                            minute_history=minute_history,
-                            now=now,
-                        )
-                        if supports is None or len(supports) == 0:
-                            return False
-                        if resistances is None or len(resistances) == 0:
-                            return False
-
-                        stop_price = resistances[-1]
-                        target_price = supports[-1]
-
-                        distance_to_stop = (
-                            stop_price - data.close
-                        ) / data.close
-                        tlog(
-                            f"{self.name} {symbol} distance to stop {round(distance_to_stop, 2)}"
-                        )
-                        if distance_to_stop < 0.02:
-                            tlog(
-                                f"{self.name} {symbol} too close to resistance, skipping short sell"
-                            )
-                            return False
-
-                        portfolio_value = float(
-                            self.trading_api.get_account().portfolio_value
-                        )
-                        shares_to_buy = (
-                            portfolio_value
-                            * config.risk
-                            // (stop_price - data.close)
-                        )
-                        if not shares_to_buy:
-                            shares_to_buy = 1
-                        shares_to_buy -= position
-                        if shares_to_buy > 0:
-                            # Check asset availability for shorting
-                            asset = self.trading_api.get_asset(symbol)
-
-                            if (
-                                asset.tradable is False
-                                or asset.shortable is False
-                                or asset.status == "inactive"
-                                or asset.easy_to_borrow is False
-                            ):
-                                tlog(
-                                    f"{self.name}\t\t\tcannot short {symbol}. Asset details:{repr(asset)}"
-                                )
-                                return False
-
-                            tlog(
-                                f"[{self.name}]\t\t\tSubmitting short sell for {shares_to_buy} shares of {symbol} at {data.close} target {target_price} stop {stop_price}"
-                            )
-                            sell_indicators[symbol] = {
-                                "rsi": rsi[-1].tolist(),
-                                "macd": macd1[-5:].tolist(),
-                                "macd_signal": macd_signal[-5:].tolist(),
-                            }
-
-                            try:
-                                o = self.trading_api.submit_order(
-                                    symbol=symbol,
-                                    qty=str(shares_to_buy),
-                                    side="sell",
-                                    type="market",
-                                    time_in_force="day",
-                                )
-                                open_orders[symbol] = (o, "sell_short")
-                                latest_cost_basis[symbol] = data.close
-                                target_prices[symbol] = target_price
-                                stop_prices[symbol] = stop_price
-                                open_order_strategy[symbol] = self
-                                return True
-                            except Exception as e:
-                                error_logger.report_exception()
-                                tlog(
-                                    f"[{self.name}]\t\t\t\tfailed to sell short {symbol} for reason {e}"
-                                )
-
-        if (
-            (
-                since_market_open.seconds // 60 >= 15
-                or config.bypass_market_schedule
-            )
-            and until_market_close.seconds // 60 > 15
-            and position
-        ):
+        elif await self._is_sell_time(now) and position:
             # Check for liquidation signals
             rsi = RSI(minute_history["close"], 14)
             movement = (
