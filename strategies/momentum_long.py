@@ -172,7 +172,7 @@ class MomentumLong(Strategy):
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
 
-        if super().is_sell_time(now) and position:
+        if await super().is_sell_time(now) and position:
             # Check for liquidation signals
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
