@@ -3,6 +3,7 @@ from datetime import datetime
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
+import config
 import trading_data
 from models.algo_run import AlgoRun
 
@@ -21,3 +22,25 @@ class Strategy:
         self, symbol: str, position: int, minute_history: df, now: datetime
     ) -> bool:
         return False
+
+    async def is_sell_time(self, now: datetime):
+        return (
+            True
+            if (
+                (now - config.market_open).seconds // 60
+                >= config.market_cool_down_minutes
+                or config.bypass_market_schedule
+            )
+            and (config.market_close - now).seconds // 60 > 15
+            else False
+        )
+
+    async def is_buy_time(self, now: datetime):
+        return (
+            True
+            if config.trade_buy_window
+            > (now - config.market_open).seconds // 60
+            > config.market_cool_down_minutes
+            or config.bypass_market_schedule
+            else False
+        )
