@@ -43,7 +43,7 @@ def find_resistances(
 
         resistances = []
         for key, cluster in clusters.items():
-            if len(cluster) > 0:
+            if len(cluster) > 1:
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
@@ -72,7 +72,7 @@ def find_supports(
         clusters = dict(enumerate(grouper(local_maximas), 1))
         resistances = []
         for key, cluster in clusters.items():
-            if len(cluster) > 0:
+            if len(cluster) > 1:
                 resistances.append(round(sum(cluster) / len(cluster), 2))
         resistances = sorted(resistances)
 
