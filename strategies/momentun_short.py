@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
 from google.cloud import error_reporting
@@ -56,10 +56,6 @@ class MomentumShort(Strategy):
             and close > high_15m
             and volume_today[symbol] > 30000
         ):
-            #               tlog(
-            #                    f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
-            #                )
-            # check for a positive, increasing MACD
             macds = MACD(
                 minute_history["close"].dropna().between_time("9:30", "16:00")
             )
@@ -94,7 +90,7 @@ class MomentumShort(Strategy):
 
     async def _find_target_stop_prices(
         self, close: float, minute_history: df, now: datetime
-    ) -> Any(Tuple[None, None], Tuple[float, float]):  # type: ignore
+    ) -> Tuple[Optional[float], Optional[float]]:
         supports = find_supports(
             strategy_name=self.name,
             current_value=close,
@@ -117,7 +113,7 @@ class MomentumShort(Strategy):
         distance_to_stop = (stop_price - close) / close
 
         if distance_to_stop < 0.02:
-            return False
+            return None, None
 
         return target_price, stop_price
 
@@ -171,7 +167,7 @@ class MomentumShort(Strategy):
             target_price, stop_price = await self._find_target_stop_prices(
                 close=data.close, minute_history=minute_history, now=now
             )
-            if target_price is None:
+            if target_price is None or stop_price is None:
                 return False
 
             portfolio_value = float(
