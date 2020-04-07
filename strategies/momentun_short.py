@@ -95,13 +95,11 @@ class MomentumShort(Strategy):
             strategy_name=self.name,
             current_value=close,
             minute_history=minute_history,
-            now=now,
         )
         resistances = find_resistances(
             strategy_name=self.name,
             current_value=close,
             minute_history=minute_history,
-            now=now,
         )
         if supports is None or len(supports) == 0:
             return None, None
@@ -128,33 +126,11 @@ class MomentumShort(Strategy):
             else True
         )
 
-    async def _is_buy_time(self, now: datetime):
-        return (
-            True
-            if config.trade_buy_window
-            > (now - config.market_open).seconds // 60
-            > config.market_cool_down_minutes
-            or config.bypass_market_schedule
-            else False
-        )
-
-    async def _is_sell_time(self, now: datetime):
-        return (
-            True
-            if (
-                (now - config.market_open).seconds // 60
-                >= config.market_cool_down_minutes
-                or config.bypass_market_schedule
-            )
-            and (config.market_close - now).seconds // 60 > 15
-            else False
-        )
-
     async def run(
         self, symbol: str, position: int, minute_history: df, now: datetime
     ) -> bool:
         data = minute_history.iloc[-1]
-        if await self._is_buy_time(now) and not position:
+        if await super().is_buy_time(now) and not position:
             to_buy, indicators = await self._check_buy_signal(
                 symbol=symbol,
                 open=data.open,
@@ -208,7 +184,7 @@ class MomentumShort(Strategy):
                     f"[{self.name}]\t\t\t\tfailed to sell short {symbol} for reason {e}"
                 )
 
-        elif await self._is_sell_time(now) and position:
+        elif await super().is_sell_time(now) and position:
             # Check for liquidation signals
             rsi = RSI(minute_history["close"], 14)
             movement = (

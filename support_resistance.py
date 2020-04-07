@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 import numpy as np
@@ -29,7 +28,7 @@ def grouper(iterable):
 
 
 def find_resistances(
-    strategy_name: str, current_value: float, minute_history: df, now: datetime
+    strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
     series = minute_history["high"][-200:].resample("5min").min()
@@ -59,7 +58,7 @@ def find_resistances(
 
 
 def find_supports(
-    strategy_name: str, current_value: float, minute_history: df, now: datetime
+    strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
     series = minute_history["low"][-200:].resample("5min").min()
