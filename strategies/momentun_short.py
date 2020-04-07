@@ -184,7 +184,7 @@ class MomentumShort(Strategy):
                     f"[{self.name}]\t\t\t\tfailed to sell short {symbol} for reason {e}"
                 )
 
-        elif await super().is_sell_time(now) and position:
+        elif await super().is_sell_time(now) and position < 0:
             # Check for liquidation signals
             rsi = RSI(minute_history["close"], 14)
             movement = (
