@@ -36,6 +36,7 @@ def find_resistances(
         series = (
             minute_history["high"][-back_track_min:].resample("5min").min()
         )
+        tlog(f"{symobl} find_resistances(): {series}")
 
         diff = np.diff(series.values)
         high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
