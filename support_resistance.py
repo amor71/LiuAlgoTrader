@@ -34,7 +34,7 @@ def find_resistances(
 
     for back_track_min in range(200, len(minute_history.index), 60):
         series = (
-            minute_history["high"][-back_track_min:].resample("5min").min()
+            minute_history["high"][-back_track_min:].resample("5min").max()
         )
         # tlog(f"{symbol} find_resistances(): {len(series)}")
 
