@@ -120,12 +120,12 @@ class MomentumShort(Strategy):
     async def is_not_shortable(self, symbol: str) -> bool:
         asset = self.trading_api.get_asset(symbol)
         return (
-            False
+            True
             if asset.tradable is False
             or asset.shortable is False
             or asset.status == "inactive"
             or asset.easy_to_borrow is False
-            else True
+            else False
         )
 
     async def run(
