@@ -267,7 +267,10 @@ async def run(
 
         # do we need to liquidate for the day?
         until_market_close = config.market_close - ts
-        if until_market_close.seconds // 60 <= 5:
+        if (
+            until_market_close.seconds // 60
+            <= config.market_liquidation_end_time_minutes
+        ):
             await liquidate(symbol, symbol_position, trading_api, data_ws)
 
         # run strategies
