@@ -20,7 +20,7 @@ volume_today: Dict[str, int] = {}
 def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
     """get ticker history"""
 
-    minute_history: Dict[str, object] = {}
+    minute_history: Dict[str, df] = {}
     c = 0
     exclude_symbols = []
     for symbol in symbols:
@@ -45,7 +45,9 @@ def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
                         error_logger.report_exception()
                         exclude_symbols.append(symbol)
             c += 1
-            tlog(f"loaded agg data for {symbol} {c}/{len(symbols)}")
+            tlog(
+                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{len(symbols)}"
+            )
 
     for x in exclude_symbols:
         symbols.remove(x)
