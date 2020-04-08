@@ -43,6 +43,7 @@ group_margin = 0.02
 
 # trade times
 market_cool_down_minutes: int = 15
+market_liquidation_end_time_minutes: int = 15
 market_open: datetime
 market_close: datetime
 
