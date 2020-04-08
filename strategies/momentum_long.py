@@ -106,7 +106,7 @@ class MomentumLong(Strategy):
                         if rsi[-1] < 80:
                             tlog(f"[{self.name}] RSI {rsi[-1]} < 80")
                             resistance = find_resistances(
-                                self.name, data.close, minute_history
+                                symbol, self.name, data.close, minute_history
                             )
 
                             if resistance is None or resistance == []:
