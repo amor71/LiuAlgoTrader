@@ -89,14 +89,16 @@ class MomentumShort(Strategy):
         return False, {}
 
     async def _find_target_stop_prices(
-        self, close: float, minute_history: df, now: datetime
+        self, symbol: str, close: float, minute_history: df, now: datetime
     ) -> Tuple[Optional[float], Optional[float]]:
         supports = find_supports(
+            symobl=symbol,
             strategy_name=self.name,
             current_value=close,
             minute_history=minute_history,
         )
         resistances = find_resistances(
+            symobl=symbol,
             strategy_name=self.name,
             current_value=close,
             minute_history=minute_history,
@@ -141,7 +143,10 @@ class MomentumShort(Strategy):
                 return False
 
             target_price, stop_price = await self._find_target_stop_prices(
-                close=data.close, minute_history=minute_history, now=now
+                symbol=symbol,
+                close=data.close,
+                minute_history=minute_history,
+                now=now,
             )
             if target_price is None or stop_price is None:
                 return False

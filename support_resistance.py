@@ -28,60 +28,64 @@ def grouper(iterable):
 
 
 def find_resistances(
-    strategy_name: str, current_value: float, minute_history: df
+    symobl: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
-    series = minute_history["high"][-200:].resample("5min").min()
 
-    diff = np.diff(series.values)
-    high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
-    if len(high_index) > 0:
-        local_maximas = sorted(
-            [series[i] for i in high_index if series[i] > current_value]
+    for back_track_min in range(200, minute_history.shape[0], 60):
+        series = (
+            minute_history["high"][-back_track_min:].resample("5min").min()
         )
-        clusters = dict(enumerate(grouper(local_maximas), 1))
 
-        resistances = []
-        for key, cluster in clusters.items():
-            if len(cluster) > 1:
-                resistances.append(round(sum(cluster) / len(cluster), 2))
-        resistances = sorted(resistances)
-
-        if len(resistances) > 0:
-            tlog(
-                f"[{strategy_name}] find_resistances() - resistances={resistances}"
+        diff = np.diff(series.values)
+        high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+        if len(high_index) > 0:
+            local_maximas = sorted(
+                [series[i] for i in high_index if series[i] > current_value]
             )
+            clusters = dict(enumerate(grouper(local_maximas), 1))
 
-        return resistances
+            resistances = []
+            for key, cluster in clusters.items():
+                if len(cluster) > 1:
+                    resistances.append(round(sum(cluster) / len(cluster), 2))
+            resistances = sorted(resistances)
+
+            if len(resistances) > 0:
+                tlog(
+                    f"[{strategy_name}] find_resistances({symobl}) - resistances={resistances}"
+                )
+
+            return resistances
 
     return None
 
 
 def find_supports(
-    strategy_name: str, current_value: float, minute_history: df
+    symobl: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
-    series = minute_history["low"][-200:].resample("5min").min()
-    diff = np.diff(series.values)
-    high_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
-    if len(high_index) > 0:
-        local_maximas = sorted(
-            [series[i] for i in high_index if series[i] <= current_value]
-        )
-
-        clusters = dict(enumerate(grouper(local_maximas), 1))
-        resistances = []
-        for key, cluster in clusters.items():
-            if len(cluster) > 1:
-                resistances.append(round(sum(cluster) / len(cluster), 2))
-        resistances = sorted(resistances)
-
-        if len(resistances) > 0:
-            tlog(
-                f"[{strategy_name}] find_supports() - resistances={resistances}"
+    for back_track_min in range(200, minute_history.shape[0], 60):
+        series = minute_history["low"][-back_track_min:].resample("5min").min()
+        diff = np.diff(series.values)
+        high_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
+        if len(high_index) > 0:
+            local_maximas = sorted(
+                [series[i] for i in high_index if series[i] <= current_value]
             )
+            clusters = dict(enumerate(grouper(local_maximas), 1))
+            resistances = []
+            for key, cluster in clusters.items():
+                if len(cluster) > 1:
+                    resistances.append(round(sum(cluster) / len(cluster), 2))
+            resistances = sorted(resistances)
 
-        return resistances
+            if len(resistances) > 0:
+                tlog(
+                    f"[{strategy_name}] find_supports({symobl}) - resistances={resistances}"
+                )
+
+            return resistances
 
     return None
 
