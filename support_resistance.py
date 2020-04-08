@@ -28,15 +28,15 @@ def grouper(iterable):
 
 
 def find_resistances(
-    symobl: str, strategy_name: str, current_value: float, minute_history: df
+    symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
 
-    for back_track_min in range(200, minute_history.shape[0], 60):
+    for back_track_min in range(200, len(minute_history.index), 60):
         series = (
             minute_history["high"][-back_track_min:].resample("5min").min()
         )
-        tlog(f"{symobl} find_resistances(): {series}")
+        tlog(f"{symbol} find_resistances(): {len(series)}")
 
         diff = np.diff(series.values)
         high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
@@ -54,7 +54,7 @@ def find_resistances(
 
             if len(resistances) > 0:
                 tlog(
-                    f"[{strategy_name}] find_resistances({symobl}) - resistances={resistances}"
+                    f"[{strategy_name}] find_resistances({symbol}) - resistances={resistances}"
                 )
 
             return resistances
@@ -63,10 +63,10 @@ def find_resistances(
 
 
 def find_supports(
-    symobl: str, strategy_name: str, current_value: float, minute_history: df
+    symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
-    for back_track_min in range(200, minute_history.shape[0], 60):
+    for back_track_min in range(200, len(minute_history.index), 60):
         series = minute_history["low"][-back_track_min:].resample("5min").min()
         diff = np.diff(series.values)
         high_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
@@ -83,7 +83,7 @@ def find_supports(
 
             if len(resistances) > 0:
                 tlog(
-                    f"[{strategy_name}] find_supports({symobl}) - resistances={resistances}"
+                    f"[{strategy_name}] find_supports({symbol}) - resistances={resistances}"
                 )
 
             return resistances
