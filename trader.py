@@ -140,6 +140,10 @@ async def run(
     async def handle_trade_update(conn, channel, data):
         symbol = data.order["symbol"]
 
+        # if trade originated somewhere else, disregard
+        if symbol not in trading_data.open_orders:
+            return
+
         last_order = trading_data.open_orders.get(symbol)[0]
         last_op = trading_data.open_orders.get(symbol)[1]
         if last_order is not None:
