@@ -42,7 +42,7 @@ def find_resistances(
         high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
         if len(high_index) > 0:
             local_maximas = sorted(
-                [series[i] for i in high_index if series[i] > current_value]
+                [series[i] for i in high_index if series[i] >= current_value]
             )
             clusters = dict(enumerate(grouper(local_maximas), 1))
 

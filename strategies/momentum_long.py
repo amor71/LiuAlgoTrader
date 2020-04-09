@@ -115,6 +115,13 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
+                            if (
+                                resistance[0] - data.close
+                            ) / data.close < 0.02:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance at {resistance[0]}"
+                                )
+
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history, now
