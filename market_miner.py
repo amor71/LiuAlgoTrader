@@ -11,7 +11,10 @@ from common.tlog import tlog
 
 @timeit
 async def update_all_tickers_data(api: tradeapi) -> None:
-    pass
+    tickers = api.polygon.all_tickers()
+
+    for ticker in tickers:
+        print(ticker)
 
 
 def motd(filename: str, version: str) -> None:
