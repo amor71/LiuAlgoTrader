@@ -40,11 +40,16 @@ class MomentumLong(Strategy):
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
             try:
-                high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
-            except Exception:
+                high_15m = minute_history[lbound:ubound][  # type: ignore
+                    "high"
+                ].max()
+            except Exception as e:
                 error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
+                tlog(
+                    f"[{self.name}] error aggregation {e} - maybe should use nearest?"
+                )
                 return False
 
             # Get the change since yesterday's market close
@@ -56,9 +61,6 @@ class MomentumLong(Strategy):
                 and data.close > high_15m
                 and volume_today[symbol] > 30000
             ):
-                #               tlog(
-                #                   f"[{self.name}] {symbol} high_15m={high_15m} data.close={data.close}"
-                #               )
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
