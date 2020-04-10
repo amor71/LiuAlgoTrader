@@ -1,17 +1,20 @@
+import asyncio
 import os
 
 import alpaca_trade_api as tradeapi
 import pygit2
 
 import config
-from tlog import tlog
+from common.decorators import timeit
+from common.tlog import tlog
 
 
-async def update_all_tickers_data(api: tradeapi):
+@timeit
+async def update_all_tickers_data(api: tradeapi) -> None:
     pass
 
 
-def motd(filename: str, version: str):
+def motd(filename: str, version: str) -> None:
     """Display welcome message"""
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
@@ -25,7 +28,14 @@ def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    update_all_tickers_data(data_api)
+    asyncio.ensure_future(update_all_tickers_data(data_api))
+
+    try:
+        asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        tlog(f"Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(f"Caught exception {str(e)}")
 
 
 """
