@@ -52,3 +52,21 @@ ALTER TABLE new_trades ADD COLUMN target_price decimal (8, 2);
 
 ALTER TYPE trade_operation ADD VALUE 'sell_short';
 ALTER TYPE trade_operation ADD VALUE 'buy_short';
+
+CREATE TABLE IF NOT EXISTS ticker_data (
+    ticker_id serial PRIMARY KEY,
+    name text NOT NULL,
+    symbol text NOT NULL,
+    description text NOT NULL,
+    tags text[],
+    similar_tickers text[],
+    industry text,
+    sector text,
+    exchange text,
+    create_tstamp timestamp DEFAULT current_timestamp,
+    modify_tstamp timestamp
+);
+CREATE INDEX ON ticker_data(sector);
+CREATE INDEX ON ticker_data(industry);
+CREATE INDEX ON ticker_data(tags);
+CREATE INDEX ON ticker_data(similar_tickers);
