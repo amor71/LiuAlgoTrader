@@ -4,7 +4,7 @@ import numpy as np
 from pandas import DataFrame as df
 
 import config
-from tlog import tlog
+from common.tlog import tlog
 
 
 def grouper(iterable):

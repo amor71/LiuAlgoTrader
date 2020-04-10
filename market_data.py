@@ -9,7 +9,7 @@ from google.cloud import error_reporting
 from pandas import DataFrame as df
 
 import config
-from tlog import tlog
+from common.tlog import tlog
 
 error_logger = error_reporting.Client()
 

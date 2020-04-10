@@ -7,9 +7,9 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 import config
+from common.tlog import tlog
 from market_data import prev_closes, volume_today
 from support_resistance import find_resistances, find_supports
-from tlog import tlog
 from trading_data import (buy_indicators, latest_cost_basis,
                           open_order_strategy, open_orders, sell_indicators,
                           stop_prices, target_prices)
