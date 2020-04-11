@@ -3,8 +3,7 @@ from datetime import datetime
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
-import config
-import trading_data
+from common import config, trading_data
 from models.algo_run import AlgoRun
 
 

@@ -18,11 +18,14 @@ from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-import config
-import trading_data
+from common import config, trading_data
 from common.tlog import tlog
-from market_data import (get_historical_data, get_tickers, prev_closes,
-                         volume_today)
+from common.market_data import (
+    get_historical_data,
+    get_tickers,
+    prev_closes,
+    volume_today,
+)
 from models.new_trades import NewTrade
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
@@ -32,10 +35,7 @@ error_logger = error_reporting.Client()
 
 
 async def liquidate(
-    symbol: str,
-    symbol_position: int,
-    trading_api: tradeapi,
-    data_ws: StreamConn,
+    symbol: str, symbol_position: int, trading_api: tradeapi, data_ws: StreamConn,
 ) -> None:
 
     if symbol_position:
@@ -123,9 +123,7 @@ async def run(
         if position.symbol in symbols:
             trading_data.positions[position.symbol] = float(position.qty)
             # Recalculate cost basis and stop price
-            trading_data.latest_cost_basis[position.symbol] = float(
-                position.cost_basis
-            )
+            trading_data.latest_cost_basis[position.symbol] = float(position.cost_basis)
 
     # Keep track of what we're buying/selling
     trade_channels = ["trade_updates"]
@@ -279,9 +277,7 @@ async def run(
 
         # run strategies
         for s in strategies:
-            if await s.run(
-                symbol, symbol_position, minute_history[symbol], ts
-            ):
+            if await s.run(symbol, symbol_position, minute_history[symbol], ts):
                 tlog(f"executed strategy {s.name} on {symbol}")
                 return
 
@@ -416,12 +412,8 @@ def main():
         secret_key=config.prod_api_secret,
     )
     nyc = timezone("America/New_York")
-    config.market_open, config.market_close = get_trading_windows(
-        nyc, _data_api
-    )
-    tlog(
-        f"markets open {config.market_open} market close {config.market_close}"
-    )
+    config.market_open, config.market_close = get_trading_windows(nyc, _data_api)
+    tlog(f"markets open {config.market_open} market close {config.market_close}")
 
     # Wait until just before we might want to trade
     current_dt = datetime.today().astimezone(nyc)
@@ -434,16 +426,9 @@ def main():
             if to_market_open.total_seconds() > 0:
                 time.sleep(to_market_open.total_seconds() + 1)
 
-            tlog(
-                f"market open, wait {config.market_cool_down_minutes} minutes"
-            )
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
-            while (
-                since_market_open.seconds // 60
-                < config.market_cool_down_minutes
-            ):
+            tlog(f"market open, wait {config.market_cool_down_minutes} minutes")
+            since_market_open = datetime.today().astimezone(nyc) - config.market_open
+            while since_market_open.seconds // 60 < config.market_cool_down_minutes:
                 time.sleep(1)
                 since_market_open = (
                     datetime.today().astimezone(nyc) - config.market_open
@@ -451,19 +436,13 @@ def main():
 
         tlog("ready to start")
         base_url = (
-            config.prod_base_url
-            if config.env == "PROD"
-            else config.paper_base_url
+            config.prod_base_url if config.env == "PROD" else config.paper_base_url
         )
         api_key_id = (
-            config.prod_api_key_id
-            if config.env == "PROD"
-            else config.paper_api_key_id
+            config.prod_api_key_id if config.env == "PROD" else config.paper_api_key_id
         )
         api_secret = (
-            config.prod_api_secret
-            if config.env == "PROD"
-            else config.paper_api_secret
+            config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
         )
 
         _trading_api = tradeapi.REST(
@@ -487,9 +466,7 @@ def main():
             asyncio.get_event_loop().run_forever()
         except KeyboardInterrupt:
             tlog(f"Caught KeyboardInterrupt")
-            asyncio.get_event_loop().run_until_complete(
-                end_time("KeyboardInterrupt")
-            )
+            asyncio.get_event_loop().run_until_complete(end_time("KeyboardInterrupt"))
         except Exception as e:
             tlog(f"Caught exception {str(e)}")
             asyncio.get_event_loop().run_until_complete(end_time(str(e)))

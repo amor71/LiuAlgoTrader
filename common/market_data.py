@@ -8,7 +8,7 @@ from alpaca_trade_api.polygon.entity import Ticker
 from google.cloud import error_reporting
 from pandas import DataFrame as df
 
-import config
+from common import config
 from common.tlog import tlog
 
 error_logger = error_reporting.Client()
@@ -72,8 +72,7 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
                 and config.max_share_price
                 >= ticker.lastTrade["p"]
                 >= config.min_share_price
-                and ticker.prevDay["v"] * ticker.lastTrade["p"]
-                > config.min_last_dv
+                and ticker.prevDay["v"] * ticker.lastTrade["p"] > config.min_last_dv
                 and ticker.todaysChangePerc >= config.today_change_percent
             )
         ]

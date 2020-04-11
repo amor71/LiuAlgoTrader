@@ -31,11 +31,7 @@ class NewTrade:
         self.trade_id = None
 
     async def save(
-        self,
-        pool: Pool,
-        client_buy_time: str,
-        stop_price=None,
-        target_price=None,
+        self, pool: Pool, client_buy_time: str, stop_price=None, target_price=None,
     ):
         async with pool.acquire() as con:
             async with con.transaction():

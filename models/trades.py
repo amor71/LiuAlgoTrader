@@ -1,21 +1,17 @@
 import json
 from typing import Dict
-
+from deprecated import deprecated
 from asyncpg.pool import Pool
 
 
+@deprecated(reason="should not be used")
 class Trade:
     sell_price: float
     sell_indicators: Dict
     is_win: bool
 
     def __init__(
-        self,
-        algo_run_id: int,
-        symbol: str,
-        qty: int,
-        price: float,
-        indicators: dict,
+        self, algo_run_id: int, symbol: str, qty: int, price: float, indicators: dict,
     ):
         """
         create a trade object, which mean a "buy" operation, and creating a transaction_id,

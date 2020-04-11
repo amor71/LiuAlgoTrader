@@ -1,6 +1,6 @@
 from google.cloud import logging
 
-import config
+from common import config
 
 logger = logging.Client().logger("trader")
 

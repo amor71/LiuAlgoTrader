@@ -6,13 +6,19 @@ from google.cloud import error_reporting
 from pandas import DataFrame as df
 from talib import MACD, RSI
 
-import config
+from common import config
 from common.tlog import tlog
-from market_data import prev_closes, volume_today
-from support_resistance import find_resistances, find_supports
-from trading_data import (buy_indicators, latest_cost_basis,
-                          open_order_strategy, open_orders, sell_indicators,
-                          stop_prices, target_prices)
+from common.market_data import prev_closes, volume_today
+from fincalcs.support_resistance import find_resistances, find_supports
+from common.trading_data import (
+    buy_indicators,
+    latest_cost_basis,
+    open_order_strategy,
+    open_orders,
+    sell_indicators,
+    stop_prices,
+    target_prices,
+)
 
 from .base import Strategy
 
@@ -23,9 +29,7 @@ class MomentumShort(Strategy):
     name = "momentum_short"
 
     def __init__(self, trading_api: tradeapi, data_api: tradeapi):
-        super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
-        )
+        super().__init__(name=self.name, trading_api=trading_api, data_api=data_api)
 
     async def create(self) -> None:
         await super().create()
@@ -56,9 +60,7 @@ class MomentumShort(Strategy):
             and close > high_15m
             and volume_today[symbol] > 30000
         ):
-            macds = MACD(
-                minute_history["close"].dropna().between_time("9:30", "16:00")
-            )
+            macds = MACD(minute_history["close"].dropna().between_time("9:30", "16:00"))
 
             macd = macds[0]
             macd_signal = macds[1]
@@ -143,20 +145,13 @@ class MomentumShort(Strategy):
                 return False
 
             target_price, stop_price = await self._find_target_stop_prices(
-                symbol=symbol,
-                close=data.close,
-                minute_history=minute_history,
-                now=now,
+                symbol=symbol, close=data.close, minute_history=minute_history, now=now,
             )
             if target_price is None or stop_price is None:
                 return False
 
-            portfolio_value = float(
-                self.trading_api.get_account().portfolio_value
-            )
-            shares_to_buy = (
-                portfolio_value * config.risk // data.close
-            ) - position
+            portfolio_value = float(self.trading_api.get_account().portfolio_value)
+            shares_to_buy = (portfolio_value * config.risk // data.close) - position
             if shares_to_buy <= 0:
                 return False
 
@@ -192,9 +187,9 @@ class MomentumShort(Strategy):
         elif await super().is_sell_time(now) and position < 0:
             # Check for liquidation signals
             rsi = RSI(minute_history["close"], 14)
-            movement = (
-                data.close - latest_cost_basis[symbol]
-            ) / latest_cost_basis[symbol]
+            movement = (data.close - latest_cost_basis[symbol]) / latest_cost_basis[
+                symbol
+            ]
 
             to_sell = False
             sell_reasons = []
@@ -213,9 +208,7 @@ class MomentumShort(Strategy):
                     buy_indicators[symbol] = {
                         "rsi": rsi[-5:].tolist(),
                         "movement": movement,
-                        "reasons": " AND ".join(
-                            [str(elem) for elem in sell_reasons]
-                        ),
+                        "reasons": " AND ".join([str(elem) for elem in sell_reasons]),
                     }
 
                     tlog(
