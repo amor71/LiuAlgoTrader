@@ -2,6 +2,7 @@ import asyncio
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
 
 import asyncpg
@@ -99,11 +100,13 @@ def _fetch_symbol_details(
             },
         ) as response:
             if response.status_code == 200:
-                if response is None:
-                    tlog(f"received empty response for ticker {ticker.ticker}")
-                else:
+                try:
                     r = response.json()
                     return r
+                except JSONDecodeError:
+                    tlog(
+                        f"JSONDecodeError for {ticker.ticker} w {response.text}"
+                    )
 
     except requests.exceptions.ConnectionError as e:
         tlog(
