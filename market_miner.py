@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
-import IPython
+
 import asyncpg
 import pygit2
 import requests
@@ -19,7 +19,7 @@ from models.ticker_data import TickerData
 
 async def create_db_connection() -> None:
     trading_data.db_conn_pool = await asyncpg.create_pool(
-        dsn=config.dsn, min_size=20, max_size=200
+        dsn=config.dsn, min_size=20, max_size=50
     )
     tlog("db connection pool initialized")
 
@@ -74,17 +74,28 @@ async def _update_ticker_details(ticker_info: Dict) -> None:
         exchange=ticker_info["exchange"],
     )
     if await ticker_data.save(trading_data.db_conn_pool) is False:
-        tlog(f"going to wait 30 seconds and retry saving {ticker_info['name']}")
+        tlog(
+            f"going to wait 30 seconds and retry saving {ticker_info['name']}"
+        )
         await asyncio.sleep(30)
         return await _update_ticker_details(ticker_info)
 
 
-def _fetch_symbol_details(session: requests.Session, ticker: Ticker) -> Optional[Dict]:
-    url = "https://api.polygon.io/" + "v1" + f"/meta/symbols/{ticker.ticker}/company"
+def _fetch_symbol_details(
+    session: requests.Session, ticker: Ticker
+) -> Optional[Dict]:
+    url = (
+        "https://api.polygon.io/"
+        + "v1"
+        + f"/meta/symbols/{ticker.ticker}/company"
+    )
 
     try:
         with session.get(
-            url, params={"apiKey": get_polygon_credentials(config.prod_api_key_id),},
+            url,
+            params={
+                "apiKey": get_polygon_credentials(config.prod_api_key_id),
+            },
         ) as response:
             if response.status_code == 200:
                 try:
