@@ -2,8 +2,7 @@ import json
 
 from asyncpg.pool import Pool
 
-import config
-import trading_data
+from common import config, trading_data
 
 
 class AlgoRun:

@@ -79,13 +79,9 @@ def grouper(iterable):
 
 def find_resistance(current_value, minute_history, now):
     """calculate next resistance"""
-    minute_history_index = minute_history["high"].index.get_loc(
-        now, method="nearest"
-    )
+    minute_history_index = minute_history["high"].index.get_loc(now, method="nearest")
     series = (
-        minute_history["high"][
-            minute_history_index - 200 : minute_history_index
-        ]
+        minute_history["high"][minute_history_index - 200 : minute_history_index]
         .resample("5min")
         .min()
     )
@@ -112,13 +108,9 @@ def find_resistance(current_value, minute_history, now):
 
 def find_support(current_value, minute_history, now):
     """calculate support"""
-    minute_history_index = minute_history["high"].index.get_loc(
-        now, method="nearest"
-    )
+    minute_history_index = minute_history["high"].index.get_loc(now, method="nearest")
     series = (
-        minute_history["high"][
-            minute_history_index - 200 : minute_history_index
-        ]
+        minute_history["high"][minute_history_index - 200 : minute_history_index]
         .resample("5min")
         .min()
     )
@@ -252,9 +244,7 @@ def run(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret,
     )
     data_conn = tradeapi.StreamConn(
-        base_url=prod_base_url,
-        key_id=prod_api_key_id,
-        secret_key=prod_api_secret,
+        base_url=prod_base_url, key_id=prod_api_key_id, secret_key=prod_api_secret,
     )
     # Update initial state with information from tickers
     for ticker in tickers:
@@ -287,9 +277,7 @@ def run(
             positions[position.symbol] = float(position.qty)
             # Recalculate cost basis and stop price
             latest_cost_basis[position.symbol] = float(position.cost_basis)
-            stop_prices[position.symbol] = (
-                float(position.cost_basis) * default_stop
-            )
+            stop_prices[position.symbol] = float(position.cost_basis) * default_stop
 
     # Keep track of what we're buying/selling
     target_prices = {}
@@ -317,9 +305,9 @@ def run(
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
                     qty = qty * -1
-                positions[symbol] = positions.get(
+                positions[symbol] = positions.get(symbol, 0) - partial_fills.get(
                     symbol, 0
-                ) - partial_fills.get(symbol, 0)
+                )
                 partial_fills[symbol] = qty
                 positions[symbol] += qty
                 open_orders[symbol] = Order(data.order)
@@ -327,9 +315,9 @@ def run(
                 qty = int(data.order["filled_qty"])
                 if data.order["side"] == "sell":
                     qty = qty * -1
-                positions[symbol] = positions.get(
+                positions[symbol] = positions.get(symbol, 0) - partial_fills.get(
                     symbol, 0
-                ) - partial_fills.get(symbol, 0)
+                )
                 partial_fills[symbol] = 0
                 positions[symbol] += qty
 
@@ -422,10 +410,7 @@ def run(
                     timezone("America/New_York")
                 )
                 order_lifetime = original_ts - submission_ts
-                if (
-                    original_ts > submission_ts
-                    and order_lifetime.seconds // 60 >= 1
-                ):
+                if original_ts > submission_ts and order_lifetime.seconds // 60 >= 1:
                     # Cancel it so we can try again for a fill
                     logger.log_text(
                         f"[{env}] Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={submission_ts}"
@@ -459,9 +444,7 @@ def run(
                 return
 
             # Get the change since yesterday's market close
-            daily_pct_change = (
-                data.close - prev_closes[symbol]
-            ) / prev_closes[symbol]
+            daily_pct_change = (data.close - prev_closes[symbol]) / prev_closes[symbol]
             if (
                 daily_pct_change > 0.04
                 and data.close > high_15m
@@ -489,9 +472,7 @@ def run(
                 macd_signal = macds[1]
                 if (
                     macd1[-1].round(2) > 0
-                    and macd1[-3].round(3)
-                    < macd1[-2].round(3)
-                    < macd1[-1].round(3)
+                    and macd1[-3].round(3) < macd1[-2].round(3) < macd1[-1].round(3)
                     and macd1[-1].round(2) > macd_signal[-1].round(2)
                     and sell_macds[0][-1] > 0
                     and data.close > new_data[0]
@@ -535,9 +516,7 @@ def run(
                                 data.close + (data.close - stop_price) * 3
                             )
                             shares_to_buy = (
-                                portfolio_value
-                                * risk
-                                // (data.close - stop_price)
+                                portfolio_value * risk // (data.close - stop_price)
                             )
                             if not shares_to_buy:
                                 shares_to_buy = 1
@@ -557,16 +536,10 @@ def run(
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
                                         "macd": macd1[-5:].tolist(),
-                                        "macd_signal": macd_signal[
-                                            -5:
-                                        ].tolist(),
+                                        "macd_signal": macd_signal[-5:].tolist(),
                                         "slow macd": macd2[-5:].tolist(),
-                                        "sell_macd": sell_macds[0][
-                                            -5:
-                                        ].tolist(),
-                                        "sell_macd_signal": sell_macds[1][
-                                            -5:
-                                        ].tolist(),
+                                        "sell_macd": sell_macds[0][-5:].tolist(),
+                                        "sell_macd_signal": sell_macds[1][-5:].tolist(),
                                     }
                                     o = api.submit_order(
                                         symbol=symbol,
@@ -583,9 +556,7 @@ def run(
                                 except Exception:
                                     error_logger.report_exception()
                     else:
-                        logger.log_text(
-                            f"[{env}] failed MACD(40,60) for {symbol}!"
-                        )
+                        logger.log_text(f"[{env}] failed MACD(40,60) for {symbol}!")
 
         if (
             since_market_open.seconds // 60 >= 15
@@ -597,9 +568,7 @@ def run(
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
             macds = MACD(
-                minute_history[symbol]["close"]
-                .dropna()
-                .between_time("9:30", "16:00"),
+                minute_history[symbol]["close"].dropna().between_time("9:30", "16:00"),
                 13,
                 21,
             )
@@ -607,9 +576,9 @@ def run(
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(minute_history[symbol]["close"], 14)
-            movement = (
-                data.close - latest_cost_basis[symbol]
-            ) / latest_cost_basis[symbol]
+            movement = (data.close - latest_cost_basis[symbol]) / latest_cost_basis[
+                symbol
+            ]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1].round(2)
 
@@ -648,9 +617,7 @@ def run(
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
                         "sell_macd_signal": macd_signal[-5:].tolist(),
-                        "reasons": " AND ".join(
-                            [str(elem) for elem in sell_reasons]
-                        ),
+                        "reasons": " AND ".join([str(elem) for elem in sell_reasons]),
                     }
 
                     if not partial_sell:
@@ -772,9 +739,7 @@ def run_ws(
     logger.log_text(f"[{env}] starting web-socket loop")
 
     try:
-        trade_conn.loop.run_until_complete(
-            trade_conn.subscribe(trade_channels)
-        )
+        trade_conn.loop.run_until_complete(trade_conn.subscribe(trade_channels))
         data_conn.loop.run_until_complete(data_conn.subscribe(data_channels))
         data_conn.loop.run_forever()
     except Exception as e:
@@ -782,9 +747,7 @@ def run_ws(
         error_logger.report_exception()
 
 
-async def save_start(
-    name: str, environment: str, build: str, parameters: dict
-):
+async def save_start(name: str, environment: str, build: str, parameters: dict):
     logger.log_text(f"[{env}] save_start task starting")
     global run_details
     run_details = AlgoRun(name, environment, build, parameters)
@@ -827,13 +790,11 @@ async def end_time(reason: str):
 
 async def set_db_connection(dsn: str):
     global db_conn_pool
-    db_conn_pool = await asyncpg.create_pool(
-        dsn=dsn, min_size=20, max_size=200
-    )
+    db_conn_pool = await asyncpg.create_pool(dsn=dsn, min_size=20, max_size=200)
 
 
 def main():
-    r = pygit2.Repository("./")
+    r = pygit2.Repository("../")
     label = r.describe()
     filename = os.path.basename(__file__)
     msg = f"{filename} {label} starting!"
@@ -851,13 +812,9 @@ def main():
     api_key_id = prod_api_key_id if env == "PROD" else paper_api_key_id
     api_secret = prod_api_secret if env == "PROD" else paper_api_secret
 
-    api = tradeapi.REST(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret
-    )
+    api = tradeapi.REST(base_url=base_url, key_id=api_key_id, secret_key=api_secret)
     prod_api = tradeapi.REST(
-        base_url=prod_base_url,
-        key_id=prod_api_key_id,
-        secret_key=prod_api_secret,
+        base_url=prod_base_url, key_id=prod_api_key_id, secret_key=prod_api_secret,
     )
     # Get when the market opens or opened today
     nyc = timezone("America/New_York")

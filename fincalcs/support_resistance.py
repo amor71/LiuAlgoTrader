@@ -3,7 +3,7 @@ from typing import List, Optional
 import numpy as np
 from pandas import DataFrame as df
 
-import config
+from common import config
 from common.tlog import tlog
 
 
@@ -14,9 +14,7 @@ def grouper(iterable):
 
         if (
             not prev
-            or -config.group_margin
-            <= float(item - prev) / prev
-            <= config.group_margin
+            or -config.group_margin <= float(item - prev) / prev <= config.group_margin
         ):
             group.append(item)
         else:

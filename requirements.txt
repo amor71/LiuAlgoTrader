@@ -1,20 +1,21 @@
 requests
+deprecated
 numpy
 mypy
 black
 flake8
 pylint
 Cython
-alpaca-trade-api>=0.25
+alpaca - trade - api >= 0.25
 sklearn
-google-cloud-logging
+google - cloud - logging
 therapist
 jupyter
-ta-lib
+ta - lib
 influxdb
 asyncpg
-psycopg2-binary
+psycopg2 - binary
 sqlalchemy
 pygit2
-polygon-api-client
-google-cloud-error-reporting
+polygon - api - client
+google - cloud - error - reporting
