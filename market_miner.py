@@ -104,9 +104,7 @@ def _fetch_symbol_details(
                     r = response.json()
                     return r
                 except JSONDecodeError:
-                    tlog(
-                        f"JSONDecodeError for {ticker.ticker} w {response.text}"
-                    )
+                    tlog(f"JSONDecodeError for {ticker.sticker}")
 
     except requests.exceptions.ConnectionError as e:
         tlog(
