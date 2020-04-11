@@ -15,7 +15,7 @@ def timeit(func):
         tlog(f"{func.__name__} started")
         start = time.time()
         result = await process(func, *args, **params)
-        tlog(f"{func.__name__} >>> {time.time() - start}")
+        tlog(f"{func.__name__} >>> {round(time.time() - start, 3)} seconds")
         return result
 
     return helper

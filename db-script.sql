@@ -54,15 +54,15 @@ ALTER TYPE trade_operation ADD VALUE 'sell_short';
 ALTER TYPE trade_operation ADD VALUE 'buy_short';
 
 CREATE TABLE IF NOT EXISTS ticker_data (
-    ticker_id serial PRIMARY KEY,
+    symbol text PRIMARY KEY,
     name text NOT NULL,
-    symbol text NOT NULL,
     description text NOT NULL,
     tags text[],
     similar_tickers text[],
     industry text,
     sector text,
     exchange text,
+    short_ratio float,
     create_tstamp timestamp DEFAULT current_timestamp,
     modify_tstamp timestamp
 );
