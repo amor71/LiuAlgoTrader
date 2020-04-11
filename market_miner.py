@@ -99,8 +99,11 @@ def _fetch_symbol_details(
             },
         ) as response:
             if response.status_code == 200:
-                r = response.json()
-                return r
+                if response is None:
+                    tlog(f"received empty response for ticker {ticker.ticker}")
+                else:
+                    r = response.json()
+                    return r
 
     except requests.exceptions.ConnectionError as e:
         tlog(
