@@ -5,6 +5,7 @@ from typing import Dict, List
 import alpaca_trade_api as tradeapi
 import requests
 from alpaca_trade_api.polygon.entity import Ticker
+from asyncpg.connection import Connection
 from google.cloud import error_reporting
 from pandas import DataFrame as df
 
@@ -72,7 +73,8 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
                 and config.max_share_price
                 >= ticker.lastTrade["p"]
                 >= config.min_share_price
-                and ticker.prevDay["v"] * ticker.lastTrade["p"] > config.min_last_dv
+                and ticker.prevDay["v"] * ticker.lastTrade["p"]
+                > config.min_last_dv
                 and ticker.todaysChangePerc >= config.today_change_percent
             )
         ]
@@ -86,3 +88,55 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
 
     tlog("got no data :-( giving up")
     return []
+
+
+async def get_sector_tickers(conn: Connection, sector: str) -> List[str]:
+    async with conn.transaction():
+        records = await conn.fetch(
+            """
+                SELECT symbol
+                FROM ticker_data
+                WHERE sector = $1
+            """,
+            sector,
+        )
+
+        return [record.r[0] for record in records]
+
+
+async def get_industry_tickers(conn: Connection, industry: str) -> List[str]:
+    async with conn.transaction():
+        records = await conn.fetch(
+            """
+                SELECT symbol
+                FROM ticker_data
+                WHERE industry = $1
+            """,
+            industry,
+        )
+
+        return [record.r[0] for record in records]
+
+
+async def get_market_sectors(conn: Connection) -> List[str]:
+    async with conn.transaction():
+        records = await conn.fetch(
+            """
+                SELECT distinct sector
+                FROM ticker_data
+            """
+        )
+
+        return [record.r[0] for record in records]
+
+
+async def get_market_industries(conn: Connection) -> List[str]:
+    with conn.transaction():
+        records = await conn.fetch(
+            """
+                SELECT distinct indstry
+                FROM ticker_data
+            """
+        )
+
+        return [record.r[0] for record in records]
