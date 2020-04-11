@@ -98,8 +98,8 @@ def _fetch_symbol_details(
                 "apiKey": get_polygon_credentials(config.prod_api_key_id),
             },
         ) as response:
-            r = response.json()
             if response.status_code == 200:
+                r = response.json()
                 return r
 
     except requests.exceptions.ConnectionError as e:
