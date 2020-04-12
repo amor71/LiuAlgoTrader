@@ -96,21 +96,6 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
     return []
 
 
-async def get_sector_tickers(pool: Pool, sector: str) -> List[str]:
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            records = await conn.fetch(
-                """
-                    SELECT symbol
-                    FROM ticker_data
-                    WHERE sector = $1
-                """,
-                sector,
-            )
-
-            return [record.r[0] for record in records]
-
-
 async def calculate_trends(pool: Pool) -> bool:
     # load snapshot
     with requests.Session() as session:
@@ -124,7 +109,7 @@ async def calculate_trends(pool: Pool) -> bool:
         ) as response:
             if (
                 response.status_code == 200
-                and (r := response.json()).status == "OK"
+                and (r := response.json())["status"] == "OK"
             ):
                 for ticker in r["tickers"]:
                     trading_data.snapshot[ticker.ticker] = TickerSnapshot(
@@ -132,9 +117,15 @@ async def calculate_trends(pool: Pool) -> bool:
                         volume=ticker["day"]["volume"],
                         today_change=ticker["todaysChangePerc"],
                     )
+                    print(trading_data.snapshot[ticker.ticker])
 
                 # load industry & sector mappings
+                # sectors = await get_market_industries(pool)
+                # industries = await get_market_industries(pool)
 
+                # sector_mapping = {}
+
+                # industry_mapping = {}
                 # per each industry, calculate trend
 
                 # per each sector, calculate trend
@@ -142,6 +133,21 @@ async def calculate_trends(pool: Pool) -> bool:
                 return True
 
     return False
+
+
+async def get_sector_tickers(pool: Pool, sector: str) -> List[str]:
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            records = await conn.fetch(
+                """
+                    SELECT symbol
+                    FROM ticker_data
+                    WHERE sector = $1
+                """,
+                sector,
+            )
+
+            return [record[0] for record in records if record[0]]
 
 
 async def get_industry_tickers(pool: Pool, industry: str) -> List[str]:
@@ -156,7 +162,7 @@ async def get_industry_tickers(pool: Pool, industry: str) -> List[str]:
                 industry,
             )
 
-            return [record.r[0] for record in records]
+            return [record[0] for record in records if record[0]]
 
 
 async def get_market_sectors(pool: Pool) -> List[str]:
@@ -164,7 +170,7 @@ async def get_market_sectors(pool: Pool) -> List[str]:
         async with conn.transaction():
             records = await conn.fetch(
                 """
-                    SELECT distinct sector
+                    SELECT DISTINCT sector
                     FROM ticker_data
                 """
             )
@@ -176,7 +182,7 @@ async def get_market_industries(pool: Pool) -> List[str]:
         async with conn.transaction():
             records = await conn.fetch(
                 """
-                    SELECT distinct industry
+                    SELECT DISTINCT industry
                     FROM ticker_data
                 """
             )

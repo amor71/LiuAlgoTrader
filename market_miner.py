@@ -56,6 +56,10 @@ def _fetch(session: requests.Session, page: int) -> List[Ticker]:
 
 
 async def _update_ticker_details(ticker_info: Dict) -> None:
+    if ticker_info["active"] == "false" or ticker_info["active"] is False:
+        tlog(f"ticker {ticker_info['name']} is not active")
+        return
+
     ticker_data = TickerData(
         name=ticker_info["name"],
         symbol=ticker_info["symbol"],
