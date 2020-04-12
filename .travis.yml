@@ -2,6 +2,8 @@ language: python
 python:
   - "3.8"
 os: linux
+services:
+  - postgresql
 env:
   global:
     - DEPS_DIR=$HOME/dependencies
@@ -19,5 +21,8 @@ install:
       ./tools/build_talib_from_source.bash $DEPS_DIR;
     fi
   - pip install -r requirements.txt
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+  - psql -d travis_ci_test -U postgres -f db-script.sql
 script:
   - pytest
