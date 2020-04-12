@@ -120,6 +120,10 @@ async def calculate_trends(pool: Pool) -> bool:
                         today_change=ticker["todaysChangePerc"],
                     )
 
+                if not trading_data.snapshot:
+                    tlog("calculate_trends(): market snapshot not available")
+                    return False
+
                 # calculate sector trends
                 sectors = await get_market_industries(pool)
 
