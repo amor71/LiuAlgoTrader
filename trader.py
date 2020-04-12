@@ -512,7 +512,7 @@ def main():
             )
 
     # else run off-hour aggregates
-    asyncio.get_running_loop().run_until_complete(off_hours_aggregates())
+    asyncio.get_event_loop().run_until_complete(off_hours_aggregates())
 
 
 """
