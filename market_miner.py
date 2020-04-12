@@ -165,14 +165,15 @@ def main():
         tlog("Caught KeyboardInterrupt")
 
 
-"""
-starting
-"""
-build_label = pygit2.Repository("./").describe(
-    describe_strategy=pygit2.GIT_DESCRIBE_ALL
-)
-filename = os.path.basename(__file__)
-motd(filename=filename, version=build_label)
+if __name__ == "__main__":
+    """
+    starting
+    """
+    build_label = pygit2.Repository("./").describe(
+        describe_strategy=pygit2.GIT_DESCRIBE_ALL
+    )
+    filename = os.path.basename(__file__)
+    motd(filename=filename, version=build_label)
 
-main()
-tlog("Done.")
+    main()
+    tlog("Done.")

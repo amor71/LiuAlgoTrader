@@ -22,6 +22,7 @@ from common import config, trading_data
 from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
 from common.tlog import tlog
+from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
@@ -390,7 +391,7 @@ def get_trading_windows(tz, api):
     calendar = api.get_calendar(start=today_str, end=today_str)[0]
 
     tlog(f"next open date {calendar.date}")
-    
+
     if today < calendar.date.date():
         tlog(f"which is not today {today}")
         return None, None
@@ -402,6 +403,11 @@ def get_trading_windows(tz, api):
     )
 
     return market_open, market_close
+
+
+async def off_hours_aggregates() -> None:
+    tlog("starting to run off hours aggregates")
+    await update_all_tickers_data()
 
 
 def main():
@@ -423,83 +429,90 @@ def main():
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
     )
-    tlog(
-        f"markets open {config.market_open} market close {config.market_close}"
-    )
 
-    # Wait until just before we might want to trade
-    current_dt = datetime.today().astimezone(nyc)
-    tlog(f"current time {current_dt}")
+    if config.market_open:
+        tlog(
+            f"markets open {config.market_open} market close {config.market_close}"
+        )
 
-    if current_dt < config.market_close or config.bypass_market_schedule:
-        if not config.bypass_market_schedule:
-            to_market_open = config.market_open - current_dt
-            tlog(f"waiting for market open: {to_market_open}")
-            if to_market_open.total_seconds() > 0:
-                time.sleep(to_market_open.total_seconds() + 1)
+        # Wait until just before we might want to trade
+        current_dt = datetime.today().astimezone(nyc)
+        tlog(f"current time {current_dt}")
 
-            tlog(
-                f"market open, wait {config.market_cool_down_minutes} minutes"
-            )
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
-            while (
-                since_market_open.seconds // 60
-                < config.market_cool_down_minutes
-            ):
-                time.sleep(1)
+        if current_dt < config.market_close or config.bypass_market_schedule:
+            if not config.bypass_market_schedule:
+                to_market_open = config.market_open - current_dt
+                tlog(f"waiting for market open: {to_market_open}")
+                if to_market_open.total_seconds() > 0:
+                    time.sleep(to_market_open.total_seconds() + 1)
+
+                tlog(
+                    f"market open, wait {config.market_cool_down_minutes} minutes"
+                )
                 since_market_open = (
                     datetime.today().astimezone(nyc) - config.market_open
                 )
+                while (
+                    since_market_open.seconds // 60
+                    < config.market_cool_down_minutes
+                ):
+                    time.sleep(1)
+                    since_market_open = (
+                        datetime.today().astimezone(nyc) - config.market_open
+                    )
 
-        tlog("ready to start")
-        base_url = (
-            config.prod_base_url
-            if config.env == "PROD"
-            else config.paper_base_url
-        )
-        api_key_id = (
-            config.prod_api_key_id
-            if config.env == "PROD"
-            else config.paper_api_key_id
-        )
-        api_secret = (
-            config.prod_api_secret
-            if config.env == "PROD"
-            else config.paper_api_secret
-        )
-
-        _trading_api = tradeapi.REST(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret
-        )
-        _trade_ws = tradeapi.StreamConn(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret,
-        )
-        asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
-
-        asyncio.ensure_future(
-            start_strategies(
-                trading_api=_trading_api,
-                data_api=_data_api,
-                trading_ws=_trade_ws,
-                data_ws=_data_ws,
+            tlog("ready to start")
+            base_url = (
+                config.prod_base_url
+                if config.env == "PROD"
+                else config.paper_base_url
             )
-        )
-
-        try:
-            asyncio.get_event_loop().run_forever()
-        except KeyboardInterrupt:
-            tlog("Caught KeyboardInterrupt")
-            asyncio.get_event_loop().run_until_complete(
-                end_time("KeyboardInterrupt")
+            api_key_id = (
+                config.prod_api_key_id
+                if config.env == "PROD"
+                else config.paper_api_key_id
             )
-        except Exception as e:
-            tlog(f"Caught exception {str(e)}")
-            asyncio.get_event_loop().run_until_complete(end_time(str(e)))
+            api_secret = (
+                config.prod_api_secret
+                if config.env == "PROD"
+                else config.paper_api_secret
+            )
 
-    else:
-        tlog("missed market open time, try again next trading day, or bypass")
+            _trading_api = tradeapi.REST(
+                base_url=base_url, key_id=api_key_id, secret_key=api_secret
+            )
+            _trade_ws = tradeapi.StreamConn(
+                base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+            )
+            asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
+
+            asyncio.ensure_future(
+                start_strategies(
+                    trading_api=_trading_api,
+                    data_api=_data_api,
+                    trading_ws=_trade_ws,
+                    data_ws=_data_ws,
+                )
+            )
+
+            try:
+                asyncio.get_event_loop().run_forever()
+            except KeyboardInterrupt:
+                tlog("Caught KeyboardInterrupt")
+                asyncio.get_event_loop().run_until_complete(
+                    end_time("KeyboardInterrupt")
+                )
+            except Exception as e:
+                tlog(f"Caught exception {str(e)}")
+                asyncio.get_event_loop().run_until_complete(end_time(str(e)))
+
+        else:
+            tlog(
+                "missed market open time, try again next trading day, or bypass"
+            )
+
+    # else run off-hour aggregates
+    asyncio.get_running_loop().run_until_complete(off_hours_aggregates())
 
 
 """
