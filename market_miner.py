@@ -56,8 +56,7 @@ def _fetch(session: requests.Session, page: int) -> List[Ticker]:
 
 
 async def _update_ticker_details(ticker_info: Dict) -> None:
-    if ticker_info["active"] == "false" or ticker_info["active"] is False:
-        tlog(f"ticker {ticker_info['name']} is not active")
+    if ticker_info["active"] is False:
         return
 
     ticker_data = TickerData(
@@ -97,7 +96,8 @@ def _fetch_symbol_details(
             if response.status_code == 200:
                 try:
                     r = response.json()
-                    return r
+                    if r["active"]:
+                        return r
                 except JSONDecodeError:
                     tlog(f"JSONDecodeError for {ticker.ticker}")
                     raise Exception(response.text)
