@@ -392,7 +392,7 @@ def get_trading_windows(tz, api):
 
     tlog(f"next open date {calendar.date}")
 
-    if today < calendar.date.date():
+    if today.date() < calendar.date.date():
         tlog(f"which is not today {today}")
         return None, None
     market_open = today.replace(
