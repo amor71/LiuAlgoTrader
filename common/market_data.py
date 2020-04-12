@@ -11,6 +11,7 @@ from google.cloud import error_reporting
 from pandas import DataFrame as df
 
 from common import config, trading_data
+from common.decorators import timeit
 from common.tlog import tlog
 from models.ticker_snapshot import TickerSnapshot
 
@@ -96,6 +97,7 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
     return []
 
 
+@timeit
 async def calculate_trends(pool: Pool) -> bool:
     # load snapshot
     with requests.Session() as session:
@@ -117,18 +119,50 @@ async def calculate_trends(pool: Pool) -> bool:
                         volume=ticker["day"]["volume"],
                         today_change=ticker["todaysChangePerc"],
                     )
-                    print(trading_data.snapshot[ticker.ticker])
 
-                # load industry & sector mappings
-                # sectors = await get_market_industries(pool)
-                # industries = await get_market_industries(pool)
+                # calculate sector trends
+                sectors = await get_market_industries(pool)
 
-                # sector_mapping = {}
+                sector_tickers = {}
+                for sector in sectors:
+                    sector_tickers[sector] = await get_sector_tickers(
+                        pool, sector
+                    )
 
-                # industry_mapping = {}
-                # per each industry, calculate trend
+                    sector_volume = 0
+                    adjusted_sum = 0.0
+                    for symbol in sector_tickers[sector]:
+                        sector_volume += trading_data.snapshot[symbol].volume
+                        adjusted_sum += (
+                            trading_data.snapshot[symbol].volume
+                            * trading_data.snapshot[symbol].today_change
+                        )
 
-                # per each sector, calculate trend
+                    trading_data.sector_trend[sector] = round(
+                        adjusted_sum / sector_volume, 2
+                    )
+
+                # calculate industry
+                industries = await get_market_industries(pool)
+
+                industry_tickers = {}
+                for industry in industries:
+                    industry_tickers[industry] = await get_industry_tickers(
+                        pool, industry
+                    )
+
+                    industry_volume = 0
+                    adjusted_sum = 0.0
+                    for symbol in industry_tickers[sector]:
+                        industry_volume += trading_data.snapshot[symbol].volume
+                        adjusted_sum += (
+                            trading_data.snapshot[symbol].volume
+                            * trading_data.snapshot[symbol].today_change
+                        )
+
+                    trading_data.industry_trend[industry] = round(
+                        adjusted_sum / industry_volume, 2
+                    )
 
                 return True
 
