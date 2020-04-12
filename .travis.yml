@@ -15,7 +15,7 @@ cache:
     - $DEPS_DIR
 install:
   - pip install --upgrade pip wheel
-  - pip install -r requirements.txt
   - if [ $WITH_TA_LIBRARY = "yes" ]; then
       ./tools/build_talib_from_source.bash $DEPS_DIR;
     fi
+  - pip install -r requirements.txt
