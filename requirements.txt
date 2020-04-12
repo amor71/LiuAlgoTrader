@@ -1,5 +1,6 @@
 requests
 deprecated
+urllib3<1.25
 numpy
 mypy
 black
@@ -11,8 +12,7 @@ sklearn
 google-cloud-logging
 therapist
 jupyter
-ta-lib
-influxdb
+TA-Lib
 asyncpg
 psycopg2-binary
 sqlalchemy
