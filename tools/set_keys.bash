@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+
+export ALPACA_PAPER_BASEURL=""
+export ALPACA_PAPER_API_KEY=""
+export ALPACA_PAPER_API_SECRET=""
+
+export ALPACA_LIVE_BASEURL=""
+export ALPACA_LIVE_API_KEY=""
+export ALPACA_LIVE_API_SECRET=""
