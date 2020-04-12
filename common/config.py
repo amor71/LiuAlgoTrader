@@ -5,9 +5,9 @@ from datetime import datetime
 # API keys
 #
 # Replace these with your API connection info from the dashboard
-paper_base_url = "https://paper-api.alpaca.markets"
-paper_api_key_id = "PKO3OSD9LU9GTQPL69GO"
-paper_api_secret = "chnPFlGXbY4Y4QAAZ3Q7MJHxkxBYB30CQZNVZTaj"
+paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
+paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
+paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 
 #
 # Execution details (env variable)
@@ -16,9 +16,9 @@ env: str = os.getenv("TRADE", "PAPER")
 dsn: str = os.getenv("DSN", "")
 trade_buy_window: int = int(os.getenv("TRADE_BUY_WINDOW", "120"))
 
-prod_base_url = "https://api.alpaca.markets"
-prod_api_key_id = "AKVKN4TLUUS5MZO5KYLM"
-prod_api_secret = "nkK2UmvE1kTFFw1ZlaqDmwCyiuCu7OOeB5y2La/X"
+prod_base_url = os.getenv("ALPACA_LIVE_BASEURL")
+prod_api_key_id = os.getenv("ALPACA_LIVE_API_KEY")
+prod_api_secret = os.getenv("ALPACA_LIVE_API_SECRET")
 
 
 #
