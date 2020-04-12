@@ -1,0 +1,16 @@
+actions:
+    mypy:
+        run: mypy --show-error-context --pretty  --strict-optional  --ignore-missing-imports {files}
+        include: "*.py"
+    bandit:
+        run: bandit {files}
+        include: "*.py"
+    black:
+        run: black -l 79 {files}
+        include: "*.py"
+    isort:
+        run: isort {files}
+        include: "*.py"
+    flake8:
+        run: flake8 --ignore=E501,E231,E711,E712,C0111,E203,W503,Q000 {files}
+        include: "*.py"
