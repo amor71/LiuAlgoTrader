@@ -510,8 +510,10 @@ def main():
             tlog(
                 "missed market open time, try again next trading day, or bypass"
             )
+    else:
+        asyncio.get_event_loop().run_until_complete(create_db_connection())
 
-    # else run off-hour aggregates
+    # run off-hour aggregates
     asyncio.get_event_loop().run_until_complete(off_hours_aggregates())
 
 
