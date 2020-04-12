@@ -5,23 +5,16 @@ from concurrent.futures import ThreadPoolExecutor
 from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
 
-import asyncpg
 import pygit2
 import requests
 from alpaca_trade_api.common import get_polygon_credentials
 from alpaca_trade_api.polygon.entity import Ticker
 
 from common import config, trading_data
+from common.database import create_db_connection
 from common.decorators import timeit
 from common.tlog import tlog
 from models.ticker_data import TickerData
-
-
-async def create_db_connection() -> None:
-    trading_data.db_conn_pool = await asyncpg.create_pool(
-        dsn=config.dsn, min_size=20, max_size=50
-    )
-    tlog("db connection pool initialized")
 
 
 def _get_count(session) -> int:
@@ -165,7 +158,7 @@ def main():
         asyncio.get_event_loop().run_until_complete(create_db_connection())
         asyncio.get_event_loop().run_until_complete(update_all_tickers_data())
     except KeyboardInterrupt:
-        tlog(f"Caught KeyboardInterrupt")
+        tlog("Caught KeyboardInterrupt")
 
 
 """

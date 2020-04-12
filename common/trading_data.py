@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 from alpaca_trade_api.entity import Order
 from asyncpg.pool import Pool
 
+from models.ticker_snapshot import TickerSnapshot
 from strategies.base import Strategy
 
 #
@@ -23,3 +24,7 @@ positions: Dict[str, float] = {}
 target_prices: Dict[str, float] = {}
 stop_prices: Dict[str, float] = {}
 partial_fills: Dict[str, float] = {}
+
+industry_trend: Dict[str, float] = {}
+sector_trend: Dict[str, float] = {}
+snapshot: Dict[str, TickerSnapshot] = {}
