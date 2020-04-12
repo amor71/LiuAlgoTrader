@@ -18,3 +18,5 @@ psycopg2-binary
 sqlalchemy
 pygit2
 google-cloud-error-reporting
+pytest
+pytest-asyncio
