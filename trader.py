@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
-import asyncpg
 import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.polygon.entity import Ticker
@@ -19,6 +18,7 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from common import config, trading_data
+from common.database import create_db_connection
 from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
 from common.tlog import tlog
@@ -305,12 +305,6 @@ async def run(
     except Exception as e:
         tlog(f"Exception {e}")
         error_logger.report_exception()
-
-
-async def create_db_connection(dsn: str) -> None:
-    trading_data.db_conn_pool = await asyncpg.create_pool(
-        dsn=dsn, min_size=20, max_size=200
-    )
 
 
 async def start_strategies(
