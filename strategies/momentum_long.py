@@ -7,18 +7,12 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 from common import config
-from common.tlog import tlog
 from common.market_data import prev_closes, volume_today
+from common.tlog import tlog
+from common.trading_data import (buy_indicators, latest_cost_basis,
+                                 open_order_strategy, open_orders,
+                                 sell_indicators, stop_prices, target_prices)
 from fincalcs.support_resistance import find_resistances, find_stop
-from common.trading_data import (
-    buy_indicators,
-    latest_cost_basis,
-    open_order_strategy,
-    open_orders,
-    sell_indicators,
-    stop_prices,
-    target_prices,
-)
 
 from .base import Strategy
 
@@ -29,7 +23,9 @@ class MomentumLong(Strategy):
     name = "momentum_long"
 
     def __init__(self, trading_api: tradeapi, data_api: tradeapi):
-        super().__init__(name=self.name, trading_api=trading_api, data_api=data_api)
+        super().__init__(
+            name=self.name, trading_api=trading_api, data_api=data_api
+        )
 
     async def create(self) -> None:
         await super().create()
@@ -51,11 +47,15 @@ class MomentumLong(Strategy):
                 error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
                 # index can get messy until it's healed by the minute bars
-                tlog(f"[{self.name}] error aggregation {e} - maybe should use nearest?")
+                tlog(
+                    f"[{self.name}] error aggregation {e} - maybe should use nearest?"
+                )
                 return False
 
             # Get the change since yesterday's market close
-            daily_pct_change = (data.close - prev_closes[symbol]) / prev_closes[symbol]
+            daily_pct_change = (
+                data.close - prev_closes[symbol]
+            ) / prev_closes[symbol]
             if (
                 daily_pct_change > 0.04
                 and data.close > high_15m
@@ -63,11 +63,15 @@ class MomentumLong(Strategy):
             ):
                 # check for a positive, increasing MACD
                 macds = MACD(
-                    minute_history["close"].dropna().between_time("9:30", "16:00")
+                    minute_history["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00")
                 )
 
                 sell_macds = MACD(
-                    minute_history["close"].dropna().between_time("9:30", "16:00"),
+                    minute_history["close"]
+                    .dropna()
+                    .between_time("9:30", "16:00"),
                     13,
                     21,
                 )
@@ -76,7 +80,9 @@ class MomentumLong(Strategy):
                 macd_signal = macds[1]
                 if (
                     macd1[-1].round(2) > 0
-                    and macd1[-3].round(3) < macd1[-2].round(3) < macd1[-1].round(3)
+                    and macd1[-3].round(3)
+                    < macd1[-2].round(3)
+                    < macd1[-1].round(3)
                     and macd1[-1].round(2) > macd_signal[-1].round(2)
                     and sell_macds[0][-1] > 0
                     and data.close > data.open
@@ -86,12 +92,16 @@ class MomentumLong(Strategy):
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
                     macd2 = MACD(
-                        minute_history["close"].dropna().between_time("9:30", "16:00"),
+                        minute_history["close"]
+                        .dropna()
+                        .between_time("9:30", "16:00"),
                         40,
                         60,
                     )[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
-                        tlog(f"[{self.name}] MACD(40,60) for {symbol} trending up!")
+                        tlog(
+                            f"[{self.name}] MACD(40,60) for {symbol} trending up!"
+                        )
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history["close"], 14)
 
@@ -107,14 +117,18 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
-                            if (resistance[0] - data.close) / data.close < 0.02:
+                            if (
+                                resistance[0] - data.close
+                            ) / data.close < 0.02:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} too close to resistance at {resistance[0]}"
                                 )
                                 return False
 
                             # Stock has passed all checks; figure out how much to buy
-                            stop_price = find_stop(data.close, minute_history, now)
+                            stop_price = find_stop(
+                                data.close, minute_history, now
+                            )
                             stop_prices[symbol] = stop_price
                             target_prices[symbol] = (
                                 data.close + (data.close - stop_price) * 3
@@ -139,10 +153,17 @@ class MomentumLong(Strategy):
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
                                         "macd": macd1[-5:].tolist(),
-                                        "macd_signal": macd_signal[-5:].tolist(),
+                                        "macd_signal": macd_signal[
+                                            -5:
+                                        ].tolist(),
                                         "slow macd": macd2[-5:].tolist(),
-                                        "sell_macd": sell_macds[0][-5:].tolist(),
-                                        "sell_macd_signal": sell_macds[1][-5:].tolist(),
+                                        "sell_macd": sell_macds[0][
+                                            -5:
+                                        ].tolist(),
+                                        "sell_macd_signal": sell_macds[1][
+                                            -5:
+                                        ].tolist(),
+                                        "resistances": resistance,
                                     }
                                     o = self.trading_api.submit_order(
                                         symbol=symbol,
@@ -168,15 +189,17 @@ class MomentumLong(Strategy):
             # Sell for a loss if it's below our cost basis and MACD < 0
             # Sell for a profit if it's above our target price
             macds = MACD(
-                minute_history["close"].dropna().between_time("9:30", "16:00"), 13, 21,
+                minute_history["close"].dropna().between_time("9:30", "16:00"),
+                13,
+                21,
             )
 
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(minute_history["close"], 14)
-            movement = (data.close - latest_cost_basis[symbol]) / latest_cost_basis[
-                symbol
-            ]
+            movement = (
+                data.close - latest_cost_basis[symbol]
+            ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1].round(2)
 
@@ -190,23 +213,23 @@ class MomentumLong(Strategy):
             sell_reasons = []
             if data.close <= stop_prices[symbol]:
                 to_sell = True
-                sell_reasons.append(f"stopped")
+                sell_reasons.append("stopped")
             elif below_cost_base and macd_val <= 0:
                 to_sell = True
-                sell_reasons.append(f"below cost & macd negative")
+                sell_reasons.append("below cost & macd negative")
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
-                sell_reasons.append(f"above target & macd negative")
+                sell_reasons.append("above target & macd negative")
             elif rsi[-1] >= 78:
                 to_sell = True
-                sell_reasons.append(f"rsi max")
+                sell_reasons.append("rsi max")
             elif bail_out:
                 to_sell = True
-                sell_reasons.append(f"bail")
+                sell_reasons.append("bail")
             elif scalp:
                 partial_sell = True
                 to_sell = True
-                sell_reasons.append(f"scale-out")
+                sell_reasons.append("scale-out")
 
             if to_sell:
                 try:
@@ -215,7 +238,9 @@ class MomentumLong(Strategy):
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
                         "sell_macd_signal": macd_signal[-5:].tolist(),
-                        "reasons": " AND ".join([str(elem) for elem in sell_reasons]),
+                        "reasons": " AND ".join(
+                            [str(elem) for elem in sell_reasons]
+                        ),
                     }
 
                     if not partial_sell:
