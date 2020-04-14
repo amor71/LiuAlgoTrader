@@ -3,6 +3,7 @@ Trading strategy runner
 """
 import asyncio
 import os
+import sys
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -564,3 +565,4 @@ except Exception as e:
     tlog(f"Caught exception {str(e)}")
 
 tlog("Done.")
+sys.exit(1)
