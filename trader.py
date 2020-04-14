@@ -306,8 +306,6 @@ async def run(
     try:
         await trading_ws.subscribe(trade_channels)
         await data_ws.subscribe(data_channels)
-
-        # asyncio.get_event_loop().run_forever()
     except Exception as e:
         tlog(f"Exception {e}")
         error_logger.report_exception()
@@ -357,7 +355,11 @@ async def end_time(reason: str):
 
 async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
     dt = datetime.today().astimezone(tz)
-    to_market_close = config.market_close - dt
+    to_market_close = (
+        config.market_close - dt
+        if config.market_close > dt
+        else timedelta(hours=24) + (config.market_close - dt)
+    )
 
     tlog(f"tear-down task waiting for market close: {to_market_close}")
     try:
@@ -513,14 +515,9 @@ async def main():
                 "missed market open time, try again next trading day, or bypass"
             )
     else:
-        asyncio.get_event_loop().run_until_complete(create_db_connection())
+        await create_db_connection()
 
-    # run off-hour aggregates
-    try:
-        asyncio.get_event_loop().run_until_complete(off_hours_aggregates())
-    except Exception as e:
-        error_logger.report_exception()
-        tlog(f"Caught exception {str(e)}")
+    await off_hours_aggregates()
 
 
 """
