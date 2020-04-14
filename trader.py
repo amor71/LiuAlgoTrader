@@ -508,7 +508,7 @@ async def main():
                     data_ws=_data_ws,
                 )
             )
-            await asyncio.gather(tear_down, strategy)
+            await asyncio.gather(tear_down, strategy, return_exceptions=True)
 
         else:
             tlog(
