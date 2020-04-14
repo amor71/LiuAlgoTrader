@@ -50,4 +50,4 @@ market_close: datetime
 #
 # Bypasses
 #
-bypass_market_schedule: bool = True
+bypass_market_schedule: bool = False
