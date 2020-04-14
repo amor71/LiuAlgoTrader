@@ -220,6 +220,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
+        print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -303,6 +304,8 @@ async def run(
     try:
         await trading_ws.subscribe(trade_channels)
         await data_ws.subscribe(data_channels)
+
+        # asyncio.get_event_loop().run_forever()
     except Exception as e:
         tlog(f"Exception {e}")
         error_logger.report_exception()
@@ -411,7 +414,7 @@ async def off_hours_aggregates() -> None:
     await update_all_tickers_data()
 
 
-def main():
+async def main():
     trading_data.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
@@ -489,9 +492,11 @@ def main():
             _trade_ws = tradeapi.StreamConn(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret,
             )
-            asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
+            tear_down = asyncio.create_task(
+                teardown_task(nyc, [_trade_ws, _data_ws])
+            )
 
-            asyncio.ensure_future(
+            strategy = asyncio.create_task(
                 start_strategies(
                     trading_api=_trading_api,
                     data_api=_data_api,
@@ -499,45 +504,7 @@ def main():
                     data_ws=_data_ws,
                 )
             )
-
-            try:
-                asyncio.get_event_loop().run_forever()
-            except KeyboardInterrupt:
-                tlog("Caught KeyboardInterrupt")
-
-                tlog(
-                    "Attempting graceful shutdown, press Ctrl+C again to exit…"
-                )
-                loop = asyncio.get_event_loop()
-
-                # Do not show `asyncio.CancelledError` exceptions during shutdown
-                # (a lot of these may be generated, skip this if you prefer to see them)
-                def shutdown_exception_handler(loop, context):
-                    if "exception" not in context or not isinstance(
-                        context["exception"], asyncio.CancelledError
-                    ):
-                        loop.default_exception_handler(context)
-
-                loop.set_exception_handler(shutdown_exception_handler)
-
-                # Handle shutdown gracefully by waiting for all tasks to be cancelled
-                tasks = asyncio.gather(
-                    asyncio.all_tasks(loop=loop),
-                    loop=loop,
-                    return_exceptions=True,
-                )
-                tasks.add_done_callback(lambda t: loop.stop())
-                tasks.cancel()
-
-                # Keep the event loop running until it is either destroyed or all
-                # tasks have really terminated
-                while not tasks.done() and not loop.is_closed():
-                    loop.run_forever()
-                return
-            except Exception as e:
-                error_logger.report_exception()
-                tlog(f"Caught exception {str(e)}")
-                asyncio.get_event_loop().run_until_complete(end_time(str(e)))
+            await asyncio.gather(tear_down, strategy)
 
         else:
             tlog(
@@ -558,7 +525,7 @@ def main():
 starting
 """
 try:
-    main()
+    asyncio.run(main())
 except KeyboardInterrupt:
     tlog("main() - Caught KeyboardInterrupt")
 except Exception as e:
