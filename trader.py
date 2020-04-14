@@ -250,7 +250,7 @@ async def run(
             ]
         minute_history[symbol].loc[ts] = new_data
 
-        if (now := datetime.now()) - data.start > timedelta(seconds=30):  # type: ignore
+        if (now := datetime.utcnow()) - data.start > timedelta(seconds=30):  # type: ignore
             tlog(f"A$ now={now} data.start={data.start} out of sync")
             return
 
