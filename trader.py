@@ -565,4 +565,4 @@ except Exception as e:
     tlog(f"Caught exception {str(e)}")
 
 tlog("Done.")
-sys.exit(1)
+sys.exit(0)
