@@ -338,6 +338,7 @@ async def start_strategies(
 
 async def end_time(reason: str):
     for s in trading_data.strategies:
+        tlog(f"updating end time for strategy {s.name}")
         await s.algo_run.update_end_time(
             pool=trading_data.db_conn_pool, end_reason=reason
         )
@@ -405,7 +406,9 @@ async def off_hours_aggregates() -> None:
 
 
 def main():
-    trading_data.build_label = pygit2.Repository("./").describe()
+    trading_data.build_label = pygit2.Repository("./").describe(
+        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
+    )
     trading_data.filename = os.path.basename(__file__)
     motd(filename=trading_data.filename, version=trading_data.build_label)
 
@@ -478,7 +481,7 @@ def main():
             _trade_ws = tradeapi.StreamConn(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret,
             )
-            asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
+            asyncio.create_task(teardown_task(nyc, [_trade_ws, _data_ws]))
 
             asyncio.ensure_future(
                 start_strategies(
@@ -496,7 +499,9 @@ def main():
                 asyncio.get_event_loop().run_until_complete(
                     end_time("KeyboardInterrupt")
                 )
+
             except Exception as e:
+                error_logger.report_exception()
                 tlog(f"Caught exception {str(e)}")
                 asyncio.get_event_loop().run_until_complete(end_time(str(e)))
 
@@ -508,7 +513,11 @@ def main():
         asyncio.get_event_loop().run_until_complete(create_db_connection())
 
     # run off-hour aggregates
-    asyncio.get_event_loop().run_until_complete(off_hours_aggregates())
+    try:
+        asyncio.get_event_loop().run_until_complete(off_hours_aggregates())
+    except Exception as e:
+        error_logger.report_exception()
+        tlog(f"Caught exception {str(e)}")
 
 
 """
