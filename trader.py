@@ -313,27 +313,32 @@ async def start_strategies(
     data_ws: StreamConn,
     trading_ws: StreamConn,
 ):
-    tlog("setting up strategies")
-    await create_db_connection(str(config.dsn))
+    try:
+        tlog("setting up strategies")
+        await create_db_connection(str(config.dsn))
 
-    strategy_types = [MomentumShort, MomentumLong]
-    for strategy_type in strategy_types:
-        tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(trading_api=trading_api, data_api=data_api)
-        await s.create()
+        strategy_types = [MomentumShort, MomentumLong]
+        for strategy_type in strategy_types:
+            tlog(f"initializing {strategy_type.name}")
+            s = strategy_type(trading_api=trading_api, data_api=data_api)
+            await s.create()
 
-        trading_data.strategies.append(s)
+            trading_data.strategies.append(s)
 
-    tickers = await get_tickers(data_api=data_api)
-    await run(
-        tickers=tickers,
-        strategies=trading_data.strategies,
-        trading_api=trading_api,
-        data_api=data_api,
-        data_ws=data_ws,
-        trading_ws=trading_ws,
-    )
-    tlog("strategies ready to execute")
+        tickers = await get_tickers(data_api=data_api)
+        tlog("strategies ready to execute")
+        await run(
+            tickers=tickers,
+            strategies=trading_data.strategies,
+            trading_api=trading_api,
+            data_api=data_api,
+            data_ws=data_ws,
+            trading_ws=trading_ws,
+        )
+    except asyncio.CancelledError:
+        tlog("start_strategies() cancelled ")
+    finally:
+        tlog("start_strategies() task done.")
 
 
 async def end_time(reason: str):
@@ -441,8 +446,10 @@ def main():
                 to_market_open = config.market_open - current_dt
                 tlog(f"waiting for market open: {to_market_open}")
                 if to_market_open.total_seconds() > 0:
-                    time.sleep(to_market_open.total_seconds() + 1)
-
+                    try:
+                        time.sleep(to_market_open.total_seconds() + 1)
+                    except KeyboardInterrupt:
+                        return
                 tlog(
                     f"market open, wait {config.market_cool_down_minutes} minutes"
                 )
@@ -481,7 +488,7 @@ def main():
             _trade_ws = tradeapi.StreamConn(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret,
             )
-            asyncio.create_task(teardown_task(nyc, [_trade_ws, _data_ws]))
+            asyncio.ensure_future(teardown_task(nyc, [_trade_ws, _data_ws]))
 
             asyncio.ensure_future(
                 start_strategies(
@@ -496,10 +503,36 @@ def main():
                 asyncio.get_event_loop().run_forever()
             except KeyboardInterrupt:
                 tlog("Caught KeyboardInterrupt")
-                asyncio.get_event_loop().run_until_complete(
-                    end_time("KeyboardInterrupt")
-                )
 
+                tlog(
+                    "Attempting graceful shutdown, press Ctrl+C again to exit…"
+                )
+                loop = asyncio.get_event_loop()
+
+                # Do not show `asyncio.CancelledError` exceptions during shutdown
+                # (a lot of these may be generated, skip this if you prefer to see them)
+                def shutdown_exception_handler(loop, context):
+                    if "exception" not in context or not isinstance(
+                        context["exception"], asyncio.CancelledError
+                    ):
+                        loop.default_exception_handler(context)
+
+                loop.set_exception_handler(shutdown_exception_handler)
+
+                # Handle shutdown gracefully by waiting for all tasks to be cancelled
+                tasks = asyncio.gather(
+                    asyncio.all_tasks(loop=loop),
+                    loop=loop,
+                    return_exceptions=True,
+                )
+                tasks.add_done_callback(lambda t: loop.stop())
+                tasks.cancel()
+
+                # Keep the event loop running until it is either destroyed or all
+                # tasks have really terminated
+                while not tasks.done() and not loop.is_closed():
+                    loop.run_forever()
+                return
             except Exception as e:
                 error_logger.report_exception()
                 tlog(f"Caught exception {str(e)}")
@@ -523,5 +556,11 @@ def main():
 """
 starting
 """
-main()
+try:
+    main()
+except KeyboardInterrupt:
+    tlog("main() - Caught KeyboardInterrupt")
+except Exception as e:
+    tlog(f"Caught exception {str(e)}")
+
 tlog("Done.")
