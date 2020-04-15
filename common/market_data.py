@@ -70,8 +70,11 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
     max_retries = 50
     while max_retries > 0:
         tickers = data_api.polygon.all_tickers()
+        tlog(f"loaded {len(tickers)} from Polygon")
         assets = data_api.list_assets()
+        tlog(f"loaded {len(assests)} from Alpaca")
         tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
+        tlog(f"tradable_symobls={len(traable_symobls)}")
         rc = [
             ticker
             for ticker in tickers
