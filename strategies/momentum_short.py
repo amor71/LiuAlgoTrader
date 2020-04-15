@@ -161,7 +161,7 @@ class MomentumShort(Strategy):
             if shares_to_buy <= 0:
                 return False
 
-            if self.is_not_shortable(symbol):
+            if await self.is_not_shortable(symbol):
                 tlog(f"{self.name}\t\t\tcannot short {symbol}.")
                 return False
 

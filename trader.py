@@ -219,6 +219,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
+        #print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -250,11 +251,11 @@ async def run(
             ]
         minute_history[symbol].loc[ts] = new_data
 
-        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=30):  # type: ignore
+        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
             tlog(f"A$ now={now} data.start={data.start} out of sync")
             return
-        else:
-            print(f"clock diff: {now-data.start}")
+#        else:
+#            print(f"clock diff: {now-data.start}")
 
         # Next, check for existing orders for the stock
         existing_order = trading_data.open_orders.get(symbol)
