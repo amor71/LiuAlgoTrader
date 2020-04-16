@@ -11,7 +11,8 @@ from common.market_data import prev_closes, volume_today
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, latest_cost_basis,
                                  open_order_strategy, open_orders,
-                                 sell_indicators, stop_prices, target_prices)
+                                 sell_indicators, stop_prices,
+                                 symbol_resistance, target_prices)
 from fincalcs.support_resistance import find_resistances, find_stop
 
 from .base import Strategy
@@ -133,6 +134,7 @@ class MomentumLong(Strategy):
                             target_prices[symbol] = (
                                 data.close + (data.close - stop_price) * 3
                             )
+                            symbol_resistance[symbol] = resistance[0]
                             portfolio_value = float(
                                 self.trading_api.get_account().portfolio_value
                             )
@@ -204,7 +206,7 @@ class MomentumLong(Strategy):
             macd_signal_val = macd_signal[-1].round(2)
 
             movement_threshold = (
-                target_prices[symbol] + latest_cost_basis[symbol]
+                symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
@@ -260,7 +262,7 @@ class MomentumLong(Strategy):
                             time_in_force="day",
                         )
                     else:
-                        qty = int(position / 3)
+                        qty = int(position / 2)
                         tlog(
                             f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
