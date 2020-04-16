@@ -14,7 +14,9 @@ def grouper(iterable):
 
         if (
             not prev
-            or -config.group_margin <= float(item - prev) / prev <= config.group_margin
+            or -config.group_margin
+            <= float(item - prev) / prev
+            <= config.group_margin
         ):
             group.append(item)
         else:
@@ -43,7 +45,7 @@ def find_resistances(
             )
             if len(local_maximas) > 0:
                 tlog(
-                    f"[{strategy_name}] find_resistances({symbol}) - resistances={local_maximas}"
+                    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
                 )
                 return local_maximas
 
@@ -66,7 +68,7 @@ def find_supports(
             )
             if len(local_maximas) > 0:
                 tlog(
-                    f"[{strategy_name}] find_supports({symbol}) - resistances={local_maximas}"
+                    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
                 )
                 return local_maximas
 

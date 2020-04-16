@@ -120,7 +120,7 @@ class MomentumLong(Strategy):
 
                             if (
                                 resistance[0] - data.close
-                            ) / data.close < 0.02:
+                            ) / data.close < 0.01:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} too close to resistance at {resistance[0]}"
                                 )
