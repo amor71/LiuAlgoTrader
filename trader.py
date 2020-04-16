@@ -148,7 +148,7 @@ async def run(
         last_order = trading_data.open_orders.get(symbol)[0]
         last_op = trading_data.open_orders.get(symbol)[1]
         if last_order is not None:
-            tlog(f"trade update for {symbol}")
+            tlog(f"trade update for {symbol} data={data}")
             event = data.event
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
@@ -219,7 +219,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        #print(data)
+        # print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -254,8 +254,8 @@ async def run(
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
             tlog(f"A$ now={now} data.start={data.start} out of sync")
             return
-#        else:
-#            print(f"clock diff: {now-data.start}")
+        #        else:
+        #            print(f"clock diff: {now-data.start}")
 
         # Next, check for existing orders for the stock
         existing_order = trading_data.open_orders.get(symbol)
