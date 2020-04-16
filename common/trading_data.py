@@ -24,6 +24,7 @@ positions: Dict[str, float] = {}
 target_prices: Dict[str, float] = {}
 stop_prices: Dict[str, float] = {}
 partial_fills: Dict[str, float] = {}
+symbol_resistance: Dict[str, float] = {}
 
 industry_trend: Dict[str, float] = {}
 sector_trend: Dict[str, float] = {}
