@@ -90,6 +90,31 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     return False
 
 
+async def save(
+    symbol: str,
+    new_qty: int,
+    last_op: str,
+    price: float,
+    indicators: Dict,
+    now: str,
+) -> None:
+    db_trade = NewTrade(
+        algo_run_id=trading_data.open_order_strategy[symbol].algo_run.run_id,
+        symbol=symbol,
+        qty=new_qty,
+        operation=last_op,
+        price=price,
+        indicators=indicators,
+    )
+
+    await db_trade.save(
+        trading_data.db_conn_pool,
+        now,
+        trading_data.stop_prices[symbol],
+        trading_data.target_prices[symbol],
+    )
+
+
 async def run(
     tickers: List[Ticker],
     strategies: List[Strategy],
@@ -150,8 +175,10 @@ async def run(
         if last_order is not None:
             tlog(f"trade update for {symbol} data={data}")
             event = data.event
+
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
+                new_qty = qty - trading_data.partial_fills.get(symbol, 0)
                 if data.order["side"] == "sell":
                     qty = qty * -1
                 trading_data.positions[symbol] = trading_data.positions.get(
@@ -160,60 +187,53 @@ async def run(
                 trading_data.partial_fills[symbol] = qty
                 trading_data.positions[symbol] += qty
                 trading_data.open_orders[symbol] = (Order(data.order), last_op)
+
+                await save(
+                    symbol,
+                    new_qty,
+                    last_op,
+                    float(data.order["filled_avg_price"]),
+                    trading_data.buy_indicators[symbol]
+                    if data.order["side"] == "buy"
+                    else trading_data.sell_indicators[symbol],
+                    data.timestamp,
+                )
+
             elif event == "fill":
                 qty = int(data.order["filled_qty"])
+                new_qty = qty - trading_data.partial_fills.get(symbol, 0)
                 if data.order["side"] == "sell":
                     qty = qty * -1
+
                 trading_data.positions[symbol] = trading_data.positions.get(
                     symbol, 0
                 ) - trading_data.partial_fills.get(symbol, 0)
                 trading_data.partial_fills[symbol] = 0
                 trading_data.positions[symbol] += qty
 
-                if data.order["side"] == "buy":
-                    db_trade = NewTrade(
-                        algo_run_id=trading_data.open_order_strategy[
-                            symbol
-                        ].algo_run.run_id,
-                        symbol=symbol,
-                        qty=qty,
-                        operation=last_op,
-                        price=float(data.order["filled_avg_price"]),
-                        indicators=trading_data.buy_indicators[symbol],
-                    )
-                    await db_trade.save(
-                        trading_data.db_conn_pool,
-                        data.timestamp,
-                        trading_data.stop_prices[symbol],
-                        trading_data.target_prices[symbol],
-                    )
-                    trading_data.buy_indicators[symbol] = None
-                if data.order["side"] == "sell":
-                    if trading_data.sell_indicators[symbol] is not None:
-                        db_trade = NewTrade(
-                            algo_run_id=trading_data.open_order_strategy[
-                                symbol
-                            ].algo_run.run_id,
-                            symbol=symbol,
-                            qty=-qty,
-                            operation=last_op,
-                            price=float(data.order["filled_avg_price"]),
-                            indicators=trading_data.sell_indicators[symbol],
-                        )
-                        await db_trade.save(
-                            trading_data.db_conn_pool,
-                            data.timestamp,
-                            trading_data.stop_prices[symbol],
-                            trading_data.target_prices[symbol],
-                        )
-                    trading_data.sell_indicators[symbol] = None
+                await save(
+                    symbol,
+                    new_qty,
+                    last_op,
+                    float(data.order["filled_avg_price"]),
+                    trading_data.buy_indicators[symbol]
+                    if data.order["side"] == "buy"
+                    else trading_data.sell_indicators[symbol],
+                    data.timestamp,
+                )
 
+                if data.order["side"] == "buy":
+                    trading_data.buy_indicators[symbol] = None
+                else:
+                    trading_data.sell_indicators[symbol] = None
                 trading_data.open_orders[symbol] = None
                 trading_data.open_order_strategy[symbol] = None
+
             elif event in ("canceled", "rejected"):
                 trading_data.partial_fills[symbol] = 0
                 trading_data.open_orders[symbol] = None
                 trading_data.open_order_strategy[symbol] = None
+
         else:
             tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
 
