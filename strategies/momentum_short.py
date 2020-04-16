@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
 from google.cloud import error_reporting
@@ -90,7 +90,13 @@ class MomentumShort(Strategy):
 
     async def _find_target_stop_prices(
         self, symbol: str, close: float, minute_history: df, now: datetime
-    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    ) -> Tuple[
+        Optional[float],
+        Optional[float],
+        Optional[float],
+        Optional[List[float]],
+        Optional[List[float]],
+    ]:
         supports = find_supports(
             symbol=symbol,
             strategy_name=self.name,
@@ -104,15 +110,21 @@ class MomentumShort(Strategy):
             minute_history=minute_history,
         )
         if supports is None or len(supports) == 0:
-            return None, None, None
+            return None, None, None, None, None
         if resistances is None or len(resistances) == 0:
-            return None, None, None
+            return None, None, None, None, None
 
-        target_price = supports[-1]
-        stop_price = resistances[-1]
+        target_price = supports[-1] + 0.02
+        stop_price = resistances[-1] - 0.02
         distance_to_stop = (stop_price - close) / close
 
-        return target_price, stop_price, distance_to_stop
+        return (
+            target_price,
+            stop_price,
+            distance_to_stop,
+            supports,
+            resistances,
+        )
 
     async def is_not_shortable(self, symbol: str) -> bool:
         asset = self.trading_api.get_asset(symbol)
@@ -143,6 +155,8 @@ class MomentumShort(Strategy):
                 target_price,
                 stop_price,
                 distance_to_stop,
+                supports,
+                resistances,
             ) = await self._find_target_stop_prices(
                 symbol=symbol,
                 close=data.close,
@@ -174,6 +188,8 @@ class MomentumShort(Strategy):
                     "stop_price": stop_price,
                     "target_price": target_price,
                     "distance_to_stop": distance_to_stop,
+                    "supports": supports,
+                    "resistances": resistances,
                 }
             )
 
