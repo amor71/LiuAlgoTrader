@@ -178,7 +178,7 @@ async def run(
 
             if event == "partial_fill":
                 qty = int(data.order["filled_qty"])
-                new_qty = qty - trading_data.partial_fills.get(symbol, 0)
+                new_qty = qty - abs(trading_data.partial_fills.get(symbol, 0))
                 if data.order["side"] == "sell":
                     qty = qty * -1
                 trading_data.positions[symbol] = trading_data.positions.get(
@@ -201,7 +201,7 @@ async def run(
 
             elif event == "fill":
                 qty = int(data.order["filled_qty"])
-                new_qty = qty - trading_data.partial_fills.get(symbol, 0)
+                new_qty = qty - abs(trading_data.partial_fills.get(symbol, 0))
                 if data.order["side"] == "sell":
                     qty = qty * -1
 
@@ -272,7 +272,9 @@ async def run(
         minute_history[symbol].loc[ts] = new_data
 
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
-            tlog(f"A$ now={now} data.start={data.start} out of sync")
+            tlog(
+                f"A$ {data.symbol }now={now} data.start={data.start} out of sync"
+            )
             return
         #        else:
         #            print(f"clock diff: {now-data.start}")
@@ -309,14 +311,24 @@ async def run(
             if await s.run(
                 symbol, symbol_position, minute_history[symbol], ts
             ):
-                tlog(f"executed strategy {s.name} on {symbol}")
+                tlog(
+                    f"executed strategy {s.name} on {symbol} w data {minute_history[symbol][-10:]}"
+                )
                 return
 
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
+        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
+            tlog(
+                f"AM$ {data.symbol} now={now} data.start={data.start} out of sync"
+            )
+            return
         ts = data.start
-        ts -= timedelta(microseconds=ts.microsecond)
+        ts = ts.replace(
+            second=0, microsecond=0
+        )  # ts -= timedelta(microseconds=ts.microsecond)
+
         minute_history[data.symbol].loc[ts] = [
             data.open,
             data.high,
