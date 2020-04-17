@@ -42,6 +42,8 @@ def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
                         _from=date.today() - timedelta(days=10),
                         to=date.today() + timedelta(days=1),
                     ).df
+                    minute_history[symbol]["vwap"] = 0.0
+                    minute_history[symbol]["average"] = 0.0
                     break
                 except (
                     requests.exceptions.HTTPError,
