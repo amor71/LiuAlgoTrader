@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from typing import List
 
 #
 # API keys
@@ -48,6 +49,10 @@ market_open: datetime
 market_close: datetime
 
 #
+# WS Data Channels
+#
+WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
+#
 # Bypasses
 #
-bypass_market_schedule: bool = False 
+bypass_market_schedule: bool = False

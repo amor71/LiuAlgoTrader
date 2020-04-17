@@ -157,7 +157,9 @@ async def run(
     trade_channels = ["trade_updates"]
     data_channels = []
     for symbol in symbols:
-        symbol_channels = ["A.{}".format(symbol), "AM.{}".format(symbol)]
+        symbol_channels = [
+            f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
+        ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
         data_channels += symbol_channels
     tlog(f"Watching {len(symbols)} symbols.")
 
@@ -237,6 +239,14 @@ async def run(
         else:
             tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
 
+    @data_ws.on(r"T$")
+    async def handle_trade_event(conn, channel, data):
+        print(f"trade event: {conn} {channel} {data}")
+
+    @data_ws.on(r"Q$")
+    async def handle_quote_event(conn, channel, data):
+        print(f"quote event: {conn} {channel} {data}")
+
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         # print(data)
@@ -260,6 +270,8 @@ async def run(
                 data.low,
                 data.close,
                 data.volume,
+                data.vwap,
+                data.average,
             ]
         else:
             new_data = [
@@ -268,10 +280,12 @@ async def run(
                 data.low if data.low < current.low else current.low,
                 data.close,
                 current.volume + data.volume,
+                data.vwap,
+                data.average,
             ]
         minute_history[symbol].loc[ts] = new_data
 
-        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
+        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
             tlog(
                 f"A$ {data.symbol }now={now} data.start={data.start} out of sync"
             )
@@ -319,7 +333,7 @@ async def run(
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
-        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=10):  # type: ignore
+        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
             tlog(
                 f"AM$ {data.symbol} now={now} data.start={data.start} out of sync"
             )
@@ -335,6 +349,8 @@ async def run(
             data.low,
             data.close,
             data.volume,
+            data.vwap,
+            data.average,
         ]
         volume_today[data.symbol] += data.volume
 
