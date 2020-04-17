@@ -190,6 +190,8 @@ class MomentumShort(Strategy):
                     "distance_to_stop": distance_to_stop,
                     "supports": supports,
                     "resistances": resistances,
+                    "vwap": data.vwap,
+                    "avg": data.average,
                 }
             )
 
@@ -242,6 +244,8 @@ class MomentumShort(Strategy):
                         "reasons": " AND ".join(
                             [str(elem) for elem in sell_reasons]
                         ),
+                        "vwap": data.vwap,
+                        "avg": data.average,
                     }
 
                     tlog(

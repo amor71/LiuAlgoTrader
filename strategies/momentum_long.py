@@ -166,6 +166,8 @@ class MomentumLong(Strategy):
                                             -5:
                                         ].tolist(),
                                         "resistances": resistance,
+                                        "vwap": data.vwap,
+                                        "avg": data.average,
                                     }
                                     o = self.trading_api.submit_order(
                                         symbol=symbol,
@@ -245,6 +247,8 @@ class MomentumLong(Strategy):
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
                         "sell_macd_signal": macd_signal[-5:].tolist(),
+                        "vwap": data.vwap,
+                        "avg": data.average,
                         "reasons": " AND ".join(
                             [str(elem) for elem in sell_reasons]
                         ),
