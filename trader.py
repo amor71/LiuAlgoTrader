@@ -241,11 +241,11 @@ async def run(
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
-        print(f"trade event: {conn} {channel} {data}")
+        tlog(f"trade event: {conn} {channel} {data}")
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
-        print(f"quote event: {conn} {channel} {data}")
+        tlog(f"quote event: {conn} {channel} {data}")
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
