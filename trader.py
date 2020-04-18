@@ -65,6 +65,10 @@ async def liquidate(
                 op = "sell"
 
             trading_data.open_orders[symbol] = (o, op)
+            trading_data.open_order_strategy[
+                symbol
+            ] = trading_data.last_used_strategy[symbol]
+
         except Exception as e:
             error_logger.report_exception()
             tlog(f"failed to liquidate {symbol} w exception {e}")
@@ -246,7 +250,7 @@ async def run(
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
-        #tlog(f"quote event: {conn} {channel} {data}")
+        # tlog(f"quote event: {conn} {channel} {data}")
         pass
 
     @data_ws.on(r"A$")
@@ -327,6 +331,7 @@ async def run(
             if await s.run(
                 symbol, symbol_position, minute_history[symbol], ts
             ):
+                trading_data.last_used_strategy[symbol] = s
                 tlog(
                     f"executed strategy {s.name} on {symbol} w data {minute_history[symbol][-10:]}"
                 )
