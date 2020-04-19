@@ -77,7 +77,7 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
         tlog(f"loaded {len(assets)} assets from Alpaca")
         tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
         tlog(f"Total number of tradable symobls is {len(tradable_symbols)}")
-        rc = [
+        unsorted = [
             ticker
             for ticker in tickers
             if (
@@ -90,9 +90,13 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
                 and ticker.todaysChangePerc >= config.today_change_percent
             )
         ]
-        if len(rc) > 0:
-            tlog(f"loaded {len(rc)} tickers")
-            return rc
+        if len(unsorted) > 0:
+            rc = sorted(unsorted, key=lambda ticker: ticker.day["v"])
+            _len = max(config.total_tickers, len(rc))
+            tlog(
+                f"loaded {len(rc)} tickers, picking {max(_len)} tickers with highest volume"
+            )
+            return rc[-_len:]
 
         tlog("got no data :-( waiting then re-trying")
         time.sleep(30)

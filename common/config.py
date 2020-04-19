@@ -48,11 +48,15 @@ market_liquidation_end_time_minutes: int = 15
 market_open: datetime
 market_close: datetime
 
+# total number of tickers to follow
+total_tickers = 50
+
 #
 # WS Data Channels
 #
 WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
+
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False 
+bypass_market_schedule: bool = False
