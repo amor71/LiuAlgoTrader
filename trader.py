@@ -26,7 +26,7 @@ from common.tlog import tlog
 from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
 from strategies.base import Strategy
-from strategies.momentum_long import MomentumLong
+# from strategies.momentum_long import MomentumLong
 from strategies.momentum_short import MomentumShort
 
 error_logger = error_reporting.Client()
@@ -119,6 +119,70 @@ async def save(
     )
 
 
+async def get_order(api: tradeapi, order_id: str) -> Order:
+    return api.get_order(order_id)
+
+
+async def update_partially_filled_order(order: Order) -> None:
+    qty = int(order.filled_qty)
+    new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
+    if order.side == "sell":
+        qty = qty * -1
+
+    trading_data.positions[order.symbol] = trading_data.positions.get(
+        order.symbol, 0
+    ) - trading_data.partial_fills.get(order.symbol, 0)
+    trading_data.partial_fills[order.symbol] = qty
+    trading_data.positions[order.symbol] += qty
+    trading_data.open_orders[order.symbol] = (
+        order,
+        trading_data.open_orders.get(order.symbol)[1],
+    )
+
+    await save(
+        order.symbol,
+        new_qty,
+        trading_data.open_orders.get(order.symbol)[1],
+        float(order.filled_avg_price),
+        trading_data.buy_indicators[order.symbol]
+        if order.side == "buy"
+        else trading_data.sell_indicators[order.symbol],
+        order.updated_at,
+    )
+
+
+async def update_filled_order(order: Order) -> None:
+    qty = int(order.filled_qty)
+    new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
+    if order.side == "sell":
+        qty = qty * -1
+
+    trading_data.positions[order.symbol] = trading_data.positions.get(
+        order.symbol, 0
+    ) - trading_data.partial_fills.get(order.symbol, 0)
+    trading_data.partial_fills[order.symbol] = 0
+    trading_data.positions[order.symbol] += qty
+
+    await save(
+        order.symbol,
+        new_qty,
+        trading_data.open_orders.get(order.symbol)[1],
+        float(order.filled_avg_price),
+        trading_data.buy_indicators[order.symbol]
+        if order.side == "buy"
+        else trading_data.sell_indicators[order.symbol],
+        order.filled_at,
+    )
+
+    if order.side == "buy":
+        trading_data.buy_indicators[order.symbol] = None
+    else:
+        trading_data.sell_indicators[order.symbol] = None
+
+    trading_data.open_orders[order.symbol] = None
+    trading_data.open_order_strategy[order.symbol] = None
+
+
 async def run(
     tickers: List[Ticker],
     strategies: List[Strategy],
@@ -177,64 +241,14 @@ async def run(
             return
 
         last_order = trading_data.open_orders.get(symbol)[0]
-        last_op = trading_data.open_orders.get(symbol)[1]
         if last_order is not None:
             tlog(f"trade update for {symbol} data={data}")
             event = data.event
 
             if event == "partial_fill":
-                qty = int(data.order["filled_qty"])
-                new_qty = qty - abs(trading_data.partial_fills.get(symbol, 0))
-                if data.order["side"] == "sell":
-                    qty = qty * -1
-                trading_data.positions[symbol] = trading_data.positions.get(
-                    symbol, 0
-                ) - trading_data.partial_fills.get(symbol, 0)
-                trading_data.partial_fills[symbol] = qty
-                trading_data.positions[symbol] += qty
-                trading_data.open_orders[symbol] = (Order(data.order), last_op)
-
-                await save(
-                    symbol,
-                    new_qty,
-                    last_op,
-                    float(data.order["filled_avg_price"]),
-                    trading_data.buy_indicators[symbol]
-                    if data.order["side"] == "buy"
-                    else trading_data.sell_indicators[symbol],
-                    data.timestamp,
-                )
-
+                await update_partially_filled_order(Order(data.order))
             elif event == "fill":
-                qty = int(data.order["filled_qty"])
-                new_qty = qty - abs(trading_data.partial_fills.get(symbol, 0))
-                if data.order["side"] == "sell":
-                    qty = qty * -1
-
-                trading_data.positions[symbol] = trading_data.positions.get(
-                    symbol, 0
-                ) - trading_data.partial_fills.get(symbol, 0)
-                trading_data.partial_fills[symbol] = 0
-                trading_data.positions[symbol] += qty
-
-                await save(
-                    symbol,
-                    new_qty,
-                    last_op,
-                    float(data.order["filled_avg_price"]),
-                    trading_data.buy_indicators[symbol]
-                    if data.order["side"] == "buy"
-                    else trading_data.sell_indicators[symbol],
-                    data.timestamp,
-                )
-
-                if data.order["side"] == "buy":
-                    trading_data.buy_indicators[symbol] = None
-                else:
-                    trading_data.sell_indicators[symbol] = None
-                trading_data.open_orders[symbol] = None
-                trading_data.open_order_strategy[symbol] = None
-
+                await update_filled_order(Order(data.order))
             elif event in ("canceled", "rejected"):
                 trading_data.partial_fills[symbol] = 0
                 trading_data.open_orders[symbol] = None
@@ -305,11 +319,28 @@ async def run(
             existing_order = existing_order[0]
             try:
                 if await should_cancel_order(existing_order, original_ts):
-                    # Cancel it so we can try again for a fill
-                    tlog(
-                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
+                    inflight_order = await get_order(
+                        trading_api, existing_order.id
                     )
-                    trading_api.cancel_order(existing_order.id)
+                    if inflight_order and inflight_order.status == "filled":
+                        tlog(
+                            "order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                        )
+                        await update_filled_order(inflight_order)
+                    elif (
+                        inflight_order
+                        and inflight_order.status == "partially_filled"
+                    ):
+                        tlog(
+                            "order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                        )
+                        await update_partially_filled_order(inflight_order)
+                    else:
+                        # Cancel it so we can try again for a fill
+                        tlog(
+                            f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
+                        )
+                        trading_api.cancel_order(existing_order.id)
                 return
             except AttributeError:
                 error_logger.report_exception()
@@ -342,9 +373,9 @@ async def run(
     async def handle_minute_bar(conn, channel, data):
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
             tlog(
-                f"AM$ {data.symbol} now={now} data.start={data.start} out of sync"
+                f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
             )
-            return
+            pass
         ts = data.start
         ts = ts.replace(
             second=0, microsecond=0
@@ -379,7 +410,7 @@ async def start_strategies(
         tlog("setting up strategies")
         await create_db_connection(str(config.dsn))
 
-        strategy_types = [MomentumShort, MomentumLong]
+        strategy_types = [MomentumShort]  # , MomentumLong]
         for strategy_type in strategy_types:
             tlog(f"initializing {strategy_type.name}")
             s = strategy_type(trading_api=trading_api, data_api=data_api)
