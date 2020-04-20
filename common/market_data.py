@@ -93,11 +93,11 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
         if len(unsorted) > 0:
             tlog(f"loaded {len(unsorted)} tickers")
             rc = unsorted  # sorted(unsorted, key=lambda ticker: ticker.day["v"])
-            _len = max(config.total_tickers, len(rc))
-            tlog(
-                f"loaded {len(rc)} tickers, picking {max(_len)} tickers with highest volume"
-            )
-            return rc[-_len:]
+            # _len = max(config.total_tickers, len(rc))
+            # tlog(
+            #    f"loaded {len(rc)} tickers, picking {max(_len)} tickers with highest volume"
+            # )
+            return rc  # rc[-_len:]
 
         tlog("got no data :-( waiting then re-trying")
         time.sleep(30)
