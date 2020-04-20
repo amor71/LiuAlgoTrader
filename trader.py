@@ -113,7 +113,7 @@ async def save(
 
     await db_trade.save(
         trading_data.db_conn_pool,
-        now,
+        str(now),
         trading_data.stop_prices[symbol],
         trading_data.target_prices[symbol],
     )
