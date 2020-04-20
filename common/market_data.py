@@ -91,6 +91,7 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
             )
         ]
         if len(unsorted) > 0:
+            tlog(f"loaded {len(unsorted)} tickers")
             rc = sorted(unsorted, key=lambda ticker: ticker.day["v"])
             _len = max(config.total_tickers, len(rc))
             tlog(
