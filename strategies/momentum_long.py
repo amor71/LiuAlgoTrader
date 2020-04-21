@@ -106,8 +106,8 @@ class MomentumLong(Strategy):
                         # check RSI does not indicate overbought
                         rsi = RSI(minute_history["close"], 14)
 
-                        if rsi[-1] < 80:
-                            tlog(f"[{self.name}] RSI {rsi[-1]} < 80")
+                        if rsi[-1] < 78:
+                            tlog(f"[{self.name}] RSI {round(rsi[-1], 2)} < 78")
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
                             )
@@ -187,7 +187,11 @@ class MomentumLong(Strategy):
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
 
-        if await super().is_sell_time(now) and position > 0:
+        if (
+            await super().is_sell_time(now)
+            and position > 0
+            and symbol in latest_cost_basis
+        ):
             # Check for liquidation signals
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
