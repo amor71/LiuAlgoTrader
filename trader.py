@@ -26,7 +26,7 @@ from common.tlog import tlog
 from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
 from strategies.base import Strategy
-# from strategies.momentum_long import MomentumLong
+from strategies.momentum_long import MomentumLong
 from strategies.momentum_short import MomentumShort
 
 error_logger = error_reporting.Client()
@@ -372,9 +372,9 @@ async def run(
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
-            tlog(
-                f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
-            )
+            #tlog(
+            #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
+            #)
             pass
         ts = data.start
         ts = ts.replace(
@@ -410,7 +410,7 @@ async def start_strategies(
         tlog("setting up strategies")
         await create_db_connection(str(config.dsn))
 
-        strategy_types = [MomentumShort]  # , MomentumLong]
+        strategy_types = [MomentumLong]
         for strategy_type in strategy_types:
             tlog(f"initializing {strategy_type.name}")
             s = strategy_type(trading_api=trading_api, data_api=data_api)
