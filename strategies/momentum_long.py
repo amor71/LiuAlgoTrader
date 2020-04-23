@@ -104,10 +104,17 @@ class MomentumLong(Strategy):
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(minute_history["close"], 14)
+                        rsi = RSI(
+                            minute_history["close"]
+                            .dropna()
+                            .between_time("9:30", "16:00"),
+                            14,
+                        )
 
                         if rsi[-1] < 78:
-                            tlog(f"[{self.name}] RSI {round(rsi[-1], 2)} < 78")
+                            tlog(
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 78"
+                            )
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
                             )
@@ -118,11 +125,9 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
-                            if (
-                                resistance[0] - data.close
-                            ) / data.close < 0.01:
+                            if (resistance[0] - data.low) / data.close < 0.01:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance at {resistance[0]}"
+                                    f"[{self.name}] {symbol} at price {data.low} too close to resistance at {resistance[0]}"
                                 )
                                 return False
 
@@ -204,7 +209,10 @@ class MomentumLong(Strategy):
 
             macd = macds[0]
             macd_signal = macds[1]
-            rsi = RSI(minute_history["close"], 14)
+            rsi = RSI(
+                minute_history["close"].dropna().between_time("9:30", "16:00"),
+                14,
+            )
             movement = (
                 data.close - latest_cost_basis[symbol]
             ) / latest_cost_basis[symbol]
