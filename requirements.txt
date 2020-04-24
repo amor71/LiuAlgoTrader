@@ -20,4 +20,4 @@ pygit2==1.2.0
 google-cloud-error-reporting==0.33.0
 pytest==5.4.1
 pytest-asyncio==0.11.0
-
+pytest-cov
