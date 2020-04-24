@@ -11,7 +11,7 @@ alpaca-trade-api >= 0.25
 sklearn==0.0
 google-cloud-logging==1.15.0
 therapist==2.0.0
-jupyter
+jupyter==1.0.0
 TA-Lib
 asyncpg
 psycopg2-binary
