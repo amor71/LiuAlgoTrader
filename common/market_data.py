@@ -97,7 +97,7 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
             tlog(
                 f"loaded {len(rc)} tickers, picking {_len} tickers with highest volume"
             )
-            return rc  # rc[-_len:]
+            return rc[-_len:]
 
         tlog("got no data :-( waiting then re-trying")
         time.sleep(30)
