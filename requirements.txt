@@ -1,4 +1,4 @@
-requests
+requests==2.23.0
 deprecated
 urllib3<1.25
 numpy
