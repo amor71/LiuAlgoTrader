@@ -1,5 +1,5 @@
 requests==2.23.0
-deprecated
+deprecated==1.2.9
 urllib3<1.25
 numpy
 mypy
