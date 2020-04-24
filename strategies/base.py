@@ -1,3 +1,4 @@
+"""Base Class for Strategies"""
 from datetime import datetime
 
 import alpaca_trade_api as tradeapi
