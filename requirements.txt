@@ -14,7 +14,7 @@ therapist==2.0.0
 jupyter==1.0.0
 TA-Lib==0.4.17
 asyncpg==0.20.1
-psycopg2-binary
+psycopg2-binary==2.8.5
 sqlalchemy
 pygit2
 google-cloud-error-reporting
