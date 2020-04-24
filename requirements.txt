@@ -4,7 +4,7 @@ urllib3==1.25.9
 numpy==1.18.3
 mypy==0.770
 black==19.10b0
-flake8
+flake8==3.7.9
 pylint
 Cython
 alpaca-trade-api >= 0.25
