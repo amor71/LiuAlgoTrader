@@ -8,7 +8,7 @@ flake8==3.7.9
 pylint==2.4.4
 Cython==0.29.16
 alpaca-trade-api >= 0.25
-sklearn
+sklearn==0.0
 google-cloud-logging
 therapist
 jupyter
