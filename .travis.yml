@@ -17,6 +17,7 @@ cache:
     - $DEPS_DIR
 install:
   - pip install --upgrade pip wheel
+  - pip install coverage
   - if [ $WITH_TA_LIBRARY = "yes" ]; then
       ./tools/build_talib_from_source.bash $DEPS_DIR;
     fi
@@ -25,4 +26,6 @@ before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
   - psql -d travis_ci_test -U postgres -f db-script.sql
 script:
-  - pytest
+  - coverage run -m pytest
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
