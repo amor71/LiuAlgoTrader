@@ -6,7 +6,7 @@ mypy==0.770
 black==19.10b0
 flake8==3.7.9
 pylint==2.4.4
-Cython
+Cython==0.29.16
 alpaca-trade-api >= 0.25
 sklearn
 google-cloud-logging
