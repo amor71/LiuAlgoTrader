@@ -13,7 +13,8 @@ from common.trading_data import (buy_indicators, latest_cost_basis,
                                  open_order_strategy, open_orders,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
-from fincalcs.support_resistance import find_resistances, find_stop
+from fincalcs.support_resistance import (find_resistances, find_stop,
+                                         find_supports)
 
 from .base import Strategy
 
@@ -118,7 +119,9 @@ class MomentumLong(Strategy):
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
                             )
-
+                            supports = find_supports(
+                                symbol, self.name, data.close, minute_history
+                            )
                             if resistance is None or resistance == []:
                                 tlog(
                                     f"[{self.name}]no resistance for {symbol} -> skip buy"
@@ -171,6 +174,7 @@ class MomentumLong(Strategy):
                                             -5:
                                         ].tolist(),
                                         "resistances": resistance,
+                                        "supports": supports,
                                         "vwap": data.vwap,
                                         "avg": data.average,
                                     }
@@ -235,9 +239,11 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif below_cost_base and macd_val <= 0:
+            elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
                 to_sell = True
-                sell_reasons.append("below cost & macd negative")
+                sell_reasons.append(
+                    "below cost & macd negative & RSI trending down"
+                )
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
@@ -255,7 +261,7 @@ class MomentumLong(Strategy):
             if to_sell:
                 try:
                     sell_indicators[symbol] = {
-                        "rsi": rsi[-1].tolist(),
+                        "rsi": rsi[-2:].tolist(),
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
                         "sell_macd_signal": macd_signal[-5:].tolist(),
