@@ -10,7 +10,7 @@ Cython==0.29.16
 alpaca-trade-api >= 0.25
 sklearn==0.0
 google-cloud-logging==1.15.0
-therapist
+therapist==2.0.0
 jupyter
 TA-Lib
 asyncpg
