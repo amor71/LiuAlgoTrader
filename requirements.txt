@@ -17,6 +17,6 @@ asyncpg==0.20.1
 psycopg2-binary==2.8.5
 sqlalchemy==1.3.16
 pygit2==1.2.0
-google-cloud-error-reporting
+google-cloud-error-reporting==0.33.0
 pytest
 pytest-asyncio
