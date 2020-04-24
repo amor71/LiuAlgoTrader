@@ -5,7 +5,7 @@ numpy==1.18.3
 mypy==0.770
 black==19.10b0
 flake8==3.7.9
-pylint
+pylint==2.4.4
 Cython
 alpaca-trade-api >= 0.25
 sklearn
