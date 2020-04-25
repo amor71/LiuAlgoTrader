@@ -124,7 +124,9 @@ async def get_order(api: tradeapi, order_id: str) -> Order:
     return api.get_order(order_id)
 
 
-async def update_partially_filled_order(order: Order) -> None:
+async def update_partially_filled_order(
+    strategy: Strategy, order: Order
+) -> None:
     qty = int(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
@@ -151,8 +153,17 @@ async def update_partially_filled_order(order: Order) -> None:
         order.updated_at,
     )
 
+    if order.side == "buy":
+        await strategy.buy_callback(
+            order.symbol, float(order.filled_avg_price), new_qty
+        )
+    else:
+        await strategy.sell_callback(
+            order.symbol, float(order.filled_avg_price), new_qty
+        )
 
-async def update_filled_order(order: Order) -> None:
+
+async def update_filled_order(strategy: Strategy, order: Order) -> None:
     qty = int(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
@@ -179,6 +190,15 @@ async def update_filled_order(order: Order) -> None:
         trading_data.buy_indicators[order.symbol] = None
     else:
         trading_data.sell_indicators[order.symbol] = None
+
+    if order.side == "buy":
+        await strategy.buy_callback(
+            order.symbol, float(order.filled_avg_price), new_qty
+        )
+    else:
+        await strategy.sell_callback(
+            order.symbol, float(order.filled_avg_price), new_qty
+        )
 
     trading_data.open_orders[order.symbol] = None
     trading_data.open_order_strategy[order.symbol] = None
@@ -247,9 +267,13 @@ async def run(
             event = data.event
 
             if event == "partial_fill":
-                await update_partially_filled_order(Order(data.order))
+                await update_partially_filled_order(
+                    trading_data.open_order_strategy[symbol], Order(data.order)
+                )
             elif event == "fill":
-                await update_filled_order(Order(data.order))
+                await update_filled_order(
+                    trading_data.open_order_strategy[symbol], Order(data.order)
+                )
             elif event in ("canceled", "rejected"):
                 trading_data.partial_fills[symbol] = 0
                 trading_data.open_orders[symbol] = None

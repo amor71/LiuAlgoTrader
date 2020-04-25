@@ -44,3 +44,9 @@ class Strategy:
             or config.bypass_market_schedule
             else False
         )
+
+    async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
+        pass
+
+    async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
+        pass

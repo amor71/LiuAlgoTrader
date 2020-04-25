@@ -29,6 +29,12 @@ class MomentumLong(Strategy):
             name=self.name, trading_api=trading_api, data_api=data_api
         )
 
+    async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
+        latest_cost_basis[symbol] = price
+
+    async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
+        latest_cost_basis[symbol] = price
+
     async def create(self) -> None:
         await super().create()
         tlog(f"strategy {self.name} created")
@@ -187,7 +193,6 @@ class MomentumLong(Strategy):
                                         limit_price=str(data.close),
                                     )
                                     open_orders[symbol] = (o, "buy")
-                                    latest_cost_basis[symbol] = data.close
                                     open_order_strategy[symbol] = self
                                     return True
 
@@ -298,7 +303,6 @@ class MomentumLong(Strategy):
                         )
 
                     open_orders[symbol] = (o, "sell")
-                    latest_cost_basis[symbol] = data.close
                     open_order_strategy[symbol] = self
                     return True
                 except Exception:
