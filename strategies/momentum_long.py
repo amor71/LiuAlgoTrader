@@ -231,9 +231,11 @@ class MomentumLong(Strategy):
             movement_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
-            macd_below_signal = macd_val < macd_signal_val
+            macd_below_signal = macd_val <= macd_signal_val
             bail_out = (
-                movement > min(0.02, movement_threshold) and macd_below_signal
+                # movement > min(0.02, movement_threshold) and macd_below_signal
+                data.close > latest_cost_basis[symbol]
+                and macd_below_signal
             )
             scalp = movement > min(0.02, movement_threshold)
             below_cost_base = data.close <= latest_cost_basis[symbol]
