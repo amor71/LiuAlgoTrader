@@ -332,7 +332,7 @@ async def run(
 
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
             tlog(
-                f"A$ {data.symbol }now={now} data.start={data.start} out of sync"
+                f"A$ {data.symbol} now={now} data.start={data.start} out of sync"
             )
             return
         #        else:
