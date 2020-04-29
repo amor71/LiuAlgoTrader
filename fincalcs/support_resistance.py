@@ -34,7 +34,11 @@ def find_resistances(
 
     for back_track_min in range(120, len(minute_history.index), 60):
         series = (
-            minute_history["close"][-back_track_min:].resample("5min").max()
+            minute_history["close"][-back_track_min:]
+            .dropna()
+            .between_time("9:30", "16:00")
+            .resample("5min")
+            .max()
         ).dropna()
 
         diff = np.diff(series.values)
@@ -58,7 +62,11 @@ def find_supports(
     """calculate supports"""
     for back_track_min in range(120, len(minute_history.index), 60):
         series = (
-            minute_history["close"][-back_track_min:].resample("5min").min()
+            minute_history["close"][-back_track_min:]
+            .dropna()
+            .between_time("9:30", "16:00")
+            .resample("5min")
+            .min()
         ).dropna()
         diff = np.diff(series.values)
         high_index = np.where((diff[:-1] <= 0) & (diff[1:] > 0))[0] + 1
