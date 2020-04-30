@@ -40,8 +40,10 @@ class MomentumLong(Strategy):
         tlog(f"strategy {self.name} created")
 
     async def should_cool_down(self, symbol: str, now: datetime):
-        if cool_down[symbol] and cool_down[symbol] >= now.replace(
-            second=0, microsecond=0
+        if (
+            symbol in cool_down
+            and cool_down[symbol]
+            and cool_down[symbol] >= now.replace(second=0, microsecond=0)
         ):
             return True
 
