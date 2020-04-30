@@ -1,5 +1,6 @@
 """Global data shared during trading"""
-from typing import Dict, List, Tuple
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 from alpaca_trade_api.entity import Order
 from asyncpg.pool import Pool
@@ -30,3 +31,5 @@ symbol_resistance: Dict[str, float] = {}
 industry_trend: Dict[str, float] = {}
 sector_trend: Dict[str, float] = {}
 snapshot: Dict[str, TickerSnapshot] = {}
+
+cool_down: Dict[str, Optional[datetime]] = {}
