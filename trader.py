@@ -222,7 +222,9 @@ async def run(
     tlog(f"Tracking {len(symbols)} symbols")
 
     minute_history: Dict[str, df] = get_historical_data(
-        api=data_api, symbols=symbols,
+        api=data_api,
+        symbols=symbols,
+        max=min(config.total_tickers, len(symbols)),
     )
 
     # Cancel any existing open orders on watched symbols
