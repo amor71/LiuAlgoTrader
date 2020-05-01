@@ -224,7 +224,7 @@ async def run(
     minute_history: Dict[str, df] = get_historical_data(
         api=data_api,
         symbols=symbols,
-        max=min(config.total_tickers, len(symbols)),
+        max_tickers=min(config.total_tickers, len(symbols)),
     )
 
     # Cancel any existing open orders on watched symbols
