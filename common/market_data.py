@@ -54,18 +54,21 @@ def get_historical_data(
                             find_resistances(
                                 symbol,
                                 "pre-calc",
-                                minute_history[symbol]["close"][-1],
-                                minute_history[symbol],
+                                _df["close"][-1],
+                                _df,
                             )
                             is not None
                         ):
                             minute_history[symbol] = _df
                             tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max}"
+                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
                             )
                             c += 1
-                            continue
+                            break 
+                        else:
+                            tlog(f"non resistance for {symbol}")
                     exclude_symbols.append(symbol)
+                    break
                 except (
                     requests.exceptions.HTTPError,
                     requests.exceptions.ConnectionError,
