@@ -13,6 +13,7 @@ from pandas import DataFrame as df
 from common import config, trading_data
 from common.decorators import timeit
 from common.tlog import tlog
+from fincalcs.support_resistance import find_resistances
 from models.ticker_snapshot import TickerSnapshot
 
 try:
@@ -24,9 +25,12 @@ prev_closes: Dict[str, float] = {}
 volume_today: Dict[str, int] = {}
 
 
-def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
+def get_historical_data(
+    api: tradeapi, symbols: List[str], max_tickers: int
+) -> Dict[str, df]:
     """get ticker history"""
 
+    tlog(f"Loading max {max_tickers} tickers w/ highest volume")
     minute_history: Dict[str, df] = {}
     c = 0
     exclude_symbols = []
@@ -35,15 +39,35 @@ def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
             retry_counter = 5
             while retry_counter > 0:
                 try:
-                    minute_history[symbol] = api.polygon.historic_agg_v2(
-                        symbol,
-                        1,
-                        "minute",
-                        _from=date.today() - timedelta(days=10),
-                        to=date.today() + timedelta(days=1),
-                    ).df
-                    minute_history[symbol]["vwap"] = 0.0
-                    minute_history[symbol]["average"] = 0.0
+                    if c < max_tickers:
+                        _df = api.polygon.historic_agg_v2(
+                            symbol,
+                            1,
+                            "minute",
+                            _from=date.today() - timedelta(days=10),
+                            to=date.today() + timedelta(days=1),
+                        ).df
+                        _df["vwap"] = 0.0
+                        _df["average"] = 0.0
+
+                        if (
+                            find_resistances(
+                                symbol,
+                                "pre-calc",
+                                _df["close"][-1],
+                                _df,
+                            )
+                            is not None
+                        ):
+                            minute_history[symbol] = _df
+                            tlog(
+                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
+                            )
+                            c += 1
+                            break 
+                        else:
+                            tlog(f"non resistance for {symbol}")
+                    exclude_symbols.append(symbol)
                     break
                 except (
                     requests.exceptions.HTTPError,
@@ -54,14 +78,11 @@ def get_historical_data(api: tradeapi, symbols: List[str],) -> Dict[str, df]:
                         if error_logger:
                             error_logger.report_exception()
                         exclude_symbols.append(symbol)
-            c += 1
-            tlog(
-                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{len(symbols)}"
-            )
 
     for x in exclude_symbols:
         symbols.remove(x)
 
+    tlog(f"Total number of symbols for trading {len(symbols)}")
     return minute_history
 
 
@@ -92,12 +113,13 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
         ]
         if len(unsorted) > 0:
             tlog(f"loaded {len(unsorted)} tickers")
-            rc = sorted(unsorted, key=lambda ticker: float(ticker.day["v"]))
-            _len = min(config.total_tickers, len(rc))
-            tlog(
-                f"loaded {len(rc)} tickers, picking {_len} tickers with highest volume"
+            rc = sorted(
+                unsorted,
+                key=lambda ticker: float(ticker.day["v"]),
+                reverse=True,
             )
-            return rc[-_len:]
+            tlog(f"loaded {len(rc)} tickers")
+            return rc
 
         tlog("got no data :-( waiting then re-trying")
         time.sleep(30)
