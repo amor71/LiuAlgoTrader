@@ -9,7 +9,7 @@ from talib import MACD, RSI
 from common import config
 from common.market_data import prev_closes, volume_today
 from common.tlog import tlog
-from common.trading_data import (buy_indicators, latest_cost_basis,
+from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  open_order_strategy, open_orders,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
@@ -39,11 +39,27 @@ class MomentumLong(Strategy):
         await super().create()
         tlog(f"strategy {self.name} created")
 
+    async def should_cool_down(self, symbol: str, now: datetime):
+        if (
+            symbol in cool_down
+            and cool_down[symbol]
+            and cool_down[symbol] >= now.replace(second=0, microsecond=0)
+        ):
+            return True
+
+        cool_down[symbol] = None
+        return False
+
     async def run(
         self, symbol: str, position: int, minute_history: df, now: datetime
     ) -> bool:
         data = minute_history.iloc[-1]
-        if await super().is_buy_time(now) and not position:
+        if (
+            await super().is_buy_time(now)
+            and not position
+            and not await self.should_cool_down(symbol, now)
+        ):
+
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -132,11 +148,17 @@ class MomentumLong(Strategy):
                                 tlog(
                                     f"[{self.name}]no resistance for {symbol} -> skip buy"
                                 )
+                                cool_down[symbol] = now.replace(
+                                    second=0, microsecond=0
+                                )
                                 return False
 
                             if (resistance[0] - data.low) / data.close < 0.01:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.low} too close to resistance at {resistance[0]}"
+                                )
+                                cool_down[symbol] = now.replace(
+                                    second=0, microsecond=0
                                 )
                                 return False
 
@@ -226,14 +248,17 @@ class MomentumLong(Strategy):
                 data.close - latest_cost_basis[symbol]
             ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
-            macd_signal_val = macd_signal[-1].round(2)
+            macd_signal_val = macd_signal[-1]
 
             movement_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
-                movement > min(0.02, movement_threshold) and macd_below_signal
+                # movement > min(0.02, movement_threshold) and macd_below_signal
+                data.close > latest_cost_basis[symbol]
+                and macd_below_signal
+                and macd[-1] < macd[-2]
             )
             scalp = movement > min(0.02, movement_threshold)
             below_cost_base = data.close <= latest_cost_basis[symbol]
@@ -254,7 +279,10 @@ class MomentumLong(Strategy):
                 sell_reasons.append("above target & macd negative")
             elif rsi[-1] >= 78:
                 to_sell = True
-                sell_reasons.append("rsi max")
+                sell_reasons.append("rsi max, cool-down for 5 minutes")
+                cool_down[symbol] = now.replace(
+                    second=0, microsecond=0
+                ) + timedelta(minutes=5)
             elif bail_out:
                 to_sell = True
                 sell_reasons.append("bail")
