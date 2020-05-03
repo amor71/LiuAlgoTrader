@@ -23,6 +23,7 @@ from common.database import create_db_connection
 from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
 from common.tlog import tlog
+from data_stream.alpaca import AlpacaStreaming
 from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
 from strategies.base import Strategy
@@ -514,7 +515,7 @@ def get_trading_windows(tz, api):
 
     calendar = api.get_calendar(start=today_str, end=today_str)[0]
 
-    tlog(f"next open date {calendar.date}")
+    tlog(f"next open date {calendar.date.date()}")
 
     if today.date() < calendar.date.date():
         tlog(f"which is not today {today}")
@@ -551,6 +552,10 @@ async def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
+    _alpaca_ws = AlpacaStreaming(
+        key=config.prod_api_key_id, secret=config.prod_api_secret
+    )
+    await _alpaca_ws.connect()
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
