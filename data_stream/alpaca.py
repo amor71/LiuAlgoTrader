@@ -1,5 +1,7 @@
+import asyncio
 import json
 from enum import Enum, auto
+from typing import Awaitable, Dict
 
 import websockets
 from google.cloud import error_reporting
@@ -22,10 +24,14 @@ class AlpacaStreaming:
         self.key = key
         self.secret = secret
         self.state: WSConnectState = WSConnectState.NOT_CONNECTED
+        self.websocket: websockets.client.WebSocketClientProtocol
+        self.consumer_task: asyncio.Task
+        self.stream_map: Dict = {}
 
     async def connect(self) -> bool:
+        """Connect web-socket and authenticate, update internal state"""
         try:
-            self.websocket = await websockets.connect(self.END_POINT)
+            self.websocket = await websockets.client.connect(self.END_POINT)
             self.state = WSConnectState.CONNECTED
         except websockets.WebSocketException as wse:
             error_logger.report_exception()
@@ -37,7 +43,6 @@ class AlpacaStreaming:
             "action": "authenticate",
             "data": {"key_id": self.key, "secret_key": self.secret},
         }
-
         await self.websocket.send(json.dumps(auth_payload))
         _greeting = await self.websocket.recv()
         if isinstance(_greeting, bytes):
@@ -50,4 +55,93 @@ class AlpacaStreaming:
             return False
 
         self.state = WSConnectState.AUTHENTICATED
+        self.consumer_task = asyncio.create_task(
+            self._consumer(), name="alpaca-streaming-consumer-task"
+        )
+
         return True
+
+    async def close(self) -> None:
+        """Close open websocket, if open"""
+        if self.state not in (
+            WSConnectState.AUTHENTICATED,
+            WSConnectState.CONNECTED,
+        ):
+            raise ValueError("can't close a non-open connection")
+        try:
+            self.websocket.close()
+        except websockets.WebSocketException as wse:
+            tlog(f"failed to close web-socket w exception {wse}")
+
+        self.state = WSConnectState.NOT_CONNECTED
+
+    async def subscribe(self, symbol: str, handler: Awaitable) -> bool:
+        if self.state != WSConnectState.AUTHENTICATED:
+            raise ValueError(
+                f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
+            )
+
+        _subscribe_payload = {
+            "action": "listen",
+            "data": {"streams": [f"AM.{symbol}"]},
+        }
+        await self.websocket.send(json.dumps(_subscribe_payload))
+        _subscribe_response = await self.websocket.recv()
+        if isinstance(_subscribe_response, bytes):
+            _subscribe_response = _subscribe_response.decode("utf-8")
+        msg = json.loads(_subscribe_response)
+        if msg.get("stream", {}) != "listening":
+            tlog(f"unexpected listening result {msg} for {_subscribe_payload}")
+            return False
+
+        self.stream_map[symbol] = handler
+        return True
+
+    async def unsubscribe(self, symbol: str) -> bool:
+        if self.state != WSConnectState.AUTHENTICATED:
+            raise ValueError(
+                f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
+            )
+
+        self.stream_map.pop(symbol, None)
+        return False
+
+    async def _reconnect(self) -> None:
+        """automatically reconnect socket, and re-subscribe, internal"""
+        await self.close()
+        if await self.connect():
+            _dict = self.stream_map.copy()
+            self.stream_map.clear()
+
+            for symbol in _dict:
+                await self.subscribe(symbol, _dict[symbol])
+        else:
+            tlog(
+                f"{self.consumer_task.get_name()} failed reconnect check log for reason"
+            )
+
+    async def _consumer(self) -> None:
+        """Main tread loop for consuming incoming messages, internal only """
+        try:
+            while True:
+                _msg = await self.websocket.recv()
+                if isinstance(_msg, bytes):
+                    _msg = _msg.decode("utf-8")
+                msg = json.loads(_msg)
+                stream = msg.get("stream")
+                if stream is not None:
+                    _func = self.stream_map.get(stream, None)
+                    if _func:
+                        await _func(stream, msg["data"])
+                    else:
+                        tlog(
+                            f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
+                        )
+
+        except websockets.WebSocketException as wse:
+            tlog(
+                f"{self.consumer_task.get_name()} received WebSocketException {wse}"
+            )
+            await self._reconnect()
+        except asyncio.CancelledError:
+            tlog(f"{self.consumer_task.get_name()} cancelled")
