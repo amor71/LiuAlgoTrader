@@ -59,7 +59,6 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -153,15 +152,20 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
-                            if (resistance[0] - data.low) / data.close < 0.01:
+                            if (resistance[0] - data.close) / (
+                                data.close - supports[-1]
+                            ) < 0.75:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.low} too close to resistance at {resistance[0]}"
+                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
                                 return False
 
+                            tlog(
+                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {resistance[0]}"
+                            )
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history, now
