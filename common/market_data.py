@@ -44,18 +44,14 @@ def get_historical_data(
                             symbol,
                             1,
                             "minute",
-                            _from=date.today() - timedelta(days=10),
-                            to=date.today() + timedelta(days=1),
+                            _from=str(date.today() - timedelta(days=10)),
+                            to=str(date.today() + timedelta(days=1)),
                         ).df
                         _df["vwap"] = 0.0
                         _df["average"] = 0.0
-
                         if (
                             find_resistances(
-                                symbol,
-                                "pre-calc",
-                                _df["close"][-1],
-                                _df,
+                                symbol, "pre-calc", _df["close"][-1], _df,
                             )
                             is not None
                         ):
@@ -64,7 +60,7 @@ def get_historical_data(
                                 f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
                             )
                             c += 1
-                            break 
+                            break
                         else:
                             tlog(f"non resistance for {symbol}")
                     exclude_symbols.append(symbol)

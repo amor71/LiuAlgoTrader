@@ -24,6 +24,7 @@ from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
 from common.tlog import tlog
 from data_stream.alpaca import AlpacaStreaming
+from data_stream.streaming_base import StreamingBase
 from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
 from strategies.base import Strategy
@@ -205,6 +206,10 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
+async def minutes_handler(symbol: str, data: Dict) -> None:
+    tlog(f"minutes_handler({symbol}, {data}")
+
+
 async def run(
     tickers: List[Ticker],
     strategies: List[Strategy],
@@ -212,6 +217,7 @@ async def run(
     trading_api: tradeapi,
     data_ws: StreamConn,
     trading_ws: StreamConn,
+    data_ws2: StreamingBase,
 ) -> None:
     """main loop"""
     # Update initial state with information from tickers
@@ -253,6 +259,9 @@ async def run(
             f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
         ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
         data_channels += symbol_channels
+
+        if data_ws2:
+            await data_ws2.subscribe(symbol, minutes_handler)
     tlog(f"Watching {len(symbols)} symbols.")
 
     # Use trade updates to keep track of our portfolio
@@ -287,17 +296,20 @@ async def run(
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
+        print("2")
         # tlog(f"trade event: {conn} {channel} {data}")
         pass
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
+        print("1")
         # tlog(f"quote event: {conn} {channel} {data}")
         pass
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        # print(data)
+        print("3")
+        print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -354,7 +366,10 @@ async def run(
                         tlog(
                             "order_id {existing_order.id} for {symbol} already filled {inflight_order}"
                         )
-                        await update_filled_order(inflight_order)
+                        await update_filled_order(
+                            trading_data.open_order_strategy[symbol],
+                            inflight_order,
+                        )
                     elif (
                         inflight_order
                         and inflight_order.status == "partially_filled"
@@ -362,7 +377,10 @@ async def run(
                         tlog(
                             "order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
                         )
-                        await update_partially_filled_order(inflight_order)
+                        await update_partially_filled_order(
+                            trading_data.open_order_strategy[symbol],
+                            inflight_order,
+                        )
                     else:
                         # Cancel it so we can try again for a fill
                         tlog(
@@ -399,6 +417,7 @@ async def run(
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
+
         if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=11):  # type: ignore
             # tlog(
             #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
@@ -420,12 +439,8 @@ async def run(
         ]
         volume_today[data.symbol] += data.volume
 
-    try:
-        await trading_ws.subscribe(trade_channels)
-        await data_ws.subscribe(data_channels)
-    except Exception as e:
-        tlog(f"Exception {e}")
-        error_logger.report_exception()
+    await trading_ws.subscribe(trade_channels)
+    await data_ws.subscribe(data_channels)
 
 
 async def start_strategies(
@@ -433,6 +448,7 @@ async def start_strategies(
     data_api: tradeapi,
     data_ws: StreamConn,
     trading_ws: StreamConn,
+    data_ws2: StreamingBase,
 ):
     try:
         tlog("setting up strategies")
@@ -455,6 +471,7 @@ async def start_strategies(
             data_api=data_api,
             data_ws=data_ws,
             trading_ws=trading_ws,
+            data_ws2=data_ws2,
         )
     except asyncio.CancelledError:
         tlog("start_strategies() cancelled ")
@@ -526,7 +543,6 @@ def get_trading_windows(tz, api):
     market_close = today.replace(
         hour=calendar.close.hour, minute=calendar.close.minute, second=0
     )
-
     return market_open, market_close
 
 
@@ -552,10 +568,11 @@ async def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    _alpaca_ws = AlpacaStreaming(
-        key=config.prod_api_key_id, secret=config.prod_api_secret
-    )
-    await _alpaca_ws.connect()
+    _alpaca_ws = None
+    # AlpacaStreaming(
+    #    key=config.prod_api_key_id, secret=config.prod_api_secret
+    # )
+    # await _alpaca_ws.connect()
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
@@ -627,6 +644,7 @@ async def main():
                     data_api=_data_api,
                     trading_ws=_trade_ws,
                     data_ws=_data_ws,
+                    data_ws2=_alpaca_ws,
                 )
             )
             await asyncio.gather(tear_down, strategy, return_exceptions=True)

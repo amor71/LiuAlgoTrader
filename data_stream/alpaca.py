@@ -1,6 +1,5 @@
 import asyncio
 import json
-from enum import Enum, auto
 from typing import Awaitable, Dict
 
 import websockets
@@ -8,16 +7,12 @@ from google.cloud import error_reporting
 
 from common.tlog import tlog
 
+from .streaming_base import StreamingBase, WSConnectState
+
 error_logger = error_reporting.Client()
 
 
-class WSConnectState(Enum):
-    NOT_CONNECTED = auto()
-    CONNECTED = auto()
-    AUTHENTICATED = auto()
-
-
-class AlpacaStreaming:
+class AlpacaStreaming(StreamingBase):
     END_POINT = "wss://data.alpaca.markets/stream"
 
     def __init__(self, key: str, secret: str):
@@ -27,6 +22,7 @@ class AlpacaStreaming:
         self.websocket: websockets.client.WebSocketClientProtocol
         self.consumer_task: asyncio.Task
         self.stream_map: Dict = {}
+        super().__init__()
 
     async def connect(self) -> bool:
         """Connect web-socket and authenticate, update internal state"""
@@ -45,6 +41,7 @@ class AlpacaStreaming:
         }
         await self.websocket.send(json.dumps(auth_payload))
         _greeting = await self.websocket.recv()
+
         if isinstance(_greeting, bytes):
             _greeting = _greeting.decode("utf-8")
         msg = json.loads(_greeting)
@@ -52,13 +49,17 @@ class AlpacaStreaming:
             tlog(
                 f"Invalid Alpaca API credentials, Failed to authenticate: {msg}"
             )
-            return False
+            raise ValueError(
+                f"Invalid Alpaca API credentials, Failed to authenticate: {msg}"
+            )
 
         self.state = WSConnectState.AUTHENTICATED
-        self.consumer_task = asyncio.create_task(
-            self._consumer(), name="alpaca-streaming-consumer-task"
-        )
 
+        # self.consumer_task = asyncio.create_task(
+        #    self._consumer(), name="alpaca-streaming-consumer-task"
+        # )
+
+        tlog("Successfully connected to Alpaca web-socket")
         return True
 
     async def close(self) -> None:
@@ -76,6 +77,7 @@ class AlpacaStreaming:
         self.state = WSConnectState.NOT_CONNECTED
 
     async def subscribe(self, symbol: str, handler: Awaitable) -> bool:
+        return True
         if self.state != WSConnectState.AUTHENTICATED:
             raise ValueError(
                 f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
@@ -83,17 +85,9 @@ class AlpacaStreaming:
 
         _subscribe_payload = {
             "action": "listen",
-            "data": {"streams": [f"AM.{symbol}"]},
+            "data": {"streams": [f"alpacadatav1/AM.{symbol}"]},
         }
         await self.websocket.send(json.dumps(_subscribe_payload))
-        _subscribe_response = await self.websocket.recv()
-        if isinstance(_subscribe_response, bytes):
-            _subscribe_response = _subscribe_response.decode("utf-8")
-        msg = json.loads(_subscribe_response)
-        if msg.get("stream", {}) != "listening":
-            tlog(f"unexpected listening result {msg} for {_subscribe_payload}")
-            return False
-
         self.stream_map[symbol] = handler
         return True
 
@@ -122,6 +116,8 @@ class AlpacaStreaming:
 
     async def _consumer(self) -> None:
         """Main tread loop for consuming incoming messages, internal only """
+
+        tlog(f"{self.consumer_task.get_name()} starting")
         try:
             while True:
                 _msg = await self.websocket.recv()
@@ -129,14 +125,18 @@ class AlpacaStreaming:
                     _msg = _msg.decode("utf-8")
                 msg = json.loads(_msg)
                 stream = msg.get("stream")
-                if stream is not None:
-                    _func = self.stream_map.get(stream, None)
-                    if _func:
-                        await _func(stream, msg["data"])
-                    else:
-                        tlog(
-                            f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
-                        )
+                if stream != "listening":
+                    try:
+                        _func = self.stream_map.get(stream.split(".")[1], None)
+                        if _func:
+                            await _func(stream, msg["data"])
+                        else:
+                            tlog(
+                                f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
+                            )
+                    except Exception as e:
+                        error_logger.report_exception()
+                        tlog(f"{self.consumer_task.get_name()}  exception {e}")
 
         except websockets.WebSocketException as wse:
             tlog(
@@ -145,3 +145,5 @@ class AlpacaStreaming:
             await self._reconnect()
         except asyncio.CancelledError:
             tlog(f"{self.consumer_task.get_name()} cancelled")
+
+        tlog(f"{self.consumer_task.get_name()} completed")
