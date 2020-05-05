@@ -55,9 +55,9 @@ class AlpacaStreaming(StreamingBase):
 
         self.state = WSConnectState.AUTHENTICATED
 
-        # self.consumer_task = asyncio.create_task(
-        #    self._consumer(), name="alpaca-streaming-consumer-task"
-        # )
+        self.consumer_task = asyncio.create_task(
+            self._consumer(), name="alpaca-streaming-consumer-task"
+        )
 
         tlog("Successfully connected to Alpaca web-socket")
         return True
@@ -70,14 +70,13 @@ class AlpacaStreaming(StreamingBase):
         ):
             raise ValueError("can't close a non-open connection")
         try:
-            self.websocket.close()
+            await self.websocket.close()
         except websockets.WebSocketException as wse:
             tlog(f"failed to close web-socket w exception {wse}")
 
         self.state = WSConnectState.NOT_CONNECTED
 
     async def subscribe(self, symbol: str, handler: Awaitable) -> bool:
-        return True
         if self.state != WSConnectState.AUTHENTICATED:
             raise ValueError(
                 f"{symbol} web-socket not ready for listening, make sure connect passed successfully"

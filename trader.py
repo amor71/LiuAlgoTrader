@@ -308,6 +308,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
+
         print("3")
         print(data)
         symbol = data.symbol
@@ -417,7 +418,7 @@ async def run(
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
-
+        print("111")
         if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=11):  # type: ignore
             # tlog(
             #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
@@ -568,11 +569,10 @@ async def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    _alpaca_ws = None
-    # AlpacaStreaming(
-    #    key=config.prod_api_key_id, secret=config.prod_api_secret
-    # )
-    # await _alpaca_ws.connect()
+    _alpaca_ws = AlpacaStreaming(
+        key=config.prod_api_key_id, secret=config.prod_api_secret
+    )
+    await _alpaca_ws.connect()
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
