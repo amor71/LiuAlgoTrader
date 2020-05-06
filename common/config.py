@@ -49,7 +49,8 @@ market_open: datetime
 market_close: datetime
 
 # total number of tickers to follow
-total_tickers = 85
+total_tickers = 100
+
 
 #
 # WS Data Channels
