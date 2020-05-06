@@ -133,9 +133,9 @@ class MomentumLong(Strategy):
                             14,
                         )
 
-                        if rsi[-1] < 78:
+                        if rsi[-1] < 75:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 78"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 75"
                             )
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
@@ -281,7 +281,7 @@ class MomentumLong(Strategy):
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
-            elif rsi[-1] >= 78:
+            elif rsi[-1] >= 79:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
                 cool_down[symbol] = now.replace(
