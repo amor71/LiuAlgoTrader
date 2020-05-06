@@ -296,7 +296,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        # print(data)
+        #print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
