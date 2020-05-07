@@ -154,7 +154,7 @@ class MomentumLong(Strategy):
 
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
-                            ) < 0.75:
+                            ) < 0.85:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
                                 )
@@ -211,6 +211,13 @@ class MomentumLong(Strategy):
                                         "supports": supports,
                                         "vwap": data.vwap,
                                         "avg": data.average,
+                                        "position_ratio": str(
+                                            round(
+                                                (resistance[0] - data.close)
+                                                / (data.close - supports[-1]),
+                                                2,
+                                            )
+                                        ),
                                     }
                                     o = self.trading_api.submit_order(
                                         symbol=symbol,
