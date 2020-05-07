@@ -133,9 +133,9 @@ class MomentumLong(Strategy):
                             14,
                         )
 
-                        if rsi[-1] < 75:
+                        if rsi[-1] <= 70:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 75"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
                             )
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
