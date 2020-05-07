@@ -170,7 +170,9 @@ class MomentumLong(Strategy):
                             stop_price = find_stop(
                                 data.close, minute_history, now
                             )
-                            stop_prices[symbol] = stop_price
+                            stop_prices[symbol] = min(
+                                stop_price, supports[-1] - 0.02
+                            )
                             target_prices[symbol] = (
                                 data.close + (data.close - stop_price) * 3
                             )
@@ -265,7 +267,7 @@ class MomentumLong(Strategy):
                 and macd[-1] < macd[-2]
             )
             scalp = movement > min(0.02, movement_threshold)
-            below_cost_base = data.close <= latest_cost_basis[symbol]
+            # below_cost_base = data.close <= latest_cost_basis[symbol]
 
             to_sell = False
             partial_sell = False
@@ -273,11 +275,11 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
-                to_sell = True
-                sell_reasons.append(
-                    "below cost & macd negative & RSI trending down"
-                )
+            #           elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
+            #               to_sell = True
+            #               sell_reasons.append(
+            #                   "below cost & macd negative & RSI trending down"
+            #               )
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
