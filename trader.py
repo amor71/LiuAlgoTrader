@@ -207,7 +207,8 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 
 
 async def minutes_handler(symbol: str, data: Dict) -> None:
-    tlog(f"minutes_handler({symbol}, {data}")
+    # tlog(f"minutes_handler({symbol}, {data}")
+    pass
 
 
 async def run(
@@ -296,20 +297,16 @@ async def run(
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
-        print("2")
         # tlog(f"trade event: {conn} {channel} {data}")
         pass
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
-        print("1")
         # tlog(f"quote event: {conn} {channel} {data}")
         pass
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-
-        print("3")
         print(data)
         symbol = data.symbol
 
@@ -418,7 +415,6 @@ async def run(
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
-        print("111")
         if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=11):  # type: ignore
             # tlog(
             #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
@@ -568,6 +564,7 @@ async def main():
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
+        data_stream="polygon",
     )
     _alpaca_ws = AlpacaStreaming(
         key=config.prod_api_key_id, secret=config.prod_api_secret
