@@ -155,7 +155,7 @@ class MomentumLong(Strategy):
 
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
-                            ) < 0.85:
+                            ) < 0.8:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
                                 )
