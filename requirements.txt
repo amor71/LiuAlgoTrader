@@ -11,7 +11,7 @@ alpaca-trade-api >= 0.25
 google-cloud-logging==1.15.0
 therapist==2.0.0
 jupyter==1.0.0
-TA-Lib==0.4.17
+TA-Lib==0.4.18
 asyncpg==0.20.1
 psycopg2-binary==2.8.5
 sqlalchemy==1.3.16
