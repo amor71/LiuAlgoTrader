@@ -296,7 +296,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        #print(data)
+        # print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -550,6 +550,7 @@ async def main():
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
+        data_stream="polygon",
     )
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
