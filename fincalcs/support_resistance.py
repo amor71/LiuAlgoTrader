@@ -48,9 +48,9 @@ def find_resistances(
                 [series[i] for i in high_index if series[i] >= current_value]
             )
             if len(local_maximas) > 0:
-                tlog(
-                    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
-                )
+                # tlog(
+                #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
+                # )
                 return local_maximas
 
     return None
@@ -75,9 +75,9 @@ def find_supports(
                 [series[i] for i in high_index if series[i] <= current_value]
             )
             if len(local_maximas) > 0:
-                tlog(
-                    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
-                )
+                # tlog(
+                #    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
+                # )
                 return local_maximas
 
     return None

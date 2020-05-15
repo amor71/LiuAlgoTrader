@@ -18,7 +18,7 @@ from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from common import config, trading_data
+from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
@@ -206,11 +206,6 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
-async def minutes_handler(symbol: str, data: Dict) -> None:
-    # tlog(f"minutes_handler({symbol}, {data}")
-    pass
-
-
 async def run(
     tickers: List[Ticker],
     strategies: List[Strategy],
@@ -229,7 +224,7 @@ async def run(
     symbols = [ticker.ticker for ticker in tickers]
     tlog(f"Tracking {len(symbols)} symbols")
 
-    minute_history: Dict[str, df] = get_historical_data(
+    market_data.minute_history = get_historical_data(
         api=data_api,
         symbols=symbols,
         max_tickers=min(config.total_tickers, len(symbols)),
@@ -262,7 +257,7 @@ async def run(
         data_channels += symbol_channels
 
         if data_ws2:
-            await data_ws2.subscribe(symbol, minutes_handler)
+            await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
     tlog(f"Watching {len(symbols)} symbols.")
 
     # Use trade updates to keep track of our portfolio
@@ -307,7 +302,7 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        print(data)
+        # print(data)
         symbol = data.symbol
 
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -317,7 +312,7 @@ async def run(
         )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
 
         try:
-            current = minute_history[data.symbol].loc[ts]
+            current = market_data.minute_history[data.symbol].loc[ts]
         except KeyError:
             current = None
 
@@ -341,7 +336,7 @@ async def run(
                 data.vwap,
                 data.average,
             ]
-        minute_history[symbol].loc[ts] = new_data
+        market_data.minute_history[symbol].loc[ts] = new_data
 
         if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
             tlog(
@@ -404,17 +399,18 @@ async def run(
         # run strategies
         for s in strategies:
             if await s.run(
-                symbol, symbol_position, minute_history[symbol], ts
+                symbol, symbol_position, market_data.minute_history[symbol], ts
             ):
                 trading_data.last_used_strategy[symbol] = s
                 tlog(
-                    f"executed strategy {s.name} on {symbol} w data {minute_history[symbol][-10:]}"
+                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
                 )
                 return
 
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
+        # print(data)
         if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=11):  # type: ignore
             # tlog(
             #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
@@ -425,7 +421,7 @@ async def run(
             second=0, microsecond=0
         )  # ts -= timedelta(microseconds=ts.microsecond)
 
-        minute_history[data.symbol].loc[ts] = [
+        market_data.minute_history[data.symbol].loc[ts] = [
             data.open,
             data.high,
             data.low,

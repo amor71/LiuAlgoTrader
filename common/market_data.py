@@ -23,6 +23,7 @@ except Exception:
 
 prev_closes: Dict[str, float] = {}
 volume_today: Dict[str, int] = {}
+minute_history: Dict[str, df] = {}
 
 
 def get_historical_data(
@@ -62,7 +63,9 @@ def get_historical_data(
                             c += 1
                             break
                         else:
-                            tlog(f"non resistance for {symbol}")
+                            tlog(
+                                f"no resistance for {symbol}, skipping ticker"
+                            )
                     exclude_symbols.append(symbol)
                     break
                 except (

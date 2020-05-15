@@ -1,14 +1,19 @@
 import asyncio
 import json
+from datetime import datetime, timedelta
 from typing import Awaitable, Dict
 
+import pandas as pd
 import websockets
 from google.cloud import error_reporting
+from pytz import timezone
 
+from common import market_data
 from common.tlog import tlog
 
 from .streaming_base import StreamingBase, WSConnectState
 
+NY = "America/New_York"
 error_logger = error_reporting.Client()
 
 
@@ -135,7 +140,9 @@ class AlpacaStreaming(StreamingBase):
                             )
                     except Exception as e:
                         error_logger.report_exception()
-                        tlog(f"{self.consumer_task.get_name()}  exception {e}")
+                        tlog(
+                            f"{self.consumer_task.get_name()}  exception {e.__class__.__qualname__}:{e}"
+                        )
 
         except websockets.WebSocketException as wse:
             tlog(
@@ -146,3 +153,40 @@ class AlpacaStreaming(StreamingBase):
             tlog(f"{self.consumer_task.get_name()} cancelled")
 
         tlog(f"{self.consumer_task.get_name()} completed")
+
+    @classmethod
+    async def minutes_handler(cls, symbol: str, data: Dict) -> None:
+        if data["ev"] != "AM":
+            tlog(
+                f"AlpacaStreaming.minutes_handler() got invalid event data: {symbol}:{data}"
+            )
+            return
+
+        if symbol.split(".")[-1] != data["T"]:
+            tlog(
+                f"AlpacaStreaming.minutes_handler() symbol does not match data payload {symbol}:{data}"
+            )
+            return
+
+        start = pd.Timestamp(data["s"], tz=NY, unit="ms")
+        if (now := datetime.now(tz=timezone("America/New_York"))) - start > timedelta(minutes=2):  # type: ignore
+            tlog(
+                f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
+            )
+
+        try:
+            current_data = market_data.minute_history[data["T"]].loc[start]
+        except KeyError:
+            current_data = None
+
+        if current_data is None:
+            market_data.minute_history[data["T"]].loc[start] = [
+                data["o"],
+                data["h"],
+                data["l"],
+                data["c"],
+                data["av"],
+                data["vw"],
+                data["a"],
+            ]
+            market_data.volume_today[data["T"]] = data["av"]
