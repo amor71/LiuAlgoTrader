@@ -14,3 +14,6 @@ class StreamingBase:
 
     async def subscribe(self, symbol: str, handler: Awaitable) -> bool:
         pass
+
+    async def unsubscribe(self, symbol: str) -> bool:
+        pass
