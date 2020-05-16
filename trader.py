@@ -14,7 +14,6 @@ from alpaca_trade_api.entity import Order
 from alpaca_trade_api.polygon.entity import Ticker
 from alpaca_trade_api.stream2 import StreamConn
 from google.cloud import error_reporting
-from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
