@@ -540,6 +540,7 @@ def get_trading_windows(tz, api):
 
 async def off_hours_aggregates() -> None:
     tlog("starting to run off hours aggregates")
+    await create_db_connection()
     await update_all_tickers_data()
 
 
@@ -645,9 +646,6 @@ async def main():
             tlog(
                 "missed market open time, try again next trading day, or bypass"
             )
-    else:
-        await create_db_connection()
-
     await off_hours_aggregates()
 
 
