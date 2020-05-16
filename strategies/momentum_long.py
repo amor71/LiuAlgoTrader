@@ -59,7 +59,6 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -134,9 +133,10 @@ class MomentumLong(Strategy):
                             14,
                         )
 
-                        if rsi[-1] < 78:
+                        tlog(f"[{self.name}] RSI={round(rsi[-1], 2)}")
+                        if rsi[-1] <= 70:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 78"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
                             )
                             resistance = find_resistances(
                                 symbol, self.name, data.close, minute_history
@@ -153,20 +153,27 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
-                            if (resistance[0] - data.low) / data.close < 0.01:
+                            if (resistance[0] - data.close) / (
+                                data.close - supports[-1]
+                            ) < 0.8:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.low} too close to resistance at {resistance[0]}"
+                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
                                 return False
 
+                            tlog(
+                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {resistance[0]}"
+                            )
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
                                 data.close, minute_history, now
                             )
-                            stop_prices[symbol] = stop_price
+                            stop_prices[symbol] = min(
+                                stop_price, supports[-1] - 0.02
+                            )
                             target_prices[symbol] = (
                                 data.close + (data.close - stop_price) * 3
                             )
@@ -205,6 +212,13 @@ class MomentumLong(Strategy):
                                         "supports": supports,
                                         "vwap": data.vwap,
                                         "avg": data.average,
+                                        "position_ratio": str(
+                                            round(
+                                                (resistance[0] - data.close)
+                                                / (data.close - supports[-1]),
+                                                2,
+                                            )
+                                        ),
                                     }
                                     o = self.trading_api.submit_order(
                                         symbol=symbol,
@@ -261,7 +275,7 @@ class MomentumLong(Strategy):
                 and macd[-1] < macd[-2]
             )
             scalp = movement > min(0.02, movement_threshold)
-            below_cost_base = data.close <= latest_cost_basis[symbol]
+            # below_cost_base = data.close <= latest_cost_basis[symbol]
 
             to_sell = False
             partial_sell = False
@@ -269,15 +283,15 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
-                to_sell = True
-                sell_reasons.append(
-                    "below cost & macd negative & RSI trending down"
-                )
+            #           elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
+            #               to_sell = True
+            #               sell_reasons.append(
+            #                   "below cost & macd negative & RSI trending down"
+            #               )
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
-            elif rsi[-1] >= 78:
+            elif rsi[-1] >= 79:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
                 cool_down[symbol] = now.replace(
