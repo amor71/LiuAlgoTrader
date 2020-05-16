@@ -101,6 +101,11 @@ class AlpacaStreaming(StreamingBase):
                 f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
             )
 
+        _subscribe_payload = {
+            "action": "unlisten",
+            "data": {"streams": [f"alpacadatav1/AM.{symbol}"]},
+        }
+        await self.websocket.send(json.dumps(_subscribe_payload))
         self.stream_map.pop(symbol, None)
         return False
 
@@ -185,7 +190,7 @@ class AlpacaStreaming(StreamingBase):
                 data["h"],
                 data["l"],
                 data["c"],
-                data["av"],
+                data["v"],
                 data["vw"],
                 data["a"],
             ]
