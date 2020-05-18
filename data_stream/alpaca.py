@@ -167,7 +167,7 @@ class AlpacaStreaming(StreamingBase):
             )
             return
 
-        if symbol.split(".")[-1] != data["T"]:
+        if symbol[3:] != data["T"]:
             tlog(
                 f"AlpacaStreaming.minutes_handler() symbol does not match data payload {symbol}:{data}"
             )
