@@ -282,9 +282,9 @@ async def run(
                     trading_data.open_order_strategy[symbol], Order(data.order)
                 )
             elif event in ("canceled", "rejected"):
-                trading_data.partial_fills[symbol] = 0
-                trading_data.open_orders[symbol] = None
-                trading_data.open_order_strategy[symbol] = None
+                trading_data.partial_fills.pop(symbol, None)
+                trading_data.open_orders.pop(symbol, None)
+                trading_data.open_order_strategy.pop(symbol, None)
 
         else:
             tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
@@ -356,7 +356,7 @@ async def run(
                     )
                     if inflight_order and inflight_order.status == "filled":
                         tlog(
-                            "order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                            f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
                         )
                         await update_filled_order(
                             trading_data.open_order_strategy[symbol],
@@ -367,7 +367,7 @@ async def run(
                         and inflight_order.status == "partially_filled"
                     ):
                         tlog(
-                            "order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                            f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
                         )
                         await update_partially_filled_order(
                             trading_data.open_order_strategy[symbol],
