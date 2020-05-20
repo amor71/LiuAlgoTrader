@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import date, timedelta
 from typing import Dict, List
@@ -26,7 +27,7 @@ volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
 
 
-def get_historical_data(
+async def get_historical_data(
     api: tradeapi, symbols: List[str], max_tickers: int
 ) -> Dict[str, df]:
     """get ticker history"""
@@ -40,6 +41,7 @@ def get_historical_data(
             retry_counter = 5
             while retry_counter > 0:
                 try:
+                    await asyncio.sleep(0)
                     if c < max_tickers:
                         _df = api.polygon.historic_agg_v2(
                             symbol,
