@@ -49,14 +49,14 @@ market_open: datetime
 market_close: datetime
 
 # total number of tickers to follow
-total_tickers = 150
+total_tickers = 400
 
 #
 # WS Data Channels
 #
-WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
+WS_DATA_CHANNELS: List[str] = ["A", "AM"]  # , "T", "Q"]
 
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False
+bypass_market_schedule: bool = True

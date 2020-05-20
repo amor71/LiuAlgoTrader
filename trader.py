@@ -214,6 +214,7 @@ async def second_task(
         while True:
             data = await queue.get()
             symbol = data.symbol
+            print(f"got[{symbol}]")
 
             # First, aggregate 1s bars for up-to-date MACD calculations
             original_ts = ts = data.start
@@ -252,7 +253,6 @@ async def second_task(
                 tlog(
                     f"A$ {data.symbol} now={now} data.start={data.start} out of sync"
                 )
-                queue.task_done()
                 continue
 
             #        else:
@@ -295,7 +295,6 @@ async def second_task(
                                 f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
                             )
                             trading_api.cancel_order(existing_order.id)
-                    queue.task_done()
                     continue
                 except AttributeError:
                     error_logger.report_exception()
@@ -326,10 +325,7 @@ async def second_task(
                     tlog(
                         f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
                     )
-                    queue.task_done()
                     continue
-
-            queue.task_done()
 
     except asyncio.CancelledError:
         tlog("second_task() cancelled ")
@@ -339,13 +335,11 @@ async def second_task(
 
 async def run(
     tickers: List[Ticker],
-    strategies: List[Strategy],
     data_api: tradeapi,
     trading_api: tradeapi,
     data_ws: StreamConn,
     trading_ws: StreamConn,
     data_ws2: StreamingBase,
-    minute_queue: asyncio.Queue,
     second_queue: asyncio.Queue,
 ) -> None:
     """main loop"""
@@ -357,7 +351,7 @@ async def run(
     symbols = [ticker.ticker for ticker in tickers]
     tlog(f"Tracking {len(symbols)} symbols")
 
-    market_data.minute_history = get_historical_data(
+    market_data.minute_history = await get_historical_data(
         api=data_api,
         symbols=symbols,
         max_tickers=min(config.total_tickers, len(symbols)),
@@ -435,7 +429,10 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        await second_queue.put_nowait(data)
+        try:
+            await second_queue.put(data)
+        except Exception as e:
+            tlog(f"Exception in handle_second_bar(): {e}")
 
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
@@ -551,16 +548,6 @@ async def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    _data_ws = tradeapi.StreamConn(
-        base_url=config.prod_base_url,
-        key_id=config.prod_api_key_id,
-        secret_key=config.prod_api_secret,
-        data_stream="polygon",
-    )
-    _alpaca_ws = AlpacaStreaming(
-        key=config.prod_api_key_id, secret=config.prod_api_secret
-    )
-    await _alpaca_ws.connect()
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
@@ -616,6 +603,17 @@ async def main():
                 else config.paper_api_secret
             )
 
+            _data_ws = tradeapi.StreamConn(
+                base_url=config.prod_base_url,
+                key_id=config.prod_api_key_id,
+                secret_key=config.prod_api_secret,
+                data_stream="polygon",
+            )
+            _alpaca_ws = AlpacaStreaming(
+                key=config.prod_api_key_id, secret=config.prod_api_secret
+            )
+            await _alpaca_ws.connect()
+
             _trading_api = tradeapi.REST(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret
             )
@@ -639,7 +637,6 @@ async def main():
 
             tickers = await get_tickers(data_api=_data_api)
 
-            _minute_queue = asyncio.Queue()
             _second_queue = asyncio.Queue()
 
             tlog("strategies ready to execute")
@@ -647,18 +644,15 @@ async def main():
             main_task = asyncio.create_task(
                 run(
                     tickers=tickers,
-                    strategies=trading_data.strategies,
                     trading_api=_trading_api,
                     data_api=_data_api,
                     data_ws=_data_ws,
                     trading_ws=_trade_ws,
                     data_ws2=_alpaca_ws,
-                    minute_queue=_minute_queue,
                     second_queue=_second_queue,
                 )
             )
 
-            minute_worker = asyncio.create_task(minute_task)
             seconds_worker = asyncio.create_task(
                 second_task(
                     queue=_second_queue,
@@ -666,13 +660,8 @@ async def main():
                     data_ws=_data_ws,
                 )
             )
-
             await asyncio.gather(
-                tear_down,
-                main_task,
-                minute_worker,
-                seconds_worker,
-                return_exceptions=True,
+                tear_down, main_task, seconds_worker, return_exceptions=True,
             )
 
         else:

@@ -175,9 +175,10 @@ class AlpacaStreaming(StreamingBase):
 
         start = pd.Timestamp(data["s"], tz=NY, unit="ms")
         if (now := datetime.now(tz=timezone("America/New_York"))) - start > timedelta(minutes=2):  # type: ignore
-            tlog(
-                f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
-            )
+            # tlog(
+            #    f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
+            # )
+            pass
 
         try:
             current_data = market_data.minute_history[data["T"]].loc[start]
