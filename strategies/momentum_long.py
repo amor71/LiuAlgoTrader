@@ -106,7 +106,7 @@ class MomentumLong(Strategy):
                     and macd1[-3].round(3)
                     < macd1[-2].round(3)
                     < macd1[-1].round(3)
-                    and macd1[-1].round(2) > macd_signal[-1].round(2)
+                    and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
                     and data.close > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
@@ -267,10 +267,13 @@ class MomentumLong(Strategy):
             movement_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
+            bail_threshold = (
+                latest_cost_basis[symbol] + movement_threshold
+            ) / 2.0
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.close > latest_cost_basis[symbol]
+                data.close > bail_threshold
                 and macd_below_signal
                 and macd[-1] < macd[-2]
             )
