@@ -207,9 +207,9 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 
 async def handle_second_msg(
     data: Any, trading_api: tradeapi, data_ws: StreamConn
-):
+) -> bool:
     symbol = data.symbol
-    print(f"got[{symbol}]")
+    print(f"got [{symbol}] to handle_second_msg")
 
     # First, aggregate 1s bars for up-to-date MACD calculations
     original_ts = ts = data.start
@@ -245,8 +245,8 @@ async def handle_second_msg(
     market_data.minute_history[symbol].loc[ts] = new_data
 
     if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=6):  # type: ignore
-        tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
-        return
+        # tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
+        return False
 
     # Next, check for existing orders for the stock
     existing_order = trading_data.open_orders.get(symbol)
@@ -282,7 +282,7 @@ async def handle_second_msg(
                         f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
                     )
                     trading_api.cancel_order(existing_order.id)
-            return
+            return True
         except AttributeError:
             error_logger.report_exception()
             tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
@@ -300,14 +300,24 @@ async def handle_second_msg(
 
     # run strategies
     for s in trading_data.strategies:
-        if await s.run(
-            symbol, symbol_position, market_data.minute_history[symbol], ts,
-        ):
-            trading_data.last_used_strategy[symbol] = s
+        try:
+            if await s.run(
+                symbol,
+                symbol_position,
+                market_data.minute_history[symbol],
+                ts,
+            ):
+                trading_data.last_used_strategy[symbol] = s
+                tlog(
+                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
+                )
+                continue
+        except Exception as e:
             tlog(
-                f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
+                f"handle_second_msg() exception of type {type(e).__name__} with args {e.args} for {symbol}"
             )
-            continue
+
+    return True
 
 
 async def second_task(
@@ -318,7 +328,7 @@ async def second_task(
     try:
         while True:
             data = await queue.get()
-            asyncio.create_task(handle_second_msg(data, trading_api, data_ws))
+            await handle_second_msg(data, trading_api, data_ws)
 
     except asyncio.CancelledError:
         tlog("second_task() cancelled ")
@@ -327,28 +337,14 @@ async def second_task(
 
 
 async def run(
-    tickers: List[Ticker],
-    data_api: tradeapi,
+    symbols: List[str],
     trading_api: tradeapi,
     data_ws: StreamConn,
     trading_ws: StreamConn,
     data_ws2: StreamingBase,
-    second_queue: asyncio.Queue,
+    queue: asyncio.Queue,
 ) -> None:
     """main loop"""
-    # Update initial state with information from tickers
-    for ticker in tickers:
-        symbol = ticker.ticker
-        prev_closes[symbol] = ticker.prevDay["c"]
-        volume_today[symbol] = ticker.day["v"]
-    symbols = [ticker.ticker for ticker in tickers]
-    tlog(f"Tracking {len(symbols)} symbols")
-
-    market_data.minute_history = await get_historical_data(
-        api=data_api,
-        symbols=symbols,
-        max_tickers=min(config.total_tickers, len(symbols)),
-    )
 
     # Cancel any existing open orders on watched symbols
     existing_orders = trading_api.list_orders(limit=500)
@@ -376,8 +372,9 @@ async def run(
         ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
         data_channels += symbol_channels
 
-        if data_ws2:
-            await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+        # if data_ws2:
+        #    await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+
     tlog(f"Watching {len(symbols)} symbols.")
 
     # Use trade updates to keep track of our portfolio
@@ -423,8 +420,11 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         try:
-            print(data.symbol)
-            asyncio.create_task(second_queue.put(data))
+            if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=6):  # type: ignore
+                pass
+            else:
+                asyncio.create_task(queue.put(data))
+
         except Exception as e:
             tlog(f"Exception in handle_second_bar(): {e}")
 
@@ -596,26 +596,8 @@ async def main():
                 if config.env == "PROD"
                 else config.paper_api_secret
             )
-
-            _data_ws = tradeapi.StreamConn(
-                base_url=config.prod_base_url,
-                key_id=config.prod_api_key_id,
-                secret_key=config.prod_api_secret,
-                data_stream="polygon",
-            )
-            _alpaca_ws = AlpacaStreaming(
-                key=config.prod_api_key_id, secret=config.prod_api_secret
-            )
-            await _alpaca_ws.connect()
-
             _trading_api = tradeapi.REST(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret
-            )
-            _trade_ws = tradeapi.StreamConn(
-                base_url=base_url, key_id=api_key_id, secret_key=api_secret,
-            )
-            tear_down = asyncio.create_task(
-                teardown_task(nyc, [_trade_ws, _data_ws])
             )
 
             tlog("setting up strategies")
@@ -631,27 +613,55 @@ async def main():
 
             tickers = await get_tickers(data_api=_data_api)
 
-            _second_queue = asyncio.Queue()
+            # Update initial state with information from tickers
+            for ticker in tickers:
+                symbol = ticker.ticker
+                prev_closes[symbol] = ticker.prevDay["c"]
+                volume_today[symbol] = ticker.day["v"]
+            symbols = [ticker.ticker for ticker in tickers]
+            tlog(f"Tracking {len(symbols)} symbols")
+
+            market_data.minute_history = await get_historical_data(
+                api=_data_api,
+                symbols=symbols,
+                max_tickers=min(config.total_tickers, len(symbols)),
+            )
+
+            tlog("setup streaming")
+            _data_ws = tradeapi.StreamConn(
+                base_url=config.prod_base_url,
+                key_id=config.prod_api_key_id,
+                secret_key=config.prod_api_secret,
+                data_stream="polygon",
+            )
+            _alpaca_ws = AlpacaStreaming(
+                key=config.prod_api_key_id, secret=config.prod_api_secret
+            )
+            await _alpaca_ws.connect()
+
+            _trade_ws = tradeapi.StreamConn(
+                base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+            )
+            tear_down = asyncio.create_task(
+                teardown_task(nyc, [_trade_ws, _data_ws])
+            )
 
             tlog("strategies ready to execute")
-
+            q = asyncio.Queue()
             main_task = asyncio.create_task(
                 run(
-                    tickers=tickers,
+                    symbols=symbols,
                     trading_api=_trading_api,
-                    data_api=_data_api,
                     data_ws=_data_ws,
                     trading_ws=_trade_ws,
                     data_ws2=_alpaca_ws,
-                    second_queue=_second_queue,
+                    queue=q,
                 )
             )
 
             seconds_worker = asyncio.create_task(
                 second_task(
-                    queue=_second_queue,
-                    trading_api=_trading_api,
-                    data_ws=_data_ws,
+                    queue=q, trading_api=_trading_api, data_ws=_data_ws,
                 )
             )
             await asyncio.gather(
