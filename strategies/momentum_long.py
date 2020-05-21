@@ -60,7 +60,6 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-            await asyncio.sleep(0)
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -78,7 +77,6 @@ class MomentumLong(Strategy):
                 return False
 
             # Get the change since yesterday's market close
-            await asyncio.sleep(0)
             daily_pct_change = (
                 data.close - prev_closes[symbol]
             ) / prev_closes[symbol]
@@ -93,7 +91,7 @@ class MomentumLong(Strategy):
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
-                await asyncio.sleep(0)
+                # await asyncio.sleep(0)
                 sell_macds = MACD(
                     minute_history["close"]
                     .dropna()
@@ -101,7 +99,7 @@ class MomentumLong(Strategy):
                     13,
                     21,
                 )
-                await asyncio.sleep(0)
+                # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
@@ -124,7 +122,7 @@ class MomentumLong(Strategy):
                         40,
                         60,
                     )[0]
-                    await asyncio.sleep(0)
+                    # await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
@@ -136,7 +134,7 @@ class MomentumLong(Strategy):
                             .between_time("9:30", "16:00"),
                             14,
                         )
-                        await asyncio.sleep(0)
+                        # await asyncio.sleep(0)
                         tlog(f"[{self.name}] RSI={round(rsi[-1], 2)}")
                         if rsi[-1] <= 70:
                             tlog(
@@ -199,7 +197,7 @@ class MomentumLong(Strategy):
                                 )
 
                                 try:
-                                    await asyncio.sleep(0)
+                                    # await asyncio.sleep(0)
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
                                         "macd": macd1[-5:].tolist(),
@@ -256,7 +254,7 @@ class MomentumLong(Strategy):
                 13,
                 21,
             )
-            await asyncio.sleep(0)
+            # await asyncio.sleep(0)
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(
@@ -268,7 +266,7 @@ class MomentumLong(Strategy):
             ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
-            await asyncio.sleep(0)
+            # await asyncio.sleep(0)
             movement_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
@@ -314,7 +312,7 @@ class MomentumLong(Strategy):
                 sell_reasons.append("scale-out")
 
             if to_sell:
-                await asyncio.sleep(0)
+                # await asyncio.sleep(0)
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-2:].tolist(),
