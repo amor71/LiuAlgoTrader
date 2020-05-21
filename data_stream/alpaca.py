@@ -111,6 +111,7 @@ class AlpacaStreaming(StreamingBase):
 
     async def _reconnect(self) -> None:
         """automatically reconnect socket, and re-subscribe, internal"""
+        tlog(f"{self.consumer_task.get_name()} reconnecting")
         await self.close()
         if await self.connect():
             _dict = self.stream_map.copy()
@@ -136,7 +137,7 @@ class AlpacaStreaming(StreamingBase):
                 stream = msg.get("stream")
                 if stream != "listening":
                     try:
-                        _func = self.stream_map.get(stream.split(".")[1], None)
+                        _func = self.stream_map.get(stream[3:], None)
                         if _func:
                             await _func(stream, msg["data"])
                         else:
