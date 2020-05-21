@@ -53,7 +53,7 @@ async def get_historical_data(
                         _df["vwap"] = 0.0
                         _df["average"] = 0.0
                         if (
-                            find_resistances(
+                            await find_resistances(
                                 symbol, "pre-calc", _df["close"][-1], _df,
                             )
                             is not None
