@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -205,6 +205,111 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
+async def handle_second_msg(
+    data: Any, trading_api: tradeapi, data_ws: StreamConn
+):
+    symbol = data.symbol
+    print(f"got[{symbol}]")
+
+    # First, aggregate 1s bars for up-to-date MACD calculations
+    original_ts = ts = data.start
+    ts = ts.replace(
+        second=0, microsecond=0
+    )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+
+    try:
+        current = market_data.minute_history[data.symbol].loc[ts]
+    except KeyError:
+        current = None
+
+    if current is None:
+        new_data = [
+            data.open,
+            data.high,
+            data.low,
+            data.close,
+            data.volume,
+            data.vwap,
+            data.average,
+        ]
+    else:
+        new_data = [
+            current.open,
+            data.high if data.high > current.high else current.high,
+            data.low if data.low < current.low else current.low,
+            data.close,
+            current.volume + data.volume,
+            data.vwap,
+            data.average,
+        ]
+    market_data.minute_history[symbol].loc[ts] = new_data
+
+    if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=6):  # type: ignore
+        tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
+        return
+
+    # Next, check for existing orders for the stock
+    existing_order = trading_data.open_orders.get(symbol)
+    if existing_order is not None:
+        existing_order = existing_order[0]
+        try:
+            if await should_cancel_order(existing_order, original_ts):
+                inflight_order = await get_order(
+                    trading_api, existing_order.id
+                )
+                if inflight_order and inflight_order.status == "filled":
+                    tlog(
+                        f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                    )
+                    await update_filled_order(
+                        trading_data.open_order_strategy[symbol],
+                        inflight_order,
+                    )
+                elif (
+                    inflight_order
+                    and inflight_order.status == "partially_filled"
+                ):
+                    tlog(
+                        f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                    )
+                    await update_partially_filled_order(
+                        trading_data.open_order_strategy[symbol],
+                        inflight_order,
+                    )
+                else:
+                    # Cancel it so we can try again for a fill
+                    tlog(
+                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
+                    )
+                    trading_api.cancel_order(existing_order.id)
+            return
+        except AttributeError:
+            error_logger.report_exception()
+            tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
+
+    # do we have a position?
+    symbol_position = trading_data.positions.get(symbol, 0)
+
+    # do we need to liquidate for the day?
+    until_market_close = config.market_close - ts
+    if (
+        until_market_close.seconds // 60
+        <= config.market_liquidation_end_time_minutes
+    ):
+        await liquidate(symbol, symbol_position, trading_api, data_ws)
+
+    # run strategies
+    for s in trading_data.strategies:
+        if await s.run(
+            symbol, symbol_position, market_data.minute_history[symbol], ts,
+        ):
+            trading_data.last_used_strategy[symbol] = s
+            tlog(
+                f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
+            )
+            continue
+
+
 async def second_task(
     queue: asyncio.Queue, trading_api: tradeapi, data_ws: StreamConn,
 ) -> None:
@@ -213,119 +318,7 @@ async def second_task(
     try:
         while True:
             data = await queue.get()
-            symbol = data.symbol
-            print(f"got[{symbol}]")
-
-            # First, aggregate 1s bars for up-to-date MACD calculations
-            original_ts = ts = data.start
-            ts = ts.replace(
-                second=0, microsecond=0
-            )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
-
-            try:
-                current = market_data.minute_history[data.symbol].loc[ts]
-            except KeyError:
-                current = None
-
-            if current is None:
-                new_data = [
-                    data.open,
-                    data.high,
-                    data.low,
-                    data.close,
-                    data.volume,
-                    data.vwap,
-                    data.average,
-                ]
-            else:
-                new_data = [
-                    current.open,
-                    data.high if data.high > current.high else current.high,
-                    data.low if data.low < current.low else current.low,
-                    data.close,
-                    current.volume + data.volume,
-                    data.vwap,
-                    data.average,
-                ]
-            market_data.minute_history[symbol].loc[ts] = new_data
-
-            if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
-                tlog(
-                    f"A$ {data.symbol} now={now} data.start={data.start} out of sync"
-                )
-                continue
-
-            #        else:
-            #            print(f"clock diff: {now-data.start}")
-
-            # Next, check for existing orders for the stock
-            existing_order = trading_data.open_orders.get(symbol)
-            if existing_order is not None:
-                existing_order = existing_order[0]
-                try:
-                    if await should_cancel_order(existing_order, original_ts):
-                        inflight_order = await get_order(
-                            trading_api, existing_order.id
-                        )
-                        if (
-                            inflight_order
-                            and inflight_order.status == "filled"
-                        ):
-                            tlog(
-                                f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
-                            )
-                            await update_filled_order(
-                                trading_data.open_order_strategy[symbol],
-                                inflight_order,
-                            )
-                        elif (
-                            inflight_order
-                            and inflight_order.status == "partially_filled"
-                        ):
-                            tlog(
-                                f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
-                            )
-                            await update_partially_filled_order(
-                                trading_data.open_order_strategy[symbol],
-                                inflight_order,
-                            )
-                        else:
-                            # Cancel it so we can try again for a fill
-                            tlog(
-                                f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
-                            )
-                            trading_api.cancel_order(existing_order.id)
-                    continue
-                except AttributeError:
-                    error_logger.report_exception()
-                    tlog(
-                        f"Attribute Error in symbol {symbol} w/ {existing_order}"
-                    )
-
-            # do we have a position?
-            symbol_position = trading_data.positions.get(symbol, 0)
-
-            # do we need to liquidate for the day?
-            until_market_close = config.market_close - ts
-            if (
-                until_market_close.seconds // 60
-                <= config.market_liquidation_end_time_minutes
-            ):
-                await liquidate(symbol, symbol_position, trading_api, data_ws)
-
-            # run strategies
-            for s in trading_data.strategies:
-                if await s.run(
-                    symbol,
-                    symbol_position,
-                    market_data.minute_history[symbol],
-                    ts,
-                ):
-                    trading_data.last_used_strategy[symbol] = s
-                    tlog(
-                        f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-                    )
-                    continue
+            asyncio.create_task(handle_second_msg(data, trading_api, data_ws))
 
     except asyncio.CancelledError:
         tlog("second_task() cancelled ")
@@ -430,7 +423,7 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         try:
-            await second_queue.put(data)
+            asyncio.create_task(second_queue.put(data))
         except Exception as e:
             tlog(f"Exception in handle_second_bar(): {e}")
 
