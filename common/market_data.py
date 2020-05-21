@@ -59,6 +59,7 @@ async def get_historical_data(
                             is not None
                         ):
                             minute_history[symbol] = _df
+                            trading_data.queues[symbol] = asyncio.Queue()
                             tlog(
                                 f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
                             )
