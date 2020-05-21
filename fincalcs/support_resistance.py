@@ -1,10 +1,10 @@
+import asyncio
 from typing import List, Optional
 
 import numpy as np
 from pandas import DataFrame as df
 
 from common import config
-from common.tlog import tlog
 
 
 def grouper(iterable):
@@ -27,7 +27,7 @@ def grouper(iterable):
         yield group
 
 
-def find_resistances(
+async def find_resistances(
     symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
@@ -52,11 +52,12 @@ def find_resistances(
                 #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
                 # )
                 return local_maximas
+        await asyncio.sleep(0)
 
     return None
 
 
-def find_supports(
+async def find_supports(
     symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
@@ -79,6 +80,7 @@ def find_supports(
                 #    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
                 # )
                 return local_maximas
+        await asyncio.sleep(0)
 
     return None
 

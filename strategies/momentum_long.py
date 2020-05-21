@@ -60,6 +60,7 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
+            await asyncio.sleep(0)
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -92,7 +93,7 @@ class MomentumLong(Strategy):
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
-
+                await asyncio.sleep(0)
                 sell_macds = MACD(
                     minute_history["close"]
                     .dropna()
@@ -100,7 +101,7 @@ class MomentumLong(Strategy):
                     13,
                     21,
                 )
-
+                await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
@@ -116,7 +117,6 @@ class MomentumLong(Strategy):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    await asyncio.sleep(0)
                     macd2 = MACD(
                         minute_history["close"]
                         .dropna()
@@ -124,6 +124,7 @@ class MomentumLong(Strategy):
                         40,
                         60,
                     )[0]
+                    await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
@@ -141,10 +142,10 @@ class MomentumLong(Strategy):
                             tlog(
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
                             )
-                            resistance = find_resistances(
+                            resistance = await find_resistances(
                                 symbol, self.name, data.close, minute_history
                             )
-                            supports = find_supports(
+                            supports = await find_supports(
                                 symbol, self.name, data.close, minute_history
                             )
                             if resistance is None or resistance == []:
