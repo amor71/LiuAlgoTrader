@@ -423,6 +423,7 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         try:
+            print(data.symbol)
             asyncio.create_task(second_queue.put(data))
         except Exception as e:
             tlog(f"Exception in handle_second_bar(): {e}")
