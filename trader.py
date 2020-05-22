@@ -137,17 +137,26 @@ if __name__ == "__main__":
             symbols=symbols,
             max_tickers=min(config.total_tickers, len(symbols)),
         )
+        symbols = minute_history.keys()
         mp.set_start_method("spawn")
-        queue: mp.Queue = mp.Queue()
+
+        _num_processes = (
+            int(len(symbols) / config.num_consumer_processes_ratio) + 1
+        )
+        queues: List[mp.Queue] = [mp.Queue() for i in range(_num_processes)]
 
         processes: List = []
         processes.append(
-            mp.Process(target=producer_main, args=(queue, symbols),)
+            mp.Process(
+                target=producer_main, args=(queues, symbols, minute_history),
+            )
         )
 
-        for i in range(config.num_consumer_processes):
+        for i in range(_num_processes):
             processes.append(
-                mp.Process(target=consumer_main, args=(queue, minute_history))
+                mp.Process(
+                    target=consumer_main, args=(queues[i], minute_history)
+                )
             )
 
         for p in processes:

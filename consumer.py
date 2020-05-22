@@ -470,7 +470,7 @@ async def consumer_async_main(queue: Queue):
     )
 
 
-def consumer_main(queue: Queue, minute_history: Dict[str, df]) -> None:
+def consumer_main(queue: Queue, minute_history: Dict[str, df],) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
     trading_data.build_label = pygit2.Repository("./").describe(
