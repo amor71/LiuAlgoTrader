@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -205,29 +205,146 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
+async def handle_second_msg(
+    data: Any, trading_api: tradeapi, data_ws: StreamConn
+) -> bool:
+    symbol = data.symbol
+    print(f"got [{symbol}] to handle_second_msg")
+
+    # First, aggregate 1s bars for up-to-date MACD calculations
+    original_ts = ts = data.start
+    ts = ts.replace(
+        second=0, microsecond=0
+    )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+
+    try:
+        current = market_data.minute_history[data.symbol].loc[ts]
+    except KeyError:
+        current = None
+
+    if current is None:
+        new_data = [
+            data.open,
+            data.high,
+            data.low,
+            data.close,
+            data.volume,
+            data.vwap,
+            data.average,
+        ]
+    else:
+        new_data = [
+            current.open,
+            data.high if data.high > current.high else current.high,
+            data.low if data.low < current.low else current.low,
+            data.close,
+            current.volume + data.volume,
+            data.vwap,
+            data.average,
+        ]
+    market_data.minute_history[symbol].loc[ts] = new_data
+
+    if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=6):  # type: ignore
+        # tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
+        return False
+
+    # Next, check for existing orders for the stock
+    existing_order = trading_data.open_orders.get(symbol)
+    if existing_order is not None:
+        existing_order = existing_order[0]
+        try:
+            if await should_cancel_order(existing_order, original_ts):
+                inflight_order = await get_order(
+                    trading_api, existing_order.id
+                )
+                if inflight_order and inflight_order.status == "filled":
+                    tlog(
+                        f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                    )
+                    await update_filled_order(
+                        trading_data.open_order_strategy[symbol],
+                        inflight_order,
+                    )
+                elif (
+                    inflight_order
+                    and inflight_order.status == "partially_filled"
+                ):
+                    tlog(
+                        f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                    )
+                    await update_partially_filled_order(
+                        trading_data.open_order_strategy[symbol],
+                        inflight_order,
+                    )
+                else:
+                    # Cancel it so we can try again for a fill
+                    tlog(
+                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
+                    )
+                    trading_api.cancel_order(existing_order.id)
+            return True
+        except AttributeError:
+            error_logger.report_exception()
+            tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
+
+    # do we have a position?
+    symbol_position = trading_data.positions.get(symbol, 0)
+
+    # do we need to liquidate for the day?
+    until_market_close = config.market_close - ts
+    if (
+        until_market_close.seconds // 60
+        <= config.market_liquidation_end_time_minutes
+    ):
+        await liquidate(symbol, symbol_position, trading_api, data_ws)
+
+    # run strategies
+    for s in trading_data.strategies:
+        try:
+            if await s.run(
+                symbol,
+                symbol_position,
+                market_data.minute_history[symbol],
+                ts,
+            ):
+                trading_data.last_used_strategy[symbol] = s
+                tlog(
+                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
+                )
+                continue
+        except Exception as e:
+            tlog(
+                f"handle_second_msg() exception of type {type(e).__name__} with args {e.args} for {symbol}"
+            )
+
+    return True
+
+
+async def second_task(
+    queue: asyncio.Queue, trading_api: tradeapi, data_ws: StreamConn,
+) -> None:
+    tlog("second_task() starting")
+
+    try:
+        while True:
+            data = await queue.get()
+            await handle_second_msg(data, trading_api, data_ws)
+
+    except asyncio.CancelledError:
+        tlog("second_task() cancelled ")
+    finally:
+        tlog("second_task() task done.")
+
+
 async def run(
-    tickers: List[Ticker],
-    strategies: List[Strategy],
-    data_api: tradeapi,
+    symbols: List[str],
     trading_api: tradeapi,
     data_ws: StreamConn,
     trading_ws: StreamConn,
     data_ws2: StreamingBase,
+    queue: asyncio.Queue,
 ) -> None:
     """main loop"""
-    # Update initial state with information from tickers
-    for ticker in tickers:
-        symbol = ticker.ticker
-        prev_closes[symbol] = ticker.prevDay["c"]
-        volume_today[symbol] = ticker.day["v"]
-    symbols = [ticker.ticker for ticker in tickers]
-    tlog(f"Tracking {len(symbols)} symbols")
-
-    market_data.minute_history = get_historical_data(
-        api=data_api,
-        symbols=symbols,
-        max_tickers=min(config.total_tickers, len(symbols)),
-    )
 
     # Cancel any existing open orders on watched symbols
     existing_orders = trading_api.list_orders(limit=500)
@@ -255,8 +372,9 @@ async def run(
         ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
         data_channels += symbol_channels
 
-        if data_ws2:
-            await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+        # if data_ws2:
+        #    await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+
     tlog(f"Watching {len(symbols)} symbols.")
 
     # Use trade updates to keep track of our portfolio
@@ -301,110 +419,14 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        # print(data)
-        symbol = data.symbol
-
-        # First, aggregate 1s bars for up-to-date MACD calculations
-        original_ts = ts = data.start
-        ts = ts.replace(
-            second=0, microsecond=0
-        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
-
         try:
-            current = market_data.minute_history[data.symbol].loc[ts]
-        except KeyError:
-            current = None
+            if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=6):  # type: ignore
+                pass
+            else:
+                asyncio.create_task(queue.put(data))
 
-        if current is None:
-            new_data = [
-                data.open,
-                data.high,
-                data.low,
-                data.close,
-                data.volume,
-                data.vwap,
-                data.average,
-            ]
-        else:
-            new_data = [
-                current.open,
-                data.high if data.high > current.high else current.high,
-                data.low if data.low < current.low else current.low,
-                data.close,
-                current.volume + data.volume,
-                data.vwap,
-                data.average,
-            ]
-        market_data.minute_history[symbol].loc[ts] = new_data
-
-        if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=11):  # type: ignore
-            tlog(
-                f"A$ {data.symbol} now={now} data.start={data.start} out of sync"
-            )
-            return
-        #        else:
-        #            print(f"clock diff: {now-data.start}")
-
-        # Next, check for existing orders for the stock
-        existing_order = trading_data.open_orders.get(symbol)
-        if existing_order is not None:
-            existing_order = existing_order[0]
-            try:
-                if await should_cancel_order(existing_order, original_ts):
-                    inflight_order = await get_order(
-                        trading_api, existing_order.id
-                    )
-                    if inflight_order and inflight_order.status == "filled":
-                        tlog(
-                            f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
-                        )
-                        await update_filled_order(
-                            trading_data.open_order_strategy[symbol],
-                            inflight_order,
-                        )
-                    elif (
-                        inflight_order
-                        and inflight_order.status == "partially_filled"
-                    ):
-                        tlog(
-                            f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
-                        )
-                        await update_partially_filled_order(
-                            trading_data.open_order_strategy[symbol],
-                            inflight_order,
-                        )
-                    else:
-                        # Cancel it so we can try again for a fill
-                        tlog(
-                            f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
-                        )
-                        trading_api.cancel_order(existing_order.id)
-                return
-            except AttributeError:
-                error_logger.report_exception()
-                tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
-
-        # do we have a position?
-        symbol_position = trading_data.positions.get(symbol, 0)
-
-        # do we need to liquidate for the day?
-        until_market_close = config.market_close - ts
-        if (
-            until_market_close.seconds // 60
-            <= config.market_liquidation_end_time_minutes
-        ):
-            await liquidate(symbol, symbol_position, trading_api, data_ws)
-
-        # run strategies
-        for s in strategies:
-            if await s.run(
-                symbol, symbol_position, market_data.minute_history[symbol], ts
-            ):
-                trading_data.last_used_strategy[symbol] = s
-                tlog(
-                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-                )
-                return
+        except Exception as e:
+            tlog(f"Exception in handle_second_bar(): {e}")
 
     # Replace aggregated 1s bars with incoming 1m bars
     @data_ws.on(r"AM$")
@@ -433,42 +455,6 @@ async def run(
 
     await trading_ws.subscribe(trade_channels)
     await data_ws.subscribe(data_channels)
-
-
-async def start_strategies(
-    trading_api: tradeapi,
-    data_api: tradeapi,
-    data_ws: StreamConn,
-    trading_ws: StreamConn,
-    data_ws2: StreamingBase,
-):
-    try:
-        tlog("setting up strategies")
-        await create_db_connection(str(config.dsn))
-
-        strategy_types = [MomentumLong]
-        for strategy_type in strategy_types:
-            tlog(f"initializing {strategy_type.name}")
-            s = strategy_type(trading_api=trading_api, data_api=data_api)
-            await s.create()
-
-            trading_data.strategies.append(s)
-
-        tickers = await get_tickers(data_api=data_api)
-        tlog("strategies ready to execute")
-        await run(
-            tickers=tickers,
-            strategies=trading_data.strategies,
-            trading_api=trading_api,
-            data_api=data_api,
-            data_ws=data_ws,
-            trading_ws=trading_ws,
-            data_ws2=data_ws2,
-        )
-    except asyncio.CancelledError:
-        tlog("start_strategies() cancelled ")
-    finally:
-        tlog("start_strategies() task done.")
 
 
 async def end_time(reason: str):
@@ -556,16 +542,6 @@ async def main():
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    _data_ws = tradeapi.StreamConn(
-        base_url=config.prod_base_url,
-        key_id=config.prod_api_key_id,
-        secret_key=config.prod_api_secret,
-        data_stream="polygon",
-    )
-    _alpaca_ws = AlpacaStreaming(
-        key=config.prod_api_key_id, secret=config.prod_api_secret
-    )
-    await _alpaca_ws.connect()
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, _data_api
@@ -620,10 +596,49 @@ async def main():
                 if config.env == "PROD"
                 else config.paper_api_secret
             )
-
             _trading_api = tradeapi.REST(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret
             )
+
+            tlog("setting up strategies")
+            await create_db_connection(str(config.dsn))
+
+            strategy_types = [MomentumLong]
+            for strategy_type in strategy_types:
+                tlog(f"initializing {strategy_type.name}")
+                s = strategy_type(trading_api=_trading_api, data_api=_data_api)
+                await s.create()
+
+                trading_data.strategies.append(s)
+
+            tickers = await get_tickers(data_api=_data_api)
+
+            # Update initial state with information from tickers
+            for ticker in tickers:
+                symbol = ticker.ticker
+                prev_closes[symbol] = ticker.prevDay["c"]
+                volume_today[symbol] = ticker.day["v"]
+            symbols = [ticker.ticker for ticker in tickers]
+            tlog(f"Tracking {len(symbols)} symbols")
+
+            market_data.minute_history = await get_historical_data(
+                api=_data_api,
+                symbols=symbols,
+                max_tickers=min(config.total_tickers, len(symbols)),
+            )
+
+            tlog("setup streaming")
+            _data_ws = tradeapi.StreamConn(
+                base_url=config.prod_base_url,
+                key_id=config.prod_api_key_id,
+                secret_key=config.prod_api_secret,
+                data_stream="polygon",
+            )
+            _alpaca_ws = AlpacaStreaming(
+                key=config.prod_api_key_id, secret=config.prod_api_secret
+            )
+            await _alpaca_ws.connect()
+
             _trade_ws = tradeapi.StreamConn(
                 base_url=base_url, key_id=api_key_id, secret_key=api_secret,
             )
@@ -631,16 +646,27 @@ async def main():
                 teardown_task(nyc, [_trade_ws, _data_ws])
             )
 
-            strategy = asyncio.create_task(
-                start_strategies(
+            tlog("strategies ready to execute")
+            q = asyncio.Queue()
+            main_task = asyncio.create_task(
+                run(
+                    symbols=symbols,
                     trading_api=_trading_api,
-                    data_api=_data_api,
-                    trading_ws=_trade_ws,
                     data_ws=_data_ws,
+                    trading_ws=_trade_ws,
                     data_ws2=_alpaca_ws,
+                    queue=q,
                 )
             )
-            await asyncio.gather(tear_down, strategy, return_exceptions=True)
+
+            seconds_worker = asyncio.create_task(
+                second_task(
+                    queue=q, trading_api=_trading_api, data_ws=_data_ws,
+                )
+            )
+            await asyncio.gather(
+                tear_down, main_task, seconds_worker, return_exceptions=True,
+            )
 
         else:
             tlog(

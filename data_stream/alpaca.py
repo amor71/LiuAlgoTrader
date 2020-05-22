@@ -111,6 +111,7 @@ class AlpacaStreaming(StreamingBase):
 
     async def _reconnect(self) -> None:
         """automatically reconnect socket, and re-subscribe, internal"""
+        tlog(f"{self.consumer_task.get_name()} reconnecting")
         await self.close()
         if await self.connect():
             _dict = self.stream_map.copy()
@@ -136,7 +137,7 @@ class AlpacaStreaming(StreamingBase):
                 stream = msg.get("stream")
                 if stream != "listening":
                     try:
-                        _func = self.stream_map.get(stream.split(".")[1], None)
+                        _func = self.stream_map.get(stream[3:], None)
                         if _func:
                             await _func(stream, msg["data"])
                         else:
@@ -175,9 +176,10 @@ class AlpacaStreaming(StreamingBase):
 
         start = pd.Timestamp(data["s"], tz=NY, unit="ms")
         if (now := datetime.now(tz=timezone("America/New_York"))) - start > timedelta(minutes=2):  # type: ignore
-            tlog(
-                f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
-            )
+            # tlog(
+            #    f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
+            # )
+            pass
 
         try:
             current_data = market_data.minute_history[data["T"]].loc[start]
