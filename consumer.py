@@ -4,6 +4,7 @@ from multiprocessing import Queue
 from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
+import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.polygon.entity import Ticker
 from alpaca_trade_api.stream2 import StreamConn
@@ -434,13 +435,17 @@ async def consumer_async_main(queue: Queue):
 
 def consumer_main(queue: Queue, symbols: List[str]) -> None:
     tlog("*** consumer_main() starting ***")
+    trading_data.build_label = pygit2.Repository("./").describe(
+        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
+    )
     try:
         asyncio.run(asyncio.run(consumer_async_main(queue)))
     except KeyboardInterrupt:
-        tlog("producer_main() - Caught KeyboardInterrupt")
+        tlog("consumer_main() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
-            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
+            f"consumer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
+        raise
 
     tlog("*** consumer_main() completed ***")
