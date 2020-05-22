@@ -26,7 +26,7 @@ def grouper(iterable):
         yield group
 
 
-def find_resistances(
+async def find_resistances(
     symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
     """calculate supports"""
