@@ -55,7 +55,7 @@ async def run(
                 tlog(f"A$ {data.symbol}: data out of sync")
                 pass
             else:
-                asyncio.create_task(queue.put(data))
+                queue.put(data)
 
         except Exception as e:
             tlog(
@@ -65,7 +65,7 @@ async def run(
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         try:
-            asyncio.create_task(queue.put(data))
+            queue.put(data)
         except Exception as e:
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -135,5 +135,6 @@ def producer_main(queue: Queue, symbols: List[str]) -> None:
         tlog(
             f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
+        raise
 
     tlog("*** producer_main() completed ***")

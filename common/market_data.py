@@ -94,6 +94,9 @@ def get_tickers(data_api: tradeapi) -> List[Ticker]:
     while max_retries > 0:
         tickers = data_api.polygon.all_tickers()
         tlog(f"loaded {len(tickers)} tickers from Polygon")
+
+        if not len(tickers):
+            break
         assets = data_api.list_assets()
         tlog(f"loaded {len(assets)} assets from Alpaca")
         tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
