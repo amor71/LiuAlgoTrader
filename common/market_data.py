@@ -27,7 +27,7 @@ volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
 
 
-async def get_historical_data(
+def get_historical_data(
     api: tradeapi, symbols: List[str], max_tickers: int
 ) -> Dict[str, df]:
     """get ticker history"""
@@ -41,7 +41,6 @@ async def get_historical_data(
             retry_counter = 5
             while retry_counter > 0:
                 try:
-                    await asyncio.sleep(0)
                     if c < max_tickers:
                         _df = api.polygon.historic_agg_v2(
                             symbol,
@@ -53,13 +52,12 @@ async def get_historical_data(
                         _df["vwap"] = 0.0
                         _df["average"] = 0.0
                         if (
-                            await find_resistances(
+                            find_resistances(
                                 symbol, "pre-calc", _df["close"][-1], _df,
                             )
                             is not None
                         ):
                             minute_history[symbol] = _df
-                            trading_data.queues[symbol] = asyncio.Queue()
                             tlog(
                                 f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
                             )
@@ -88,7 +86,7 @@ async def get_historical_data(
     return minute_history
 
 
-async def get_tickers(data_api: tradeapi) -> List[Ticker]:
+def get_tickers(data_api: tradeapi) -> List[Ticker]:
     """get all tickers"""
 
     tlog("Getting current ticker data...")
@@ -124,7 +122,11 @@ async def get_tickers(data_api: tradeapi) -> List[Ticker]:
             return rc
 
         tlog("got no data :-( waiting then re-trying")
-        time.sleep(30)
+
+        try:
+            time.sleep(30)
+        except KeyboardInterrupt:
+            break
         max_retries -= 1
 
     tlog("got no data :-( giving up")
