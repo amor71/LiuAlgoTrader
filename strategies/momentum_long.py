@@ -25,10 +25,8 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, trading_api: tradeapi, data_api: tradeapi):
-        super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
-        )
+    def __init__(self, trading_api: tradeapi):
+        super().__init__(name=self.name, trading_api=trading_api)
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price

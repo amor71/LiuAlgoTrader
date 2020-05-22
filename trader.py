@@ -1,12 +1,11 @@
 """
 Trading strategy runner
 """
-import asyncio
+import multiprocessing as mp
 import os
 import sys
 import time
 from datetime import datetime
-from multiprocessing import Process, Queue
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -14,11 +13,10 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.database import create_db_connection
 from common.market_data import (get_historical_data, get_tickers, prev_closes,
                                 volume_today)
 from common.tlog import tlog
-from market_miner import update_all_tickers_data
+from consumer import consumer_main
 from producer import producer_main
 
 error_logger = error_reporting.Client()
@@ -105,10 +103,6 @@ def ready_to_start(trading_api: tradeapi) -> bool:
     return True
 
 
-def consumer_main(queue: Queue) -> None:
-    pass
-
-
 """
 starting
 """
@@ -144,16 +138,17 @@ if __name__ == "__main__":
             max_tickers=min(config.total_tickers, len(_symbols)),
         )
 
-        queue: Queue = Queue()
-        producer_process = Process(
-            target=producer_main,
-            args=(queue, data_api, list(minute_history.keys())),
+        queue: mp.Queue = mp.Queue()
+        producer_process = mp.Process(
+            target=producer_main, args=(queue, list(minute_history.keys())),
         )
-        # consumer_process = Process(target=consumer_main, args=(queue,))
+        consumer_process = mp.Process(
+            target=consumer_main, args=(queue, list(minute_history.keys()))
+        )
         producer_process.start()
-        # consumer_process.start()
+        consumer_process.start()
         producer_process.join()
-        # consumer_process.join()
+        consumer_process.join()
 
-tlog("Done.")
-sys.exit(0)
+        tlog("main completed")
+        sys.exit(0)

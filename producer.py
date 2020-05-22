@@ -132,4 +132,8 @@ def producer_main(queue: Queue, symbols: List[str]) -> None:
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:
-        tlog(f"producer_main() - Caught exception {str(e)}")
+        tlog(
+            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
+        )
+
+    tlog("*** producer_main() completed ***")

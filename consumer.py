@@ -1,16 +1,9 @@
-"""
-Trading strategy runner
-"""
 import asyncio
-import os
-import sys
-import time
 from datetime import datetime, timedelta
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
-import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.polygon.entity import Ticker
 from alpaca_trade_api.stream2 import StreamConn
@@ -36,76 +29,40 @@ from strategies.momentum_long import MomentumLong
 error_logger = error_reporting.Client()
 
 
-async def run_consumer(
-    symbols: List[str],
-    trading_api: tradeapi,
-    data_ws: StreamConn,
-    trading_ws: StreamConn,
-    data_ws2: StreamingBase,
-    queue: asyncio.Queue,
-) -> None:
-    """main loop"""
+async def trade_run(ws: StreamConn,) -> None:
+    trade_channels = ["trade_updates"]
 
-    data_channels = []
-    for symbol in symbols:
-        symbol_channels = [
-            f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
-        ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
-        data_channels += symbol_channels
+    # Use trade updates to keep track of our portfolio
+    @ws.on(r"trade_update")
+    async def handle_trade_update(conn, channel, data):
+        symbol = data.order["symbol"]
 
-        if data_ws2:
-            await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+        # if trade originated somewhere else, disregard
+        if trading_data.open_orders.get(symbol) is None:
+            return
 
-    tlog(f"Watching {len(symbols)} symbols.")
+        last_order = trading_data.open_orders.get(symbol)[0]
+        if last_order is not None:
+            tlog(f"trade update for {symbol} data={data}")
+            event = data.event
 
-    @data_ws.on(r"T$")
-    async def handle_trade_event(conn, channel, data):
-        # tlog(f"trade event: {conn} {channel} {data}")
-        pass
+            if event == "partial_fill":
+                await update_partially_filled_order(
+                    trading_data.open_order_strategy[symbol], Order(data.order)
+                )
+            elif event == "fill":
+                await update_filled_order(
+                    trading_data.open_order_strategy[symbol], Order(data.order)
+                )
+            elif event in ("canceled", "rejected"):
+                trading_data.partial_fills.pop(symbol, None)
+                trading_data.open_orders.pop(symbol, None)
+                trading_data.open_order_strategy.pop(symbol, None)
 
-    @data_ws.on(r"Q$")
-    async def handle_quote_event(conn, channel, data):
-        # tlog(f"quote event: {conn} {channel} {data}")
-        pass
+        else:
+            tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
 
-    @data_ws.on(r"A$")
-    async def handle_second_bar(conn, channel, data):
-        try:
-            if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=6):  # type: ignore
-                pass
-            else:
-                asyncio.create_task(queue.put(data))
-
-        except Exception as e:
-            tlog(f"Exception in handle_second_bar(): {e}")
-
-    # Replace aggregated 1s bars with incoming 1m bars
-    @data_ws.on(r"AM$")
-    async def handle_minute_bar(conn, channel, data):
-        # print(data)
-        if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=11):  # type: ignore
-            # tlog(
-            #    f"AM$ {data.symbol} now={now} data.start={data.start} out of sync w {data}"
-            # )
-            pass
-        ts = data.start
-        ts = ts.replace(
-            second=0, microsecond=0
-        )  # ts -= timedelta(microseconds=ts.microsecond)
-
-        market_data.minute_history[data.symbol].loc[ts] = [
-            data.open,
-            data.high,
-            data.low,
-            data.close,
-            data.volume,
-            data.vwap,
-            data.average,
-        ]
-        volume_today[data.symbol] += data.volume
-
-    await trading_ws.subscribe(trade_channels)
-    await data_ws.subscribe(data_channels)
+    await ws.subscribe(trade_channels)
 
 
 async def end_time(reason: str):
@@ -143,10 +100,7 @@ async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
 
 
 async def liquidate(
-    symbol: str,
-    symbol_position: int,
-    trading_api: tradeapi,
-    data_ws: StreamConn,
+    symbol: str, symbol_position: int, trading_api: tradeapi,
 ) -> None:
 
     if symbol_position:
@@ -182,16 +136,6 @@ async def liquidate(
         except Exception as e:
             error_logger.report_exception()
             tlog(f"failed to liquidate {symbol} w exception {e}")
-    else:
-        try:
-            await data_ws.unsubscribe([f"A.{symbol}", f"AM.{symbol}"])
-            # await trading_api.unsubscribe(trade_channels)
-        except ValueError as e:
-            tlog(f"failed to unsubscribe {symbol} w ValueError {e}")
-            error_logger.report_exception()
-        except Exception as e:
-            tlog(f"failed to unsubscribe {symbol} w exception {e}")
-            error_logger.report_exception()
 
 
 async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
@@ -313,11 +257,9 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
-async def handle_second_msg(
-    data: Any, trading_api: tradeapi, data_ws: StreamConn
-) -> bool:
+async def handle_queue_msg(data: Any, trading_api: tradeapi) -> bool:
     symbol = data.symbol
-    print(f"got [{symbol}] to handle_second_msg")
+    print(f"got [{symbol}] to handle_queue_msg")
 
     # First, aggregate 1s bars for up-to-date MACD calculations
     original_ts = ts = data.start
@@ -352,9 +294,11 @@ async def handle_second_msg(
         ]
     market_data.minute_history[symbol].loc[ts] = new_data
 
+    """
     if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=6):  # type: ignore
         # tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
         return False
+    """
 
     # Next, check for existing orders for the stock
     existing_order = trading_data.open_orders.get(symbol)
@@ -404,7 +348,7 @@ async def handle_second_msg(
         until_market_close.seconds // 60
         <= config.market_liquidation_end_time_minutes
     ):
-        await liquidate(symbol, symbol_position, trading_api, data_ws)
+        await liquidate(symbol, symbol_position, trading_api)
 
     # run strategies
     for s in trading_data.strategies:
@@ -422,23 +366,81 @@ async def handle_second_msg(
                 continue
         except Exception as e:
             tlog(
-                f"handle_second_msg() exception of type {type(e).__name__} with args {e.args} for {symbol}"
+                f"handle_queue_msg() exception of type {type(e).__name__} with args {e.args} for {symbol}"
             )
 
     return True
 
 
-async def second_task(
-    queue: asyncio.Queue, trading_api: tradeapi, data_ws: StreamConn,
-) -> None:
-    tlog("second_task() starting")
+async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
+    tlog("queue_consumer() starting")
 
     try:
         while True:
             data = await queue.get()
-            await handle_second_msg(data, trading_api, data_ws)
+            asyncio.create_task(handle_queue_msg(data, trading_api))
 
     except asyncio.CancelledError:
-        tlog("second_task() cancelled ")
+        tlog("queue_consumer() cancelled ")
     finally:
-        tlog("second_task() task done.")
+        tlog("queue_consumer() task done.")
+
+
+async def consumer_async_main(queue: Queue):
+    await create_db_connection(str(config.dsn))
+
+    base_url = (
+        config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    )
+    api_key_id = (
+        config.prod_api_key_id
+        if config.env == "PROD"
+        else config.paper_api_key_id
+    )
+    api_secret = (
+        config.prod_api_secret
+        if config.env == "PROD"
+        else config.paper_api_secret
+    )
+    trading_api = tradeapi.REST(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret
+    )
+
+    strategy_types = [MomentumLong]
+    for strategy_type in strategy_types:
+        tlog(f"initializing {strategy_type.name}")
+        s = strategy_type(trading_api=trading_api)
+        await s.create()
+
+        trading_data.strategies.append(s)
+
+    trade_ws = tradeapi.StreamConn(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+    )
+
+    trade_task = asyncio.create_task(trade_run(ws=trade_ws))
+
+    queue_consumer_task = asyncio.create_task(
+        queue_consumer(queue, trading_api)
+    )
+
+    tear_down = asyncio.create_task(
+        teardown_task(timezone("America/New_York"), [trade_ws])
+    )
+    await asyncio.gather(
+        tear_down, trade_task, queue_consumer_task, return_exceptions=True,
+    )
+
+
+def consumer_main(queue: Queue, symbols: List[str]) -> None:
+    tlog("*** consumer_main() starting ***")
+    try:
+        asyncio.run(asyncio.run(consumer_async_main(queue)))
+    except KeyboardInterrupt:
+        tlog("producer_main() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
+        )
+
+    tlog("*** consumer_main() completed ***")
