@@ -59,4 +59,4 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM"]  # , "T", "Q"]
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False
+bypass_market_schedule: bool = True
