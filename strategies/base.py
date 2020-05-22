@@ -9,10 +9,9 @@ from models.algo_run import AlgoRun
 
 
 class Strategy:
-    def __init__(self, name: str, trading_api: tradeapi, data_api: tradeapi):
+    def __init__(self, name: str, trading_api: tradeapi):
         self.name = name
         self.trading_api = trading_api
-        self.data_api = data_api
         self.algo_run = AlgoRun(strategy_name=self.name)
 
     async def create(self):
