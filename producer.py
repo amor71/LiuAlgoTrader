@@ -6,15 +6,16 @@ import json
 import os
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from typing import List
+from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 from alpaca_trade_api.stream2 import StreamConn
 from google.cloud import error_reporting
+from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from common import config
+from common import config, market_data
 from common.tlog import tlog
 from data_stream.alpaca import AlpacaStreaming
 from data_stream.streaming_base import StreamingBase
@@ -26,7 +27,7 @@ async def run(
     symbols: List[str],
     data_ws: StreamConn,
     data_ws2: StreamingBase,
-    queue: Queue,
+    queues: List[Queue],
 ) -> None:
     data_channels = []
     for symbol in symbols:
@@ -57,7 +58,13 @@ async def run(
                 pass
             else:
                 data.__dict__["_raw"]["event"] = "A"
-                queue.put(json.dumps(data.__dict__["_raw"]))
+                q_id = int(
+                    list(market_data.minute_history.keys()).index(
+                        data["symbol"]
+                    )
+                    / config.num_consumer_processes_ratio
+                )
+                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
@@ -68,7 +75,11 @@ async def run(
     async def handle_minute_bar(conn, channel, data):
         try:
             data.__dict__["_raw"]["event"] = "AM"
-            queue.put(json.dumps(data.__dict__["_raw"]))
+            q_id = int(
+                list(market_data.minute_history.keys()).index(data["symbol"])
+                / config.num_consumer_processes_ratio
+            )
+            queues[q_id].put(json.dumps(data.__dict__["_raw"]))
         except Exception as e:
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -105,7 +116,7 @@ process main
 """
 
 
-async def producer_async_main(queue: Queue, symbols: List[str]):
+async def producer_async_main(queues: List[Queue], symbols: List[str]):
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -118,7 +129,12 @@ async def producer_async_main(queue: Queue, symbols: List[str]):
     await alpaca_ws.connect()
 
     main_task = asyncio.create_task(
-        run(symbols=symbols, data_ws=data_ws, data_ws2=alpaca_ws, queue=queue,)
+        run(
+            symbols=symbols,
+            data_ws=data_ws,
+            data_ws2=alpaca_ws,
+            queues=queues,
+        )
     )
 
     tear_down = asyncio.create_task(
@@ -130,14 +146,17 @@ async def producer_async_main(queue: Queue, symbols: List[str]):
     )
 
 
-def producer_main(queue: Queue, symbols: List[str]) -> None:
+def producer_main(
+    queues: List[Queue], symbols: List[str], minute_history: Dict[str, df]
+) -> None:
     tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
     try:
+        market_data.minute_history = minute_history
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(producer_async_main(queue, symbols))
+        loop.run_until_complete(producer_async_main(queues, symbols))
         loop.run_forever()
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
