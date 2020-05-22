@@ -2,6 +2,8 @@
 Trading strategy runner
 """
 import asyncio
+import json
+import os
 from datetime import datetime, timedelta
 from multiprocessing import Queue
 from typing import List
@@ -28,13 +30,11 @@ async def run(
 ) -> None:
     data_channels = []
     for symbol in symbols:
-        symbol_channels = [
-            f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
-        ]  # ["A.{}".format(symbol), "AM.{}".format(symbol)]
+        symbol_channels = [f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS]
         data_channels += symbol_channels
 
-        if data_ws2:
-            await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
+        # if data_ws2:
+        #    await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
 
     tlog(f"Watching {len(symbols)} symbols.")
 
@@ -51,11 +51,13 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         try:
-            if datetime.now(tz=timezone("America/New_York")) - data.start > timedelta(seconds=6):  # type: ignore
-                tlog(f"A$ {data.symbol}: data out of sync")
+            # print(f"{data.symbol}")
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
+                tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
-                queue.put(data)
+                data.__dict__["_raw"]["event"] = "A"
+                queue.put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
@@ -65,7 +67,8 @@ async def run(
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         try:
-            queue.put(data)
+            data.__dict__["_raw"]["event"] = "AM"
+            queue.put(json.dumps(data.__dict__["_raw"]))
         except Exception as e:
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -75,6 +78,7 @@ async def run(
 
 
 async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
+    tlog("teardown_task() starting")
     dt = datetime.today().astimezone(tz)
     to_market_close = (
         config.market_close - dt
@@ -93,7 +97,7 @@ async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
 
         asyncio.get_running_loop().stop()
     finally:
-        tlog("tear down task done.")
+        tlog("teardown_task() done.")
 
 
 """
@@ -120,21 +124,26 @@ async def producer_async_main(queue: Queue, symbols: List[str]):
     tear_down = asyncio.create_task(
         teardown_task(timezone("America/New_York"), [data_ws])
     )
+
     await asyncio.gather(
-        tear_down, main_task, return_exceptions=True,
+        main_task, tear_down, return_exceptions=True,
     )
 
 
 def producer_main(queue: Queue, symbols: List[str]) -> None:
-    tlog("*** producer_main() starting ***")
+    tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
     try:
-        asyncio.run(asyncio.run(producer_async_main(queue, symbols)))
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(producer_async_main(queue, symbols))
+        loop.run_forever()
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
             f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
-        raise
 
     tlog("*** producer_main() completed ***")

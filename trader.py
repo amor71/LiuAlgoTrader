@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from typing import List
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -13,8 +14,7 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.market_data import (get_historical_data, get_tickers, prev_closes,
-                                volume_today)
+from common.market_data import get_historical_data, get_tickers, volume_today
 from common.tlog import tlog
 from consumer import consumer_main
 from producer import producer_main
@@ -127,28 +127,39 @@ if __name__ == "__main__":
         # Update initial state with information from tickers
         for ticker in tickers:
             symbol = ticker.ticker
-            prev_closes[symbol] = ticker.prevDay["c"]
+            # prev_closes[symbol] = ticker.prevDay["c"]
             volume_today[symbol] = ticker.day["v"]
-        _symbols = [ticker.ticker for ticker in tickers]
-        tlog(f"Tracking {len(_symbols)} symbols")
+        symbols = [ticker.ticker for ticker in tickers]
+        tlog(f"Tracking {len(symbols)} symbols")
 
         minute_history = get_historical_data(
             api=data_api,
-            symbols=_symbols,
-            max_tickers=min(config.total_tickers, len(_symbols)),
+            symbols=symbols,
+            max_tickers=min(config.total_tickers, len(symbols)),
+        )
+        mp.set_start_method("spawn")
+        queue: mp.Queue = mp.Queue()
+
+        processes: List = []
+        processes.append(
+            mp.Process(target=producer_main, args=(queue, symbols),)
         )
 
-        queue: mp.Queue = mp.Queue()
-        producer_process = mp.Process(
-            target=producer_main, args=(queue, list(minute_history.keys())),
-        )
-        consumer_process = mp.Process(
-            target=consumer_main, args=(queue, list(minute_history.keys()))
-        )
-        producer_process.start()
-        consumer_process.start()
-        producer_process.join()
-        consumer_process.join()
+        for i in range(config.num_consumer_processes):
+            processes.append(
+                mp.Process(target=consumer_main, args=(queue, minute_history))
+            )
+
+        for p in processes:
+            # p.daemon = True
+            p.start()
+
+        try:
+            for p in processes:
+                p.join()
+        except KeyboardInterrupt:
+            for p in processes:
+                p.terminate()
 
         tlog("main completed")
         sys.exit(0)

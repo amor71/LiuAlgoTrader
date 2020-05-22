@@ -1,31 +1,28 @@
 import asyncio
-from datetime import datetime, timedelta
+import json
+import os
+import sys
+import traceback
+from datetime import date, datetime, timedelta
 from multiprocessing import Queue
 from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
+import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
-from alpaca_trade_api.polygon.entity import Ticker
 from alpaca_trade_api.stream2 import StreamConn
 from google.cloud import error_reporting
+from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from common import config, market_data, trading_data
 from common.database import create_db_connection
-from common.market_data import (get_historical_data, get_tickers, prev_closes,
-                                volume_today)
 from common.tlog import tlog
-from data_stream.alpaca import AlpacaStreaming
-from data_stream.streaming_base import StreamingBase
-from market_miner import update_all_tickers_data
 from models.new_trades import NewTrade
-from producer import producer_main
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
-
-# from strategies.momentum_short import MomentumShort
 
 error_logger = error_reporting.Client()
 
@@ -258,48 +255,65 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
-async def handle_queue_msg(data: Any, trading_api: tradeapi) -> bool:
-    symbol = data.symbol
-    print(f"got [{symbol}] to handle_queue_msg")
+async def handle_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
+    symbol = data["symbol"]
+    # print(f"got [{symbol}] to handle_queue_msg")
 
     # First, aggregate 1s bars for up-to-date MACD calculations
-    original_ts = ts = data.start
+    original_ts = ts = pd.Timestamp(
+        data["start"], tz="America/New_York", unit="ms"
+    )
     ts = ts.replace(
         second=0, microsecond=0
     )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
 
+    if symbol not in market_data.minute_history:
+        _df = trading_api.polygon.historic_agg_v2(
+            symbol,
+            1,
+            "minute",
+            _from=str(date.today() - timedelta(days=10)),
+            to=str(date.today() + timedelta(days=1)),
+        ).df
+        _df["vwap"] = 0.0
+        _df["average"] = 0.0
+        market_data.minute_history[symbol] = _df
     try:
-        current = market_data.minute_history[data.symbol].loc[ts]
+        current = market_data.minute_history[symbol].loc[ts]
     except KeyError:
         current = None
 
     if current is None:
         new_data = [
-            data.open,
-            data.high,
-            data.low,
-            data.close,
-            data.volume,
-            data.vwap,
-            data.average,
+            data["open"],
+            data["high"],
+            data["low"],
+            data["close"],
+            data["volume"],
+            data["vwap"],
+            data["average"],
         ]
     else:
         new_data = [
             current.open,
-            data.high if data.high > current.high else current.high,
-            data.low if data.low < current.low else current.low,
-            data.close,
-            current.volume + data.volume,
-            data.vwap,
-            data.average,
+            max(data["high"], current.high),
+            min(data["low"], current.low),
+            data["close"],
+            current.volume + data["volume"],
+            data["vwap"],
+            data["average"],
         ]
     market_data.minute_history[symbol].loc[ts] = new_data
+    market_data.volume_today[symbol] = data["totalvolume"]
 
-    """
-    if (now := datetime.now(tz=timezone("America/New_York"))) - data.start > timedelta(seconds=6):  # type: ignore
-        # tlog(f"A$ {data.symbol} now={now} data.start={data.start} out of sync")
-        return False
-    """
+    if data["event"] == "A":
+        if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
+            tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
+            return False
+    elif data["event"] == "AM":
+        return True
+    else:
+        tlog(f"[ERROR] unknown event {data['event']}")
 
     # Next, check for existing orders for the stock
     existing_order = trading_data.open_orders.get(symbol)
@@ -353,22 +367,14 @@ async def handle_queue_msg(data: Any, trading_api: tradeapi) -> bool:
 
     # run strategies
     for s in trading_data.strategies:
-        try:
-            if await s.run(
-                symbol,
-                symbol_position,
-                market_data.minute_history[symbol],
-                ts,
-            ):
-                trading_data.last_used_strategy[symbol] = s
-                tlog(
-                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-                )
-                continue
-        except Exception as e:
+        if await s.run(
+            symbol, symbol_position, market_data.minute_history[symbol], ts,
+        ):
+            trading_data.last_used_strategy[symbol] = s
             tlog(
-                f"handle_queue_msg() exception of type {type(e).__name__} with args {e.args} for {symbol}"
+                f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
             )
+            continue
 
     return True
 
@@ -378,13 +384,41 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
 
     try:
         while True:
-            data = await queue.get()
-            asyncio.create_task(handle_queue_msg(data, trading_api))
+            raw_data = queue.get()
+            data = json.loads(raw_data)
+            # print(f"got {data}")
+            await handle_queue_msg(data, trading_api)
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
+    except Exception as e:
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
+        del exc_info
     finally:
         tlog("queue_consumer() task done.")
+
+
+def get_trading_windows(tz, api):
+    """Get start and end time for trading"""
+
+    today = datetime.today().astimezone(tz)
+    today_str = datetime.today().astimezone(tz).strftime("%Y-%m-%d")
+
+    calendar = api.get_calendar(start=today_str, end=today_str)[0]
+
+    tlog(f"next open date {calendar.date.date()}")
+
+    if today.date() < calendar.date.date():
+        tlog(f"which is not today {today}")
+        return None, None
+    market_open = today.replace(
+        hour=calendar.open.hour, minute=calendar.open.minute, second=0
+    )
+    market_close = today.replace(
+        hour=calendar.close.hour, minute=calendar.close.minute, second=0
+    )
+    return market_open, market_close
 
 
 async def consumer_async_main(queue: Queue):
@@ -406,7 +440,10 @@ async def consumer_async_main(queue: Queue):
     trading_api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
-
+    nyc = timezone("America/New_York")
+    config.market_open, config.market_close = get_trading_windows(
+        nyc, trading_api
+    )
     strategy_types = [MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
@@ -433,19 +470,22 @@ async def consumer_async_main(queue: Queue):
     )
 
 
-def consumer_main(queue: Queue, symbols: List[str]) -> None:
-    tlog("*** consumer_main() starting ***")
+def consumer_main(queue: Queue, minute_history: Dict[str, df]) -> None:
+    tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
+
     trading_data.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
+
+    market_data.minute_history = minute_history
     try:
-        asyncio.run(asyncio.run(consumer_async_main(queue)))
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(consumer_async_main(queue))
+        loop.run_forever()
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(
-            f"consumer_main() - exception of type {type(e).__name__} with args {e.args}"
-        )
-        raise
 
     tlog("*** consumer_main() completed ***")
