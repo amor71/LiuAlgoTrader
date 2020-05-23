@@ -5,13 +5,13 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
-from typing import Any, Dict, List
+from typing import Dict
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
-from alpaca_trade_api.stream2 import StreamConn
+# from alpaca_trade_api.stream2 import StreamConn
 from google.cloud import error_reporting
 from pandas import DataFrame as df
 from pytz import timezone
@@ -415,7 +415,7 @@ def get_trading_windows(tz, api):
     return market_open, market_close
 
 
-async def consumer_async_main(queue: Queue):
+async def consumer_async_main(queue: Queue, unique_id: str):
     await create_db_connection(str(config.dsn))
 
     base_url = (
@@ -441,7 +441,7 @@ async def consumer_async_main(queue: Queue):
     strategy_types = [MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(trading_api=trading_api)
+        s = strategy_type(trading_api=trading_api, batch_id=unique_id)
         await s.create()
 
         trading_data.strategies.append(s)
@@ -458,7 +458,9 @@ async def consumer_async_main(queue: Queue):
     )
 
 
-def consumer_main(queue: Queue, minute_history: Dict[str, df],) -> None:
+def consumer_main(
+    queue: Queue, minute_history: Dict[str, df], unique_id: str
+) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
     trading_data.build_label = pygit2.Repository("./").describe(
@@ -471,7 +473,7 @@ def consumer_main(queue: Queue, minute_history: Dict[str, df],) -> None:
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(consumer_async_main(queue))
+        loop.run_until_complete(consumer_async_main(queue, unique_id))
         loop.run_forever()
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
