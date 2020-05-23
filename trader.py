@@ -137,7 +137,7 @@ if __name__ == "__main__":
             symbols=symbols,
             max_tickers=min(config.total_tickers, len(symbols)),
         )
-        symbols = minute_history.keys()
+        symbols = list(minute_history.keys())
         mp.set_start_method("spawn")
 
         _num_processes = (
