@@ -303,7 +303,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     elif data["EV"] == "AM":
         return True
     else:
-        tlog(f"[ERROR] unknown event {data['event']}")
+        tlog(f"[ERROR] unknown EV {data['EV']}")
 
     # Next, check for existing orders for the stock
     existing_order = trading_data.open_orders.get(symbol)
