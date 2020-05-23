@@ -5,6 +5,7 @@ import multiprocessing as mp
 import os
 import sys
 import time
+import uuid
 from datetime import datetime
 from typing import List
 
@@ -22,11 +23,12 @@ from producer import producer_main
 error_logger = error_reporting.Client()
 
 
-def motd(filename: str, version: str) -> None:
+def motd(filename: str, version: str, unique_id: str) -> None:
     """Display welcome message"""
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"{filename} {version} starting")
+    tlog(f"unique id: {unique_id}")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"TRADE_BUY_WINDOW: {config.trade_buy_window}")
     tlog(f"DSN: {config.dsn}")
@@ -99,8 +101,10 @@ def ready_to_start(trading_api: tradeapi) -> bool:
                         datetime.today().astimezone(nyc) - config.market_open
                     )
 
-    tlog("ready to start")
-    return True
+            tlog("ready to start")
+            return True
+
+    return False
 
 
 """
@@ -113,7 +117,13 @@ if __name__ == "__main__":
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
     trading_data.filename = os.path.basename(__file__)
-    motd(filename=trading_data.filename, version=trading_data.build_label)
+
+    uid = str(uuid.uuid4())
+    motd(
+        filename=trading_data.filename,
+        version=trading_data.build_label,
+        unique_id=uid,
+    )
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -138,37 +148,44 @@ if __name__ == "__main__":
             max_tickers=min(config.total_tickers, len(symbols)),
         )
         symbols = list(minute_history.keys())
-        mp.set_start_method("spawn")
 
-        _num_processes = (
-            int(len(symbols) / config.num_consumer_processes_ratio) + 1
-        )
-        queues: List[mp.Queue] = [mp.Queue() for i in range(_num_processes)]
+        if len(symbols) > 0:
+            mp.set_start_method("spawn")
 
-        processes: List = []
-        processes.append(
-            mp.Process(
-                target=producer_main, args=(queues, symbols, minute_history),
+            _num_processes = (
+                int(len(symbols) / config.num_consumer_processes_ratio) + 1
             )
-        )
+            queues: List[mp.Queue] = [
+                mp.Queue() for i in range(_num_processes)
+            ]
 
-        for i in range(_num_processes):
+            processes: List = []
             processes.append(
                 mp.Process(
-                    target=consumer_main, args=(queues[i], minute_history)
+                    target=producer_main,
+                    args=(queues, symbols, minute_history),
                 )
             )
 
-        for p in processes:
-            # p.daemon = True
-            p.start()
+            for i in range(_num_processes):
+                processes.append(
+                    mp.Process(
+                        target=consumer_main,
+                        args=(queues[i], minute_history, uid),
+                    )
+                )
 
-        try:
             for p in processes:
-                p.join()
-        except KeyboardInterrupt:
-            for p in processes:
-                p.terminate()
+                # p.daemon = True
+                p.start()
 
-        tlog("main completed")
-        sys.exit(0)
+            try:
+                for p in processes:
+                    p.join()
+            except KeyboardInterrupt:
+                for p in processes:
+                    p.terminate()
+
+    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+    tlog(f"run {uid} completed")
+    sys.exit(0)
