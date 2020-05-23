@@ -27,42 +27,6 @@ from strategies.momentum_long import MomentumLong
 error_logger = error_reporting.Client()
 
 
-async def trade_run(ws: StreamConn,) -> None:
-    trade_channels = ["trade_updates"]
-
-    # Use trade updates to keep track of our portfolio
-    @ws.on(r"trade_update")
-    async def handle_trade_update(conn, channel, data):
-        symbol = data.order["symbol"]
-
-        # if trade originated somewhere else, disregard
-        if trading_data.open_orders.get(symbol) is None:
-            return
-
-        last_order = trading_data.open_orders.get(symbol)[0]
-        if last_order is not None:
-            tlog(f"trade update for {symbol} data={data}")
-            event = data.event
-
-            if event == "partial_fill":
-                await update_partially_filled_order(
-                    trading_data.open_order_strategy[symbol], Order(data.order)
-                )
-            elif event == "fill":
-                await update_filled_order(
-                    trading_data.open_order_strategy[symbol], Order(data.order)
-                )
-            elif event in ("canceled", "rejected"):
-                trading_data.partial_fills.pop(symbol, None)
-                trading_data.open_orders.pop(symbol, None)
-                trading_data.open_order_strategy.pop(symbol, None)
-
-        else:
-            tlog(f"{data.event} trade update for {symbol} WITHOUT ORDER")
-
-    await ws.subscribe(trade_channels)
-
-
 async def end_time(reason: str):
     for s in trading_data.strategies:
         tlog(f"updating end time for strategy {s.name}")
@@ -71,7 +35,7 @@ async def end_time(reason: str):
         )
 
 
-async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
+async def teardown_task(tz: DstTzInfo,) -> None:
     dt = datetime.today().astimezone(tz)
     to_market_close = (
         config.market_close - dt
@@ -87,10 +51,6 @@ async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
     else:
         tlog("tear down task starting")
         await end_time("market close")
-
-        tlog("closing web-sockets")
-        for w in ws:
-            await w.close()
 
         asyncio.get_running_loop().stop()
     finally:
@@ -255,7 +215,37 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy[order.symbol] = None
 
 
-async def handle_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
+async def handle_trade_update(data: Dict) -> bool:
+    symbol = data["symbol"]
+    if trading_data.open_orders.get(symbol) is None:
+        return False
+
+    last_order = trading_data.open_orders.get(symbol)[0]
+    if last_order is not None:
+        tlog(f"trade update for {symbol} data={data}")
+        event = data["event"]
+
+        if event == "partial_fill":
+            await update_partially_filled_order(
+                trading_data.open_order_strategy[symbol], Order(data["order"])
+            )
+        elif event == "fill":
+            await update_filled_order(
+                trading_data.open_order_strategy[symbol], Order(data["order"])
+            )
+        elif event in ("canceled", "rejected"):
+            trading_data.partial_fills.pop(symbol, None)
+            trading_data.open_orders.pop(symbol, None)
+            trading_data.open_order_strategy.pop(symbol, None)
+
+        return True
+    else:
+        tlog(f"{data['event']} trade update for {symbol} WITHOUT ORDER")
+
+    return False
+
+
+async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     symbol = data["symbol"]
     # print(f"got [{symbol}] to handle_queue_msg")
 
@@ -306,11 +296,11 @@ async def handle_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     market_data.minute_history[symbol].loc[ts] = new_data
     market_data.volume_today[symbol] = data["totalvolume"]
 
-    if data["event"] == "A":
+    if data["EV"] == "A":
         if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
             tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
             return False
-    elif data["event"] == "AM":
+    elif data["EV"] == "AM":
         return True
     else:
         tlog(f"[ERROR] unknown event {data['event']}")
@@ -346,7 +336,7 @@ async def handle_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                 else:
                     # Cancel it so we can try again for a fill
                     tlog(
-                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at}"
+                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"
                     )
                     trading_api.cancel_order(existing_order.id)
             return True
@@ -387,7 +377,11 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
             raw_data = queue.get()
             data = json.loads(raw_data)
             # print(f"got {data}")
-            await handle_queue_msg(data, trading_api)
+            if data["EV"] == "trade_update":
+                tlog(f"received trade_update: {data}")
+                await handle_trade_update(data)
+            else:
+                await handle_data_queue_msg(data, trading_api)
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
@@ -452,21 +446,15 @@ async def consumer_async_main(queue: Queue):
 
         trading_data.strategies.append(s)
 
-    trade_ws = tradeapi.StreamConn(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
-    )
-
-    trade_task = asyncio.create_task(trade_run(ws=trade_ws))
-
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
     )
 
     tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"), [trade_ws])
+        teardown_task(timezone("America/New_York"))
     )
     await asyncio.gather(
-        tear_down, trade_task, queue_consumer_task, return_exceptions=True,
+        tear_down, queue_consumer_task, return_exceptions=True,
     )
 
 

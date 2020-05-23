@@ -23,10 +23,28 @@ from data_stream.streaming_base import StreamingBase
 error_logger = error_reporting.Client()
 
 
+async def trade_run(ws: StreamConn, queues: List[Queue]) -> None:
+
+    # Use trade updates to keep track of our portfolio
+    @ws.on(r"trade_update")
+    async def handle_trade_update(conn, channel, data):
+        tlog(f"TRADE UPDATE! {data.__dict__}")
+        data.__dict__["_raw"]["EV"] = "trade_update"
+        q_id = int(
+            list(market_data.minute_history.keys()).index(
+                data.__dict__["_raw"]["symbol"]
+            )
+            / config.num_consumer_processes_ratio
+        )
+        queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+    await ws.subscribe(["trade_updates"])
+
+
 async def run(
     symbols: List[str],
     data_ws: StreamConn,
-    data_ws2: StreamingBase,
+    # data_ws2: StreamingBase,
     queues: List[Queue],
 ) -> None:
     data_channels = []
@@ -57,10 +75,10 @@ async def run(
                 tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
-                data.__dict__["_raw"]["event"] = "A"
+                data.__dict__["_raw"]["EV"] = "A"
                 q_id = int(
                     list(market_data.minute_history.keys()).index(
-                        data["symbol"]
+                        data.__dict__["_raw"]["symbol"]
                     )
                     / config.num_consumer_processes_ratio
                 )
@@ -74,9 +92,11 @@ async def run(
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         try:
-            data.__dict__["_raw"]["event"] = "AM"
+            data.__dict__["_raw"]["EV"] = "AM"
             q_id = int(
-                list(market_data.minute_history.keys()).index(data["symbol"])
+                list(market_data.minute_history.keys()).index(
+                    data.__dict__["_raw"]["symbol"]
+                )
                 / config.num_consumer_processes_ratio
             )
             queues[q_id].put(json.dumps(data.__dict__["_raw"]))
@@ -116,25 +136,49 @@ process main
 """
 
 
-async def producer_async_main(queues: List[Queue], symbols: List[str]):
+async def producer_async_main(
+    queues: List[Queue], symbols: List[str],
+):
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
         data_stream="polygon",
     )
-    alpaca_ws = AlpacaStreaming(
-        key=config.prod_api_key_id, secret=config.prod_api_secret
-    )
-    await alpaca_ws.connect()
+
+    # alpaca_ws = AlpacaStreaming(
+    #    key=config.prod_api_key_id, secret=config.prod_api_secret
+    # )
+    # await alpaca_ws.connect()
 
     main_task = asyncio.create_task(
         run(
             symbols=symbols,
             data_ws=data_ws,
-            data_ws2=alpaca_ws,
+            # data_ws2=alpaca_ws,
             queues=queues,
         )
+    )
+
+    base_url = (
+        config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    )
+    api_key_id = (
+        config.prod_api_key_id
+        if config.env == "PROD"
+        else config.paper_api_key_id
+    )
+    api_secret = (
+        config.prod_api_secret
+        if config.env == "PROD"
+        else config.paper_api_secret
+    )
+    trade_ws = tradeapi.StreamConn(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+    )
+
+    trade_updates_task = asyncio.create_task(
+        trade_run(ws=trade_ws, queues=queues,)
     )
 
     tear_down = asyncio.create_task(
@@ -142,7 +186,7 @@ async def producer_async_main(queues: List[Queue], symbols: List[str]):
     )
 
     await asyncio.gather(
-        main_task, tear_down, return_exceptions=True,
+        main_task, trade_updates_task, tear_down, return_exceptions=True,
     )
 
 
