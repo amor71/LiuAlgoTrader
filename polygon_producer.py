@@ -1,5 +1,5 @@
 """
-Trading strategy runner
+Get Market data from Polygon and pump to consumers
 """
 import asyncio
 import json
@@ -17,8 +17,6 @@ from pytz.tzinfo import DstTzInfo
 
 from common import config, market_data
 from common.tlog import tlog
-from data_stream.alpaca import AlpacaStreaming
-from data_stream.streaming_base import StreamingBase
 
 error_logger = error_reporting.Client()
 
@@ -146,18 +144,8 @@ async def producer_async_main(
         data_stream="polygon",
     )
 
-    # alpaca_ws = AlpacaStreaming(
-    #    key=config.prod_api_key_id, secret=config.prod_api_secret
-    # )
-    # await alpaca_ws.connect()
-
     main_task = asyncio.create_task(
-        run(
-            symbols=symbols,
-            data_ws=data_ws,
-            # data_ws2=alpaca_ws,
-            queues=queues,
-        )
+        run(symbols=symbols, data_ws=data_ws, queues=queues,)
     )
 
     base_url = (
@@ -190,10 +178,10 @@ async def producer_async_main(
     )
 
 
-def producer_main(
+def polygon_producer_main(
     queues: List[Queue], symbols: List[str], minute_history: Dict[str, df]
 ) -> None:
-    tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
+    tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         market_data.minute_history = minute_history
         if not asyncio.get_event_loop().is_closed():
