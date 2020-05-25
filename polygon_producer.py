@@ -21,19 +21,16 @@ from common.tlog import tlog
 error_logger = error_reporting.Client()
 
 
-async def trade_run(ws: StreamConn, queues: List[Queue]) -> None:
+async def trade_run(
+    ws: StreamConn, queues: List[Queue], queue_id_hash: Dict[str, int]
+) -> None:
 
     # Use trade updates to keep track of our portfolio
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
         tlog(f"TRADE UPDATE! {data.__dict__}")
         data.__dict__["_raw"]["EV"] = "trade_update"
-        q_id = int(
-            list(market_data.minute_history.keys()).index(
-                data.__dict__["_raw"]["symbol"]
-            )
-            / config.num_consumer_processes_ratio
-        )
+        q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
         queues[q_id].put(json.dumps(data.__dict__["_raw"]))
 
     await ws.subscribe(["trade_updates"])
@@ -42,18 +39,15 @@ async def trade_run(ws: StreamConn, queues: List[Queue]) -> None:
 async def run(
     symbols: List[str],
     data_ws: StreamConn,
-    # data_ws2: StreamingBase,
     queues: List[Queue],
+    queue_id_hash: Dict[str, int],
 ) -> None:
     data_channels = []
     for symbol in symbols:
         symbol_channels = [f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS]
         data_channels += symbol_channels
 
-        # if data_ws2:
-        #    await data_ws2.subscribe(symbol, AlpacaStreaming.minutes_handler)
-
-    tlog(f"Watching {len(symbols)} symbols.")
+    tlog(f"Watching {len(symbols)} symbols from Polygon.io")
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
@@ -74,12 +68,7 @@ async def run(
                 pass
             else:
                 data.__dict__["_raw"]["EV"] = "A"
-                q_id = int(
-                    list(market_data.minute_history.keys()).index(
-                        data.__dict__["_raw"]["symbol"]
-                    )
-                    / config.num_consumer_processes_ratio
-                )
+                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
                 queues[q_id].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
@@ -91,12 +80,7 @@ async def run(
     async def handle_minute_bar(conn, channel, data):
         try:
             data.__dict__["_raw"]["EV"] = "AM"
-            q_id = int(
-                list(market_data.minute_history.keys()).index(
-                    data.__dict__["_raw"]["symbol"]
-                )
-                / config.num_consumer_processes_ratio
-            )
+            q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
             queues[q_id].put(json.dumps(data.__dict__["_raw"]))
         except Exception as e:
             tlog(
@@ -135,7 +119,7 @@ process main
 
 
 async def producer_async_main(
-    queues: List[Queue], symbols: List[str],
+    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
 ):
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
@@ -145,7 +129,12 @@ async def producer_async_main(
     )
 
     main_task = asyncio.create_task(
-        run(symbols=symbols, data_ws=data_ws, queues=queues,)
+        run(
+            symbols=symbols,
+            data_ws=data_ws,
+            queues=queues,
+            queue_id_hash=queue_id_hash,
+        )
     )
 
     base_url = (
@@ -166,7 +155,7 @@ async def producer_async_main(
     )
 
     trade_updates_task = asyncio.create_task(
-        trade_run(ws=trade_ws, queues=queues,)
+        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash)
     )
 
     tear_down = asyncio.create_task(
@@ -179,16 +168,17 @@ async def producer_async_main(
 
 
 def polygon_producer_main(
-    queues: List[Queue], symbols: List[str], minute_history: Dict[str, df]
+    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
-        market_data.minute_history = minute_history
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(producer_async_main(queues, symbols))
+        loop.run_until_complete(
+            producer_async_main(queues, symbols, queue_id_hash)
+        )
         loop.run_forever()
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
