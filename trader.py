@@ -160,6 +160,12 @@ if __name__ == "__main__":
                 mp.Queue() for i in range(_num_consumer_processes)
             ]
 
+            q_id_hash = {}
+            for symbol in symbols:
+                q_id_hash[symbol] = int(
+                    list(minute_history.keys()).index(symbol)
+                    / config.num_consumer_processes_ratio
+                )
             consumers = [
                 mp.Process(
                     target=consumer_main,
@@ -174,11 +180,11 @@ if __name__ == "__main__":
             # Producers second
             polygon_producer = mp.Process(
                 target=polygon_producer_main,
-                args=(queues, symbols, minute_history),
+                args=(queues, symbols, q_id_hash),
             )
             polygon_producer.start()
 
-            # wait for completion and hope everyone places nicely
+            # wait for completion and hope everyone plays nicely
             try:
                 polygon_producer.join()
                 for p in consumers:
