@@ -18,7 +18,7 @@ from common import config, trading_data
 from common.market_data import get_historical_data, get_tickers, volume_today
 from common.tlog import tlog
 from consumer import consumer_main
-from producer import producer_main
+from polygon_producer import polygon_producer_main
 
 error_logger = error_reporting.Client()
 
@@ -152,38 +152,40 @@ if __name__ == "__main__":
         if len(symbols) > 0:
             mp.set_start_method("spawn")
 
-            _num_processes = (
+            # Consumers first
+            _num_consumer_processes = (
                 int(len(symbols) / config.num_consumer_processes_ratio) + 1
             )
             queues: List[mp.Queue] = [
-                mp.Queue() for i in range(_num_processes)
+                mp.Queue() for i in range(_num_consumer_processes)
             ]
 
-            processes: List = []
-            processes.append(
+            consumers = [
                 mp.Process(
-                    target=producer_main,
-                    args=(queues, symbols, minute_history),
+                    target=consumer_main,
+                    args=(queues[i], minute_history, uid),
                 )
-            )
-
-            for i in range(_num_processes):
-                processes.append(
-                    mp.Process(
-                        target=consumer_main,
-                        args=(queues[i], minute_history, uid),
-                    )
-                )
-
-            for p in processes:
+                for i in range(_num_consumer_processes)
+            ]
+            for p in consumers:
                 # p.daemon = True
                 p.start()
 
+            # Producers second
+            polygon_producer = mp.Process(
+                target=polygon_producer_main,
+                args=(queues, symbols, minute_history),
+            )
+            polygon_producer.start()
+
+            # wait for completion and hope everyone places nicely
             try:
-                for p in processes:
+                polygon_producer.join()
+                for p in consumers:
                     p.join()
             except KeyboardInterrupt:
-                for p in processes:
+                polygon_producer.terminate()
+                for p in consumers:
                     p.terminate()
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
