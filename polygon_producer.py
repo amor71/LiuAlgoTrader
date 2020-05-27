@@ -28,10 +28,20 @@ async def trade_run(
     # Use trade updates to keep track of our portfolio
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
-        tlog(f"TRADE UPDATE! {data.__dict__}")
-        data.__dict__["_raw"]["EV"] = "trade_update"
-        q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-        queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+        try:
+            tlog(f"TRADE UPDATE! {data.__dict__}")
+            data.__dict__["_raw"]["EV"] = "trade_update"
+            data.__dict__["_raw"]["symbol"] = data.__dict__["_raw"]["order"][
+                "symbol"
+            ]
+            q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
+            queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+        except Exception as e:
+            tlog(
+                f"Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
+            )
 
     await ws.subscribe(["trade_updates"])
 
@@ -62,7 +72,6 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         try:
-            # print(f"{data.symbol}")
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
                 tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass

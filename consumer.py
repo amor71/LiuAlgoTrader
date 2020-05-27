@@ -222,8 +222,8 @@ async def handle_trade_update(data: Dict) -> bool:
 
     last_order = trading_data.open_orders.get(symbol)[0]
     if last_order is not None:
-        tlog(f"trade update for {symbol} data={data}")
         event = data["event"]
+        tlog(f"trade update for {symbol} data={data} with event {event}")
 
         if event == "partial_fill":
             await update_partially_filled_order(
@@ -381,7 +381,10 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
                 tlog(f"received trade_update: {data}")
                 await handle_trade_update(data)
             else:
-                await handle_data_queue_msg(data, trading_api)
+                if not await handle_data_queue_msg(data, trading_api):
+                    while not queue.empty():
+                        _ = queue.get()
+                    tlog("cleaned queue")
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
