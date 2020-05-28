@@ -63,3 +63,6 @@ bypass_market_schedule: bool = True
 
 # performance parameters
 num_consumer_processes_ratio: int = 15
+
+# polygon parameters
+polygon_seconds_timeout = 60
