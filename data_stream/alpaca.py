@@ -1,14 +1,12 @@
 import asyncio
 import json
-from datetime import datetime, timedelta
-from typing import Awaitable, Dict
+from multiprocessing import Queue
+from typing import Awaitable, Dict, List
 
-import pandas as pd
 import websockets
 from google.cloud import error_reporting
-from pytz import timezone
 
-from common import market_data
+from common import config, market_data
 from common.tlog import tlog
 
 from .streaming_base import StreamingBase, WSConnectState
@@ -20,14 +18,14 @@ error_logger = error_reporting.Client()
 class AlpacaStreaming(StreamingBase):
     END_POINT = "wss://data.alpaca.markets/stream"
 
-    def __init__(self, key: str, secret: str):
+    def __init__(self, key: str, secret: str, queues: List[Queue]):
         self.key = key
         self.secret = secret
         self.state: WSConnectState = WSConnectState.NOT_CONNECTED
         self.websocket: websockets.client.WebSocketClientProtocol
         self.consumer_task: asyncio.Task
         self.stream_map: Dict = {}
-        super().__init__()
+        super().__init__(queues)
 
     async def connect(self) -> bool:
         """Connect web-socket and authenticate, update internal state"""
@@ -92,7 +90,12 @@ class AlpacaStreaming(StreamingBase):
             "data": {"streams": [f"alpacadatav1/AM.{symbol}"]},
         }
         await self.websocket.send(json.dumps(_subscribe_payload))
-        self.stream_map[symbol] = handler
+
+        q_id = int(
+            list(market_data.minute_history.keys()).index(symbol)
+            / config.num_consumer_processes_ratio
+        )
+        self.stream_map[symbol] = (handler, q_id)
         return True
 
     async def unsubscribe(self, symbol: str) -> bool:
@@ -137,9 +140,11 @@ class AlpacaStreaming(StreamingBase):
                 stream = msg.get("stream")
                 if stream != "listening":
                     try:
-                        _func = self.stream_map.get(stream[3:], None)
+                        _func, _q_id = self.stream_map.get(stream[3:], None)
                         if _func:
-                            await _func(stream, msg["data"])
+                            await _func(
+                                stream, msg["data"], self.queues[_q_id]
+                            )
                         else:
                             tlog(
                                 f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
@@ -161,7 +166,9 @@ class AlpacaStreaming(StreamingBase):
         tlog(f"{self.consumer_task.get_name()} completed")
 
     @classmethod
-    async def minutes_handler(cls, symbol: str, data: Dict) -> None:
+    async def minutes_handler(
+        cls, symbol: str, data: Dict, queue: Queue
+    ) -> None:
         if data["ev"] != "AM":
             tlog(
                 f"AlpacaStreaming.minutes_handler() got invalid event data: {symbol}:{data}"
@@ -174,26 +181,17 @@ class AlpacaStreaming(StreamingBase):
             )
             return
 
-        start = pd.Timestamp(data["s"], tz=NY, unit="ms")
-        if (now := datetime.now(tz=timezone("America/New_York"))) - start > timedelta(minutes=2):  # type: ignore
-            # tlog(
-            #    f"AlpacaStreaming.minutes_handler:{data['T']} now={now} data.start={start} out of sync w {data}"
-            # )
-            pass
-
         try:
-            current_data = market_data.minute_history[data["T"]].loc[start]
-        except KeyError:
-            current_data = None
-
-        if current_data is None:
-            market_data.minute_history[data["T"]].loc[start] = [
-                data["o"],
-                data["h"],
-                data["l"],
-                data["c"],
-                data["v"],
-                data["vw"],
-                data["a"],
-            ]
-            market_data.volume_today[data["T"]] = data["av"]
+            data["EV"] = "AM"
+            data["open"] = data["o"]
+            data["high"] = data["h"]
+            data["low"] = data["l"]
+            data["close"] = data["c"]
+            data["volume"] = data["v"]
+            data["vwap"] = data["vw"]
+            data["average"] = data["a"]
+            queue.put(json.dumps(data))
+        except Exception as e:
+            tlog(
+                f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
+            )
