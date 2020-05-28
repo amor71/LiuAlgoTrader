@@ -1,4 +1,5 @@
 """Global data shared during trading"""
+from asyncio import Queue
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -33,3 +34,5 @@ sector_trend: Dict[str, float] = {}
 snapshot: Dict[str, TickerSnapshot] = {}
 
 cool_down: Dict[str, Optional[datetime]] = {}
+
+queues: Dict[str, Queue] = {}

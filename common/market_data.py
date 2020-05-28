@@ -13,7 +13,6 @@ from pandas import DataFrame as df
 from common import config, trading_data
 from common.decorators import timeit
 from common.tlog import tlog
-from fincalcs.support_resistance import find_resistances
 from models.ticker_snapshot import TickerSnapshot
 
 try:
@@ -21,8 +20,8 @@ try:
 except Exception:
     error_logger = None
 
-prev_closes: Dict[str, float] = {}
 volume_today: Dict[str, int] = {}
+minute_history: Dict[str, df] = {}
 
 
 def get_historical_data(
@@ -34,50 +33,43 @@ def get_historical_data(
     minute_history: Dict[str, df] = {}
     c = 0
     exclude_symbols = []
-    for symbol in symbols:
-        if symbol not in minute_history:
-            retry_counter = 5
-            while retry_counter > 0:
-                try:
-                    if c < max_tickers:
-                        _df = api.polygon.historic_agg_v2(
-                            symbol,
-                            1,
-                            "minute",
-                            _from=date.today() - timedelta(days=10),
-                            to=date.today() + timedelta(days=1),
-                        ).df
-                        _df["vwap"] = 0.0
-                        _df["average"] = 0.0
-
-                        if (
-                            find_resistances(
+    try:
+        for symbol in symbols:
+            if symbol not in minute_history:
+                retry_counter = 5
+                while retry_counter > 0:
+                    try:
+                        if c < max_tickers:
+                            _df = api.polygon.historic_agg_v2(
                                 symbol,
-                                "pre-calc",
-                                _df["close"][-1],
-                                _df,
-                            )
-                            is not None
-                        ):
+                                1,
+                                "minute",
+                                _from=str(date.today() - timedelta(days=10)),
+                                to=str(date.today() + timedelta(days=1)),
+                            ).df
+                            _df["vwap"] = 0.0
+                            _df["average"] = 0.0
+
                             minute_history[symbol] = _df
                             tlog(
                                 f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
                             )
                             c += 1
-                            break 
-                        else:
-                            tlog(f"non resistance for {symbol}")
-                    exclude_symbols.append(symbol)
-                    break
-                except (
-                    requests.exceptions.HTTPError,
-                    requests.exceptions.ConnectionError,
-                ):
-                    retry_counter -= 1
-                    if retry_counter == 0:
-                        if error_logger:
-                            error_logger.report_exception()
+                            break
+
                         exclude_symbols.append(symbol)
+                        break
+                    except (
+                        requests.exceptions.HTTPError,
+                        requests.exceptions.ConnectionError,
+                    ):
+                        retry_counter -= 1
+                        if retry_counter == 0:
+                            if error_logger:
+                                error_logger.report_exception()
+                            exclude_symbols.append(symbol)
+    except KeyboardInterrupt:
+        tlog("KeyboardInterrupt")
 
     for x in exclude_symbols:
         symbols.remove(x)
@@ -86,46 +78,59 @@ def get_historical_data(
     return minute_history
 
 
-async def get_tickers(data_api: tradeapi) -> List[Ticker]:
+def get_tickers(data_api: tradeapi) -> List[Ticker]:
     """get all tickers"""
 
     tlog("Getting current ticker data...")
-    max_retries = 50
-    while max_retries > 0:
-        tickers = data_api.polygon.all_tickers()
-        tlog(f"loaded {len(tickers)} tickers from Polygon")
-        assets = data_api.list_assets()
-        tlog(f"loaded {len(assets)} assets from Alpaca")
-        tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
-        tlog(f"Total number of tradable symobls is {len(tradable_symbols)}")
-        unsorted = [
-            ticker
-            for ticker in tickers
-            if (
-                ticker.ticker in tradable_symbols
-                and config.max_share_price
-                >= ticker.lastTrade["p"]
-                >= config.min_share_price
-                and ticker.prevDay["v"] * ticker.lastTrade["p"]
-                > config.min_last_dv
-                and ticker.todaysChangePerc >= config.today_change_percent
-            )
-        ]
-        if len(unsorted) > 0:
-            tlog(f"loaded {len(unsorted)} tickers")
-            rc = sorted(
-                unsorted,
-                key=lambda ticker: float(ticker.day["v"]),
-                reverse=True,
-            )
-            tlog(f"loaded {len(rc)} tickers")
-            return rc
+    try:
+        max_retries = 50
+        while max_retries > 0:
+            tickers = data_api.polygon.all_tickers()
+            tlog(f"loaded {len(tickers)} tickers from Polygon")
 
-        tlog("got no data :-( waiting then re-trying")
-        time.sleep(30)
-        max_retries -= 1
+            if not len(tickers):
+                break
+            assets = data_api.list_assets()
+            tlog(f"loaded {len(assets)} assets from Alpaca")
+            tradable_symbols = [
+                asset.symbol for asset in assets if asset.tradable
+            ]
+            tlog(
+                f"Total number of tradable symobls is {len(tradable_symbols)}"
+            )
+            unsorted = [
+                ticker
+                for ticker in tickers
+                if (
+                    ticker.ticker in tradable_symbols
+                    and config.max_share_price
+                    >= ticker.lastTrade["p"]
+                    >= config.min_share_price
+                    and ticker.prevDay["v"] * ticker.lastTrade["p"]
+                    > config.min_last_dv
+                    and ticker.todaysChangePerc >= config.today_change_percent
+                )
+            ]
+            if len(unsorted) > 0:
+                tlog(f"loaded {len(unsorted)} tickers")
+                rc = sorted(
+                    unsorted,
+                    key=lambda ticker: float(ticker.day["v"]),
+                    reverse=True,
+                )
+                tlog(f"loaded {len(rc)} tickers")
+                return rc
+
+            tlog("got no data :-( waiting then re-trying")
+            time.sleep(30)
+            max_retries -= 1
+
+    except KeyboardInterrupt:
+        tlog("KeyboardInterrupt")
+        pass
 
     tlog("got no data :-( giving up")
+
     return []
 
 
