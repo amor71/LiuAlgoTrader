@@ -80,26 +80,32 @@ def ready_to_start(trading_api: tradeapi) -> bool:
         if current_dt < config.market_close or config.bypass_market_schedule:
             if not config.bypass_market_schedule:
                 to_market_open = config.market_open - current_dt
-                tlog(f"waiting for market open: {to_market_open}")
                 if to_market_open.total_seconds() > 0:
                     try:
+                        tlog(f"waiting for market open: {to_market_open}")
                         time.sleep(to_market_open.total_seconds() + 1)
                     except KeyboardInterrupt:
                         return False
-                tlog(
-                    f"market open, wait {config.market_cool_down_minutes} minutes"
-                )
+
                 since_market_open = (
                     datetime.today().astimezone(nyc) - config.market_open
                 )
-                while (
+                if (
                     since_market_open.seconds // 60
                     < config.market_cool_down_minutes
                 ):
-                    time.sleep(1)
-                    since_market_open = (
-                        datetime.today().astimezone(nyc) - config.market_open
+                    tlog(
+                        f"market open, wait {config.market_cool_down_minutes} minutes"
                     )
+                    while (
+                        since_market_open.seconds // 60
+                        < config.market_cool_down_minutes
+                    ):
+                        time.sleep(1)
+                        since_market_open = (
+                            datetime.today().astimezone(nyc)
+                            - config.market_open
+                        )
 
             tlog("ready to start")
             return True
