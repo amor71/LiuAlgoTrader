@@ -4,21 +4,22 @@ Get Market data from Polygon and pump to consumers
 import asyncio
 import json
 import os
+import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
-from alpaca_trade_api.stream2 import StreamConn
+from alpaca_trade_api.stream2 import StreamConn, polygon
 from google.cloud import error_reporting
-from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from common import config, market_data
+from common import config
 from common.tlog import tlog
 
 error_logger = error_reporting.Client()
+last_msg_tstamp: datetime = datetime.now()
 
 
 async def trade_run(
@@ -62,15 +63,18 @@ async def run(
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
         # tlog(f"trade event: {conn} {channel} {data}")
-        pass
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
         # tlog(f"quote event: {conn} {channel} {data}")
-        pass
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
+        # print(f"A {data.__dict__['_raw']['symbol']}")
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
                 tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
@@ -80,6 +84,8 @@ async def run(
                 q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
                 queues[q_id].put(json.dumps(data.__dict__["_raw"]))
 
+                global last_msg_tstamp
+                last_msg_tstamp = datetime.now()
         except Exception as e:
             tlog(
                 f"Exception in handle_second_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -87,16 +93,49 @@ async def run(
 
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
+        # print(f"AM {data.__dict__['_raw']['symbol']}")
         try:
             data.__dict__["_raw"]["EV"] = "AM"
             q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
             queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+            global last_msg_tstamp
+            last_msg_tstamp = datetime.now()
         except Exception as e:
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
             )
 
-    await data_ws.subscribe(data_channels)
+    global last_msg_tstamp
+    try:
+        await data_ws.subscribe(data_channels)
+
+        while True:
+            # print(f"tick! {datetime.now() - last_msg_tstamp}")
+            if (datetime.now() - last_msg_tstamp) > timedelta(seconds=60):
+                tlog(
+                    f"no data activity since {last_msg_tstamp} attempting reconnect"
+                )
+                await data_ws.close()
+                data_ws.data_ws = polygon.StreamConn(config.prod_api_key_id)
+                await data_ws.data_ws.connect()
+                data_ws.register(r"AM$", handle_minute_bar)
+                data_ws.register(r"A$", handle_second_bar)
+                data_ws.register(r"Q$", handle_quote_event)
+                data_ws.register(r"T$", handle_trade_event)
+                await data_ws.subscribe(data_channels)
+                tlog("Polygon.io reconnected")
+                last_msg_tstamp = datetime.now()
+            await asyncio.sleep(30)
+    except asyncio.CancelledError:
+        tlog("main Polygon.io consumer task cancelled ")
+    except Exception as e:
+        tlog(
+            f"Exception in Polygon.io consumer task: exception of type {type(e).__name__} with args {e.args}"
+        )
+        traceback.print_exc()
+    finally:
+        tlog("main Ploygin consumer task completed ")
 
 
 async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
