@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 import alpaca_trade_api as tradeapi
@@ -7,7 +8,7 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 from common import config
-from common.market_data import prev_closes, volume_today
+from common.market_data import volume_today
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  open_order_strategy, open_orders,
@@ -24,9 +25,9 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, trading_api: tradeapi, data_api: tradeapi):
+    def __init__(self, trading_api: tradeapi, batch_id: str):
         super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
+            name=self.name, trading_api=trading_api, batch_id=batch_id
         )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
@@ -76,21 +77,14 @@ class MomentumLong(Strategy):
                 return False
 
             # Get the change since yesterday's market close
-            daily_pct_change = (
-                data.close - prev_closes[symbol]
-            ) / prev_closes[symbol]
-            if (
-                daily_pct_change > 0.04
-                and data.close > high_15m
-                and volume_today[symbol] > 30000
-            ):
+            if data.close > high_15m and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
-
+                # await asyncio.sleep(0)
                 sell_macds = MACD(
                     minute_history["close"]
                     .dropna()
@@ -98,7 +92,7 @@ class MomentumLong(Strategy):
                     13,
                     21,
                 )
-
+                # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 if (
@@ -121,6 +115,7 @@ class MomentumLong(Strategy):
                         40,
                         60,
                     )[0]
+                    # await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
@@ -132,16 +127,16 @@ class MomentumLong(Strategy):
                             .between_time("9:30", "16:00"),
                             14,
                         )
-
+                        # await asyncio.sleep(0)
                         tlog(f"[{self.name}] RSI={round(rsi[-1], 2)}")
                         if rsi[-1] <= 70:
                             tlog(
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
                             )
-                            resistance = find_resistances(
+                            resistance = await find_resistances(
                                 symbol, self.name, data.close, minute_history
                             )
-                            supports = find_supports(
+                            supports = await find_supports(
                                 symbol, self.name, data.close, minute_history
                             )
                             if resistance is None or resistance == []:
@@ -195,6 +190,7 @@ class MomentumLong(Strategy):
                                 )
 
                                 try:
+                                    # await asyncio.sleep(0)
                                     buy_indicators[symbol] = {
                                         "rsi": rsi[-1].tolist(),
                                         "macd": macd1[-5:].tolist(),
@@ -251,7 +247,7 @@ class MomentumLong(Strategy):
                 13,
                 21,
             )
-
+            # await asyncio.sleep(0)
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(
@@ -263,7 +259,7 @@ class MomentumLong(Strategy):
             ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
-
+            # await asyncio.sleep(0)
             movement_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
@@ -309,6 +305,7 @@ class MomentumLong(Strategy):
                 sell_reasons.append("scale-out")
 
             if to_sell:
+                # await asyncio.sleep(0)
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-2:].tolist(),
