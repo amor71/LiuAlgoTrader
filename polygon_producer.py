@@ -112,7 +112,9 @@ async def run(
 
         while True:
             # print(f"tick! {datetime.now() - last_msg_tstamp}")
-            if (datetime.now() - last_msg_tstamp) > timedelta(seconds=60):
+            if (datetime.now() - last_msg_tstamp) > timedelta(
+                seconds=config.polygon_seconds_timeout
+            ):
                 tlog(
                     f"no data activity since {last_msg_tstamp} attempting reconnect"
                 )
@@ -126,7 +128,7 @@ async def run(
                 await data_ws.subscribe(data_channels)
                 tlog("Polygon.io reconnected")
                 last_msg_tstamp = datetime.now()
-            await asyncio.sleep(30)
+            await asyncio.sleep(config.polygon_seconds_timeout / 2)
     except asyncio.CancelledError:
         tlog("main Polygon.io consumer task cancelled ")
     except Exception as e:
