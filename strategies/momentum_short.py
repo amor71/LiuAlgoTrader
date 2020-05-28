@@ -103,7 +103,7 @@ class MomentumShort(Strategy):
             current_value=close,
             minute_history=minute_history,
         )
-        resistances = find_resistances(
+        resistances = await find_resistances(
             symbol=symbol,
             strategy_name=self.name,
             current_value=close,

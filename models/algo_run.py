@@ -6,17 +6,18 @@ from common import config, trading_data
 
 
 class AlgoRun:
-    def __init__(self, strategy_name):
+    def __init__(self, strategy_name: str, batch_id: str):
         self.run_id = None
         self.strategy_name = strategy_name
+        self.batch_id = batch_id
 
     async def save(self, pool: Pool):
         async with pool.acquire() as con:
             async with con.transaction():
                 self.run_id = await con.fetchval(
                     """
-                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters)
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id)
+                        VALUES ($1, $2, $3, $4, $5)
                         RETURNING algo_run_id
                     """,
                     self.strategy_name,
@@ -28,6 +29,7 @@ class AlgoRun:
                             "DSN": config.dsn,
                         }
                     ),
+                    self.batch_id,
                 )
 
     async def update_end_time(self, pool: Pool, end_reason: str):

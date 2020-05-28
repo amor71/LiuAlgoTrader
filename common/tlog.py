@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 from google.cloud import logging
 
 from common import config
@@ -10,5 +13,5 @@ except Exception:
 
 def tlog(msg: str) -> None:
     if logger:
-        logger.log_text(f"[{config.env}] {msg}")
-    print(msg)
+        logger.log_text(f"[{config.env}][{os.getpid()}] {msg}")
+    print(f"[{os.getpid()}]{datetime.now()}:{msg}")
