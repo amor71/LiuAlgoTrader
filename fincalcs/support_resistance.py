@@ -1,4 +1,3 @@
-import asyncio
 from typing import List, Optional
 
 import numpy as np
@@ -52,7 +51,6 @@ async def find_resistances(
                 #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
                 # )
                 return local_maximas
-        await asyncio.sleep(0)
 
     return None
 
@@ -80,7 +78,6 @@ async def find_supports(
                 #    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
                 # )
                 return local_maximas
-        await asyncio.sleep(0)
 
     return None
 
