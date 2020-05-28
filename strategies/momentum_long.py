@@ -8,7 +8,7 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 from common import config
-from common.market_data import prev_closes, volume_today
+from common.market_data import volume_today
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  open_order_strategy, open_orders,
@@ -25,9 +25,9 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, trading_api: tradeapi, data_api: tradeapi):
+    def __init__(self, trading_api: tradeapi, batch_id: str):
         super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
+            name=self.name, trading_api=trading_api, batch_id=batch_id
         )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
@@ -77,14 +77,7 @@ class MomentumLong(Strategy):
                 return False
 
             # Get the change since yesterday's market close
-            daily_pct_change = (
-                data.close - prev_closes[symbol]
-            ) / prev_closes[symbol]
-            if (
-                daily_pct_change > 0.04
-                and data.close > high_15m
-                and volume_today[symbol] > 30000
-            ):
+            if data.close > high_15m and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
