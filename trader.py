@@ -82,7 +82,9 @@ def ready_to_start(trading_api: tradeapi) -> bool:
                 to_market_open = config.market_open - current_dt
                 if to_market_open.total_seconds() > 0:
                     try:
-                        tlog(f"waiting for market open: {to_market_open}")
+                        tlog(
+                            f"waiting for market open: {to_market_open} ({to_market_open.total_seconds()} seconds)"
+                        )
                         time.sleep(to_market_open.total_seconds() + 1)
                     except KeyboardInterrupt:
                         return False
