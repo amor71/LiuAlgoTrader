@@ -211,8 +211,8 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
             order.symbol, float(order.filled_avg_price), new_qty
         )
 
-    trading_data.open_orders[order.symbol] = None
-    trading_data.open_order_strategy[order.symbol] = None
+    trading_data.open_orders.pop(order.symbol, None)
+    trading_data.open_order_strategy.pop(order.symbol, None)
 
 
 async def handle_trade_update(data: Dict) -> bool:
@@ -339,6 +339,8 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                         f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"
                     )
                     trading_api.cancel_order(existing_order.id)
+                    trading_data.open_orders.pop(symbol, None)
+
             return True
         except AttributeError:
             error_logger.report_exception()
