@@ -260,11 +260,11 @@ class MomentumLong(Strategy):
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
             # await asyncio.sleep(0)
-            movement_threshold = (
+            scalp_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
             ) / 2.0
             bail_threshold = (
-                latest_cost_basis[symbol] + movement_threshold
+                latest_cost_basis[symbol] + scalp_threshold
             ) / 2.0
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
@@ -273,7 +273,7 @@ class MomentumLong(Strategy):
                 and macd_below_signal
                 and macd[-1] < macd[-2]
             )
-            scalp = movement > min(0.02, movement_threshold)
+            scalp = movement > 0.02 or data.close > scalp_threshold
             # below_cost_base = data.close <= latest_cost_basis[symbol]
 
             to_sell = False
