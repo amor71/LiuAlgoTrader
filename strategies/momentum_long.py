@@ -331,7 +331,7 @@ class MomentumLong(Strategy):
                             time_in_force="day",
                         )
                     else:
-                        qty = int(position / 2)
+                        qty = int(position / 2) if position > 1 else 1
                         tlog(
                             f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
