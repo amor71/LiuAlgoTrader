@@ -65,8 +65,7 @@ async def producer_async_main(
 ):
 
     finnhub_ws = FinnhubStreaming(
-        key=config.prod_api_key_id,
-        secret=config.prod_api_secret,
+        api_key=config.prod_api_key_id,
         queues=queues,
         queue_id_hash=queue_id_hash,
     )
