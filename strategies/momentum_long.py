@@ -167,7 +167,7 @@ class MomentumLong(Strategy):
                                 data.close, minute_history, now
                             )
                             stop_prices[symbol] = min(
-                                stop_price, supports[-1] - 0.02
+                                stop_price, supports[-1] - 0.05
                             )
                             target_prices[symbol] = (
                                 data.close + (data.close - stop_price) * 3
