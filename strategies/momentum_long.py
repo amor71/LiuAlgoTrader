@@ -167,10 +167,11 @@ class MomentumLong(Strategy):
                                 data.close, minute_history, now
                             )
                             stop_prices[symbol] = min(
-                                stop_price, supports[-1] - 0.02
+                                stop_price, supports[-1] - 0.05
                             )
                             target_prices[symbol] = (
-                                data.close + (data.close - stop_price) * 3
+                                data.close
+                                + (data.close - stop_prices[symbol]) * 2
                             )
                             symbol_resistance[symbol] = resistance[0]
                             portfolio_value = float(
@@ -179,7 +180,7 @@ class MomentumLong(Strategy):
                             shares_to_buy = (
                                 portfolio_value
                                 * config.risk
-                                // (data.close - stop_price)
+                                // (data.close - stop_prices[symbol])
                             )
                             if not shares_to_buy:
                                 shares_to_buy = 1
@@ -331,7 +332,7 @@ class MomentumLong(Strategy):
                             time_in_force="day",
                         )
                     else:
-                        qty = int(position / 2)
+                        qty = int(position / 2) if position > 1 else 1
                         tlog(
                             f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
