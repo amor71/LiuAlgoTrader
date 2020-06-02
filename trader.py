@@ -18,6 +18,7 @@ from common import config, trading_data
 from common.market_data import get_historical_data, get_tickers, volume_today
 from common.tlog import tlog
 from consumer import consumer_main
+from finnhub_producer import finnhub_producer_main
 from polygon_producer import polygon_producer_main
 
 error_logger = error_reporting.Client()
@@ -174,6 +175,7 @@ if __name__ == "__main__":
                     list(minute_history.keys()).index(symbol)
                     / config.num_consumer_processes_ratio
                 )
+            """
             consumers = [
                 mp.Process(
                     target=consumer_main,
@@ -184,23 +186,36 @@ if __name__ == "__main__":
             for p in consumers:
                 # p.daemon = True
                 p.start()
+            """
 
             # Producers second
+            finnhub_producer = mp.Process(
+                target=finnhub_producer_main,
+                args=(queues, symbols, q_id_hash),
+            )
+            finnhub_producer.start()
+            """
             polygon_producer = mp.Process(
                 target=polygon_producer_main,
                 args=(queues, symbols, q_id_hash),
             )
             polygon_producer.start()
-
+            """
             # wait for completion and hope everyone plays nicely
             try:
+                finnhub_producer.join()
+                """
                 polygon_producer.join()
                 for p in consumers:
                     p.join()
+                """
             except KeyboardInterrupt:
+                finnhub_producer.terminate()
+                """
                 polygon_producer.terminate()
                 for p in consumers:
                     p.terminate()
+                """
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"run {uid} completed")
