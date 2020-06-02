@@ -170,7 +170,8 @@ class MomentumLong(Strategy):
                                 stop_price, supports[-1] - 0.05
                             )
                             target_prices[symbol] = (
-                                data.close + (data.close - stop_price) * 3
+                                data.close
+                                + (data.close - stop_prices[symbol]) * 2
                             )
                             symbol_resistance[symbol] = resistance[0]
                             portfolio_value = float(
@@ -179,7 +180,7 @@ class MomentumLong(Strategy):
                             shares_to_buy = (
                                 portfolio_value
                                 * config.risk
-                                // (data.close - stop_price)
+                                // (data.close - stop_prices[symbol])
                             )
                             if not shares_to_buy:
                                 shares_to_buy = 1
