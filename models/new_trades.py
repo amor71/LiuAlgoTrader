@@ -1,6 +1,6 @@
 """Save trade details to repository"""
 import json
-from typing import Tuple
+from typing import Dict, Tuple
 
 from asyncpg.pool import Pool
 
@@ -61,12 +61,13 @@ class NewTrade:
     @classmethod
     async def load_latest_long(
         cls, pool: Pool, symbol: str
-    ) -> Tuple[float, float, float, str, int]:
+    ) -> Tuple[float, float, float, Dict, int]:
         async with pool.acquire() as con:
             async with con.transaction():
                 row = await con.fetchrow(
                     """
-                        SELECT price, stop_price, target_price, indicators, algo_run_id FROM new_trades 
+                        SELECT price, stop_price, target_price, indicators, algo_run_id 
+                        FROM new_trades 
                         WHERE symbol=$1 AND 
                               operation='buy' 
                         ORDER BY tstamp DESC
@@ -80,7 +81,7 @@ class NewTrade:
                         float(row[0]),
                         float(row[1]),
                         float(row[2]),
-                        str(row[3]),
+                        json.loads(row[3]),
                         int(row[4]),
                     )
                 else:
