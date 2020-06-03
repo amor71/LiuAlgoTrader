@@ -5,7 +5,7 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
-from typing import Dict
+from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -35,7 +35,7 @@ async def end_time(reason: str):
         )
 
 
-async def teardown_task(tz: DstTzInfo,) -> None:
+async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
     dt = datetime.today().astimezone(tz)
     to_market_close = (
         config.market_close - dt
@@ -51,6 +51,13 @@ async def teardown_task(tz: DstTzInfo,) -> None:
     else:
         tlog("tear down task starting")
         await end_time("market close")
+
+        tlog("teardown_task(): requesting tasks to cancel")
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            tlog("teardown_task(): tasks are cancelled now")
 
         asyncio.get_running_loop().stop()
     finally:
@@ -420,7 +427,9 @@ def get_trading_windows(tz, api):
     return market_open, market_close
 
 
-async def consumer_async_main(queue: Queue, unique_id: str):
+async def consumer_async_main(
+    queue: Queue, symbols: List[str], unique_id: str
+):
     await create_db_connection(str(config.dsn))
 
     base_url = (
@@ -443,6 +452,7 @@ async def consumer_async_main(queue: Queue, unique_id: str):
     config.market_open, config.market_close = get_trading_windows(
         nyc, trading_api
     )
+
     strategy_types = [MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
@@ -451,20 +461,67 @@ async def consumer_async_main(queue: Queue, unique_id: str):
 
         trading_data.strategies.append(s)
 
+        if strategy_type == MomentumLong:
+            await load_current_long_positions(trading_api, symbols, s)
+
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
     )
 
     tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"))
+        teardown_task(timezone("America/New_York"), queue_consumer_task)
     )
     await asyncio.gather(
         tear_down, queue_consumer_task, return_exceptions=True,
     )
 
 
+async def load_current_long_positions(
+    trading_api: tradeapi, symbols: List[str], strategy: Strategy
+):
+    for symbol in symbols:
+        try:
+            position = trading_api.get_position(symbol)
+        except Exception:
+            position = None
+
+        if position:
+            try:
+                (
+                    price,
+                    stop_price,
+                    target_price,
+                    indicators,
+                    prev_run_id,
+                ) = NewTrade.load_latest_long(
+                    trading_data.db_conn_pool, symbol
+                )
+
+                trading_data.positions[symbol] = position.qty
+                trading_data.stop_prices[symbol] = stop_price
+                trading_data.target_prices[symbol] = target_price
+                trading_data.latest_cost_basis[symbol] = price
+                trading_data.open_order_strategy[symbol] = strategy
+
+                await save(
+                    symbol,
+                    position.qty,
+                    "buy",
+                    price,
+                    indicators,
+                    str(prev_run_id),
+                )
+            except Exception as e:
+                tlog(
+                    f"load_current_long_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
+                )
+
+
 def consumer_main(
-    queue: Queue, minute_history: Dict[str, df], unique_id: str
+    queue: Queue,
+    symbols: List[str],
+    minute_history: Dict[str, df],
+    unique_id: str,
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
@@ -478,7 +535,7 @@ def consumer_main(
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(consumer_async_main(queue, unique_id))
+        loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))
         loop.run_forever()
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
