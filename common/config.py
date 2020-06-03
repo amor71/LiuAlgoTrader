@@ -43,7 +43,7 @@ today_change_percent = 3.5
 group_margin = 0.02
 
 # trade times
-market_cool_down_minutes: int = 15
+market_cool_down_minutes: int = 20
 market_liquidation_end_time_minutes: int = 15
 market_open: datetime
 market_close: datetime
@@ -62,7 +62,7 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 bypass_market_schedule: bool = False
 
 # performance parameters
-num_consumer_processes_ratio: int = 15
+num_consumer_processes_ratio: int = 35
 
 # polygon parameters
 polygon_seconds_timeout = 60
