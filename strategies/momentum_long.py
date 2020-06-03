@@ -77,7 +77,7 @@ class MomentumLong(Strategy):
                 return False
 
             # Get the change since yesterday's market close
-            if data.close > high_15m and volume_today[symbol] > 30000:
+            if data.close > high_15m:  # and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
                 macds = MACD(
                     minute_history["close"]
@@ -233,8 +233,6 @@ class MomentumLong(Strategy):
                                     error_logger.report_exception()
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
-            elif volume_today[symbol] < 30000:
-                tlog(f"volume for {symbol} too low")
 
         if (
             await super().is_sell_time(now)
