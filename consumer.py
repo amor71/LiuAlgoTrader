@@ -497,7 +497,7 @@ async def load_current_long_positions(
                     trading_data.db_conn_pool, symbol
                 )
 
-                trading_data.positions[symbol] = position.qty
+                trading_data.positions[symbol] = int(position.qty)
                 trading_data.stop_prices[symbol] = stop_price
                 trading_data.target_prices[symbol] = target_price
                 trading_data.latest_cost_basis[symbol] = price
