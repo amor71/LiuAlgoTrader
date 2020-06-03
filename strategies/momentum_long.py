@@ -233,6 +233,8 @@ class MomentumLong(Strategy):
                                     error_logger.report_exception()
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
+            elif volume_today[symbol] < 30000:
+                tlog(f"volume for {symbol} too low")
 
         if (
             await super().is_sell_time(now)

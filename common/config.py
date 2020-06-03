@@ -59,7 +59,7 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False
+bypass_market_schedule: bool = True
 
 # performance parameters
 num_consumer_processes_ratio: int = 15
