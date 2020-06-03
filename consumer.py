@@ -505,7 +505,7 @@ async def load_current_long_positions(
 
                 await save(
                     symbol,
-                    position.qty,
+                    int(trading_data.positions[symbol]),
                     "buy",
                     price,
                     indicators,
