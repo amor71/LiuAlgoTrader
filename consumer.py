@@ -502,10 +502,11 @@ async def load_current_long_positions(
                 trading_data.target_prices[symbol] = target_price
                 trading_data.latest_cost_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
+                trading_data.last_used_strategy[symbol] = strategy
 
                 await save(
                     symbol,
-                    position.qty,
+                    int(trading_data.positions[symbol]),
                     "buy",
                     price,
                     indicators,
