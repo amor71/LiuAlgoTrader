@@ -493,7 +493,7 @@ async def load_current_long_positions(
                     target_price,
                     indicators,
                     prev_run_id,
-                ) = NewTrade.load_latest_long(
+                ) = await NewTrade.load_latest_long(
                     trading_data.db_conn_pool, symbol
                 )
 
