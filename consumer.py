@@ -506,7 +506,7 @@ async def load_current_long_positions(
                 trading_data.last_used_strategy[symbol] = strategy
                 trading_data.symbol_resistance[symbol] = indicators[
                     "resistances"
-                ]
+                ][0]
                 await save(
                     symbol,
                     int(trading_data.positions[symbol]),
