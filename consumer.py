@@ -486,6 +486,7 @@ async def load_current_long_positions(
             position = None
 
         if position:
+            tlog(f"loading current position for {symbol}")
             try:
                 (
                     price,
@@ -503,7 +504,9 @@ async def load_current_long_positions(
                 trading_data.latest_cost_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
-
+                trading_data.symbol_resistance[symbol] = indicators[
+                    "resistances"
+                ]
                 await save(
                     symbol,
                     int(trading_data.positions[symbol]),
