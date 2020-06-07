@@ -70,10 +70,7 @@ class FinnhubStreaming(StreamingBase):
             raise ValueError(
                 f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
             )
-        _subscribe_payload = {
-            "type": "subscribe",
-            "symbol": f"{symbol}",
-        }
+        _subscribe_payload = {"type": "subscribe", "symbol": f"{symbol}"}
         await self.websocket.send(json.dumps(_subscribe_payload))
         self.stream_map[symbol] = (handler, self.queue_id_hash[symbol])
         return True
@@ -83,10 +80,7 @@ class FinnhubStreaming(StreamingBase):
             raise ValueError(
                 f"{symbol} web-socket not ready for listening, make sure connect passed successfully"
             )
-        _subscribe_payload = {
-            "type": "unsubscribe",
-            "symbol": f"{symbol}",
-        }
+        _subscribe_payload = {"type": "unsubscribe", "symbol": f"{symbol}"}
         await self.websocket.send(json.dumps(_subscribe_payload))
         self.stream_map.pop(symbol, None)
         return False
@@ -146,4 +140,4 @@ class FinnhubStreaming(StreamingBase):
 
     @classmethod
     async def handler(cls, event: str, data: Dict, queue: Queue) -> None:
-        print(f"{event}: data")
+        print(f"{event}: {data}")
