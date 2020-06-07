@@ -15,7 +15,7 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.market_data import get_historical_data, get_tickers, volume_today
+from common.market_data import get_historical_data, get_tickers
 from common.tlog import tlog
 from consumer import consumer_main
 from finnhub_producer import finnhub_producer_main
@@ -147,8 +147,37 @@ if __name__ == "__main__":
         for ticker in tickers:
             symbol = ticker.ticker
             # prev_closes[symbol] = ticker.prevDay["c"]
-            volume_today[symbol] = ticker.day["v"]
+            # volume_today[symbol] = ticker.day["v"]
         symbols = [ticker.ticker for ticker in tickers]
+
+        # add open positions
+        base_url = (
+            config.prod_base_url
+            if config.env == "PROD"
+            else config.paper_base_url
+        )
+        api_key_id = (
+            config.prod_api_key_id
+            if config.env == "PROD"
+            else config.paper_api_key_id
+        )
+        api_secret = (
+            config.prod_api_secret
+            if config.env == "PROD"
+            else config.paper_api_secret
+        )
+        trading_api = tradeapi.REST(
+            base_url=base_url, key_id=api_key_id, secret_key=api_secret
+        )
+        existing_positions = trading_api.list_positions()
+
+        if len(existing_positions) == 0:
+            tlog("no open positions")
+        else:
+            for position in existing_positions:
+                if position.symbol not in symbols:
+                    symbols.append(position.symbol)
+                    tlog(f"added existing open position in {position.symbol}")
         tlog(f"Tracking {len(symbols)} symbols")
 
         minute_history = get_historical_data(
@@ -170,16 +199,24 @@ if __name__ == "__main__":
             ]
 
             q_id_hash = {}
+            symbol_by_queue = {}
             for symbol in symbols:
-                q_id_hash[symbol] = int(
+                _index = int(
                     list(minute_history.keys()).index(symbol)
                     / config.num_consumer_processes_ratio
                 )
+
+                q_id_hash[symbol] = _index
+                if _index not in symbol_by_queue:
+                    symbol_by_queue[_index] = [symbol]
+                else:
+                    symbol_by_queue[_index].append(symbol)
+
             """
             consumers = [
                 mp.Process(
                     target=consumer_main,
-                    args=(queues[i], minute_history, uid),
+                    args=(queues[i], symbol_by_queue[i], minute_history, uid),
                 )
                 for i in range(_num_consumer_processes)
             ]
