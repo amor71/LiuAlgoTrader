@@ -112,7 +112,6 @@ def get_tickers(data_api: tradeapi) -> List[Ticker]:
                 )
             ]
             if len(unsorted) > 0:
-                tlog(f"loaded {len(unsorted)} tickers")
                 rc = sorted(
                     unsorted,
                     key=lambda ticker: float(ticker.day["v"]),
