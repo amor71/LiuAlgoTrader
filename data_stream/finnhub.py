@@ -1,10 +1,13 @@
 import asyncio
 import json
+from datetime import datetime, timedelta
 from multiprocessing import Queue
 from typing import Awaitable, Dict, List
 
+import pandas as pd
 import websockets
 from google.cloud import error_reporting
+from pytz import timezone
 
 from common import config, market_data
 from common.tlog import tlog
@@ -27,21 +30,23 @@ class FinnhubStreaming(StreamingBase):
         self.consumer_task: asyncio.Task
         self.queue_id_hash = queue_id_hash
         self.stream_map: Dict = {}
+        self.ohlc: Dict[str, List] = {}
         super().__init__(queues)
 
     async def connect(self) -> bool:
         """Connect web-socket and authenticate, update internal state"""
         try:
-            self.websocket = await websockets.client.connect(
-                f"{self.END_POINT}{self.api_key}"
-            )
+            url = f"{self.END_POINT}{self.api_key}"
+            tlog(f"FinnhubStreaming - setting up web-socket for {url}")
+            self.websocket = await websockets.client.connect(url)
             self.state = WSConnectState.CONNECTED
         except websockets.WebSocketException as wse:
             error_logger.report_exception()
             tlog(f"Exception when connecting to Finnhub WS {wse}")
             self.state = WSConnectState.NOT_CONNECTED
             return False
-
+        else:
+            tlog("FinnhubStreaming - web-socket created successfully")
         self.state = WSConnectState.AUTHENTICATED
 
         self.consumer_task = asyncio.create_task(
@@ -110,24 +115,75 @@ class FinnhubStreaming(StreamingBase):
                 if isinstance(_msg, bytes):
                     _msg = _msg.decode("utf-8")
                 msg = json.loads(_msg)
-                stream = msg.get("data")
-                for item in stream:
-                    try:
-                        _func, _q_id = self.stream_map.get(item["s"], None)
-                        if _func:
-                            await _func(
-                                stream["type"], item, self.queues[_q_id]
-                            )
-                        else:
-                            tlog(
-                                f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
-                            )
-                    except Exception as e:
-                        error_logger.report_exception()
-                        tlog(
-                            f"{self.consumer_task.get_name()}  exception {e.__class__.__qualname__}:{e}"
-                        )
 
+                event = msg.get("type")
+                if event == "ping":
+                    pass
+                elif event == "trade":
+                    stream = msg.get("data", None)
+                    for item in stream:
+                        try:
+                            symbol = item["s"]
+                            price = item["p"]
+                            volume = item["v"]
+                            start = pd.Timestamp(item["t"], tz=NY, unit="ms")
+                            if (
+                                time_diff := datetime.now(
+                                    tz=timezone("America/New_York")
+                                )
+                                - start
+                            ) > timedelta(
+                                seconds=6
+                            ):  # type: ignore
+                                tlog(f"{symbol}: data out of sync {time_diff}")
+                                pass
+                            _func, _q_id = self.stream_map.get(symbol, None)
+
+                            minute = start.replace(second=0, microsecond=0)
+                            if (
+                                symbol not in self.ohlc
+                                or self.ohlc[symbol][0] < start
+                            ):
+                                self.ohlc[symbol] = [
+                                    minute,
+                                    price,
+                                    price,
+                                    price,
+                                    price,
+                                    volume,
+                                ]
+                            else:
+                                self.ohlc[symbol] = [
+                                    minute,
+                                    self.ohlc[symbol][1],
+                                    max(price, self.ohlc[symbol][2]),
+                                    min(price, self.ohlc[symbol][3]),
+                                    price,
+                                    self.ohlc[symbol][5] + volume,
+                                ]
+
+                            if _func:
+                                await _func(
+                                    symbol,
+                                    start,
+                                    self.ohlc[symbol],
+                                    self.queues[_q_id],
+                                )
+                            else:
+                                tlog(
+                                    f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
+                                )
+                        except Exception as e:
+                            error_logger.report_exception()
+                            tlog(
+                                f"{self.consumer_task.get_name()}  exception {e.__class__.__qualname__}:{e}"
+                            )
+                elif event == "error":
+                    tlog(f"{self.consumer_task.get_name()} [ERROR] {msg}")
+                else:
+                    tlog(
+                        f"{self.consumer_task.get_name()} [ERROR] unknown event-type {event} ({msg})"
+                    )
         except websockets.WebSocketException as wse:
             tlog(
                 f"{self.consumer_task.get_name()} received WebSocketException {wse}"
@@ -135,9 +191,15 @@ class FinnhubStreaming(StreamingBase):
             await self._reconnect()
         except asyncio.CancelledError:
             tlog(f"{self.consumer_task.get_name()} cancelled")
+        except Exception as e:
+            tlog(
+                f"{self.consumer_task.get_name()}  exception {e.__class__.__qualname__}:{e}"
+            )
 
         tlog(f"{self.consumer_task.get_name()} completed")
 
     @classmethod
-    async def handler(cls, event: str, data: Dict, queue: Queue) -> None:
-        print(f"{event}: {data}")
+    async def handler(
+        cls, symbol: str, when: datetime, data: List, queue: Queue
+    ) -> None:
+        print(f"{symbol}[{when}]  {data}")
