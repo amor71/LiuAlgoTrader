@@ -21,7 +21,7 @@ error_logger = error_reporting.Client()
 
 async def run_finnhub(symbols: List[str], data_ws: StreamingBase) -> None:
     data_channels = []
-    for symbol in symbols:
+    for symbol in symbols[:50]:
         symbol_channels = [f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS]
         data_channels += symbol_channels
 
@@ -65,7 +65,7 @@ async def producer_async_main(
 ):
 
     finnhub_ws = FinnhubStreaming(
-        api_key=config.prod_api_key_id,
+        api_key=config.finnhub_api_key,
         queues=queues,
         queue_id_hash=queue_id_hash,
     )
