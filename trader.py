@@ -164,11 +164,10 @@ if __name__ == "__main__":
             sys.exit(0)
 
         # Update initial state with information from tickers
-        for ticker in tickers:
-            symbol = ticker.ticker
-            # prev_closes[symbol] = ticker.prevDay["c"]
-            # volume_today[symbol] = ticker.day["v"]
-        symbols = [ticker.ticker for ticker in tickers]
+        symbols = [
+            ticker if isinstance(ticker, str) else ticker.ticker
+            for ticker in tickers
+        ]
 
         # add open positions
         base_url = (

@@ -11,6 +11,7 @@ paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")
 finnhub_base_url = os.getenv("FINNHUB_BASE_URL")
+finnhub_websocket_limit = 50
 #
 # Execution details (env variable)
 #

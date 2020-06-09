@@ -88,12 +88,56 @@ def get_finnhub_tickers(data_api: tradeapi) -> List[str]:
     nyc = timezone("America/New_York")
     _from = datetime.today().astimezone(nyc) - timedelta(days=1)
     _to = datetime.now(nyc)
-    for symbol in tradable_symbols:
-        url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
-        r = requests.get(url)
-        print(r.json())
+    symbols = []
+    try:
+        for symbol in tradable_symbols:
+            try:
+                retry = True
+                while retry:
+                    retry = False
+                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
+                    r = requests.get(url)
 
-    return tradable_symbols
+                    if r.status_code == 200:
+                        response = r.json()
+                        if response["s"] != "no_data":
+                            prev_prec = (
+                                100.0
+                                * (response["c"][1] - response["c"][0])
+                                / response["c"][0]
+                            )
+                            if (
+                                config.max_share_price
+                                > response["c"][1]
+                                > config.min_share_price
+                                and response["v"][0] * response["c"][0]
+                                > config.min_last_dv
+                                and prev_prec > config.today_change_percent
+                            ):
+                                symbols.append(symbol)
+                                if (
+                                    len(symbols)
+                                    == config.finnhub_websocket_limit
+                                ):
+                                    break
+
+                    elif r.status_code == 429:
+                        tlog(
+                            f"{tradable_symbols.index(symbol)}/{len(tradable_symbols)} API limit: ({r.text})"
+                        )
+                        time.sleep(30)
+                        retry = True
+                    else:
+                        print(r.status_code, r.text)
+            except IndexError as e:
+                pass
+
+    except KeyboardInterrupt:
+        tlog("KeyboardInterrupt")
+        pass
+
+    tlog(f"loaded {len(symbols)} from Finnhub")
+    return symbols
 
 
 def get_polygon_tickers(data_api: tradeapi) -> List[Ticker]:
