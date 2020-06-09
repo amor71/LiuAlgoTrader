@@ -10,6 +10,7 @@ paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")
+finnhub_base_url = os.getenv("FINNHUB_BASE_URL")
 #
 # Execution details (env variable)
 #

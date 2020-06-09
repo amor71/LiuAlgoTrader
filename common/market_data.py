@@ -1,5 +1,5 @@
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -9,6 +9,7 @@ from alpaca_trade_api.polygon.entity import Ticker
 from asyncpg.pool import Pool
 from google.cloud import error_reporting
 from pandas import DataFrame as df
+from pytz import timezone
 
 from common import config, trading_data
 from common.decorators import timeit
@@ -78,10 +79,27 @@ def get_historical_data(
     return minute_history
 
 
-def get_tickers(data_api: tradeapi) -> List[Ticker]:
+def get_finnhub_tickers(data_api: tradeapi) -> List[str]:
+    tlog("get_finnhub_tickers(): Getting current ticker data...")
+
+    assets = data_api.list_assets()
+    tlog(f"loaded {len(assets)} assets from Alpaca")
+    tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
+    nyc = timezone("America/New_York")
+    _from = datetime.today().astimezone(nyc) - timedelta(days=1)
+    _to = datetime.now(nyc)
+    for symbol in tradable_symbols:
+        url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
+        r = requests.get(url)
+        print(r.json())
+
+    return tradable_symbols
+
+
+def get_polygon_tickers(data_api: tradeapi) -> List[Ticker]:
     """get all tickers"""
 
-    tlog("Getting current ticker data...")
+    tlog("get_polygon_tickers(): Getting current ticker data...")
     try:
         max_retries = 50
         while max_retries > 0:
