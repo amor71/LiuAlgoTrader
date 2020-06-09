@@ -142,7 +142,7 @@ class FinnhubStreaming(StreamingBase):
                             minute = start.replace(second=0, microsecond=0)
                             if (
                                 symbol not in self.ohlc
-                                or self.ohlc[symbol][0] < start
+                                or self.ohlc[symbol][0] < minute
                             ):
                                 self.ohlc[symbol] = [
                                     minute,

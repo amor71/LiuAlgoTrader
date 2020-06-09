@@ -1,6 +1,7 @@
 """
 Trading strategy runner
 """
+import getopt
 import multiprocessing as mp
 import os
 import sys
@@ -15,7 +16,8 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.market_data import get_historical_data, get_tickers
+from common.market_data import (get_finnhub_tickers, get_historical_data,
+                                get_polygon_tickers)
 from common.tlog import tlog
 from consumer import consumer_main
 from finnhub_producer import finnhub_producer_main
@@ -133,6 +135,18 @@ if __name__ == "__main__":
         version=trading_data.build_label,
         unique_id=uid,
     )
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "", ["finnhub"])
+    except getopt.GetoptError:
+        print(f"usage: {sys.argv[0]} --finnhub")
+        sys.exit(0)
+
+    use_polygon = True
+    use_finnhub = False
+    for opt, arg in opts:
+        if opt == "--finnhub":
+            use_finnhub = True
+            print("Using finnhub as data-source")
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -141,7 +155,13 @@ if __name__ == "__main__":
     )
 
     if ready_to_start(data_api):
-        tickers = get_tickers(data_api=data_api)
+        if use_finnhub:
+            tickers = get_finnhub_tickers(data_api=data_api)
+        elif use_polygon:
+            tickers = get_polygon_tickers(data_api=data_api)
+        else:
+            tlog("missing data source for tickers, exiting")
+            sys.exit(0)
 
         # Update initial state with information from tickers
         for ticker in tickers:
