@@ -7,14 +7,16 @@ from datetime import datetime, timedelta
 from multiprocessing import Queue
 from typing import Dict, List
 
+import alpaca_trade_api as tradeapi
 from google.cloud import error_reporting
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from common import config, market_data
+from common import config
 from common.tlog import tlog
 from data_stream.finnhub import FinnhubStreaming
 from data_stream.streaming_base import StreamingBase
+from polygon_producer import trade_run
 
 error_logger = error_reporting.Client()
 
@@ -75,12 +77,34 @@ async def producer_async_main(
         run_finnhub(symbols=symbols, data_ws=finnhub_ws,)
     )
 
+    base_url = (
+        config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    )
+    api_key_id = (
+        config.prod_api_key_id
+        if config.env == "PROD"
+        else config.paper_api_key_id
+    )
+    api_secret = (
+        config.prod_api_secret
+        if config.env == "PROD"
+        else config.paper_api_secret
+    )
+
+    trade_ws = tradeapi.StreamConn(
+        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+    )
+
+    trade_updates_task = asyncio.create_task(
+        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash)
+    )
+
     tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"), [finnhub_ws])
+        teardown_task(timezone("America/New_York"), [finnhub_ws, trade_ws])
     )
 
     await asyncio.gather(
-        main_task, tear_down, return_exceptions=True,
+        main_task, tear_down, trade_updates_task, return_exceptions=True,
     )
 
 
