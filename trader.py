@@ -16,7 +16,9 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.market_data import (get_finnhub_tickers, get_historical_data,
+from common.market_data import (get_finnhub_tickers,
+                                get_historical_data_from_finnhub,
+                                get_historical_data_from_polygon,
                                 get_polygon_tickers)
 from common.tlog import tlog
 from consumer import consumer_main
@@ -199,11 +201,18 @@ if __name__ == "__main__":
                     tlog(f"added existing open position in {position.symbol}")
         tlog(f"Tracking {len(symbols)} symbols")
 
-        minute_history = get_historical_data(
-            api=data_api,
-            symbols=symbols,
-            max_tickers=min(config.total_tickers, len(symbols)),
-        )
+        if use_finnhub:
+            minute_history = get_historical_data_from_finnhub(symbols=symbols,)
+        elif use_polygon:
+            minute_history = get_historical_data_from_polygon(
+                api=data_api,
+                symbols=symbols,
+                max_tickers=min(config.total_tickers, len(symbols)),
+            )
+        else:
+            tlog("unpossible to get here")
+            sys.exit(0)
+
         symbols = list(minute_history.keys())
 
         if len(symbols) > 0:
