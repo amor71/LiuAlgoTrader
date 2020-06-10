@@ -9,7 +9,7 @@ import websockets
 from google.cloud import error_reporting
 from pytz import timezone
 
-from common import config, market_data
+from common import market_data
 from common.tlog import tlog
 
 from .streaming_base import StreamingBase, WSConnectState
@@ -122,21 +122,17 @@ class FinnhubStreaming(StreamingBase):
                     continue
                 elif event == "trade":
                     stream = msg.get("data", None)
-                    print(stream)
                     for item in stream:
                         try:
                             symbol = item["s"]
                             price = item["p"]
                             volume = item["v"]
                             start = pd.Timestamp(item["t"], tz=NY, unit="ms")
-                            if (
-                                time_diff := datetime.now(
-                                    tz=timezone("America/New_York")
-                                )
+                            time_diff = (
+                                datetime.now(tz=timezone("America/New_York"))
                                 - start
-                            ) > timedelta(
-                                seconds=6
-                            ):  # type: ignore
+                            )
+                            if time_diff > timedelta(seconds=6):  # type: ignore
                                 tlog(f"{symbol}: data out of sync {time_diff}")
                                 continue
                             _func, _q_id = self.stream_map.get(symbol, None)
@@ -164,10 +160,14 @@ class FinnhubStreaming(StreamingBase):
                                     self.ohlc[symbol][5] + volume,
                                 ]
 
+                            if symbol not in market_data.volume_today:
+                                market_data.volume_today[symbol] = 0
+                            market_data.volume_today[symbol] += volume
+
                             if _func:
                                 await _func(
                                     symbol,
-                                    start,
+                                    item["t"],
                                     self.ohlc[symbol],
                                     self.queues[_q_id],
                                 )
@@ -202,7 +202,7 @@ class FinnhubStreaming(StreamingBase):
 
     @classmethod
     async def handler(
-        cls, symbol: str, when: datetime, data: List, queue: Queue
+        cls, symbol: str, when: int, data: List, queue: Queue
     ) -> None:
         payload = {
             "EV": "A",
@@ -214,6 +214,8 @@ class FinnhubStreaming(StreamingBase):
             "volume": data[5],
             "vwap": None,
             "average": None,
+            "start": when,
+            "totalvolume": market_data.volume_today[symbol],
         }
-
+        queue.put(json.dumps(payload))
         print(f"{symbol}[{when}]  {data}")
