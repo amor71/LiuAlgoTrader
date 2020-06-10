@@ -1,11 +1,11 @@
 requests==2.23.0
 deprecated==1.2.10
 urllib3<1.25
-numpy==1.18.4
-numpy==1.18.4
+numpy==1.18.5
+numpy==1.18.5
 mypy==0.770
 black==19.10b0
-flake8==3.8.2
+flake8==3.8.3
 pylint==2.5.2
 Cython==0.29.19
 alpaca-trade-api==0.48
