@@ -140,15 +140,19 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(sys.argv[1:], "", ["finnhub"])
     except getopt.GetoptError:
-        print(f"usage: {sys.argv[0]} --finnhub")
+        print(f"usage: {sys.argv[0]} --finnhub --finnhub-history")
         sys.exit(0)
 
     use_polygon = True
     use_finnhub = False
+    use_finnhub_history = False
     for opt, arg in opts:
         if opt == "--finnhub":
             use_finnhub = True
             print("Using finnhub as data-source")
+        if opt == "--finnhub-history":
+            use_finnhub_history = True
+            print("Using finnhub as data-source for historic data ")
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -201,7 +205,7 @@ if __name__ == "__main__":
                     tlog(f"added existing open position in {position.symbol}")
         tlog(f"Tracking {len(symbols)} symbols")
 
-        if use_finnhub:
+        if use_finnhub or use_finnhub_history:
             minute_history = get_historical_data_from_finnhub(symbols=symbols,)
         elif use_polygon:
             minute_history = get_historical_data_from_polygon(
