@@ -210,7 +210,7 @@ if __name__ == "__main__":
                 max_tickers=min(config.total_tickers, len(symbols)),
             )
         else:
-            tlog("unpossible to get here")
+            tlog("un-possible to get here")
             sys.exit(0)
 
         symbols = list(minute_history.keys())
@@ -240,7 +240,6 @@ if __name__ == "__main__":
                 else:
                     symbol_by_queue[_index].append(symbol)
 
-            """
             consumers = [
                 mp.Process(
                     target=consumer_main,
@@ -251,36 +250,30 @@ if __name__ == "__main__":
             for p in consumers:
                 # p.daemon = True
                 p.start()
-            """
 
             # Producers second
-            finnhub_producer = mp.Process(
-                target=finnhub_producer_main,
-                args=(queues, symbols, q_id_hash),
-            )
-            finnhub_producer.start()
-            """
-            polygon_producer = mp.Process(
-                target=polygon_producer_main,
-                args=(queues, symbols, q_id_hash),
-            )
-            polygon_producer.start()
-            """
+            if use_finnhub:
+                producer = mp.Process(
+                    target=finnhub_producer_main,
+                    args=(queues, symbols, q_id_hash),
+                )
+                producer.start()
+            else:
+                producer = mp.Process(
+                    target=polygon_producer_main,
+                    args=(queues, symbols, q_id_hash),
+                )
+                producer.start()
+
             # wait for completion and hope everyone plays nicely
             try:
-                finnhub_producer.join()
-                """
-                polygon_producer.join()
+                producer.join()
                 for p in consumers:
                     p.join()
-                """
             except KeyboardInterrupt:
-                finnhub_producer.terminate()
-                """
-                polygon_producer.terminate()
+                producer.terminate()
                 for p in consumers:
                     p.terminate()
-                """
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"run {uid} completed")
