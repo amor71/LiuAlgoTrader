@@ -9,6 +9,7 @@ from alpaca_trade_api.polygon.entity import Ticker
 from asyncpg.pool import Pool
 from google.cloud import error_reporting
 from pandas import DataFrame as df
+from pandas import Timestamp
 from pytz import timezone
 
 from common import config, trading_data
@@ -26,8 +27,9 @@ minute_history: Dict[str, df] = {}
 
 
 def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
-    nyc = timezone("America/New_York")
+    nyc = timezone(NY := "America/New_York")
     _from = datetime.today().astimezone(nyc) - timedelta(days=30)
+    _from = _from.replace(hour=9, minute=29)
     _to = datetime.now(nyc)
 
     minute_history: Dict[str, df] = {}
@@ -38,7 +40,7 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
                 while retry:
                     retry = False
 
-                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
+                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=1&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
                     r = s.get(url)
 
                     if r.status_code == 200:
@@ -52,7 +54,13 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
                                 "volume": response["v"],
                             }
 
-                            _df = df(_data)
+                            _df = df(
+                                _data,
+                                index=[
+                                    Timestamp(item, tz=NY, unit="s")
+                                    for item in response["t"]
+                                ],
+                            )
                             _df["vwap"] = 0.0
                             _df["average"] = 0.0
                             minute_history[symbol] = _df

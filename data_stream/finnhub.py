@@ -116,11 +116,13 @@ class FinnhubStreaming(StreamingBase):
                     _msg = _msg.decode("utf-8")
                 msg = json.loads(_msg)
 
+                print(msg)
                 event = msg.get("type")
                 if event == "ping":
-                    pass
+                    continue
                 elif event == "trade":
                     stream = msg.get("data", None)
+                    print(stream)
                     for item in stream:
                         try:
                             symbol = item["s"]
@@ -136,7 +138,7 @@ class FinnhubStreaming(StreamingBase):
                                 seconds=6
                             ):  # type: ignore
                                 tlog(f"{symbol}: data out of sync {time_diff}")
-                                pass
+                                continue
                             _func, _q_id = self.stream_map.get(symbol, None)
 
                             minute = start.replace(second=0, microsecond=0)
@@ -202,4 +204,16 @@ class FinnhubStreaming(StreamingBase):
     async def handler(
         cls, symbol: str, when: datetime, data: List, queue: Queue
     ) -> None:
+        payload = {
+            "EV": "A",
+            "symbol": symbol,
+            "open": data[1],
+            "high": data[2],
+            "low": data[3],
+            "close": data[4],
+            "volume": data[5],
+            "vwap": None,
+            "average": None,
+        }
+
         print(f"{symbol}[{when}]  {data}")
