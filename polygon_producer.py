@@ -26,6 +26,7 @@ async def trade_run(
     ws: StreamConn, queues: List[Queue], queue_id_hash: Dict[str, int]
 ) -> None:
 
+    tlog("trade_run() starting using Alpaca trading  ")
     # Use trade updates to keep track of our portfolio
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):

@@ -1,5 +1,5 @@
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -9,6 +9,8 @@ from alpaca_trade_api.polygon.entity import Ticker
 from asyncpg.pool import Pool
 from google.cloud import error_reporting
 from pandas import DataFrame as df
+from pandas import Timestamp
+from pytz import timezone
 
 from common import config, trading_data
 from common.decorators import timeit
@@ -24,12 +26,73 @@ volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
 
 
-def get_historical_data(
+def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
+
+    tlog(f"Loading {len(symbols)} tickers historic data from Finnhub")
+    nyc = timezone(NY := "America/New_York")
+    _from = datetime.today().astimezone(nyc) - timedelta(days=30)
+    _from = _from.replace(hour=9, minute=29)
+    _to = datetime.now(nyc)
+
+    minute_history: Dict[str, df] = {}
+    with requests.Session() as s:
+        try:
+            c = 0
+            for symbol in symbols:
+                retry = True
+                while retry:
+                    retry = False
+
+                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=1&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
+                    r = s.get(url)
+
+                    if r.status_code == 200:
+                        response = r.json()
+                        if response["s"] != "no_data":
+                            _data = {
+                                "close": response["c"],
+                                "open": response["o"],
+                                "high": response["h"],
+                                "low": response["l"],
+                                "volume": response["v"],
+                            }
+
+                            _df = df(
+                                _data,
+                                index=[
+                                    Timestamp(item, tz=NY, unit="s")
+                                    for item in response["t"]
+                                ],
+                            )
+                            c += 1
+                            _df["vwap"] = 0.0
+                            _df["average"] = 0.0
+                            minute_history[symbol] = _df
+                            tlog(
+                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} ({c}/{len(symbols)})"
+                            )
+                    elif r.status_code == 429:
+                        tlog(
+                            f"{symbols.index(symbol)}/{len(symbols)} API limit: ({r.text})"
+                        )
+                        time.sleep(30)
+                        retry = True
+                    else:
+                        print(r.status_code, r.text)
+
+        except KeyboardInterrupt:
+            tlog("KeyboardInterrupt")
+            pass
+
+    return minute_history
+
+
+def get_historical_data_from_polygon(
     api: tradeapi, symbols: List[str], max_tickers: int
 ) -> Dict[str, df]:
     """get ticker history"""
 
-    tlog(f"Loading max {max_tickers} tickers w/ highest volume")
+    tlog(f"Loading max {max_tickers} tickers w/ highest volume from Polygon")
     minute_history: Dict[str, df] = {}
     c = 0
     exclude_symbols = []
@@ -78,10 +141,80 @@ def get_historical_data(
     return minute_history
 
 
-def get_tickers(data_api: tradeapi) -> List[Ticker]:
+def get_finnhub_tickers(data_api: tradeapi) -> List[str]:
+    tlog("get_finnhub_tickers(): Getting current ticker data...")
+
+    assets = data_api.list_assets()
+    tradable_symbols = [asset.symbol for asset in assets if asset.tradable]
+    tlog(f"loaded {len(tradable_symbols)} assets from Alpaca")
+    nyc = timezone("America/New_York")
+    _from = datetime.today().astimezone(nyc) - timedelta(days=1)
+    _to = datetime.now(nyc)
+    symbols = []
+    try:
+        with requests.Session() as s:
+            for symbol in tradable_symbols:
+                try:
+                    retry = True
+                    while retry:
+                        retry = False
+                        url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
+
+                        try:
+                            r = s.get(url)
+                        except ConnectionError:
+                            retry = True
+                            pass
+
+                        if r.status_code == 200:
+                            response = r.json()
+                            if response["s"] != "no_data":
+                                prev_prec = (
+                                    100.0
+                                    * (response["c"][1] - response["c"][0])
+                                    / response["c"][0]
+                                )
+                                if (
+                                    config.max_share_price
+                                    > response["c"][1]
+                                    > config.min_share_price
+                                    and response["v"][0] * response["c"][0]
+                                    > config.min_last_dv
+                                    and prev_prec > config.today_change_percent
+                                ):
+                                    symbols.append(symbol)
+                                    tlog(
+                                        f"collected {len(symbols)}/{config.finnhub_websocket_limit}"
+                                    )
+                                    if (
+                                        len(symbols)
+                                        == config.finnhub_websocket_limit
+                                    ):
+                                        break
+
+                        elif r.status_code == 429:
+                            tlog(
+                                f"{tradable_symbols.index(symbol)}/{len(tradable_symbols)} API limit: ({r.text})"
+                            )
+                            time.sleep(30)
+                            retry = True
+                        else:
+                            print(r.status_code, r.text)
+                except IndexError as e:
+                    pass
+
+    except KeyboardInterrupt:
+        tlog("KeyboardInterrupt")
+        pass
+
+    tlog(f"loaded {len(symbols)} from Finnhub")
+    return symbols
+
+
+def get_polygon_tickers(data_api: tradeapi) -> List[Ticker]:
     """get all tickers"""
 
-    tlog("Getting current ticker data...")
+    tlog("get_polygon_tickers(): Getting current ticker data...")
     try:
         max_retries = 50
         while max_retries > 0:
