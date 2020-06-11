@@ -27,6 +27,8 @@ minute_history: Dict[str, df] = {}
 
 
 def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
+
+    tlog(f"Loading {len(symbols)} tickers historic data from Finnhub")
     nyc = timezone(NY := "America/New_York")
     _from = datetime.today().astimezone(nyc) - timedelta(days=30)
     _from = _from.replace(hour=9, minute=29)
@@ -35,6 +37,7 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
     minute_history: Dict[str, df] = {}
     with requests.Session() as s:
         try:
+            c = 0
             for symbol in symbols:
                 retry = True
                 while retry:
@@ -61,11 +64,13 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
                                     for item in response["t"]
                                 ],
                             )
+                            c += 1
                             _df["vwap"] = 0.0
                             _df["average"] = 0.0
                             minute_history[symbol] = _df
-
-                            print(minute_history[symbol])
+                            tlog(
+                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} ({c}/{len(symbols)})"
+                            )
                     elif r.status_code == 429:
                         tlog(
                             f"{symbols.index(symbol)}/{len(symbols)} API limit: ({r.text})"

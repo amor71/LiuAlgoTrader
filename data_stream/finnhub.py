@@ -116,7 +116,6 @@ class FinnhubStreaming(StreamingBase):
                     _msg = _msg.decode("utf-8")
                 msg = json.loads(_msg)
 
-                print(msg)
                 event = msg.get("type")
                 if event == "ping":
                     continue
@@ -218,4 +217,3 @@ class FinnhubStreaming(StreamingBase):
             "totalvolume": market_data.volume_today[symbol],
         }
         queue.put(json.dumps(payload))
-        print(f"{symbol}[{when}]  {data}")

@@ -8,6 +8,7 @@ import sys
 import time
 import uuid
 from datetime import datetime
+from math import ceil
 from typing import List
 
 import alpaca_trade_api as tradeapi
@@ -138,7 +139,9 @@ if __name__ == "__main__":
         unique_id=uid,
     )
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "", ["finnhub"])
+        opts, args = getopt.getopt(
+            sys.argv[1:], "", ["finnhub", "finnhub-history"]
+        )
     except getopt.GetoptError:
         print(f"usage: {sys.argv[0]} --finnhub --finnhub-history")
         sys.exit(0)
@@ -223,8 +226,8 @@ if __name__ == "__main__":
             mp.set_start_method("spawn")
 
             # Consumers first
-            _num_consumer_processes = (
-                int(len(symbols) / config.num_consumer_processes_ratio) + 1
+            _num_consumer_processes = ceil(
+                1.0 * len(symbols) / config.num_consumer_processes_ratio
             )
             queues: List[mp.Queue] = [
                 mp.Queue() for i in range(_num_consumer_processes)
