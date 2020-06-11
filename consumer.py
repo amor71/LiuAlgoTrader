@@ -193,14 +193,17 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.partial_fills[order.symbol] = 0
     trading_data.positions[order.symbol] += qty
 
+    indicators = (
+        trading_data.buy_indicators[order.symbol]
+        if order.side == "buy"
+        else trading_data.sell_indicators[order.symbol]
+    )
     await save(
         order.symbol,
         new_qty,
         trading_data.open_orders.get(order.symbol)[1],
         float(order.filled_avg_price),
-        trading_data.buy_indicators[order.symbol]
-        if order.side == "buy"
-        else trading_data.sell_indicators[order.symbol],
+        indicators if indicators else "",
         order.filled_at,
     )
 

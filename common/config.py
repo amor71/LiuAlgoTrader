@@ -9,7 +9,9 @@ from typing import List
 paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
-
+finnhub_api_key = os.getenv("FINNHUB_API_KEY")
+finnhub_base_url = os.getenv("FINNHUB_BASE_URL")
+finnhub_websocket_limit = 50
 #
 # Execution details (env variable)
 #
@@ -59,7 +61,7 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False
+bypass_market_schedule: bool = True
 
 # performance parameters
 num_consumer_processes_ratio: int = 45
