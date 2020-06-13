@@ -141,7 +141,9 @@ async def run(
         tlog("main Ploygin consumer task completed ")
 
 
-async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
+async def teardown_task(
+    tz: DstTzInfo, ws: List[StreamConn], tasks: List[asyncio.Task]
+) -> None:
     tlog("teardown_task() starting")
     dt = datetime.today().astimezone(tz)
     to_market_close = (
@@ -158,6 +160,16 @@ async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
         tlog("teardown closing web-sockets")
         for w in ws:
             await w.close()
+
+        for task in tasks:
+            tlog(
+                "teardown_task(): requesting task {task.get_name()} to cancel"
+            )
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                tlog("teardown_task(): task is cancelled now")
 
         asyncio.get_running_loop().stop()
     finally:
@@ -210,7 +222,11 @@ async def producer_async_main(
     )
 
     tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"), [data_ws])
+        teardown_task(
+            timezone("America/New_York"),
+            [data_ws],
+            [trade_updates_task, main_task],
+        )
     )
 
     await asyncio.gather(
