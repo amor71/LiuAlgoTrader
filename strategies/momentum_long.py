@@ -139,7 +139,11 @@ class MomentumLong(Strategy):
                             supports = await find_supports(
                                 symbol, self.name, data.close, minute_history
                             )
-                            if resistance is None or resistance == []:
+                            if (
+                                resistance is None
+                                or resistance == []
+                                or data.close == resistance[0]
+                            ):
                                 tlog(
                                     f"[{self.name}]no resistance for {symbol} -> skip buy"
                                 )

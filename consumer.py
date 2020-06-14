@@ -45,7 +45,7 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
 
     tlog(f"tear-down task waiting for market close: {to_market_close}")
     try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 10)
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
     except asyncio.CancelledError:
         tlog("teardown_task() cancelled during sleep")
     else:
