@@ -79,6 +79,20 @@ class MomentumLong(Strategy):
             # Get the change since yesterday's market close
             if data.close > high_15m:  # and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
+
+                last_30_max_close = minute_history[-30:]["close"].max()
+                last_30_min_close = minute_history[-30:]["close"].max()
+
+                if (
+                    last_30_max_close - last_30_min_close
+                ) / last_30_min_close > 0.03:
+                    tlog(
+                        f"[{self.name}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
+                    )
+                    cool_down[symbol] = now.replace(
+                        second=0, microsecond=0
+                    ) + timedelta(minutes=15)
+
                 macds = MACD(
                     minute_history["close"]
                     .dropna()
@@ -152,6 +166,10 @@ class MomentumLong(Strategy):
                                 )
                                 return False
 
+                            if resistance[0] - data.close < 0.05:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
+                                )
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
                             ) < 0.8:
