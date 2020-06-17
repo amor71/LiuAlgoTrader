@@ -92,6 +92,7 @@ class MomentumLong(Strategy):
                     cool_down[symbol] = now.replace(
                         second=0, microsecond=0
                     ) + timedelta(minutes=15)
+                    return False
 
                 macds = MACD(
                     minute_history["close"]
@@ -170,6 +171,7 @@ class MomentumLong(Strategy):
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
                                 )
+                                return False
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
                             ) < 0.8:
