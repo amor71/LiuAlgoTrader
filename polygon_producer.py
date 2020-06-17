@@ -151,13 +151,17 @@ async def teardown_task(
         if config.market_close > dt
         else timedelta(hours=24) + (config.market_close - dt)
     )
-    tlog(f"tear-down task waiting for market close: {to_market_close}")
+    tlog(
+        f"poylgon_producer tear-down task waiting for market close: {to_market_close}"
+    )
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
 
-        tlog("teardown closing web-sockets")
+        tlog("poylgon_producer teardown closing web-sockets")
         for w in ws:
             await w.close()
+
+        tlog("poylgon_producer teardown closing tasks")
 
         for task in tasks:
             tlog(
