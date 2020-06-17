@@ -144,7 +144,7 @@ async def run(
 async def teardown_task(
     tz: DstTzInfo, ws: List[StreamConn], tasks: List[asyncio.Task]
 ) -> None:
-    tlog("teardown_task() starting")
+    tlog("poylgon_producer teardown_task() starting")
     dt = datetime.today().astimezone(tz)
     to_market_close = (
         config.market_close - dt
