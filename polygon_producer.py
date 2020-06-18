@@ -249,10 +249,14 @@ async def producer_async_main(
 
 
 def polygon_producer_main(
-    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
+    queues: List[Queue],
+    symbols: List[str],
+    queue_id_hash: Dict[str, int],
+    market_close: datetime,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
+        config.market_close = market_close
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
