@@ -146,14 +146,22 @@ async def teardown_task(
 ) -> None:
     tlog("poylgon_producer teardown_task() starting")
     dt = datetime.today().astimezone(tz)
-    to_market_close = (
-        config.market_close - dt
-        if config.market_close > dt
-        else timedelta(hours=24) + (config.market_close - dt)
-    )
-    tlog(
-        f"poylgon_producer tear-down task waiting for market close: {to_market_close}"
-    )
+    to_market_close: timedelta
+    try:
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        )
+        tlog(
+            f"poylgon_producer tear-down task waiting for market close: {to_market_close}"
+        )
+    except Exception as e:
+        tlog(
+            f"poylgon_producer - exception of type {type(e).__name__} with args {e.args}"
+        )
+        return
+
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
 
