@@ -268,7 +268,7 @@ if __name__ == "__main__":
             else:
                 producer = mp.Process(
                     target=polygon_producer_main,
-                    args=(queues, symbols, q_id_hash),
+                    args=(queues, symbols, q_id_hash, config.market_close),
                 )
                 producer.start()
 
