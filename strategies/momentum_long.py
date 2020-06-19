@@ -149,10 +149,10 @@ class MomentumLong(Strategy):
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
                             )
                             resistance = await find_resistances(
-                                symbol, self.name, data.close, minute_history
+                                symbol, self.name, data.open, minute_history
                             )
                             supports = await find_supports(
-                                symbol, self.name, data.close, minute_history
+                                symbol, self.name, data.open, minute_history
                             )
                             if (
                                 resistance is None
