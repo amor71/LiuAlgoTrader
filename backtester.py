@@ -6,7 +6,6 @@ import uuid
 import pygit2
 
 from common import config
-from common.tlog import tlog
 
 
 def get_batch_list():

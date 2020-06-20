@@ -31,7 +31,7 @@ async def end_time(reason: str):
     for s in trading_data.strategies:
         tlog(f"updating end time for strategy {s.name}")
         await s.algo_run.update_end_time(
-            pool=trading_data.db_conn_pool, end_reason=reason
+            pool=config.db_conn_pool, end_reason=reason
         )
 
 
@@ -131,7 +131,7 @@ async def save(
     )
 
     await db_trade.save(
-        trading_data.db_conn_pool,
+        config.db_conn_pool,
         str(now),
         trading_data.stop_prices[symbol],
         trading_data.target_prices[symbol],
@@ -498,7 +498,7 @@ async def load_current_long_positions(
                     indicators,
                     prev_run_id,
                 ) = await NewTrade.load_latest_long(
-                    trading_data.db_conn_pool, symbol
+                    config.db_conn_pool, symbol
                 )
 
                 trading_data.positions[symbol] = int(position.qty)

@@ -15,7 +15,7 @@ class Strategy:
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
 
     async def create(self):
-        await self.algo_run.save(pool=trading_data.db_conn_pool)
+        await self.algo_run.save(pool=config.db_conn_pool)
 
     async def run(
         self, symbol: str, position: int, minute_history: df, now: datetime
