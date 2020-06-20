@@ -1,8 +1,8 @@
 requests==2.24.0
 deprecated==1.2.10
 urllib3<1.25
-numpy==1.18.5
-numpy==1.18.5
+numpy==1.19.0
+numpy==1.19.0
 mypy==0.781
 black==19.10b0
 flake8==3.8.3
