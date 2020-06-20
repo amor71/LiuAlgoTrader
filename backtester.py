@@ -1,15 +1,40 @@
+import asyncio
 import getopt
 import os
+import pprint
 import sys
-import uuid
+import traceback
 
 import pygit2
 
 from common import config
+from common.database import create_db_connection
+from common.decorators import timeit
+from common.tlog import tlog
+from models.algo_run import AlgoRun
 
 
 def get_batch_list():
-    pass
+    @timeit
+    async def get_batch_list_worker():
+        await create_db_connection()
+        data = await AlgoRun.get_batches()
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(data)
+
+    try:
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(get_batch_list_worker())
+    except KeyboardInterrupt:
+        tlog("get_batch_list() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"get_batch_list() - exception of type {type(e).__name__} with args {e.args}"
+        )
+        traceback.print_exc()
 
 
 """
