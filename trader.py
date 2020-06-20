@@ -127,16 +127,14 @@ starting
 
 
 if __name__ == "__main__":
-    trading_data.build_label = pygit2.Repository("./").describe(
+    config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
     trading_data.filename = os.path.basename(__file__)
 
     uid = str(uuid.uuid4())
     motd(
-        filename=trading_data.filename,
-        version=trading_data.build_label,
-        unique_id=uid,
+        filename=config.filename, version=config.build_label, unique_id=uid,
     )
     try:
         opts, args = getopt.getopt(

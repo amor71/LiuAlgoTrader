@@ -2,6 +2,15 @@ import os
 from datetime import datetime
 from typing import List
 
+from asyncpg.pool import Pool
+
+#
+# Shared data
+#
+build_label: str
+filename: str
+db_conn_pool: Pool
+
 #
 # API keys
 #
@@ -61,7 +70,7 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 #
 # Bypasses
 #
-bypass_market_schedule: bool = False 
+bypass_market_schedule: bool = False
 
 # performance parameters
 num_consumer_processes_ratio: int = 75
