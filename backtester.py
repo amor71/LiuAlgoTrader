@@ -12,6 +12,7 @@ from common.database import create_db_connection
 from common.decorators import timeit
 from common.tlog import tlog
 from models.algo_run import AlgoRun
+from models.new_trades import NewTrade
 
 
 def get_batch_list():
@@ -55,6 +56,37 @@ def show_version(filename: str, version: str) -> None:
     print(f"filename:{filename}\ngit version:{version}\n")
 
 
+def backtest(batch_id: str) -> None:
+    async def backtest_run(run_id: int) -> None:
+        symbols = await NewTrade.get_run_symbols(run_id)
+        print(symbols)
+
+    @timeit
+    async def backtest_worker():
+        await create_db_connection()
+        run_list = await AlgoRun.get_batch(batch_id)
+
+        if not len(run_list):
+            print(f"can't load data for batch id {batch_id}")
+        else:
+            for run_id in run_list:
+                await backtest_run(run_id)
+
+    try:
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(backtest_worker())
+    except KeyboardInterrupt:
+        tlog("backtest() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"backtest() - exception of type {type(e).__name__} with args {e.args}"
+        )
+        traceback.print_exc()
+
+
 if __name__ == "__main__":
     config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
@@ -77,6 +109,9 @@ if __name__ == "__main__":
             elif opt in ["--batch-list", "-b"]:
                 get_batch_list()
                 break
+
+        for arg in args:
+            backtest(arg)
 
     except getopt.GetoptError as e:
         print(f"Error parsing options:{e}\n")

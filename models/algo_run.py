@@ -72,3 +72,25 @@ class AlgoRun:
                             rc[row[0]].append(list(row.values())[1:])
 
         return rc
+
+    @classmethod
+    async def get_batch(cls, batch_id: str, pool: Pool = None) -> List[int]:
+        rc: List = []
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT algo_run_id
+                        FROM algo_run
+                        WHERE batch_id = $1
+                        ORDER BY start_time DESC
+                    """,
+                    batch_id,
+                )
+
+                if rows:
+                    rc = [row[0] for row in rows]
+
+        return rc
