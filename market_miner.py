@@ -70,7 +70,7 @@ async def _update_ticker_details(ticker_info: Dict) -> None:
         sector=ticker_info["sector"],
         exchange=ticker_info["exchange"],
     )
-    if await ticker_data.save(trading_data.db_conn_pool) is False:
+    if await ticker_data.save(config.db_conn_pool) is False:
         tlog(
             f"going to wait 30 seconds and retry saving {ticker_info['name']}"
         )
