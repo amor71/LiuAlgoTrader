@@ -368,10 +368,37 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         await liquidate(symbol, symbol_position, trading_api)
 
     # run strategies
+    portfolio_value = float(trading_api.get_account().portfolio_value)
     for s in trading_data.strategies:
-        if await s.run(
-            symbol, symbol_position, market_data.minute_history[symbol], ts,
-        ):
+        do, what = await s.run(
+            symbol,
+            symbol_position,
+            market_data.minute_history[symbol],
+            ts,
+            portfolio_value,
+        )
+
+        if do:
+            if what["type"] == "limit":
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=what["qty"],
+                    side=what["side"],
+                    type="limit",
+                    time_in_force="day",
+                    limit_price=what["limit_price"],
+                )
+            else:
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=what["qty"],
+                    side=what["side"],
+                    type=what["type"],
+                    time_in_force="day",
+                )
+
+            trading_data.open_orders[symbol] = (o, what["side"])
+            trading_data.open_order_strategy[symbol] = s
             trading_data.last_used_strategy[symbol] = s
             tlog(
                 f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"

@@ -17,7 +17,12 @@ class Strategy:
         await self.algo_run.save(pool=config.db_conn_pool)
 
     async def run(
-        self, symbol: str, position: int, minute_history: df, now: datetime
+        self,
+        symbol: str,
+        position: int,
+        minute_history: df,
+        now: datetime,
+        portfolio_value: float,
     ) -> bool:
         return False
 
