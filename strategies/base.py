@@ -23,6 +23,7 @@ class Strategy:
         minute_history: df,
         now: datetime,
         portfolio_value: float,
+        debug: bool = False,
     ) -> bool:
         return False
 
