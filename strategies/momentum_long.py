@@ -25,10 +25,8 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, trading_api: tradeapi, batch_id: str):
-        super().__init__(
-            name=self.name, trading_api=trading_api, batch_id=batch_id
-        )
+    def __init__(self, batch_id: str):
+        super().__init__(name=self.name, batch_id=batch_id)
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price
@@ -55,6 +53,7 @@ class MomentumLong(Strategy):
         self, symbol: str, position: int, minute_history: df, now: datetime
     ) -> bool:
         data = minute_history.iloc[-1]
+
         if (
             await super().is_buy_time(now)
             and not position
@@ -110,6 +109,7 @@ class MomentumLong(Strategy):
                 # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
+
                 if (
                     macd1[-1].round(2) > 0
                     and macd1[-3].round(3)
