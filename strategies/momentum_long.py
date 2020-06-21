@@ -8,10 +8,8 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 from common import config
-from common.market_data import volume_today
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
-                                 open_order_strategy, open_orders,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
 from fincalcs.support_resistance import (find_resistances, find_stop,
