@@ -1,5 +1,6 @@
 import json
-from typing import Dict, List
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
@@ -12,7 +13,10 @@ class AlgoRun:
         self.strategy_name = strategy_name
         self.batch_id = batch_id
 
-    async def save(self, pool: Pool):
+    async def save(self, pool: Pool = None):
+        if not pool:
+            pool = config.db_conn_pool
+
         async with pool.acquire() as con:
             async with con.transaction():
                 self.run_id = await con.fetchval(
@@ -74,7 +78,9 @@ class AlgoRun:
         return rc
 
     @classmethod
-    async def get_batch(cls, batch_id: str, pool: Pool = None) -> List[int]:
+    async def get_batch_details(
+        cls, batch_id: str, pool: Pool = None
+    ) -> List[Tuple[int, datetime, timedelta]]:
         rc: List = []
         if not pool:
             pool = config.db_conn_pool
@@ -82,7 +88,7 @@ class AlgoRun:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT algo_run_id
+                        SELECT algo_run_id, start_time, parameters, algo_name
                         FROM algo_run
                         WHERE batch_id = $1
                         ORDER BY start_time DESC
@@ -91,6 +97,16 @@ class AlgoRun:
                 )
 
                 if rows:
-                    rc = [row[0] for row in rows]
+                    rc = [
+                        (
+                            row[0],
+                            row[1],
+                            timedelta(
+                                minutes=json.loads(row[2])["TRADE_BUY_WINDOW"]
+                            ),
+                            row[3],
+                        )
+                        for row in rows
+                    ]
 
         return rc

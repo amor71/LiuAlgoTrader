@@ -459,7 +459,7 @@ async def consumer_async_main(
     strategy_types = [MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(trading_api=trading_api, batch_id=unique_id)
+        s = strategy_type(batch_id=unique_id)
         await s.create()
 
         trading_data.strategies.append(s)

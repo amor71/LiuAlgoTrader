@@ -4,15 +4,22 @@ import os
 import pprint
 import sys
 import traceback
+import uuid
+from datetime import datetime, timedelta
 
+import alpaca_trade_api as tradeapi
+import pandas as pd
 import pygit2
+import pytz
 
-from common import config
+from common import config, market_data
 from common.database import create_db_connection
 from common.decorators import timeit
 from common.tlog import tlog
 from models.algo_run import AlgoRun
 from models.new_trades import NewTrade
+from strategies.base import Strategy
+from strategies.momentum_long import MomentumLong
 
 
 def get_batch_list():
@@ -57,20 +64,97 @@ def show_version(filename: str, version: str) -> None:
 
 
 def backtest(batch_id: str) -> None:
-    async def backtest_run(run_id: int) -> None:
+    data_api: tradeapi = tradeapi.REST(
+        base_url=config.prod_base_url,
+        key_id=config.prod_api_key_id,
+        secret_key=config.prod_api_secret,
+    )
+    uid = str(uuid.uuid4())
+
+    async def backtest_run(
+        run_id: int, start: datetime, duration: timedelta, strategy: str
+    ) -> None:
+        @timeit
+        async def backtest_symbol(
+            new_run_id: int, strategy: Strategy, symbol: str
+        ) -> None:
+            est = pytz.timezone("US/Eastern")
+            start_time = pytz.utc.localize(start).astimezone(est)
+            print(
+                f"* Starting back-testing of {symbol} from {str(start_time)} duration {duration}"
+            )
+
+            # load historical data
+            symbol_data = data_api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "minute",
+                _from=str(start - timedelta(days=10)),
+                to=str(start + timedelta(days=1)),
+            ).df
+            symbol_data["vwap"] = 0.0
+            symbol_data["average"] = 0.0
+
+            market_data.minute_history[symbol] = symbol_data
+            print(
+                f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
+            )
+
+            new_now = start_time
+            position: int = 0
+            while new_now < start_time + duration:
+                minute_history_index = symbol_data["close"].index.get_loc(
+                    new_now, method="nearest"
+                )
+                price = symbol_data["close"][minute_history_index]
+                should_buy = await strategy.run(
+                    symbol,
+                    position,
+                    symbol_data[:minute_history_index],
+                    pd.Timestamp(new_now, tz="America/New_York", unit="ms"),
+                )
+                if should_buy:
+                    print(
+                        f"BUY {symbol} should_buy at {new_now} price {price}"
+                    )
+
+                new_now += timedelta(minutes=1)
+
         symbols = await NewTrade.get_run_symbols(run_id)
-        print(symbols)
+        if len(symbols) > 0:
+
+            est = pytz.timezone("US/Eastern")
+            start_time = pytz.utc.localize(start).astimezone(est)
+            config.market_open = start_time.replace(hour=9, minute=30)
+            config.market_close = start_time.replace(hour=16, minute=0)
+            config.trade_buy_window = duration.seconds / 60
+            s: Strategy
+            if strategy == "momentum_long":
+                s = MomentumLong(uid)
+            else:
+                raise Exception("Not Implemented Yet")
+
+            new_run = AlgoRun(strategy, uid)
+            await new_run.save()
+
+            for symbol in symbols:
+                await backtest_symbol(new_run.run_id, s, symbol)
 
     @timeit
     async def backtest_worker():
         await create_db_connection()
-        run_list = await AlgoRun.get_batch(batch_id)
+        run_details = await AlgoRun.get_batch_details(batch_id)
 
-        if not len(run_list):
+        if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
-            for run_id in run_list:
-                await backtest_run(run_id)
+            for run in run_details:
+                await backtest_run(
+                    run_id=run[0],
+                    start=run[1],
+                    duration=run[2],
+                    strategy=run[3],
+                )
 
     try:
         if not asyncio.get_event_loop().is_closed():
@@ -85,6 +169,9 @@ def backtest(batch_id: str) -> None:
             f"backtest() - exception of type {type(e).__name__} with args {e.args}"
         )
         traceback.print_exc()
+    finally:
+        print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+        print(f"new batch-id: {uid}")
 
 
 if __name__ == "__main__":
