@@ -54,6 +54,7 @@ class MomentumLong(Strategy):
         minute_history: df,
         now: datetime,
         portfolio_value: float,
+        debug: bool = False,
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
 
@@ -62,13 +63,21 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
+            if debug:
+                tlog(f"[{now}]{symbol} checking buy signal")
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
+
+            if debug:
+                print(lbound, ubound)
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
+
+                if debug:
+                    print(minute_history[lbound:ubound])
             except Exception as e:
                 error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
@@ -78,12 +87,19 @@ class MomentumLong(Strategy):
                 )
                 return False, {}
 
+            if debug:
+                print(high_15m)
             # Get the change since yesterday's market close
             if data.close > high_15m:  # and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
 
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].max()
+
+                if debug:
+                    tlog(
+                        f"[{now}]{symbol} {data.close }above 15 minute high {high_15m}"
+                    )
 
                 if (
                     last_30_max_close - last_30_min_close
@@ -113,6 +129,19 @@ class MomentumLong(Strategy):
                 macd1 = macds[0]
                 macd_signal = macds[1]
 
+                if debug:
+                    if macd1[-1].round(2) > 0:
+                        tlog(f"[{now}]{symbol} MACD > 0")
+                    if (
+                        macd1[-3].round(3)
+                        < macd1[-2].round(3)
+                        < macd1[-1].round(3)
+                    ):
+                        tlog(f"[{now}]{symbol} MACD trending")
+                    if macd1[-1] > macd_signal[-1]:
+                        tlog(f"[{now}]{symbol} MACD above signal")
+                    if data.close > data.open:
+                        tlog(f"[{now}]{symbol} above open")
                 if (
                     macd1[-1].round(2) > 0
                     and macd1[-3].round(3)

@@ -6,6 +6,7 @@ import sys
 import traceback
 import uuid
 from datetime import datetime, timedelta
+from typing import List
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -51,10 +52,15 @@ starting
 
 
 def show_usage():
-    print(f"usage: {sys.argv[0]} -b -v --batch-list --version\n")
+    print(
+        f"usage: {sys.argv[0]} -b -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL\n"
+    )
     print("-v, --version\t\tDetailed version details")
     print(
         "-b, --batch-list\tDisplay list of trading sessions, list limited to last 30 days"
+    )
+    print(
+        "-d, --debug-symbol\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
 
 
@@ -63,7 +69,7 @@ def show_version(filename: str, version: str) -> None:
     print(f"filename:{filename}\ngit version:{version}\n")
 
 
-def backtest(batch_id: str) -> None:
+def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -83,19 +89,24 @@ def backtest(batch_id: str) -> None:
             est = pytz.timezone("US/Eastern")
             start_time = pytz.utc.localize(start).astimezone(est)
             print(
-                f"* Starting back-testing of {symbol} from {str(start_time)} duration {duration}"
+                f"--> back-testing {symbol} from {str(start_time)} duration {duration}"
             )
+            if debug_symbols and symbol in debug_symbols:
+                print("--> using DEBUG mode")
 
             # load historical data
             symbol_data = data_api.polygon.historic_agg_v2(
                 symbol,
                 1,
                 "minute",
-                _from=str(start - timedelta(days=10)),
+                _from=str(start - timedelta(days=9)),
                 to=str(start + timedelta(days=1)),
             ).df
             symbol_data["vwap"] = 0.0
             symbol_data["average"] = 0.0
+
+            if debug_symbols and symbol in debug_symbols:
+                tlog(symbol_data)
 
             market_data.minute_history[symbol] = symbol_data
             print(
@@ -115,6 +126,7 @@ def backtest(batch_id: str) -> None:
                     symbol_data[:minute_history_index],
                     pd.Timestamp(new_now, unit="ms"),
                     portfolio_value,
+                    debug=debug_symbols and symbol in debug_symbols,
                 )
                 if do:
                     if what["side"] == "buy":
@@ -129,7 +141,9 @@ def backtest(batch_id: str) -> None:
                         qty=int(float(what["qty"])),
                         operation=what["side"],
                         price=price,
-                        indicators=trading_data.buy_indicators[symbol],
+                        indicators=trading_data.buy_indicators[symbol]
+                        if what["side"] == "buy"
+                        else trading_data.sell_indicators[symbol],
                     )
 
                     await db_trade.save(
@@ -147,8 +161,12 @@ def backtest(batch_id: str) -> None:
 
             est = pytz.timezone("US/Eastern")
             start_time = pytz.utc.localize(start).astimezone(est)
-            config.market_open = start_time.replace(hour=9, minute=30)
-            config.market_close = start_time.replace(hour=16, minute=0)
+            config.market_open = start_time.replace(
+                hour=9, minute=30, second=0, microsecond=0
+            )
+            config.market_close = start_time.replace(
+                hour=16, minute=0, second=0, microsecond=0
+            )
             config.trade_buy_window = duration.seconds / 60
             s: Strategy
             if strategy == "momentum_long":
@@ -208,19 +226,21 @@ if __name__ == "__main__":
 
     try:
         opts, args = getopt.getopt(
-            sys.argv[1:], "vb", ["batch-list", "version"]
+            sys.argv[1:], "vb:d:", ["batch-list", "version", "debug-symbol="]
         )
-
+        debug_symbols = []
         for opt, arg in opts:
-            if opt in ["-v", "--version"]:
+            if opt in ("-v", "--version"):
                 show_version(config.filename, config.build_label)
                 break
-            elif opt in ["--batch-list", "-b"]:
+            elif opt in ("--batch-list", "-b"):
                 get_batch_list()
                 break
+            elif opt in ("--debug-symbol", "-d"):
+                debug_symbols.append(arg)
 
         for arg in args:
-            backtest(arg)
+            backtest(arg, debug_symbols)
 
     except getopt.GetoptError as e:
         print(f"Error parsing options:{e}\n")

@@ -55,10 +55,16 @@ def get_trading_windows(tz, api):
         tlog(f"which is not today {today}")
         return None, None
     market_open = today.replace(
-        hour=calendar.open.hour, minute=calendar.open.minute, second=0
+        hour=calendar.open.hour,
+        minute=calendar.open.minute,
+        second=0,
+        microsecond=0,
     )
     market_close = today.replace(
-        hour=calendar.close.hour, minute=calendar.close.minute, second=0
+        hour=calendar.close.hour,
+        minute=calendar.close.minute,
+        second=0,
+        microsecond=0,
     )
     return market_open, market_close
 
