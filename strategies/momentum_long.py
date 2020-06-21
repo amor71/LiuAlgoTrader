@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
+from typing import Dict, Tuple
 
-import alpaca_trade_api as tradeapi
 import numpy as np
 from google.cloud import error_reporting
 from pandas import DataFrame as df
@@ -50,8 +50,13 @@ class MomentumLong(Strategy):
         return False
 
     async def run(
-        self, symbol: str, position: int, minute_history: df, now: datetime
-    ) -> bool:
+        self,
+        symbol: str,
+        position: int,
+        minute_history: df,
+        now: datetime,
+        portfolio_value: float,
+    ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
 
         if (
@@ -73,7 +78,7 @@ class MomentumLong(Strategy):
                 tlog(
                     f"[{self.name}] error aggregation {e} - maybe should use nearest?"
                 )
-                return False
+                return False, {}
 
             # Get the change since yesterday's market close
             if data.close > high_15m:  # and volume_today[symbol] > 30000:
@@ -91,7 +96,7 @@ class MomentumLong(Strategy):
                     cool_down[symbol] = now.replace(
                         second=0, microsecond=0
                     ) + timedelta(minutes=15)
-                    return False
+                    return False, {}
 
                 macds = MACD(
                     minute_history["close"]
@@ -165,13 +170,13 @@ class MomentumLong(Strategy):
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
-                                return False
+                                return False, {}
 
                             if resistance[0] - data.close < 0.05:
                                 tlog(
                                     f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
                                 )
-                                return False
+                                return False, {}
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
                             ) < 0.8:
@@ -181,7 +186,7 @@ class MomentumLong(Strategy):
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
-                                return False
+                                return False, {}
 
                             tlog(
                                 f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {resistance[0]}"
@@ -198,9 +203,6 @@ class MomentumLong(Strategy):
                                 + (data.close - stop_prices[symbol]) * 2
                             )
                             symbol_resistance[symbol] = resistance[0]
-                            portfolio_value = float(
-                                self.trading_api.get_account().portfolio_value
-                            )
                             shares_to_buy = (
                                 portfolio_value
                                 * config.risk
@@ -241,17 +243,16 @@ class MomentumLong(Strategy):
                                             )
                                         ),
                                     }
-                                    o = self.trading_api.submit_order(
-                                        symbol=symbol,
-                                        qty=str(shares_to_buy),
-                                        side="buy",
-                                        type="limit",
-                                        time_in_force="day",
-                                        limit_price=str(data.close),
+
+                                    return (
+                                        True,
+                                        {
+                                            "side": "buy",
+                                            "qty": str(shares_to_buy),
+                                            "type": "limit",
+                                            "limit_price": str(data.close),
+                                        },
                                     )
-                                    open_orders[symbol] = (o, "buy")
-                                    open_order_strategy[symbol] = self
-                                    return True
 
                                 except Exception:
                                     error_logger.report_exception()
@@ -348,31 +349,30 @@ class MomentumLong(Strategy):
                         tlog(
                             f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
                         )
-                        o = self.trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(position),
-                            side="sell",
-                            type="market",
-                            time_in_force="day",
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(position),
+                                "type": "market",
+                            },
                         )
                     else:
                         qty = int(position / 2) if position > 1 else 1
                         tlog(
                             f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
-                        o = self.trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(qty),
-                            side="sell",
-                            type="limit",
-                            time_in_force="day",
-                            limit_price=str(data.close),
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(position),
+                                "type": "limit",
+                                "limit_price": str(data.close),
+                            },
                         )
 
-                    open_orders[symbol] = (o, "sell")
-                    open_order_strategy[symbol] = self
-                    return True
                 except Exception:
                     error_logger.report_exception()
 
-        return False
+        return False, {}

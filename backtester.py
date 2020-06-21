@@ -12,7 +12,7 @@ import pandas as pd
 import pygit2
 import pytz
 
-from common import config, market_data
+from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.decorators import timeit
 from common.tlog import tlog
@@ -69,6 +69,8 @@ def backtest(batch_id: str) -> None:
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
+    portfolio_value: float = 100000.0
+
     uid = str(uuid.uuid4())
 
     async def backtest_run(
@@ -107,16 +109,36 @@ def backtest(batch_id: str) -> None:
                     new_now, method="nearest"
                 )
                 price = symbol_data["close"][minute_history_index]
-                should_buy = await strategy.run(
+                do, what = await strategy.run(
                     symbol,
                     position,
                     symbol_data[:minute_history_index],
-                    pd.Timestamp(new_now, tz="America/New_York", unit="ms"),
+                    pd.Timestamp(new_now, unit="ms"),
+                    portfolio_value,
                 )
-                if should_buy:
-                    print(
-                        f"BUY {symbol} should_buy at {new_now} price {price}"
+                if do:
+                    if what["side"] == "buy":
+                        position += int(float(what["qty"]))
+                        trading_data.latest_cost_basis[symbol] = price
+                    else:
+                        position -= int(float(what["qty"]))
+
+                    db_trade = NewTrade(
+                        algo_run_id=new_run_id,
+                        symbol=symbol,
+                        qty=int(float(what["qty"])),
+                        operation=what["side"],
+                        price=price,
+                        indicators=trading_data.buy_indicators[symbol],
                     )
+
+                    await db_trade.save(
+                        config.db_conn_pool,
+                        str(new_now),
+                        trading_data.stop_prices[symbol],
+                        trading_data.target_prices[symbol],
+                    )
+                    print(what)
 
                 new_now += timedelta(minutes=1)
 
