@@ -1,4 +1,5 @@
 requests==2.23.0
+iso8601
 deprecated==1.2.10
 urllib3<1.25
 numpy==1.18.5
