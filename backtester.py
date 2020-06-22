@@ -86,7 +86,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
         async def backtest_symbol(
             new_run_id: int, strategy: Strategy, symbol: str
         ) -> None:
-            est = pytz.timezone("US/Eastern")
+            est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
             if start_time.second > 0:
                 start_time = start_time.replace(second=0, microsecond=0)
@@ -101,8 +101,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 symbol,
                 1,
                 "minute",
-                _from=str(start - timedelta(days=8)),
-                to=str(start + timedelta(days=1)),
+                _from=str(start_time - timedelta(days=8)),
+                to=str(start_time + timedelta(days=1)),
+                limit=10000,
             ).df
             symbol_data["vwap"] = 0.0
             symbol_data["average"] = 0.0
@@ -115,18 +116,30 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
             )
 
-            new_now = start_time
             position: int = 0
+            minute_index = symbol_data["close"].index.get_loc(
+                start_time, method="nearest"
+            )
+            new_now = symbol_data.index[minute_index]
+            print(f"start time with data {new_now}")
             while new_now < start_time + duration:
-                minute_history_index = symbol_data["close"].index.get_loc(
-                    new_now, method="nearest"
-                )
-                price = symbol_data["close"][minute_history_index]
+                if symbol_data.index[minute_index] != new_now:
+                    print(
+                        "mismatch!", symbol_data.index[minute_index], new_now
+                    )
+                    print(
+                        symbol_data["close"][
+                            minute_index - 10 : minute_index + 1
+                        ]
+                    )
+                    raise Exception()
+
+                price = symbol_data["close"][minute_index]
                 do, what = await strategy.run(
                     symbol,
                     position,
-                    symbol_data[: minute_history_index + 1],
-                    pd.Timestamp(new_now, unit="ms"),
+                    symbol_data[: minute_index + 1],
+                    new_now,
                     portfolio_value,
                     debug=debug_symbols and symbol in debug_symbols,
                     backtesting=True,
@@ -157,12 +170,13 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                     )
                     print(what)
 
-                new_now += timedelta(minutes=1)
+                minute_index += 1
+                new_now = symbol_data.index[minute_index]
 
         symbols = await NewTrade.get_run_symbols(run_id)
         if len(symbols) > 0:
 
-            est = pytz.timezone("US/Eastern")
+            est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
             config.market_open = start_time.replace(
                 hour=9, minute=30, second=0, microsecond=0
@@ -170,6 +184,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             config.market_close = start_time.replace(
                 hour=16, minute=0, second=0, microsecond=0
             )
+            print(f"market_open{config.market_open}")
             config.trade_buy_window = duration.seconds / 60
             s: Strategy
             if strategy == "momentum_long":
