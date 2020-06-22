@@ -24,6 +24,7 @@ class Strategy:
         now: datetime,
         portfolio_value: float,
         debug: bool = False,
+        backtesting: bool = False,
     ) -> bool:
         return False
 
