@@ -88,6 +88,8 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
         ) -> None:
             est = pytz.timezone("US/Eastern")
             start_time = pytz.utc.localize(start).astimezone(est)
+            if start_time.second > 0:
+                start_time = start_time.replace(second=0, microsecond=0)
             print(
                 f"--> back-testing {symbol} from {str(start_time)} duration {duration}"
             )
@@ -99,7 +101,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 symbol,
                 1,
                 "minute",
-                _from=str(start - timedelta(days=9)),
+                _from=str(start - timedelta(days=8)),
                 to=str(start + timedelta(days=1)),
             ).df
             symbol_data["vwap"] = 0.0
@@ -123,10 +125,11 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 do, what = await strategy.run(
                     symbol,
                     position,
-                    symbol_data[:minute_history_index],
+                    symbol_data[: minute_history_index + 1],
                     pd.Timestamp(new_now, unit="ms"),
                     portfolio_value,
                     debug=debug_symbols and symbol in debug_symbols,
+                    backtesting=True,
                 )
                 if do:
                     if what["side"] == "buy":

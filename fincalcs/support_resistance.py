@@ -55,6 +55,36 @@ async def find_resistances(
     return None
 
 
+async def find_resistances_till_time(
+    current_value: float, minute_history: df, now
+) -> Optional[List[float]]:
+    minute_history_index = minute_history["close"].index.get_loc(
+        now, method="nearest"
+    )
+    for back_track_min in range(120, len(minute_history.index), 60):
+        series = (
+            minute_history["close"][-back_track_min:minute_history_index]
+            .dropna()
+            .between_time("9:30", "16:00")
+            .resample("5min")
+            .max()
+        ).dropna()
+
+        diff = np.diff(series.values)
+        high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+        if len(high_index) > 0:
+            local_maximas = sorted(
+                [series[i] for i in high_index if series[i] >= current_value]
+            )
+            if len(local_maximas) > 0:
+                # tlog(
+                #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
+                # )
+                return local_maximas
+
+    return None
+
+
 async def find_supports(
     symbol: str, strategy_name: str, current_value: float, minute_history: df
 ) -> Optional[List[float]]:
