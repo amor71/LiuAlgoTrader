@@ -368,14 +368,13 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         await liquidate(symbol, symbol_position, trading_api)
 
     # run strategies
-    portfolio_value = float(trading_api.get_account().portfolio_value)
     for s in trading_data.strategies:
         do, what = await s.run(
             symbol,
             symbol_position,
             market_data.minute_history[symbol],
             ts,
-            portfolio_value,
+            trading_api=trading_api,
         )
 
         if do:

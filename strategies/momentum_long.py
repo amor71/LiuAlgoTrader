@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
+import alpaca_trade_api as tradeapi
 import numpy as np
 from google.cloud import error_reporting
 from pandas import DataFrame as df
@@ -53,7 +54,8 @@ class MomentumLong(Strategy):
         position: int,
         minute_history: df,
         now: datetime,
-        portfolio_value: float,
+        portfolio_value: float = None,
+        trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
@@ -239,6 +241,17 @@ class MomentumLong(Strategy):
                                 + (data.close - stop_prices[symbol]) * 2
                             )
                             symbol_resistance[symbol] = resistance[0]
+
+                            if portfolio_value is None:
+                                if trading_api:
+                                    portfolio_value = float(
+                                        trading_api.get_account().portfolio_value
+                                    )
+                                else:
+                                    raise Exception(
+                                        "MomentumLong.run(): both portfolio_value and trading_api can't be None"
+                                    )
+
                             shares_to_buy = (
                                 portfolio_value
                                 * config.risk
