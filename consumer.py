@@ -565,7 +565,7 @@ def consumer_main(
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
-    trading_data.build_label = pygit2.Repository("./").describe(
+    config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
 

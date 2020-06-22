@@ -73,7 +73,7 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 bypass_market_schedule: bool = False
 
 # performance parameters
-num_consumer_processes_ratio: int = 75
+num_consumer_processes_ratio: int = 35
 
 # polygon parameters
 polygon_seconds_timeout = 60

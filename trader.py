@@ -136,7 +136,7 @@ if __name__ == "__main__":
     config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
-    trading_data.filename = os.path.basename(__file__)
+    config.filename = os.path.basename(__file__)
 
     uid = str(uuid.uuid4())
     motd(
