@@ -22,7 +22,8 @@ class Strategy:
         position: int,
         minute_history: df,
         now: datetime,
-        portfolio_value: float,
+        portfolio_value: float = None,
+        trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> bool:
