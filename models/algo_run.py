@@ -13,7 +13,7 @@ class AlgoRun:
         self.strategy_name = strategy_name
         self.batch_id = batch_id
 
-    async def save(self, pool: Pool = None):
+    async def save(self, pool: Pool = None, env: str = None):
         if not pool:
             pool = config.db_conn_pool
 
@@ -26,7 +26,7 @@ class AlgoRun:
                         RETURNING algo_run_id
                     """,
                     self.strategy_name,
-                    config.env,
+                    env if env else config.env,
                     config.build_label,
                     json.dumps(
                         {

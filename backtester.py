@@ -193,7 +193,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 raise Exception("Not Implemented Yet")
 
             new_run = AlgoRun(strategy, uid)
-            await new_run.save()
+            await new_run.save(env="BACKTEST")
 
             for symbol in symbols:
                 await backtest_symbol(new_run.run_id, s, symbol)
