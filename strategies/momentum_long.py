@@ -12,8 +12,7 @@ from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
-from fincalcs.support_resistance import (find_resistances,
-                                         find_resistances_till_time, find_stop,
+from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
 
 from .base import Strategy
@@ -65,8 +64,6 @@ class MomentumLong(Strategy):
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-            if debug:
-                tlog(f"[{now}]{symbol} checking buy signal")
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=16)
@@ -184,11 +181,19 @@ class MomentumLong(Strategy):
                             )
 
                             resistance = await find_resistances(
-                                symbol, self.name, data.open, minute_history
+                                symbol,
+                                self.name,
+                                data.close,
+                                minute_history,
+                                debug,
                             )
 
                             supports = await find_supports(
-                                symbol, self.name, data.open, minute_history
+                                symbol,
+                                self.name,
+                                data.close,
+                                minute_history,
+                                debug,
                             )
                             if (
                                 resistance is None
