@@ -211,7 +211,8 @@ async def producer_async_main(
             data_ws=data_ws,
             queues=queues,
             queue_id_hash=queue_id_hash,
-        )
+        ),
+        name="main_task",
     )
 
     base_url = (
@@ -232,13 +233,14 @@ async def producer_async_main(
     )
 
     trade_updates_task = asyncio.create_task(
-        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash)
+        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash),
+        name="trade_updates_task",
     )
 
     tear_down = asyncio.create_task(
         teardown_task(
             timezone("America/New_York"),
-            [data_ws],
+            [data_ws, trade_ws],
             [trade_updates_task, main_task],
         )
     )
