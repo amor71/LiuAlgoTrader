@@ -173,7 +173,7 @@ async def teardown_task(
 
         for task in tasks:
             tlog(
-                "teardown_task(): requesting task {task.get_name()} to cancel"
+                f"teardown_task(): requesting task {task.get_name()} to cancel"
             )
             task.cancel()
             try:
