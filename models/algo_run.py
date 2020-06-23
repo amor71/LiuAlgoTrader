@@ -15,7 +15,7 @@ class AlgoRun:
 
     async def save(
         self, pool: Pool = None, env: str = None, ref_algo_run_id: int = None
-    ):
+    ) -> None:
         if not pool:
             pool = config.db_conn_pool
 
@@ -27,26 +27,40 @@ class AlgoRun:
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING algo_run_id
                         """
+
+                    self.run_id = await con.fetchval(
+                        q,
+                        self.strategy_name,
+                        env if env else config.env,
+                        config.build_label,
+                        json.dumps(
+                            {
+                                "TRADE_BUY_WINDOW": config.trade_buy_window,
+                                "DSN": config.dsn,
+                            }
+                        ),
+                        self.batch_id,
+                    )
                 else:
                     q = """
                         INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id, ref_algo_run)
                         VALUES ($1, $2, $3, $4, $5, $6)
                         RETURNING algo_run_id
                         """
-                self.run_id = await con.fetchval(
-                    q,
-                    self.strategy_name,
-                    env if env else config.env,
-                    config.build_label,
-                    json.dumps(
-                        {
-                            "TRADE_BUY_WINDOW": config.trade_buy_window,
-                            "DSN": config.dsn,
-                        }
-                    ),
-                    self.batch_id,
-                    ref_algo_run_id,
-                )
+                    self.run_id = await con.fetchval(
+                        q,
+                        self.strategy_name,
+                        env if env else config.env,
+                        config.build_label,
+                        json.dumps(
+                            {
+                                "TRADE_BUY_WINDOW": config.trade_buy_window,
+                                "DSN": config.dsn,
+                            }
+                        ),
+                        self.batch_id,
+                        ref_algo_run_id,
+                    )
 
     async def update_end_time(self, pool: Pool, end_reason: str):
         async with pool.acquire() as con:
