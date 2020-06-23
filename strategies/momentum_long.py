@@ -71,14 +71,14 @@ class MomentumLong(Strategy):
             ubound = lbound + timedelta(minutes=16)
 
             if debug:
-                print(lbound, ubound)
+                tlog(f"15 schedule {lbound}/{ubound}")
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
 
                 if debug:
-                    print(minute_history[lbound:ubound])
+                    tlog(f"{minute_history[lbound:ubound]}")
             except Exception as e:
                 error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
@@ -89,7 +89,8 @@ class MomentumLong(Strategy):
                 return False, {}
 
             if debug:
-                print(high_15m)
+                tlog(f"15 minutes high:{high_15m}")
+
             # Get the change since yesterday's market close
             if data.close > high_15m:  # and volume_today[symbol] > 30000:
                 # check for a positive, increasing MACD
@@ -99,7 +100,7 @@ class MomentumLong(Strategy):
 
                 if debug:
                     tlog(
-                        f"[{now}]{symbol} {data.close }above 15 minute high {high_15m}"
+                        f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
                     )
 
                 if (
@@ -143,6 +144,10 @@ class MomentumLong(Strategy):
                         tlog(f"[{now}]{symbol} MACD above signal")
                     if data.close > data.open:
                         tlog(f"[{now}]{symbol} above open")
+                    else:
+                        tlog(
+                            f"[{now}]{symbol} close {data.close} BELOW open {data.open}"
+                        )
                 if (
                     macd1[-1].round(2) > 0
                     and macd1[-3].round(3)
