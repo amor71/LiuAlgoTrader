@@ -59,7 +59,7 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         except asyncio.CancelledError:
             tlog("teardown_task(): tasks are cancelled now")
 
-        asyncio.get_running_loop().stop()
+        # asyncio.get_running_loop().stop()
     finally:
         tlog("tear down task done.")
 

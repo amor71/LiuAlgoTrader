@@ -122,6 +122,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             )
             new_now = symbol_data.index[minute_index]
             print(f"start time with data {new_now}")
+            price = 0.0
             while new_now < start_time + duration:
                 if symbol_data.index[minute_index] != new_now:
                     print(
@@ -172,6 +173,20 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
 
                 minute_index += 1
                 new_now = symbol_data.index[minute_index]
+            if position > 0:
+                print(f"liquidate {position}")
+                db_trade = NewTrade(
+                    algo_run_id=new_run_id,
+                    symbol=symbol,
+                    qty=int(position),
+                    operation="sell",
+                    price=price,
+                    indicators={"liquidate": 1},
+                )
+
+                await db_trade.save(
+                    config.db_conn_pool, str(new_now),
+                )
 
         symbols = await NewTrade.get_run_symbols(run_id)
         if len(symbols) > 0:
@@ -193,7 +208,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 raise Exception("Not Implemented Yet")
 
             new_run = AlgoRun(strategy, uid)
-            await new_run.save(env="BACKTEST")
+            await new_run.save(env="BACKTEST", ref_algo_run_id=run_id)
 
             for symbol in symbols:
                 await backtest_symbol(new_run.run_id, s, symbol)

@@ -13,18 +13,28 @@ class AlgoRun:
         self.strategy_name = strategy_name
         self.batch_id = batch_id
 
-    async def save(self, pool: Pool = None, env: str = None):
+    async def save(
+        self, pool: Pool = None, env: str = None, ref_algo_run_id: int = None
+    ):
         if not pool:
             pool = config.db_conn_pool
 
         async with pool.acquire() as con:
             async with con.transaction():
-                self.run_id = await con.fetchval(
-                    """
+                if not ref_algo_run_id:
+                    q = """
                         INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING algo_run_id
-                    """,
+                        """
+                else:
+                    q = """
+                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id, ref_algo_run)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                        RETURNING algo_run_id
+                        """
+                self.run_id = await con.fetchval(
+                    q,
                     self.strategy_name,
                     env if env else config.env,
                     config.build_label,
@@ -35,6 +45,7 @@ class AlgoRun:
                         }
                     ),
                     self.batch_id,
+                    ref_algo_run_id,
                 )
 
     async def update_end_time(self, pool: Pool, end_reason: str):
