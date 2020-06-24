@@ -420,7 +420,7 @@ class MomentumLong(Strategy):
                             True,
                             {
                                 "side": "sell",
-                                "qty": str(position),
+                                "qty": str(qty),
                                 "type": "limit",
                                 "limit_price": str(data.close),
                             },
