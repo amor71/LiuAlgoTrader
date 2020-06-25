@@ -55,10 +55,16 @@ def get_trading_windows(tz, api):
         tlog(f"which is not today {today}")
         return None, None
     market_open = today.replace(
-        hour=calendar.open.hour, minute=calendar.open.minute, second=0
+        hour=calendar.open.hour,
+        minute=calendar.open.minute,
+        second=0,
+        microsecond=0,
     )
     market_close = today.replace(
-        hour=calendar.close.hour, minute=calendar.close.minute, second=0
+        hour=calendar.close.hour,
+        minute=calendar.close.minute,
+        second=0,
+        microsecond=0,
     )
     return market_open, market_close
 
@@ -127,16 +133,14 @@ starting
 
 
 if __name__ == "__main__":
-    trading_data.build_label = pygit2.Repository("./").describe(
+    config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
-    trading_data.filename = os.path.basename(__file__)
+    config.filename = os.path.basename(__file__)
 
     uid = str(uuid.uuid4())
     motd(
-        filename=trading_data.filename,
-        version=trading_data.build_label,
-        unique_id=uid,
+        filename=config.filename, version=config.build_label, unique_id=uid,
     )
     try:
         opts, args = getopt.getopt(
