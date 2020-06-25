@@ -31,7 +31,7 @@ async def end_time(reason: str):
     for s in trading_data.strategies:
         tlog(f"updating end time for strategy {s.name}")
         await s.algo_run.update_end_time(
-            pool=trading_data.db_conn_pool, end_reason=reason
+            pool=config.db_conn_pool, end_reason=reason
         )
 
 
@@ -45,10 +45,8 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
 
     tlog(f"tear-down task waiting for market close: {to_market_close}")
     try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 10)
-    except asyncio.CancelledError:
-        tlog("teardown_task() cancelled during sleep")
-    else:
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
+
         tlog("tear down task starting")
         await end_time("market close")
 
@@ -59,7 +57,10 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         except asyncio.CancelledError:
             tlog("teardown_task(): tasks are cancelled now")
 
-        asyncio.get_running_loop().stop()
+    except asyncio.CancelledError:
+        tlog("teardown_task() cancelled during sleep")
+
+        # asyncio.get_running_loop().stop()
     finally:
         tlog("tear down task done.")
 
@@ -131,7 +132,7 @@ async def save(
     )
 
     await db_trade.save(
-        trading_data.db_conn_pool,
+        config.db_conn_pool,
         str(now),
         trading_data.stop_prices[symbol],
         trading_data.target_prices[symbol],
@@ -193,14 +194,17 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.partial_fills[order.symbol] = 0
     trading_data.positions[order.symbol] += qty
 
+    indicators = (
+        trading_data.buy_indicators[order.symbol]
+        if order.side == "buy"
+        else trading_data.sell_indicators[order.symbol]
+    )
     await save(
         order.symbol,
         new_qty,
         trading_data.open_orders.get(order.symbol)[1],
         float(order.filled_avg_price),
-        trading_data.buy_indicators[order.symbol]
-        if order.side == "buy"
-        else trading_data.sell_indicators[order.symbol],
+        indicators if indicators else "",
         order.filled_at,
     )
 
@@ -366,9 +370,35 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
     # run strategies
     for s in trading_data.strategies:
-        if await s.run(
-            symbol, symbol_position, market_data.minute_history[symbol], ts,
-        ):
+        do, what = await s.run(
+            symbol,
+            symbol_position,
+            market_data.minute_history[symbol],
+            ts,
+            trading_api=trading_api,
+        )
+
+        if do:
+            if what["type"] == "limit":
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=what["qty"],
+                    side=what["side"],
+                    type="limit",
+                    time_in_force="day",
+                    limit_price=what["limit_price"],
+                )
+            else:
+                o = trading_api.submit_order(
+                    symbol=symbol,
+                    qty=what["qty"],
+                    side=what["side"],
+                    type=what["type"],
+                    time_in_force="day",
+                )
+
+            trading_data.open_orders[symbol] = (o, what["side"])
+            trading_data.open_order_strategy[symbol] = s
             trading_data.last_used_strategy[symbol] = s
             tlog(
                 f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
@@ -419,10 +449,16 @@ def get_trading_windows(tz, api):
         tlog(f"which is not today {today}")
         return None, None
     market_open = today.replace(
-        hour=calendar.open.hour, minute=calendar.open.minute, second=0
+        hour=calendar.open.hour,
+        minute=calendar.open.minute,
+        second=0,
+        microsecond=0,
     )
     market_close = today.replace(
-        hour=calendar.close.hour, minute=calendar.close.minute, second=0
+        hour=calendar.close.hour,
+        minute=calendar.close.minute,
+        second=0,
+        microsecond=0,
     )
     return market_open, market_close
 
@@ -456,7 +492,7 @@ async def consumer_async_main(
     strategy_types = [MomentumLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(trading_api=trading_api, batch_id=unique_id)
+        s = strategy_type(batch_id=unique_id)
         await s.create()
 
         trading_data.strategies.append(s)
@@ -495,7 +531,7 @@ async def load_current_long_positions(
                     indicators,
                     prev_run_id,
                 ) = await NewTrade.load_latest_long(
-                    trading_data.db_conn_pool, symbol
+                    config.db_conn_pool, symbol
                 )
 
                 trading_data.positions[symbol] = int(position.qty)
@@ -529,7 +565,7 @@ def consumer_main(
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
-    trading_data.build_label = pygit2.Repository("./").describe(
+    config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
 

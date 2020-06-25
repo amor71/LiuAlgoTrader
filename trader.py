@@ -1,12 +1,14 @@
 """
 Trading strategy runner
 """
+import getopt
 import multiprocessing as mp
 import os
 import sys
 import time
 import uuid
 from datetime import datetime
+from math import ceil
 from typing import List
 
 import alpaca_trade_api as tradeapi
@@ -15,9 +17,13 @@ from google.cloud import error_reporting
 from pytz import timezone
 
 from common import config, trading_data
-from common.market_data import get_historical_data, get_tickers
+from common.market_data import (get_finnhub_tickers,
+                                get_historical_data_from_finnhub,
+                                get_historical_data_from_polygon,
+                                get_polygon_tickers)
 from common.tlog import tlog
 from consumer import consumer_main
+from finnhub_producer import finnhub_producer_main
 from polygon_producer import polygon_producer_main
 
 error_logger = error_reporting.Client()
@@ -49,10 +55,16 @@ def get_trading_windows(tz, api):
         tlog(f"which is not today {today}")
         return None, None
     market_open = today.replace(
-        hour=calendar.open.hour, minute=calendar.open.minute, second=0
+        hour=calendar.open.hour,
+        minute=calendar.open.minute,
+        second=0,
+        microsecond=0,
     )
     market_close = today.replace(
-        hour=calendar.close.hour, minute=calendar.close.minute, second=0
+        hour=calendar.close.hour,
+        minute=calendar.close.minute,
+        second=0,
+        microsecond=0,
     )
     return market_open, market_close
 
@@ -121,17 +133,33 @@ starting
 
 
 if __name__ == "__main__":
-    trading_data.build_label = pygit2.Repository("./").describe(
+    config.build_label = pygit2.Repository("./").describe(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
-    trading_data.filename = os.path.basename(__file__)
+    config.filename = os.path.basename(__file__)
 
     uid = str(uuid.uuid4())
     motd(
-        filename=trading_data.filename,
-        version=trading_data.build_label,
-        unique_id=uid,
+        filename=config.filename, version=config.build_label, unique_id=uid,
     )
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:], "", ["finnhub", "finnhub-history"]
+        )
+    except getopt.GetoptError:
+        print(f"usage: {sys.argv[0]} --finnhub --finnhub-history")
+        sys.exit(0)
+
+    use_polygon = True
+    use_finnhub = False
+    use_finnhub_history = False
+    for opt, arg in opts:
+        if opt == "--finnhub":
+            use_finnhub = True
+            print("Using finnhub as data-source")
+        if opt == "--finnhub-history":
+            use_finnhub_history = True
+            print("Using finnhub as data-source for historic data ")
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -140,14 +168,19 @@ if __name__ == "__main__":
     )
 
     if ready_to_start(data_api):
-        tickers = get_tickers(data_api=data_api)
+        if use_finnhub:
+            tickers = get_finnhub_tickers(data_api=data_api)
+        elif use_polygon:
+            tickers = get_polygon_tickers(data_api=data_api)
+        else:
+            tlog("missing data source for tickers, exiting")
+            sys.exit(0)
 
         # Update initial state with information from tickers
-        for ticker in tickers:
-            symbol = ticker.ticker
-            # prev_closes[symbol] = ticker.prevDay["c"]
-            # volume_today[symbol] = ticker.day["v"]
-        symbols = [ticker.ticker for ticker in tickers]
+        symbols = [
+            ticker if isinstance(ticker, str) else ticker.ticker
+            for ticker in tickers
+        ]
 
         # add open positions
         base_url = (
@@ -179,19 +212,26 @@ if __name__ == "__main__":
                     tlog(f"added existing open position in {position.symbol}")
         tlog(f"Tracking {len(symbols)} symbols")
 
-        minute_history = get_historical_data(
-            api=data_api,
-            symbols=symbols,
-            max_tickers=min(config.total_tickers, len(symbols)),
-        )
+        if use_finnhub or use_finnhub_history:
+            minute_history = get_historical_data_from_finnhub(symbols=symbols,)
+        elif use_polygon:
+            minute_history = get_historical_data_from_polygon(
+                api=data_api,
+                symbols=symbols,
+                max_tickers=min(config.total_tickers, len(symbols)),
+            )
+        else:
+            tlog("un-possible to get here")
+            sys.exit(0)
+
         symbols = list(minute_history.keys())
 
         if len(symbols) > 0:
             mp.set_start_method("spawn")
 
             # Consumers first
-            _num_consumer_processes = (
-                int(len(symbols) / config.num_consumer_processes_ratio) + 1
+            _num_consumer_processes = ceil(
+                1.0 * len(symbols) / config.num_consumer_processes_ratio
             )
             queues: List[mp.Queue] = [
                 mp.Queue() for i in range(_num_consumer_processes)
@@ -204,6 +244,7 @@ if __name__ == "__main__":
                     list(minute_history.keys()).index(symbol)
                     / config.num_consumer_processes_ratio
                 )
+
                 q_id_hash[symbol] = _index
                 if _index not in symbol_by_queue:
                     symbol_by_queue[_index] = [symbol]
@@ -222,19 +263,26 @@ if __name__ == "__main__":
                 p.start()
 
             # Producers second
-            polygon_producer = mp.Process(
-                target=polygon_producer_main,
-                args=(queues, symbols, q_id_hash),
-            )
-            polygon_producer.start()
+            if use_finnhub:
+                producer = mp.Process(
+                    target=finnhub_producer_main,
+                    args=(queues, symbols, q_id_hash),
+                )
+                producer.start()
+            else:
+                producer = mp.Process(
+                    target=polygon_producer_main,
+                    args=(queues, symbols, q_id_hash, config.market_close),
+                )
+                producer.start()
 
             # wait for completion and hope everyone plays nicely
             try:
-                polygon_producer.join()
+                producer.join()
                 for p in consumers:
                     p.join()
             except KeyboardInterrupt:
-                polygon_producer.terminate()
+                producer.terminate()
                 for p in consumers:
                     p.terminate()
 

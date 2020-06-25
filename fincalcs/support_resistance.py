@@ -4,6 +4,7 @@ import numpy as np
 from pandas import DataFrame as df
 
 from common import config
+from common.tlog import tlog
 
 
 def grouper(iterable):
@@ -27,7 +28,11 @@ def grouper(iterable):
 
 
 async def find_resistances(
-    symbol: str, strategy_name: str, current_value: float, minute_history: df
+    symbol: str,
+    strategy_name: str,
+    current_value: float,
+    minute_history: df,
+    debug=False,
 ) -> Optional[List[float]]:
     """calculate supports"""
 
@@ -47,6 +52,10 @@ async def find_resistances(
                 [series[i] for i in high_index if series[i] >= current_value]
             )
             if len(local_maximas) > 0:
+                if debug:
+                    tlog("find_resistances()")
+                    tlog(f"{minute_history}")
+                    tlog(f"{minute_history['close'][-1]}, {series}")
                 # tlog(
                 #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
                 # )
@@ -56,7 +65,11 @@ async def find_resistances(
 
 
 async def find_supports(
-    symbol: str, strategy_name: str, current_value: float, minute_history: df
+    symbol: str,
+    strategy_name: str,
+    current_value: float,
+    minute_history: df,
+    debug=False,
 ) -> Optional[List[float]]:
     """calculate supports"""
     for back_track_min in range(120, len(minute_history.index), 60):
@@ -74,6 +87,10 @@ async def find_supports(
                 [series[i] for i in high_index if series[i] <= current_value]
             )
             if len(local_maximas) > 0:
+                if debug:
+                    tlog("find_supports()")
+                    tlog(f"{minute_history}")
+                    tlog(f"{minute_history['close'][-1]}, {series}")
                 # tlog(
                 #    f"[{strategy_name}] find_supports({symbol})={local_maximas}"
                 # )

@@ -1,8 +1,10 @@
 """Save trade details to repository"""
 import json
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
+
+from common import config
 
 
 class NewTrade:
@@ -86,3 +88,26 @@ class NewTrade:
                     )
                 else:
                     raise Exception("no data")
+
+    @classmethod
+    async def get_run_symbols(
+        cls, run_id: int, pool: Pool = None
+    ) -> List[str]:
+        rc: List = []
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT DISTINCT symbol
+                        FROM new_trades
+                        WHERE algo_run_id = $1
+                    """,
+                    run_id,
+                )
+
+                if rows:
+                    rc = [row[0] for row in rows]
+
+        return rc
