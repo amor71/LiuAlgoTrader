@@ -140,13 +140,17 @@ class MomentumLong(Strategy):
                         < macd1[-1].round(3)
                     ):
                         tlog(f"[{now}]{symbol} MACD trending")
+                    else:
+                        tlog(f"[{now}]{symbol} MACD NOT trending -> failed")
                     if macd1[-1] > macd_signal[-1]:
                         tlog(f"[{now}]{symbol} MACD above signal")
-                    if data.close > data.open:
+                    else:
+                        tlog(f"[{now}]{symbol} MACD BELOW signal -> failed")
+                    if data.close >= data.open:
                         tlog(f"[{now}]{symbol} above open")
                     else:
                         tlog(
-                            f"[{now}]{symbol} close {data.close} BELOW open {data.open}"
+                            f"[{now}]{symbol} close {data.close} BELOW open {data.open} -> failed"
                         )
                 if (
                     macd1[-1].round(2) > 0
@@ -182,9 +186,9 @@ class MomentumLong(Strategy):
                         )
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
-                        if rsi[-1] <= 70:
+                        if rsi[-1] <= 71:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 70"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 71"
                             )
 
                             resistance = await find_resistances(
