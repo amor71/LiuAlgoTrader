@@ -26,6 +26,7 @@ async def trade_run(
     ws: StreamConn, queues: List[Queue], queue_id_hash: Dict[str, int]
 ) -> None:
 
+    tlog("trade_run() starting using Alpaca trading  ")
     # Use trade updates to keep track of our portfolio
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
@@ -140,25 +141,51 @@ async def run(
         tlog("main Ploygin consumer task completed ")
 
 
-async def teardown_task(tz: DstTzInfo, ws: List[StreamConn]) -> None:
-    tlog("teardown_task() starting")
+async def teardown_task(
+    tz: DstTzInfo, ws: List[StreamConn], tasks: List[asyncio.Task]
+) -> None:
+    tlog("poylgon_producer teardown_task() starting")
     dt = datetime.today().astimezone(tz)
-    to_market_close = (
-        config.market_close - dt
-        if config.market_close > dt
-        else timedelta(hours=24) + (config.market_close - dt)
-    )
-    tlog(f"tear-down task waiting for market close: {to_market_close}")
+    to_market_close: timedelta
     try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 10)
-    except asyncio.CancelledError:
-        tlog("teardown_task() cancelled during sleep")
-    else:
-        tlog("teardown closing web-sockets")
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        )
+        tlog(
+            f"poylgon_producer tear-down task waiting for market close: {to_market_close}"
+        )
+    except Exception as e:
+        tlog(
+            f"poylgon_producer - exception of type {type(e).__name__} with args {e.args}"
+        )
+        return
+
+    try:
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
+
+        tlog("poylgon_producer teardown closing web-sockets")
         for w in ws:
             await w.close()
 
+        tlog("poylgon_producer teardown closing tasks")
+
+        for task in tasks:
+            tlog(
+                f"teardown_task(): requesting task {task.get_name()} to cancel"
+            )
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                tlog("teardown_task(): task is cancelled now")
+
         asyncio.get_running_loop().stop()
+
+    except asyncio.CancelledError:
+        tlog("teardown_task() cancelled during sleep")
+
     finally:
         tlog("teardown_task() done.")
 
@@ -184,7 +211,8 @@ async def producer_async_main(
             data_ws=data_ws,
             queues=queues,
             queue_id_hash=queue_id_hash,
-        )
+        ),
+        name="main_task",
     )
 
     base_url = (
@@ -205,11 +233,16 @@ async def producer_async_main(
     )
 
     trade_updates_task = asyncio.create_task(
-        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash)
+        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash),
+        name="trade_updates_task",
     )
 
     tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"), [data_ws])
+        teardown_task(
+            timezone("America/New_York"),
+            [data_ws, trade_ws],
+            [trade_updates_task, main_task],
+        )
     )
 
     await asyncio.gather(
@@ -218,10 +251,14 @@ async def producer_async_main(
 
 
 def polygon_producer_main(
-    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
+    queues: List[Queue],
+    symbols: List[str],
+    queue_id_hash: Dict[str, int],
+    market_close: datetime,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
+        config.market_close = market_close
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
