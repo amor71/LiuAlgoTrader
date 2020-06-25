@@ -1,10 +1,10 @@
-requests==2.23.0
 iso8601
+requests==2.24.0
 deprecated==1.2.10
 urllib3<1.25
-numpy==1.18.5
-numpy==1.18.5
-mypy==0.770
+numpy==1.19.0
+numpy==1.19.0
+mypy==0.781
 black==19.10b0
 flake8==3.8.3
 pylint==2.5.2
@@ -23,5 +23,5 @@ pytest==5.4.3
 pytest-asyncio==0.12.0
 pytest-cov==2.10.0
 websockets==8.0.2
-matplotlib==3.2.1
 nb-clean
+matplotlib==3.2.2
