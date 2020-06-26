@@ -36,33 +36,49 @@ async def end_time(reason: str):
 
 
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
-    dt = datetime.today().astimezone(tz)
-    to_market_close = (
-        config.market_close - dt
-        if config.market_close > dt
-        else timedelta(hours=24) + (config.market_close - dt)
-    )
-
-    tlog(f"tear-down task waiting for market close: {to_market_close}")
+    tlog(f"consumer-teardown_task() - starting ")
     try:
+        dt = datetime.today().astimezone(tz)
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        )
+        tlog(
+            f"consumer-teardown_task() - waiting for market close: {to_market_close}"
+        )
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
+    except KeyboardInterrupt:
+        tlog("consumer-teardown_task() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
+        )
+        return
 
-        tlog("tear down task starting")
+    try:
+        tlog("consumer-teardown_task() starting")
         await end_time("market close")
 
-        tlog("teardown_task(): requesting tasks to cancel")
+        tlog("consumer-teardown_task(): requesting tasks to cancel")
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
-            tlog("teardown_task(): tasks are cancelled now")
+            tlog("consumer-teardown_task(): tasks are cancelled now")
 
     except asyncio.CancelledError:
-        tlog("teardown_task() cancelled during sleep")
-
+        tlog("consumer-teardown_task() cancelled during sleep")
+    except KeyboardInterrupt:
+        tlog("consumer-teardown_task() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
+        )
+        return
         # asyncio.get_running_loop().stop()
     finally:
-        tlog("tear down task done.")
+        tlog("consumer-teardown_task() task done.")
 
 
 async def liquidate(
@@ -85,6 +101,7 @@ async def liquidate(
                 )
                 op = "buy_short"
             else:
+
                 o = trading_api.submit_order(
                     symbol=symbol,
                     qty=str(symbol_position),
@@ -284,6 +301,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     except KeyError:
         current = None
 
+    first_blood = False
     if current is None:
         new_data = [
             data["open"],
@@ -294,6 +312,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             data["vwap"],
             data["average"],
         ]
+        first_blood = True
     else:
         new_data = [
             current.open,
