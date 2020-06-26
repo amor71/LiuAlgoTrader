@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, Tuple
 
@@ -13,6 +12,7 @@ from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
+from fincalcs.candle_patterns import four_price_doji, gravestone_doji
 from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
 
@@ -358,7 +358,7 @@ class MomentumLong(Strategy):
                 and macd[-1] < macd[-2]
             )
             scalp = movement > 0.02 or data.close > scalp_threshold
-            # below_cost_base = data.close <= latest_cost_basis[symbol]
+            below_cost_base = data.close < latest_cost_basis[symbol]
 
             to_sell = False
             partial_sell = False
@@ -366,11 +366,18 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            #           elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
-            #               to_sell = True
-            #               sell_reasons.append(
-            #                   "below cost & macd negative & RSI trending down"
-            #               )
+            elif (
+                below_cost_base
+                and macd_val < 0
+                and rsi[-1] < rsi[-2]
+                and not four_price_doji(
+                    data.open, data.close, data.high, data.low
+                )
+            ):
+                to_sell = True
+                sell_reasons.append(
+                    "below cost & macd negative & RSI trending down"
+                )
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
@@ -387,6 +394,28 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
+            elif gravestone_doji(data.open.data.close, data.high, data.low):
+                if debug:
+                    tlog(
+                        f"identified gravestone doji {data.open, data.close, data.low, data.high}"
+                    )
+                prev_data = minute_history.iloc[-2]
+                if prev_data.close > prev_data.open:
+                    if debug:
+                        tlog(f"identified up-trend before gravestone doji")
+
+                    if rsi[-1] >= 70:
+                        if debug:
+                            tlog(f"RSI >= 70, accept doji")
+                        to_sell = True
+                        sell_reasons.append("gravestone doji")
+                        if debug:
+                            tlog("sell on gravestone doji")
+                    elif debug:
+                        tlog(f"RSI < 70, do NOT accept doji")
+
+                elif debug:
+                    tlog("gravestone doji did not follow up trend")
 
             if to_sell:
                 # await asyncio.sleep(0)
