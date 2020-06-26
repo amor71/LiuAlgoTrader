@@ -366,14 +366,7 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif (
-                below_cost_base
-                and macd_val < 0
-                and rsi[-1] < rsi[-2]
-                and not four_price_doji(
-                    data.open, data.close, data.high, data.low
-                )
-            ):
+            elif below_cost_base and macd_val < 0 and rsi[-1] < rsi[-2]:
                 to_sell = True
                 sell_reasons.append(
                     "below cost & macd negative & RSI trending down"
@@ -394,7 +387,7 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
-            elif gravestone_doji(data.open.data.close, data.high, data.low):
+            elif gravestone_doji(data.open, data.close, data.high, data.low):
                 if debug:
                     tlog(
                         f"identified gravestone doji {data.open, data.close, data.low, data.high}"
