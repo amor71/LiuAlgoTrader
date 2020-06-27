@@ -544,12 +544,11 @@ async def load_current_long_positions(
             tlog(f"loading current position for {symbol}")
             try:
                 (
-                    trade_id,
+                    prev_run_id,
                     price,
                     stop_price,
                     target_price,
                     indicators,
-                    prev_run_id,
                 ) = await NewTrade.load_latest_long(
                     config.db_conn_pool, symbol
                 )
@@ -563,16 +562,10 @@ async def load_current_long_positions(
                 trading_data.symbol_resistance[symbol] = indicators[
                     "resistances"
                 ][0]
-                await save(
-                    symbol,
-                    int(trading_data.positions[symbol]),
-                    "buy",
-                    price,
-                    indicators,
-                    str(prev_run_id),
-                )
 
-                await NewTrade.expire_trade(config.db_conn_pool, trade_id)
+                await NewTrade.rename_algo_run_id(
+                    strategy.algo_run.algo_run_id, prev_run_id, symbol
+                )
 
             except Exception as e:
                 tlog(
