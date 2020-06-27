@@ -74,12 +74,12 @@ class NewTrade:
     @classmethod
     async def load_latest_long(
         cls, pool: Pool, symbol: str
-    ) -> Tuple[int, float, float, float, Dict, int]:
+    ) -> Tuple[int, float, float, float, Dict]:
         async with pool.acquire() as con:
             async with con.transaction():
                 row = await con.fetchrow(
                     """
-                        SELECT trade_id, price, stop_price, target_price, indicators, algo_run_id 
+                        SELECT algo_run_id, price, stop_price, target_price, indicators 
                         FROM new_trades 
                         WHERE symbol=$1 AND 
                               operation='buy' 
@@ -96,7 +96,6 @@ class NewTrade:
                         float(row[2]),
                         float(row[3]),
                         json.loads(row[4]),
-                        int(row[5]),
                     )
                 else:
                     raise Exception("no data")
@@ -123,3 +122,27 @@ class NewTrade:
                     rc = [row[0] for row in rows]
 
         return rc
+
+    @classmethod
+    async def rename_algo_run_id(
+        cls, new_run_id: int, old_run_id: int, symbol: str, pool: Pool = None
+    ) -> None:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    """
+                        UPDATE 
+                            new_trades 
+                        SET 
+                            algo_run_id=$1 
+                        WHERE 
+                            algo_run_id=$2 AND
+                            symbol=$3
+                    """,
+                    new_run_id,
+                    old_run_id,
+                    symbol,
+                )
