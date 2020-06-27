@@ -37,6 +37,7 @@ async def end_time(reason: str):
 
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
     tlog(f"consumer-teardown_task() - starting ")
+    to_market_close: timedelta
     try:
         dt = datetime.today().astimezone(tz)
         to_market_close = (
@@ -47,9 +48,6 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         tlog(
             f"consumer-teardown_task() - waiting for market close: {to_market_close}"
         )
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
-    except KeyboardInterrupt:
-        tlog("consumer-teardown_task() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
             f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
@@ -57,6 +55,8 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         return
 
     try:
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
+
         tlog("consumer-teardown_task() starting")
         await end_time("market close")
 
@@ -544,6 +544,7 @@ async def load_current_long_positions(
             tlog(f"loading current position for {symbol}")
             try:
                 (
+                    trade_id,
                     price,
                     stop_price,
                     target_price,
@@ -570,6 +571,9 @@ async def load_current_long_positions(
                     indicators,
                     str(prev_run_id),
                 )
+
+                await NewTrade.expire_trade(config.db_conn_pool, trade_id)
+
             except Exception as e:
                 tlog(
                     f"load_current_long_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
