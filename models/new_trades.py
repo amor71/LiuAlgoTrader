@@ -61,14 +61,25 @@ class NewTrade:
                 )
 
     @classmethod
+    async def expire_trade(cls, pool: Pool, trade_id: int) -> None:
+        async with pool.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    """
+                        UPDATE new_trades SET expire_tstamp='now()' WHERE trade_id=$1
+                    """,
+                    trade_id,
+                )
+
+    @classmethod
     async def load_latest_long(
         cls, pool: Pool, symbol: str
-    ) -> Tuple[float, float, float, Dict, int]:
+    ) -> Tuple[int, float, float, float, Dict, int]:
         async with pool.acquire() as con:
             async with con.transaction():
                 row = await con.fetchrow(
                     """
-                        SELECT price, stop_price, target_price, indicators, algo_run_id 
+                        SELECT trade_id, price, stop_price, target_price, indicators, algo_run_id 
                         FROM new_trades 
                         WHERE symbol=$1 AND 
                               operation='buy' 
@@ -80,11 +91,12 @@ class NewTrade:
 
                 if row:
                     return (
-                        float(row[0]),
+                        int(row[0]),
                         float(row[1]),
                         float(row[2]),
-                        json.loads(row[3]),
-                        int(row[4]),
+                        float(row[3]),
+                        json.loads(row[4]),
+                        int(row[5]),
                     )
                 else:
                     raise Exception("no data")
@@ -102,7 +114,7 @@ class NewTrade:
                     """
                         SELECT DISTINCT symbol
                         FROM new_trades
-                        WHERE algo_run_id = $1
+                        WHERE algo_run_id = $1 and expire_tstamp is null
                     """,
                     run_id,
                 )
