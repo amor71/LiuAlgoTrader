@@ -93,19 +93,19 @@ class MomentumLong(Strategy):
 
             # Get the change since yesterday's market close
             if data.close > high_15m:  # and volume_today[symbol] > 30000:
-                # check for a positive, increasing MACD
-
-                last_30_max_close = minute_history[-30:]["close"].max()
-                last_30_min_close = minute_history[-30:]["close"].max()
-
                 if debug:
                     tlog(
                         f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
                     )
 
+                # check for a positive, increasing MACD
+
+                last_30_max_close = minute_history[-30:]["close"].max()
+                last_30_min_close = minute_history[-30:]["close"].min()
+
                 if (
                     last_30_max_close - last_30_min_close
-                ) / last_30_min_close > 0.03:
+                ) / last_30_min_close > 0.1:
                     tlog(
                         f"[{self.name}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
                     )
@@ -114,19 +114,18 @@ class MomentumLong(Strategy):
                     ) + timedelta(minutes=15)
                     return False, {}
 
-                macds = MACD(
+                serie = (
                     minute_history["close"]
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
+
+                if data.vwap:
+                    serie[-1] = data.vwap
+                macds = MACD(serie)
                 # await asyncio.sleep(0)
-                sell_macds = MACD(
-                    minute_history["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00"),
-                    13,
-                    21,
-                )
+
+                sell_macds = MACD(serie, 13, 21,)
                 # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
@@ -165,25 +164,14 @@ class MomentumLong(Strategy):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    macd2 = MACD(
-                        minute_history["close"]
-                        .dropna()
-                        .between_time("9:30", "16:00"),
-                        40,
-                        60,
-                    )[0]
+                    macd2 = MACD(serie, 40, 60,)[0]
                     # await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(
-                            minute_history["close"]
-                            .dropna()
-                            .between_time("9:30", "16:00"),
-                            14,
-                        )
+                        rsi = RSI(serie, 14,)
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
                         if rsi[-1] <= 71:
@@ -194,7 +182,7 @@ class MomentumLong(Strategy):
                             resistance = await find_resistances(
                                 symbol,
                                 self.name,
-                                data.close,
+                                data.close if not data.vwap else data.vwap,
                                 minute_history,
                                 debug,
                             )
@@ -202,7 +190,7 @@ class MomentumLong(Strategy):
                             supports = await find_supports(
                                 symbol,
                                 self.name,
-                                data.close,
+                                data.close if not data.vwap else data.vwap,
                                 minute_history,
                                 debug,
                             )
@@ -240,7 +228,9 @@ class MomentumLong(Strategy):
                             )
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
-                                data.close, minute_history, now
+                                data.close if not data.vwap else data.vwap,
+                                minute_history,
+                                now,
                             )
                             stop_prices[symbol] = min(
                                 stop_price, supports[-1] - 0.05
