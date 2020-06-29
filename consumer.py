@@ -564,7 +564,7 @@ async def load_current_long_positions(
                 ][0]
 
                 await NewTrade.rename_algo_run_id(
-                    strategy.algo_run.algo_run_id, prev_run_id, symbol
+                    strategy.algo_run.run_id, prev_run_id, symbol
                 )
 
             except Exception as e:
