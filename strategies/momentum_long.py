@@ -212,6 +212,11 @@ class MomentumLong(Strategy):
                                     f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
                                 )
                                 return False, {}
+                            if data.close - supports[-1] < 0.05:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
+                                )
+                                return False, {}
                             if (resistance[0] - data.close) / (
                                 data.close - supports[-1]
                             ) < 0.8:
