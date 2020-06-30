@@ -25,7 +25,7 @@ search: True
 # Specify requirement files by hand, default is empty
 # default: empty
 # allowed: list
-requirements:
+#requirements:
 #  - requirements/staging.txt:
 #      # update all dependencies and pin them
 #      update: all
