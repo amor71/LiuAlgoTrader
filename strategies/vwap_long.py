@@ -48,7 +48,7 @@ class VWAPLong(Strategy):
         data = minute_history.iloc[-1]
         prev_minute = minute_history.iloc[-2]
         prev_two_minute = minute_history.iloc[-3]
-
+        prev_three_minute = minute_history.iloc[-4]
         if await super().is_buy_time(now) and not position:
             # print(
             #    symbol,
@@ -61,7 +61,8 @@ class VWAPLong(Strategy):
             # )
             if (
                 data.close > prev_minute.close > prev_minute.average
-                and prev_two_minute.close < prev_two_minute.average
+                and prev_two_minute.close > prev_two_minute.average
+                and prev_three_minute.close < prev_three_minute.average
                 and data.close > data.average
             ):
                 tlog(
