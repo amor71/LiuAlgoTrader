@@ -70,3 +70,11 @@ CREATE INDEX ON ticker_data(sector);
 CREATE INDEX ON ticker_data(industry);
 CREATE INDEX ON ticker_data(tags);
 CREATE INDEX ON ticker_data(similar_tickers);
+
+
+ALTER TABLE algo_run ADD COLUMN batch_id text NOT NULL DEFAULT '';
+CREATE INDEX ON algo_run(batch_id);
+
+ALTER TABLE algo_run ADD COLUMN ref_algo_run integer REFERENCES algo_run(algo_run_id);
+
+ALTER TABLE new_trades ADD COLUMN expire_tstamp timestamp;

@@ -1,34 +1,66 @@
 import json
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
-from common import config, trading_data
+from common import config
 
 
 class AlgoRun:
-    def __init__(self, strategy_name):
+    def __init__(self, strategy_name: str, batch_id: str):
         self.run_id = None
         self.strategy_name = strategy_name
+        self.batch_id = batch_id
 
-    async def save(self, pool: Pool):
+    async def save(
+        self, pool: Pool = None, env: str = None, ref_algo_run_id: int = None
+    ) -> None:
+        if not pool:
+            pool = config.db_conn_pool
+
         async with pool.acquire() as con:
             async with con.transaction():
-                self.run_id = await con.fetchval(
-                    """
-                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters)
-                        VALUES ($1, $2, $3, $4)
+                if not ref_algo_run_id:
+                    q = """
+                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id)
+                        VALUES ($1, $2, $3, $4, $5)
                         RETURNING algo_run_id
-                    """,
-                    self.strategy_name,
-                    config.env,
-                    trading_data.build_label,
-                    json.dumps(
-                        {
-                            "TRADE_BUY_WINDOW": config.trade_buy_window,
-                            "DSN": config.dsn,
-                        }
-                    ),
-                )
+                        """
+
+                    self.run_id = await con.fetchval(
+                        q,
+                        self.strategy_name,
+                        env if env else config.env,
+                        config.build_label,
+                        json.dumps(
+                            {
+                                "TRADE_BUY_WINDOW": config.trade_buy_window,
+                                "DSN": config.dsn,
+                            }
+                        ),
+                        self.batch_id,
+                    )
+                else:
+                    q = """
+                        INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id, ref_algo_run)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                        RETURNING algo_run_id
+                        """
+                    self.run_id = await con.fetchval(
+                        q,
+                        self.strategy_name,
+                        env if env else config.env,
+                        config.build_label,
+                        json.dumps(
+                            {
+                                "TRADE_BUY_WINDOW": config.trade_buy_window,
+                                "DSN": config.dsn,
+                            }
+                        ),
+                        self.batch_id,
+                        ref_algo_run_id,
+                    )
 
     async def update_end_time(self, pool: Pool, end_reason: str):
         async with pool.acquire() as con:
@@ -41,3 +73,65 @@ class AlgoRun:
                     end_reason,
                     self.run_id,
                 )
+
+    @classmethod
+    async def get_batches(
+        cls, pool: Pool = None, nax_batches: int = 30
+    ) -> Dict[str, List[str]]:
+        rc: Dict = {}
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT batch_id, algo_run_id, algo_name, algo_env, build_number, start_time
+                        FROM algo_run
+                        ORDER BY start_time DESC
+                        LIMIT $1
+                    """,
+                    nax_batches,
+                )
+
+                if rows:
+                    for row in rows:
+                        if row[0] not in rc:
+                            rc[row[0]] = [list(row.values())[1:]]
+                        else:
+                            rc[row[0]].append(list(row.values())[1:])
+
+        return rc
+
+    @classmethod
+    async def get_batch_details(
+        cls, batch_id: str, pool: Pool = None
+    ) -> List[Tuple[int, datetime, timedelta]]:
+        rc: List = []
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT algo_run_id, start_time, parameters, algo_name
+                        FROM algo_run
+                        WHERE batch_id = $1
+                        ORDER BY start_time DESC
+                    """,
+                    batch_id,
+                )
+
+                if rows:
+                    rc = [
+                        (
+                            row[0],
+                            row[1],
+                            timedelta(
+                                minutes=json.loads(row[2])["TRADE_BUY_WINDOW"]
+                            ),
+                            row[3],
+                        )
+                        for row in rows
+                    ]
+
+        return rc

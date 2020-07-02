@@ -2,6 +2,15 @@ import os
 from datetime import datetime
 from typing import List
 
+from asyncpg.pool import Pool
+
+#
+# Shared data
+#
+build_label: str
+filename: str
+db_conn_pool: Pool
+
 #
 # API keys
 #
@@ -9,7 +18,9 @@ from typing import List
 paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
-
+finnhub_api_key = os.getenv("FINNHUB_API_KEY")
+finnhub_base_url = os.getenv("FINNHUB_BASE_URL")
+finnhub_websocket_limit = 50
 #
 # Execution details (env variable)
 #
@@ -43,13 +54,13 @@ today_change_percent = 3.5
 group_margin = 0.02
 
 # trade times
-market_cool_down_minutes: int = 15
+market_cool_down_minutes: int = 20
 market_liquidation_end_time_minutes: int = 15
 market_open: datetime
 market_close: datetime
 
 # total number of tickers to follow
-total_tickers = 45
+total_tickers = 400
 
 #
 # WS Data Channels
@@ -59,4 +70,10 @@ WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
 #
 # Bypasses
 #
-bypass_market_schedule: bool = True 
+bypass_market_schedule: bool = False
+
+# performance parameters
+num_consumer_processes_ratio: int = 75
+
+# polygon parameters
+polygon_seconds_timeout = 60
