@@ -23,6 +23,7 @@ from common.tlog import tlog
 from models.new_trades import NewTrade
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
+from strategies.vwap_long import VWAPLong
 
 error_logger = error_reporting.Client()
 
@@ -508,7 +509,7 @@ async def consumer_async_main(
         nyc, trading_api
     )
 
-    strategy_types = [MomentumLong]
+    strategy_types = [MomentumLong, VWAPLong]
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
         s = strategy_type(batch_id=unique_id)
