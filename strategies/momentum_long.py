@@ -332,9 +332,14 @@ class MomentumLong(Strategy):
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
             # await asyncio.sleep(0)
-            scalp_threshold = (
-                symbol_resistance[symbol] + latest_cost_basis[symbol]
-            ) / 2.0
+            if symbol_resistance and symbol in symbol_resistance:
+                scalp_threshold = (
+                    symbol_resistance[symbol] + latest_cost_basis[symbol]
+                ) / 2.0
+            else:
+                scalp_threshold = (
+                    stop_prices[symbol] + latest_cost_basis[symbol]
+                ) / 2.0
             bail_threshold = (
                 latest_cost_basis[symbol] + scalp_threshold
             ) / 2.0
