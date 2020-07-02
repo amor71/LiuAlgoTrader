@@ -338,7 +338,7 @@ class MomentumLong(Strategy):
                 ) / 2.0
             else:
                 scalp_threshold = (
-                    stop_prices[symbol] + latest_cost_basis[symbol]
+                    target_prices[symbol] + latest_cost_basis[symbol]
                 ) / 2.0
             bail_threshold = (
                 latest_cost_basis[symbol] + scalp_threshold
