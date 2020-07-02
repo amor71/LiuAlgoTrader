@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Dict, Tuple
 
 import alpaca_trade_api as tradeapi
 import numpy as np
@@ -7,12 +8,11 @@ from pandas import DataFrame as df
 from talib import MACD, RSI
 
 from common import config
-from common.market_data import prev_closes, volume_today
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
-                                 open_order_strategy, open_orders,
                                  sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
+from fincalcs.candle_patterns import four_price_doji, gravestone_doji
 from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
 
@@ -24,10 +24,8 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, trading_api: tradeapi, data_api: tradeapi):
-        super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
-        )
+    def __init__(self, batch_id: str):
+        super().__init__(name=self.name, batch_id=batch_id)
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price
@@ -51,22 +49,36 @@ class MomentumLong(Strategy):
         return False
 
     async def run(
-        self, symbol: str, position: int, minute_history: df, now: datetime
-    ) -> bool:
+        self,
+        symbol: str,
+        position: int,
+        minute_history: df,
+        now: datetime,
+        portfolio_value: float = None,
+        trading_api: tradeapi = None,
+        debug: bool = False,
+        backtesting: bool = False,
+    ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
+
         if (
             await super().is_buy_time(now)
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-
             # Check for buy signals
             lbound = config.market_open
-            ubound = lbound + timedelta(minutes=15)
+            ubound = lbound + timedelta(minutes=16)
+
+            if debug:
+                tlog(f"15 schedule {lbound}/{ubound}")
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
+
+                if debug:
+                    tlog(f"{minute_history[lbound:ubound]}")
             except Exception as e:
                 error_logger.report_exception()
                 # Because we're aggregating on the fly, sometimes the datetime
@@ -74,40 +86,77 @@ class MomentumLong(Strategy):
                 tlog(
                     f"[{self.name}] error aggregation {e} - maybe should use nearest?"
                 )
-                return False
+                return False, {}
+
+            if debug:
+                tlog(f"15 minutes high:{high_15m}")
 
             # Get the change since yesterday's market close
-            daily_pct_change = (
-                data.close - prev_closes[symbol]
-            ) / prev_closes[symbol]
-            if (
-                daily_pct_change > 0.04
-                and data.close > high_15m
-                and volume_today[symbol] > 30000
-            ):
+            if data.close > high_15m:  # and volume_today[symbol] > 30000:
+                if debug:
+                    tlog(
+                        f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
+                    )
+
                 # check for a positive, increasing MACD
-                macds = MACD(
+
+                last_30_max_close = minute_history[-30:]["close"].max()
+                last_30_min_close = minute_history[-30:]["close"].min()
+
+                if (
+                    last_30_max_close - last_30_min_close
+                ) / last_30_min_close > 0.1:
+                    tlog(
+                        f"[{self.name}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
+                    )
+                    cool_down[symbol] = now.replace(
+                        second=0, microsecond=0
+                    ) + timedelta(minutes=15)
+                    return False, {}
+
+                serie = (
                     minute_history["close"]
                     .dropna()
                     .between_time("9:30", "16:00")
                 )
 
-                sell_macds = MACD(
-                    minute_history["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00"),
-                    13,
-                    21,
-                )
+                if data.vwap:
+                    serie[-1] = data.vwap
+                macds = MACD(serie)
+                # await asyncio.sleep(0)
 
+                sell_macds = MACD(serie, 13, 21,)
+                # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
+
+                if debug:
+                    if macd1[-1].round(2) > 0:
+                        tlog(f"[{now}]{symbol} MACD > 0")
+                    if (
+                        macd1[-3].round(3)
+                        < macd1[-2].round(3)
+                        < macd1[-1].round(3)
+                    ):
+                        tlog(f"[{now}]{symbol} MACD trending")
+                    else:
+                        tlog(f"[{now}]{symbol} MACD NOT trending -> failed")
+                    if macd1[-1] > macd_signal[-1]:
+                        tlog(f"[{now}]{symbol} MACD above signal")
+                    else:
+                        tlog(f"[{now}]{symbol} MACD BELOW signal -> failed")
+                    if data.close >= data.open:
+                        tlog(f"[{now}]{symbol} above open")
+                    else:
+                        tlog(
+                            f"[{now}]{symbol} close {data.close} BELOW open {data.open} -> failed"
+                        )
                 if (
                     macd1[-1].round(2) > 0
                     and macd1[-3].round(3)
                     < macd1[-2].round(3)
                     < macd1[-1].round(3)
-                    and macd1[-1].round(2) > macd_signal[-1].round(2)
+                    and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
                     and data.close > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
@@ -115,69 +164,102 @@ class MomentumLong(Strategy):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    macd2 = MACD(
-                        minute_history["close"]
-                        .dropna()
-                        .between_time("9:30", "16:00"),
-                        40,
-                        60,
-                    )[0]
+                    macd2 = MACD(serie, 40, 60,)[0]
+                    # await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(
-                            minute_history["close"]
-                            .dropna()
-                            .between_time("9:30", "16:00"),
-                            14,
-                        )
-
-                        if rsi[-1] < 78:
+                        rsi = RSI(serie, 14,)
+                        # await asyncio.sleep(0)
+                        tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
+                        if rsi[-1] <= 71:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} < 78"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 71"
                             )
-                            resistance = find_resistances(
-                                symbol, self.name, data.close, minute_history
+
+                            resistance = await find_resistances(
+                                symbol,
+                                self.name,
+                                data.close if not data.vwap else data.vwap,
+                                minute_history,
+                                debug,
                             )
-                            supports = find_supports(
-                                symbol, self.name, data.close, minute_history
+
+                            supports = await find_supports(
+                                symbol,
+                                self.name,
+                                data.close if not data.vwap else data.vwap,
+                                minute_history,
+                                debug,
                             )
-                            if resistance is None or resistance == []:
+                            if (
+                                resistance is None
+                                or resistance == []
+                                or data.close == resistance[0]
+                            ):
                                 tlog(
                                     f"[{self.name}]no resistance for {symbol} -> skip buy"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
-                                return False
+                                return False, {}
 
-                            if (resistance[0] - data.low) / data.close < 0.01:
+                            if resistance[0] - data.close < 0.05:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.low} too close to resistance at {resistance[0]}"
+                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
+                                )
+                                return False, {}
+                            if data.close - supports[-1] < 0.05:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
+                                )
+                                return False, {}
+                            if (resistance[0] - data.close) / (
+                                data.close - supports[-1]
+                            ) < 0.8:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
-                                return False
+                                return False, {}
 
+                            tlog(
+                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {resistance[0]}"
+                            )
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
-                                data.close, minute_history, now
+                                data.close if not data.vwap else data.vwap,
+                                minute_history,
+                                now,
                             )
-                            stop_prices[symbol] = stop_price
+                            stop_prices[symbol] = min(
+                                stop_price, supports[-1] - 0.05
+                            )
                             target_prices[symbol] = (
-                                data.close + (data.close - stop_price) * 3
+                                data.close
+                                + (data.close - stop_prices[symbol]) * 2
                             )
                             symbol_resistance[symbol] = resistance[0]
-                            portfolio_value = float(
-                                self.trading_api.get_account().portfolio_value
-                            )
+
+                            if portfolio_value is None:
+                                if trading_api:
+                                    portfolio_value = float(
+                                        trading_api.get_account().portfolio_value
+                                    )
+                                else:
+                                    raise Exception(
+                                        "MomentumLong.run(): both portfolio_value and trading_api can't be None"
+                                    )
+
                             shares_to_buy = (
                                 portfolio_value
                                 * config.risk
-                                // (data.close - stop_price)
+                                // (data.close - stop_prices[symbol])
                             )
                             if not shares_to_buy:
                                 shares_to_buy = 1
@@ -187,39 +269,39 @@ class MomentumLong(Strategy):
                                     f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_price}"
                                 )
 
-                                try:
-                                    buy_indicators[symbol] = {
-                                        "rsi": rsi[-1].tolist(),
-                                        "macd": macd1[-5:].tolist(),
-                                        "macd_signal": macd_signal[
-                                            -5:
-                                        ].tolist(),
-                                        "slow macd": macd2[-5:].tolist(),
-                                        "sell_macd": sell_macds[0][
-                                            -5:
-                                        ].tolist(),
-                                        "sell_macd_signal": sell_macds[1][
-                                            -5:
-                                        ].tolist(),
-                                        "resistances": resistance,
-                                        "supports": supports,
-                                        "vwap": data.vwap,
-                                        "avg": data.average,
-                                    }
-                                    o = self.trading_api.submit_order(
-                                        symbol=symbol,
-                                        qty=str(shares_to_buy),
-                                        side="buy",
-                                        type="limit",
-                                        time_in_force="day",
-                                        limit_price=str(data.close),
-                                    )
-                                    open_orders[symbol] = (o, "buy")
-                                    open_order_strategy[symbol] = self
-                                    return True
+                                # await asyncio.sleep(0)
+                                buy_indicators[symbol] = {
+                                    "rsi": rsi[-1].tolist(),
+                                    "macd": macd1[-5:].tolist(),
+                                    "macd_signal": macd_signal[-5:].tolist(),
+                                    "slow macd": macd2[-5:].tolist(),
+                                    "sell_macd": sell_macds[0][-5:].tolist(),
+                                    "sell_macd_signal": sell_macds[1][
+                                        -5:
+                                    ].tolist(),
+                                    "resistances": resistance,
+                                    "supports": supports,
+                                    "vwap": data.vwap,
+                                    "avg": data.average,
+                                    "position_ratio": str(
+                                        round(
+                                            (resistance[0] - data.close)
+                                            / (data.close - supports[-1]),
+                                            2,
+                                        )
+                                    ),
+                                }
 
-                                except Exception:
-                                    error_logger.report_exception()
+                                return (
+                                    True,
+                                    {
+                                        "side": "buy",
+                                        "qty": str(shares_to_buy),
+                                        "type": "limit",
+                                        "limit_price": str(data.close),
+                                    },
+                                )
+
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
 
@@ -237,7 +319,7 @@ class MomentumLong(Strategy):
                 13,
                 21,
             )
-
+            # await asyncio.sleep(0)
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(
@@ -249,19 +331,22 @@ class MomentumLong(Strategy):
             ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
-
-            movement_threshold = (
+            # await asyncio.sleep(0)
+            scalp_threshold = (
                 symbol_resistance[symbol] + latest_cost_basis[symbol]
+            ) / 2.0
+            bail_threshold = (
+                latest_cost_basis[symbol] + scalp_threshold
             ) / 2.0
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.close > latest_cost_basis[symbol]
+                data.close > bail_threshold
                 and macd_below_signal
                 and macd[-1] < macd[-2]
             )
-            scalp = movement > min(0.02, movement_threshold)
-            below_cost_base = data.close <= latest_cost_basis[symbol]
+            scalp = movement > 0.02 or data.close > scalp_threshold
+            below_cost_base = data.close < latest_cost_basis[symbol]
 
             to_sell = False
             partial_sell = False
@@ -269,7 +354,7 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif below_cost_base and macd_val <= 0 and rsi[-1] < rsi[-2]:
+            elif below_cost_base and macd_val < 0 and rsi[-1] < rsi[-2]:
                 to_sell = True
                 sell_reasons.append(
                     "below cost & macd negative & RSI trending down"
@@ -277,7 +362,7 @@ class MomentumLong(Strategy):
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
-            elif rsi[-1] >= 78:
+            elif rsi[-1] >= 79:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
                 cool_down[symbol] = now.replace(
@@ -290,8 +375,31 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
+            elif gravestone_doji(data.open, data.close, data.high, data.low):
+                if debug:
+                    tlog(
+                        f"identified gravestone doji {data.open, data.close, data.low, data.high}"
+                    )
+                prev_data = minute_history.iloc[-2]
+                if prev_data.close > prev_data.open:
+                    if debug:
+                        tlog(f"identified up-trend before gravestone doji")
+
+                    if rsi[-1] >= 70:
+                        if debug:
+                            tlog(f"RSI >= 70, accept doji")
+                        to_sell = True
+                        sell_reasons.append("gravestone doji")
+                        if debug:
+                            tlog("sell on gravestone doji")
+                    elif debug:
+                        tlog(f"RSI < 70, do NOT accept doji")
+
+                elif debug:
+                    tlog("gravestone doji did not follow up trend")
 
             if to_sell:
+                # await asyncio.sleep(0)
                 try:
                     sell_indicators[symbol] = {
                         "rsi": rsi[-2:].tolist(),
@@ -309,31 +417,30 @@ class MomentumLong(Strategy):
                         tlog(
                             f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
                         )
-                        o = self.trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(position),
-                            side="sell",
-                            type="market",
-                            time_in_force="day",
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(position),
+                                "type": "market",
+                            },
                         )
                     else:
-                        qty = int(position / 2)
+                        qty = int(position / 2) if position > 1 else 1
                         tlog(
                             f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
                         )
-                        o = self.trading_api.submit_order(
-                            symbol=symbol,
-                            qty=str(qty),
-                            side="sell",
-                            type="limit",
-                            time_in_force="day",
-                            limit_price=str(data.close),
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(qty),
+                                "type": "limit",
+                                "limit_price": str(data.close),
+                            },
                         )
 
-                    open_orders[symbol] = (o, "sell")
-                    open_order_strategy[symbol] = self
-                    return True
                 except Exception:
                     error_logger.report_exception()
 
-        return False
+        return False, {}

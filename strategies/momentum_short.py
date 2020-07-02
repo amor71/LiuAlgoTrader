@@ -22,10 +22,8 @@ error_logger = error_reporting.Client()
 class MomentumShort(Strategy):
     name = "momentum_short"
 
-    def __init__(self, trading_api: tradeapi, data_api: tradeapi):
-        super().__init__(
-            name=self.name, trading_api=trading_api, data_api=data_api
-        )
+    def __init__(self):
+        super().__init__(name=self.name)
 
     async def create(self) -> None:
         await super().create()
@@ -103,7 +101,7 @@ class MomentumShort(Strategy):
             current_value=close,
             minute_history=minute_history,
         )
-        resistances = find_resistances(
+        resistances = await find_resistances(
             symbol=symbol,
             strategy_name=self.name,
             current_value=close,

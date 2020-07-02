@@ -4,22 +4,28 @@ from datetime import datetime
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
-from common import config, trading_data
+from common import config
 from models.algo_run import AlgoRun
 
 
 class Strategy:
-    def __init__(self, name: str, trading_api: tradeapi, data_api: tradeapi):
+    def __init__(self, name: str, batch_id: str):
         self.name = name
-        self.trading_api = trading_api
-        self.data_api = data_api
-        self.algo_run = AlgoRun(strategy_name=self.name)
+        self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
 
     async def create(self):
-        await self.algo_run.save(pool=trading_data.db_conn_pool)
+        await self.algo_run.save(pool=config.db_conn_pool)
 
     async def run(
-        self, symbol: str, position: int, minute_history: df, now: datetime
+        self,
+        symbol: str,
+        position: int,
+        minute_history: df,
+        now: datetime,
+        portfolio_value: float = None,
+        trading_api: tradeapi = None,
+        debug: bool = False,
+        backtesting: bool = False,
     ) -> bool:
         return False
 

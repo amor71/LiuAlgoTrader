@@ -11,6 +11,6 @@ actions:
     isort:
         run: isort {files}
         include: "*.py"
-    flake8:
-        run: flake8 --ignore=E501,E231,E711,E712,C0111,E203,W503,Q000 {files}
-        include: "*.py"
+#    flake8:
+#        run: flake8 --ignore=E501,E231,E711,E712,C0111,E203,W503,Q000 {files}
+#        include: "*.py"

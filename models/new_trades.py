@@ -1,7 +1,10 @@
 """Save trade details to repository"""
 import json
+from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
+
+from common import config
 
 
 class NewTrade:
@@ -55,4 +58,91 @@ class NewTrade:
                     client_buy_time,
                     stop_price,
                     target_price,
+                )
+
+    @classmethod
+    async def expire_trade(cls, pool: Pool, trade_id: int) -> None:
+        async with pool.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    """
+                        UPDATE new_trades SET expire_tstamp='now()' WHERE trade_id=$1
+                    """,
+                    trade_id,
+                )
+
+    @classmethod
+    async def load_latest_long(
+        cls, pool: Pool, symbol: str
+    ) -> Tuple[int, float, float, float, Dict]:
+        async with pool.acquire() as con:
+            async with con.transaction():
+                row = await con.fetchrow(
+                    """
+                        SELECT algo_run_id, price, stop_price, target_price, indicators 
+                        FROM new_trades 
+                        WHERE symbol=$1 AND 
+                              operation='buy' 
+                        ORDER BY tstamp DESC
+
+                    """,
+                    symbol,
+                )
+
+                if row:
+                    return (
+                        int(row[0]),
+                        float(row[1]),
+                        float(row[2]),
+                        float(row[3]),
+                        json.loads(row[4]),
+                    )
+                else:
+                    raise Exception("no data")
+
+    @classmethod
+    async def get_run_symbols(
+        cls, run_id: int, pool: Pool = None
+    ) -> List[str]:
+        rc: List = []
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT DISTINCT symbol
+                        FROM new_trades
+                        WHERE algo_run_id = $1 and expire_tstamp is null
+                    """,
+                    run_id,
+                )
+
+                if rows:
+                    rc = [row[0] for row in rows]
+
+        return rc
+
+    @classmethod
+    async def rename_algo_run_id(
+        cls, new_run_id: int, old_run_id: int, symbol: str, pool: Pool = None
+    ) -> None:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    """
+                        UPDATE 
+                            new_trades 
+                        SET 
+                            algo_run_id=$1 
+                        WHERE 
+                            algo_run_id=$2 AND
+                            symbol=$3
+                    """,
+                    new_run_id,
+                    old_run_id,
+                    symbol,
                 )
