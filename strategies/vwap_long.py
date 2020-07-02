@@ -65,6 +65,7 @@ class VWAPLong(Strategy):
                 > prev_two_minute.close
                 > prev_three_minute.close
                 and data.close > data.average
+                and prev_minute.close > prev_minute.average
                 and prev_two_minute.close > prev_two_minute.average
                 and prev_three_minute.close < prev_three_minute.average
             ):
