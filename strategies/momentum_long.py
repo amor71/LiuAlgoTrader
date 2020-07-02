@@ -269,46 +269,39 @@ class MomentumLong(Strategy):
                                     f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_price}"
                                 )
 
-                                try:
-                                    # await asyncio.sleep(0)
-                                    buy_indicators[symbol] = {
-                                        "rsi": rsi[-1].tolist(),
-                                        "macd": macd1[-5:].tolist(),
-                                        "macd_signal": macd_signal[
-                                            -5:
-                                        ].tolist(),
-                                        "slow macd": macd2[-5:].tolist(),
-                                        "sell_macd": sell_macds[0][
-                                            -5:
-                                        ].tolist(),
-                                        "sell_macd_signal": sell_macds[1][
-                                            -5:
-                                        ].tolist(),
-                                        "resistances": resistance,
-                                        "supports": supports,
-                                        "vwap": data.vwap,
-                                        "avg": data.average,
-                                        "position_ratio": str(
-                                            round(
-                                                (resistance[0] - data.close)
-                                                / (data.close - supports[-1]),
-                                                2,
-                                            )
-                                        ),
-                                    }
+                                # await asyncio.sleep(0)
+                                buy_indicators[symbol] = {
+                                    "rsi": rsi[-1].tolist(),
+                                    "macd": macd1[-5:].tolist(),
+                                    "macd_signal": macd_signal[-5:].tolist(),
+                                    "slow macd": macd2[-5:].tolist(),
+                                    "sell_macd": sell_macds[0][-5:].tolist(),
+                                    "sell_macd_signal": sell_macds[1][
+                                        -5:
+                                    ].tolist(),
+                                    "resistances": resistance,
+                                    "supports": supports,
+                                    "vwap": data.vwap,
+                                    "avg": data.average,
+                                    "position_ratio": str(
+                                        round(
+                                            (resistance[0] - data.close)
+                                            / (data.close - supports[-1]),
+                                            2,
+                                        )
+                                    ),
+                                }
 
-                                    return (
-                                        True,
-                                        {
-                                            "side": "buy",
-                                            "qty": str(shares_to_buy),
-                                            "type": "limit",
-                                            "limit_price": str(data.close),
-                                        },
-                                    )
+                                return (
+                                    True,
+                                    {
+                                        "side": "buy",
+                                        "qty": str(shares_to_buy),
+                                        "type": "limit",
+                                        "limit_price": str(data.close),
+                                    },
+                                )
 
-                                except Exception:
-                                    error_logger.report_exception()
                     else:
                         tlog(f"[{self.name}] failed MACD(40,60) for {symbol}!")
 
