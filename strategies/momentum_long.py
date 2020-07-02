@@ -346,12 +346,12 @@ class MomentumLong(Strategy):
             macd_below_signal = macd_val < macd_signal_val
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.close > bail_threshold
+                data.vwap > bail_threshold
                 and macd_below_signal
                 and macd[-1] < macd[-2]
             )
-            scalp = movement > 0.02 or data.close > scalp_threshold
-            below_cost_base = data.close < latest_cost_basis[symbol]
+            scalp = movement > 0.02 or data.vwap > scalp_threshold
+            below_cost_base = data.vwap < latest_cost_basis[symbol]
 
             to_sell = False
             partial_sell = False
@@ -359,7 +359,12 @@ class MomentumLong(Strategy):
             if data.close <= stop_prices[symbol]:
                 to_sell = True
                 sell_reasons.append("stopped")
-            elif below_cost_base and macd_val < 0 and rsi[-1] < rsi[-2]:
+            elif (
+                below_cost_base
+                and round(macd_val, 2) < 0
+                and rsi[-1] < rsi[-2]
+                and round(macd[-1], 2) < round(macd[-2], 2)
+            ):
                 to_sell = True
                 sell_reasons.append(
                     "below cost & macd negative & RSI trending down"
