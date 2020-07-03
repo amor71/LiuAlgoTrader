@@ -19,6 +19,7 @@ from common.decorators import timeit
 from common.tlog import tlog
 from models.algo_run import AlgoRun
 from models.new_trades import NewTrade
+from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
 
@@ -79,13 +80,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
 
     uid = str(uuid.uuid4())
 
-    async def backtest_run(
-        run_id: int, start: datetime, duration: timedelta, strategy: str
-    ) -> None:
+    async def backtest_run(start: datetime, duration: timedelta) -> None:
         @timeit
-        async def backtest_symbol(
-            new_run_id: int, strategy: Strategy, symbol: str
-        ) -> None:
+        async def backtest_symbol(symbol: str) -> None:
             est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
             if start_time.second > 0:
@@ -123,6 +120,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             new_now = symbol_data.index[minute_index]
             print(f"start time with data {new_now}")
             price = 0.0
+            last_run_id = None
             while new_now < start_time + duration:
                 if symbol_data.index[minute_index] != new_now:
                     print(
@@ -136,47 +134,51 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                     raise Exception()
 
                 price = symbol_data["close"][minute_index]
-                do, what = await strategy.run(
-                    symbol,
-                    position,
-                    symbol_data[: minute_index + 1],
-                    new_now,
-                    portfolio_value,
-                    debug=debug_symbols and symbol in debug_symbols,
-                    backtesting=True,
-                )
-                if do:
-                    if what["side"] == "buy":
-                        position += int(float(what["qty"]))
-                        trading_data.latest_cost_basis[symbol] = price
-                    else:
-                        position -= int(float(what["qty"]))
-
-                    db_trade = NewTrade(
-                        algo_run_id=new_run_id,
-                        symbol=symbol,
-                        qty=int(float(what["qty"])),
-                        operation=what["side"],
-                        price=price,
-                        indicators=trading_data.buy_indicators[symbol]
-                        if what["side"] == "buy"
-                        else trading_data.sell_indicators[symbol],
+                for strategy in trading_data.strategies:
+                    do, what = await strategy.run(
+                        symbol,
+                        position,
+                        symbol_data[: minute_index + 1],
+                        new_now,
+                        portfolio_value,
+                        debug=debug_symbols and symbol in debug_symbols,
+                        backtesting=True,
                     )
+                    if do:
+                        if what["side"] == "buy":
+                            position += int(float(what["qty"]))
+                            trading_data.latest_cost_basis[symbol] = price
+                        else:
+                            position -= int(float(what["qty"]))
 
-                    await db_trade.save(
-                        config.db_conn_pool,
-                        str(new_now),
-                        trading_data.stop_prices[symbol],
-                        trading_data.target_prices[symbol],
-                    )
-                    print(what)
+                        db_trade = NewTrade(
+                            algo_run_id=strategy.algo_run.run_id,
+                            symbol=symbol,
+                            qty=int(float(what["qty"])),
+                            operation=what["side"],
+                            price=price,
+                            indicators=trading_data.buy_indicators[symbol]
+                            if what["side"] == "buy"
+                            else trading_data.sell_indicators[symbol],
+                        )
+
+                        await db_trade.save(
+                            config.db_conn_pool,
+                            str(new_now),
+                            trading_data.stop_prices[symbol],
+                            trading_data.target_prices[symbol],
+                        )
+                        print(what)
+                        break
+                    last_run_id = strategy.algo_run.run_id
 
                 minute_index += 1
                 new_now = symbol_data.index[minute_index]
+
             if position > 0:
                 print(f"liquidate {position}")
                 db_trade = NewTrade(
-                    algo_run_id=new_run_id,
+                    algo_run_id=last_run_id,
                     symbol=symbol,
                     qty=int(position),
                     operation="sell",
@@ -188,9 +190,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                     config.db_conn_pool, str(new_now),
                 )
 
-        symbols = await NewTrade.get_run_symbols(run_id)
+        symbols = await TrendingTickers.load(batch_id)
+        print(f"loaded {len(symbols)}:\n {symbols} ")
         if len(symbols) > 0:
-
             est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
             config.market_open = start_time.replace(
@@ -201,33 +203,29 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             )
             print(f"market_open{config.market_open}")
             config.trade_buy_window = duration.seconds / 60
-            s: Strategy
-            if strategy == "momentum_long":
-                s = MomentumLong(uid)
-            else:
-                raise Exception("Not Implemented Yet")
 
-            new_run = AlgoRun(strategy, uid)
-            await new_run.save(env="BACKTEST", ref_algo_run_id=run_id)
+            strategy_types = [MomentumLong]
+            config.env = "BACKTEST"
+            for strategy_type in strategy_types:
+                tlog(f"initializing {strategy_type.name}")
+                s = strategy_type(batch_id=uid)
+                await s.create()
+
+                trading_data.strategies.append(s)
 
             for symbol in symbols:
-                await backtest_symbol(new_run.run_id, s, symbol)
+                await backtest_symbol(symbol)
 
     @timeit
     async def backtest_worker():
         await create_db_connection()
         run_details = await AlgoRun.get_batch_details(batch_id)
+        _, starts, durations, _ = zip(*run_details)
 
         if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
-            for run in run_details:
-                await backtest_run(
-                    run_id=run[0],
-                    start=run[1],
-                    duration=run[2],
-                    strategy=run[3],
-                )
+            await backtest_run(start=min(starts), duration=max(durations))
 
     try:
         if not asyncio.get_event_loop().is_closed():

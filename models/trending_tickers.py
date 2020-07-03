@@ -29,3 +29,24 @@ class TrendingTickers:
                 )
 
         return self.trending_id
+
+    @classmethod
+    async def load(cls, batch_id, pool: Pool = None) -> List[str]:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT symbol
+                        FROM trending_tickers 
+                        WHERE batch_id=$1
+                    """,
+                    batch_id,
+                )
+
+                if rows:
+                    return [row[0] for row in rows]
+                else:
+                    raise Exception("no data")
