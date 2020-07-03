@@ -12,7 +12,7 @@ class TrendingTickers:
         self.batch_id = batch_id
         self.trending_id: int = 0
 
-    async def save(self, symbol: str, pool: Pool = None):
+    async def save(self, symbol: str, pool: Pool = None) -> int:
         if not pool:
             pool = config.db_conn_pool
 
@@ -27,3 +27,5 @@ class TrendingTickers:
                     self.batch_id,
                     symbol,
                 )
+
+        return self.trending_id

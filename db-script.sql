@@ -87,3 +87,15 @@ CREATE TABLE IF NOT EXISTS trending_tickers (
 );
 
 CREATE INDEX ON trending_tickers(batch_id);
+
+#
+# Script to populate DB
+#
+INSERT INTO trending_tickers (symbol, batch_id)
+    SELECT distinct t.symbol, r.batch_id
+    FROM new_trades as t, algo_run as r
+    WHERE
+        t.algo_run_id = r.algo_run_id AND
+        batch_id != '';
+
+
