@@ -424,7 +424,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             tlog(
                 f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
             )
-            continue
+            break
 
     return True
 
