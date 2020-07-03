@@ -78,3 +78,11 @@ CREATE INDEX ON algo_run(batch_id);
 ALTER TABLE algo_run ADD COLUMN ref_algo_run integer REFERENCES algo_run(algo_run_id);
 
 ALTER TABLE new_trades ADD COLUMN expire_tstamp timestamp;
+
+CREATE TABLE IF NOT EXISTS trending_tickers (
+    trending_id serial PRIMARY KEY,
+    batch_id text NOT NULL,
+    create_tstamp timestamp DEFAULT current_timestamp
+);
+
+CREATE INDEX ON trending_tickers(batch_id);
