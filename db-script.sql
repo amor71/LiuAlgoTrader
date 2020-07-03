@@ -82,6 +82,7 @@ ALTER TABLE new_trades ADD COLUMN expire_tstamp timestamp;
 CREATE TABLE IF NOT EXISTS trending_tickers (
     trending_id serial PRIMARY KEY,
     batch_id text NOT NULL,
+    symbol text NOT NULL,
     create_tstamp timestamp DEFAULT current_timestamp
 );
 
