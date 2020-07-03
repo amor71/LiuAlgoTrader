@@ -9,12 +9,15 @@ from models.algo_run import AlgoRun
 
 
 class Strategy:
-    def __init__(self, name: str, batch_id: str):
+    def __init__(self, name: str, batch_id: str, ref_run_id: int = None):
         self.name = name
-        self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
+        self.ref_run_id = ref_run_id
+        self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id,)
 
     async def create(self):
-        await self.algo_run.save(pool=config.db_conn_pool)
+        await self.algo_run.save(
+            pool=config.db_conn_pool, ref_algo_run_id=self.ref_run_id
+        )
 
     async def run(
         self,

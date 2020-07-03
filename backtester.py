@@ -17,11 +17,13 @@ from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.decorators import timeit
 from common.tlog import tlog
+from fincalcs.vwap import add_daily_vwap
 from models.algo_run import AlgoRun
 from models.new_trades import NewTrade
 from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
+from strategies.vwap_long import VWAPLong
 
 
 def get_batch_list():
@@ -80,7 +82,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
 
     uid = str(uuid.uuid4())
 
-    async def backtest_run(start: datetime, duration: timedelta) -> None:
+    async def backtest_run(
+        start: datetime, duration: timedelta, ref_run_id: int
+    ) -> None:
         @timeit
         async def backtest_symbol(symbol: str) -> None:
             est = pytz.timezone("America/New_York")
@@ -102,11 +106,10 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 to=str(start_time + timedelta(days=1)),
                 limit=10000,
             ).df
-            symbol_data["vwap"] = 0.0
-            symbol_data["average"] = 0.0
 
-            if debug_symbols and symbol in debug_symbols:
-                tlog(symbol_data)
+            add_daily_vwap(
+                symbol_data, debug=debug_symbols and symbol in debug_symbols
+            )
 
             market_data.minute_history[symbol] = symbol_data
             print(
@@ -148,6 +151,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                         if what["side"] == "buy":
                             position += int(float(what["qty"]))
                             trading_data.latest_cost_basis[symbol] = price
+                            trading_data.last_used_strategy[symbol] = strategy
                         else:
                             position -= int(float(what["qty"]))
 
@@ -169,7 +173,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                             trading_data.target_prices[symbol],
                         )
                         print(what)
-                        break
+
+                        if what["side"] == "buy":
+                            break
                     last_run_id = strategy.algo_run.run_id
 
                 minute_index += 1
@@ -204,11 +210,11 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             print(f"market_open{config.market_open}")
             config.trade_buy_window = duration.seconds / 60
 
-            strategy_types = [MomentumLong]
+            strategy_types = [MomentumLong, VWAPLong]
             config.env = "BACKTEST"
             for strategy_type in strategy_types:
                 tlog(f"initializing {strategy_type.name}")
-                s = strategy_type(batch_id=uid)
+                s = strategy_type(batch_id=uid, ref_run_id=ref_run_id)
                 await s.create()
 
                 trading_data.strategies.append(s)
@@ -220,12 +226,16 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
     async def backtest_worker():
         await create_db_connection()
         run_details = await AlgoRun.get_batch_details(batch_id)
-        _, starts, durations, _ = zip(*run_details)
+        run_ids, starts, durations, _ = zip(*run_details)
 
         if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
-            await backtest_run(start=min(starts), duration=max(durations))
+            await backtest_run(
+                start=min(starts),
+                duration=max(durations),
+                ref_run_id=run_ids[0],
+            )
 
     try:
         if not asyncio.get_event_loop().is_closed():

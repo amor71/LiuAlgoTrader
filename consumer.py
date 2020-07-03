@@ -420,11 +420,13 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
             trading_data.open_orders[symbol] = (o, what["side"])
             trading_data.open_order_strategy[symbol] = s
-            trading_data.last_used_strategy[symbol] = s
+
             tlog(
                 f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
             )
-            break
+            if what["side"] == "buy":
+                trading_data.last_used_strategy[symbol] = s
+                break
 
     return True
 
