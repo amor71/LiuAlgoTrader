@@ -21,6 +21,7 @@ from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.tlog import tlog
 from models.new_trades import NewTrade
+from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
 from strategies.vwap_long import VWAPLong
@@ -487,6 +488,15 @@ async def consumer_async_main(
     queue: Queue, symbols: List[str], unique_id: str
 ):
     await create_db_connection(str(config.dsn))
+
+    try:
+        trending_db = TrendingTickers(unique_id)
+        for symbol in symbols:
+            await trending_db.save(symbol)
+    except Exception as e:
+        tlog(
+            f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
+        )
 
     base_url = (
         config.prod_base_url if config.env == "PROD" else config.paper_base_url
