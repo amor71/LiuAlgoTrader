@@ -83,7 +83,8 @@ class NewTrade:
                         FROM new_trades 
                         WHERE symbol=$1 AND 
                               operation='buy' 
-                        ORDER BY tstamp DESC
+                        ORDER BY tstamp DESC ￿￿
+                        LIMIT 1
 
                     """,
                     symbol,
