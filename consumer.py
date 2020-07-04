@@ -21,6 +21,7 @@ from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.tlog import tlog
 from models.new_trades import NewTrade
+from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
 from strategies.vwap_long import VWAPLong
@@ -419,11 +420,13 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
             trading_data.open_orders[symbol] = (o, what["side"])
             trading_data.open_order_strategy[symbol] = s
-            trading_data.last_used_strategy[symbol] = s
+
             tlog(
                 f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
             )
-            continue
+            if what["side"] == "buy":
+                trading_data.last_used_strategy[symbol] = s
+                break
 
     return True
 
@@ -487,6 +490,15 @@ async def consumer_async_main(
     queue: Queue, symbols: List[str], unique_id: str
 ):
     await create_db_connection(str(config.dsn))
+
+    try:
+        trending_db = TrendingTickers(unique_id)
+        for symbol in symbols:
+            await trending_db.save(symbol)
+    except Exception as e:
+        tlog(
+            f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
+        )
 
     base_url = (
         config.prod_base_url if config.env == "PROD" else config.paper_base_url
@@ -560,12 +572,17 @@ async def load_current_long_positions(
                 trading_data.latest_cost_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
-                trading_data.symbol_resistance[symbol] = indicators[
-                    "resistances"
-                ][0]
+                trading_data.symbol_resistance[symbol] = (
+                    indicators["resistances"][0]
+                    if "resistances" in indicators
+                    else None
+                )
 
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol
+                )
+                tlog(
+                    f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
                 )
 
             except Exception as e:

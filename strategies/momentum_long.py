@@ -24,8 +24,10 @@ error_logger = error_reporting.Client()
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, batch_id: str):
-        super().__init__(name=self.name, batch_id=batch_id)
+    def __init__(self, batch_id: str, ref_run_id: int = None):
+        super().__init__(
+            name=self.name, batch_id=batch_id, ref_run_id=ref_run_id
+        )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price
@@ -158,7 +160,7 @@ class MomentumLong(Strategy):
                     < macd1[-1].round(3)
                     and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
-                    and data.close > data.open
+                    and data.vwap > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     tlog(
