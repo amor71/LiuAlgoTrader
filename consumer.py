@@ -572,12 +572,17 @@ async def load_current_long_positions(
                 trading_data.latest_cost_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
-                trading_data.symbol_resistance[symbol] = indicators[
-                    "resistances"
-                ][0]
+                trading_data.symbol_resistance[symbol] = (
+                    indicators["resistances"][0]
+                    if "resistances" in indicators
+                    else None
+                )
 
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol
+                )
+                tlog(
+                    f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
                 )
 
             except Exception as e:
