@@ -85,7 +85,6 @@ class NewTrade:
                               operation='buy' 
                         ORDER BY tstamp DESC ￿￿
                         LIMIT 1
-
                     """,
                     symbol,
                 )
