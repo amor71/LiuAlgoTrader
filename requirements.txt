@@ -22,7 +22,7 @@ google-cloud-error-reporting==0.34.0
 pytest==5.4.3
 pytest-asyncio==0.14.0
 pytest-cov==2.10.0
-websockets
+websockets==8.1
 nb-clean==1.4.3
 matplotlib==3.2.2
 tabulate
