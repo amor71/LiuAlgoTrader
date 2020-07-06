@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
-import numpy as np
+import talib
 from google.cloud import error_reporting
 from pandas import DataFrame as df
+from pandas import Series
+from pandas import Timestamp as ts
+from tabulate import tabulate
 from talib import BBANDS, MACD, RSI
 
 from common import config
@@ -50,9 +53,6 @@ class VWAPLong(Strategy):
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_minute = minute_history.iloc[-2]
-        prev_two_minute = minute_history.iloc[-3]
-        prev_three_minute = minute_history.iloc[-4]
-
         if await super().is_buy_time(now) and not position:
             # print(
             #    symbol,
@@ -71,7 +71,7 @@ class VWAPLong(Strategy):
                     "high"
                 ].max()
 
-                if data.close < high_15m:
+                if data.vwap < high_15m:
                     return False, {}
             except Exception as e:
                 error_logger.report_exception()
@@ -82,39 +82,101 @@ class VWAPLong(Strategy):
                 )
                 return False, {}
 
+            back_time = ts(config.market_open)
+            back_time_index = minute_history["close"].index.get_loc(
+                back_time, method="nearest"
+            )
+            close_series = (
+                minute_history["close"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .max()
+            ).dropna()
+            vwap_series = (
+                minute_history["average"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .max()
+            ).dropna()
             if (
-                data.close
-                > prev_minute.close
-                > prev_two_minute.close
-                > prev_three_minute.close
-                and data.close > data.average
-                and prev_minute.close > prev_minute.average
-                and prev_two_minute.close > prev_two_minute.average
-                and prev_three_minute.close < prev_three_minute.average
+                # data.vwap > close_series[-1] > close_series[-2]
+                # and round(data.average, 2) > round(vwap_series[-1], 2)
+                # and data.vwap > data.average
+                # and
+                data.low > data.average
+                and close_series[-1]
+                > vwap_series[-1]
+                > vwap_series[-2]
+                > close_series[-2]
+                and prev_minute.high == prev_minute.close
             ):
-                tlog(
-                    f"{symbol} found conditions for VWAP strategy now:{data}, prev_min:{prev_minute}, prev_2min:{prev_two_minute}"
-                )
                 upperband, middleband, lowerband = BBANDS(
                     minute_history["close"], timeperiod=20,
                 )
 
-                if data.close > upperband[-1] - 0.05:
+                stop_price = prev_minute.close
+                target = upperband[-1]
+
+                if target - stop_price < 0.05:
                     tlog(
-                        f"{symbol} price {data.close} distance from upper-band {upperband[-1]} does not present a good setup"
+                        f"target price {target} too close to stop price {stop_price}"
                     )
                     return False, {}
 
-                if data.close < prev_minute.average + 0.02:
-                    tlog(
-                        f"{symbol} price {data.close} distance from previous minute vwap {prev_minute.average} does not present a good setup"
-                    )
-                    return False, {}
+                stop_prices[symbol] = stop_price
+                target_prices[symbol] = target
+                open_series = (
+                    minute_history["open"][back_time_index:]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                    .resample("5min")
+                    .max()
+                ).dropna()
+                high_series = (
+                    minute_history["high"][back_time_index:]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                    .resample("5min")
+                    .max()
+                ).dropna()
+                low_series = (
+                    minute_history["low"][back_time_index:]
+                    .dropna()
+                    .between_time("9:30", "16:00")
+                    .resample("5min")
+                    .max()
+                ).dropna()
 
-                stop_prices[symbol] = max(
-                    prev_two_minute.average, lowerband[-1]
+                patterns: Dict[ts, Dict[int, List[str]]] = {}
+                pattern_functions = talib.get_function_groups()[
+                    "Pattern Recognition"
+                ]
+                for pattern in pattern_functions:
+                    pattern_value = getattr(talib, pattern)(
+                        open_series, high_series, low_series, close_series
+                    )
+                    result = pattern_value.to_numpy().nonzero()
+                    if result[0].size > 0:
+                        for timestamp, value in pattern_value.iloc[
+                            result
+                        ].items():
+                            t = ts(timestamp)
+                            if t not in patterns:
+                                patterns[t] = {}
+                            if value not in patterns[t]:
+                                patterns[t][value] = [pattern]
+                            else:
+                                patterns[t][value].append(pattern)
+
+                tlog(f"{symbol} found conditions for VWAP strategy now:{now}")
+                candle_s = Series(patterns)
+                candle_s = candle_s.sort_index()
+                tlog(f"{candle_s}")
+                tlog(
+                    f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
-                target_prices[symbol] = upperband[-1]
 
                 if portfolio_value is None:
                     if trading_api:
@@ -133,6 +195,9 @@ class VWAPLong(Strategy):
                     // data.close
                     # // (data.close - stop_prices[symbol])
                 )
+                print(
+                    f"shares to buy {shares_to_buy} {data.close} {stop_prices[symbol]}"
+                )
                 if not shares_to_buy:
                     shares_to_buy = 1
                 shares_to_buy -= position
@@ -147,6 +212,7 @@ class VWAPLong(Strategy):
                         "bbrand_upper": upperband[-5:].tolist(),
                         "average": round(data.average, 2),
                         "vwap": round(data.vwap, 2),
+                        "patterns": candle_s.to_json(),
                     }
 
                     return (
@@ -155,7 +221,7 @@ class VWAPLong(Strategy):
                             "side": "buy",
                             "qty": str(shares_to_buy),
                             "type": "limit",
-                            "limit_price": str(data.close),
+                            "limit_price": str(prev_minute.close),
                         },
                     )
         elif (
@@ -186,25 +252,3 @@ class VWAPLong(Strategy):
                 )
 
         return False, {}
-
-
-"""          elif data.vwap <= prev_minute.open:
-                sell_indicators[symbol] = {
-                    "reason": "below previous minute close",
-                    "average": round(data.average,2),
-                    "vwap": round(data.vwap,2),
-                }
-                qty = int(position / 2) if position > 1 else 1
-                tlog(
-                    f"[{self.name}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close}"
-                )
-                return (
-                    True,
-                    {
-                        "side": "sell",
-                        "qty": str(qty),
-                        "type": "limit",
-                        "limit_price": str(data.close),
-                    },
-                )
-"""
