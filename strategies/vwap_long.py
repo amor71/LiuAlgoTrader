@@ -136,7 +136,10 @@ class VWAPLong(Strategy):
             )
 
             add_daily_vwap(_df)
-            tlog(f"\n{tabulate(_df, headers='keys', tablefmt='psql')}")
+            if debug:
+                tlog(
+                    f"\n{tabulate(_df[-10:], headers='keys', tablefmt='psql')}"
+                )
             vwap_series = _df["average"]
 
             if (
