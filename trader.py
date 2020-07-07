@@ -246,6 +246,8 @@ if __name__ == "__main__":
                 )
 
                 q_id_hash[symbol] = _index
+
+                tlog(f"{symbol} consumer process index {q_id_hash[symbol]}")
                 if _index not in symbol_by_queue:
                     symbol_by_queue[_index] = [symbol]
                 else:

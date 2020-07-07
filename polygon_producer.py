@@ -181,7 +181,7 @@ async def teardown_task(
             except asyncio.CancelledError:
                 tlog("teardown_task(): task is cancelled now")
 
-        asyncio.get_running_loop().stop()
+        # asyncio.get_running_loop().stop()
 
     except asyncio.CancelledError:
         tlog("teardown_task() cancelled during sleep")

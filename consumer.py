@@ -248,7 +248,9 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 async def handle_trade_update(data: Dict) -> bool:
     symbol = data["symbol"]
     if trading_data.open_orders.get(symbol) is None:
-        return False
+        raise Exception(
+            f"symbol {symbol} does not have open order, however data {data} was dispatched"
+        )
 
     last_order = trading_data.open_orders.get(symbol)[0]
     if last_order is not None:
@@ -298,6 +300,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         _df["vwap"] = 0.0
         _df["average"] = 0.0
         market_data.minute_history[symbol] = _df
+        tlog(
+            f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
+        )
     try:
         current = market_data.minute_history[symbol].loc[ts]
     except KeyError:
@@ -451,9 +456,12 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
     except Exception as e:
-        exc_info = sys.exc_info()
-        traceback.print_exception(*exc_info)
-        del exc_info
+        tlog(
+            f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
+        )
+        # exc_info = sys.exc_info()
+        # traceback.print_exception(*exc_info)
+        # del exc_info
     finally:
         tlog("queue_consumer() task done.")
 
