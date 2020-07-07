@@ -127,7 +127,7 @@ class VWAPLong(Strategy):
             _df = concat(
                 [
                     open.rename("open"),
-                    high.rename("close"),
+                    high.rename("high"),
                     low.rename("low"),
                     close.rename("close"),
                     volume.rename("volume"),
