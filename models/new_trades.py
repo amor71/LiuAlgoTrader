@@ -73,19 +73,23 @@ class NewTrade:
 
     @classmethod
     async def load_latest_long(
-        cls, pool: Pool, symbol: str
+        cls, pool: Pool, symbol: str, strategy_name: str
     ) -> Tuple[int, float, float, float, Dict]:
         async with pool.acquire() as con:
             async with con.transaction():
                 row = await con.fetchrow(
                     """
-                        SELECT algo_run_id, price, stop_price, target_price, indicators 
-                        FROM new_trades 
-                        WHERE symbol=$1 AND 
-                              operation='buy' 
+                        SELECT t.algo_run_id, t.price, t.stop_price, t.target_price, t.indicators 
+                        FROM new_trades as t, algo_run as a
+                        WHERE 
+                            t.algo_run_id=a.algo_run_id AND
+                            a.algo_name=$2 AND
+                            symbol=$1 AND 
+                            operation='buy' 
                         ORDER BY tstamp DESC LIMIT 1
                     """,
                     symbol,
+                    strategy_name,
                 )
 
                 if row:

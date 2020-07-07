@@ -16,6 +16,7 @@ from common.trading_data import (buy_indicators, last_used_strategy,
                                  latest_cost_basis, sell_indicators,
                                  stop_prices, target_prices)
 from fincalcs.candle_patterns import doji
+from fincalcs.vwap import add_daily_vwap
 
 from .base import Strategy
 
@@ -91,8 +92,9 @@ class VWAPLong(Strategy):
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
-                .max()
+                .sum()
             ).dropna()
+
             vwap_series = (
                 minute_history["average"][back_time_index:]
                 .dropna()
@@ -132,21 +134,21 @@ class VWAPLong(Strategy):
                     .dropna()
                     .between_time("9:30", "16:00")
                     .resample("5min")
-                    .max()
+                    .sum()
                 ).dropna()
                 high_series = (
                     minute_history["high"][back_time_index:]
                     .dropna()
                     .between_time("9:30", "16:00")
                     .resample("5min")
-                    .max()
+                    .sum()
                 ).dropna()
                 low_series = (
                     minute_history["low"][back_time_index:]
                     .dropna()
                     .between_time("9:30", "16:00")
                     .resample("5min")
-                    .max()
+                    .sum()
                 ).dropna()
 
                 patterns: Dict[ts, Dict[int, List[str]]] = {}
