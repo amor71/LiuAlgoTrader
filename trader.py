@@ -239,6 +239,7 @@ if __name__ == "__main__":
 
             q_id_hash = {}
             symbol_by_queue = {}
+            c = 0
             for symbol in symbols:
                 _index = int(
                     list(minute_history.keys()).index(symbol)
@@ -247,11 +248,14 @@ if __name__ == "__main__":
 
                 q_id_hash[symbol] = _index
 
-                tlog(f"{symbol} consumer process index {q_id_hash[symbol]}")
+                tlog(
+                    f"{symbol} consumer process index {c}/{q_id_hash[symbol]}"
+                )
                 if _index not in symbol_by_queue:
                     symbol_by_queue[_index] = [symbol]
                 else:
                     symbol_by_queue[_index].append(symbol)
+                c += 1
 
             consumers = [
                 mp.Process(

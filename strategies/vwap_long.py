@@ -125,6 +125,7 @@ class VWAPLong(Strategy):
             ).dropna()
 
             _df = concat([open, high, low, close, volume])
+            print(_df)
             add_daily_vwap(_df)
             vwap_series = _df["average"]
 
