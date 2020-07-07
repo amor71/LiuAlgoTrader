@@ -558,7 +558,9 @@ async def load_current_long_positions(
             position = None
 
         if position:
-            tlog(f"loading current position for {symbol}")
+            tlog(
+                f"loading current position for {symbol} for strategy {strategy.name}"
+            )
             try:
                 (
                     prev_run_id,
