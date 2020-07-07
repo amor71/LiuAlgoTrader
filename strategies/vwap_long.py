@@ -7,6 +7,7 @@ from google.cloud import error_reporting
 from pandas import DataFrame as df
 from pandas import Series
 from pandas import Timestamp as ts
+from pandas import concat
 from tabulate import tabulate
 from talib import BBANDS, MACD, RSI
 
@@ -87,31 +88,53 @@ class VWAPLong(Strategy):
             back_time_index = minute_history["close"].index.get_loc(
                 back_time, method="nearest"
             )
-            close_series = (
+            close = (
                 minute_history["close"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .last()
+            ).dropna()
+            open = (
+                minute_history["open"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .first()
+            ).dropna()
+            high = (
+                minute_history["high"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .max()
+            ).dropna()
+            low = (
+                minute_history["low"][back_time_index:]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .min()
+            ).dropna()
+            volume = (
+                minute_history["volume"][back_time_index:]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
                 .sum()
             ).dropna()
 
-            vwap_series = (
-                minute_history["average"][back_time_index:]
-                .dropna()
-                .between_time("9:30", "16:00")
-                .resample("5min")
-                .max()
-            ).dropna()
+            _df = concat([open, high, low, close, volume])
+            add_daily_vwap(_df)
+            vwap_series = _df["average"]
+
             if (
                 # data.vwap > close_series[-1] > close_series[-2]
                 # and round(data.average, 2) > round(vwap_series[-1], 2)
                 # and data.vwap > data.average
                 # and
                 data.low > data.average
-                and close_series[-1]
-                > vwap_series[-1]
-                > vwap_series[-2]
-                > close_series[-2]
+                and close[-1] > vwap_series[-1] > vwap_series[-2] > close[-2]
                 and prev_minute.high == prev_minute.close
             ):
                 upperband, middleband, lowerband = BBANDS(
@@ -129,27 +152,6 @@ class VWAPLong(Strategy):
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
-                open_series = (
-                    minute_history["open"][back_time_index:]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                    .resample("5min")
-                    .sum()
-                ).dropna()
-                high_series = (
-                    minute_history["high"][back_time_index:]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                    .resample("5min")
-                    .sum()
-                ).dropna()
-                low_series = (
-                    minute_history["low"][back_time_index:]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                    .resample("5min")
-                    .sum()
-                ).dropna()
 
                 patterns: Dict[ts, Dict[int, List[str]]] = {}
                 pattern_functions = talib.get_function_groups()[
@@ -157,7 +159,7 @@ class VWAPLong(Strategy):
                 ]
                 for pattern in pattern_functions:
                     pattern_value = getattr(talib, pattern)(
-                        open_series, high_series, low_series, close_series
+                        open, high, low, close
                     )
                     result = pattern_value.to_numpy().nonzero()
                     if result[0].size > 0:
