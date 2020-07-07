@@ -459,9 +459,9 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
         tlog(
             f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
         )
-        # exc_info = sys.exc_info()
-        # traceback.print_exception(*exc_info)
-        # del exc_info
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
+        del exc_info
     finally:
         tlog("queue_consumer() task done.")
 
@@ -536,9 +536,7 @@ async def consumer_async_main(
         await s.create()
 
         trading_data.strategies.append(s)
-
-        if strategy_type == MomentumLong:
-            await load_current_long_positions(trading_api, symbols, s)
+        await load_current_long_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
@@ -554,7 +552,7 @@ async def consumer_async_main(
 
 async def load_current_long_positions(
     trading_api: tradeapi, symbols: List[str], strategy: Strategy
-):
+) -> None:
     for symbol in symbols:
         try:
             position = trading_api.get_position(symbol)
@@ -571,8 +569,11 @@ async def load_current_long_positions(
                     target_price,
                     indicators,
                 ) = await NewTrade.load_latest_long(
-                    config.db_conn_pool, symbol
+                    config.db_conn_pool, symbol, strategy.name
                 )
+
+                if prev_run_id is None:
+                    return
 
                 trading_data.positions[symbol] = int(position.qty)
                 trading_data.stop_prices[symbol] = stop_price
