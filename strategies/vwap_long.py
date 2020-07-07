@@ -131,7 +131,8 @@ class VWAPLong(Strategy):
                     low.rename("low"),
                     close.rename("close"),
                     volume.rename("volume"),
-                ]
+                ],
+                axis=1,
             )
             tlog(f"\n{tabulate(_df, headers='keys', tablefmt='psql')}")
 
