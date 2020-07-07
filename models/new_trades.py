@@ -5,6 +5,7 @@ from typing import Dict, List, Tuple
 from asyncpg.pool import Pool
 
 from common import config
+from common.tlog import tlog
 
 
 class NewTrade:
@@ -101,7 +102,8 @@ class NewTrade:
                         json.loads(row[4]),
                     )
                 else:
-                    raise Exception("no data")
+                    tlog(f"no data for strategy {strategy_name}")
+                    raise ValueError
 
     @classmethod
     async def get_run_symbols(

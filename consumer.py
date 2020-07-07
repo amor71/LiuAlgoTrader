@@ -592,6 +592,8 @@ async def load_current_long_positions(
                     f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
                 )
 
+            except ValueError:
+                pass
             except Exception as e:
                 tlog(
                     f"load_current_long_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
