@@ -239,7 +239,7 @@ class VWAPLong(Strategy):
                             "side": "buy",
                             "qty": str(shares_to_buy),
                             "type": "limit",
-                            "limit_price": str(prev_minute.close),
+                            "limit_price": str(data.close),
                         },
                     )
         elif (
