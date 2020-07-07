@@ -133,7 +133,8 @@ class VWAPLong(Strategy):
                     volume.rename("volume"),
                 ]
             )
-            print(_df)
+            tlog(f"\n{tabulate(_df, headers='keys', tablefmt='psql')}")
+
             add_daily_vwap(_df)
             vwap_series = _df["average"]
 
