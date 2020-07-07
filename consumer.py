@@ -248,9 +248,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 async def handle_trade_update(data: Dict) -> bool:
     symbol = data["symbol"]
     if trading_data.open_orders.get(symbol) is None:
-        raise Exception(
-            f"symbol {symbol} does not have open order, however data {data} was dispatched"
-        )
+        return False
 
     last_order = trading_data.open_orders.get(symbol)[0]
     if last_order is not None:
