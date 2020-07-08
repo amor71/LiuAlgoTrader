@@ -77,7 +77,6 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         tlog(
             f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
         )
-        return
         # asyncio.get_running_loop().stop()
     finally:
         tlog("consumer-teardown_task() task done.")
@@ -618,10 +617,11 @@ def consumer_main(
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))
-        loop.run_forever()
+        asyncio.run(consumer_async_main(queue, symbols, unique_id))
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(asyncio.new_event_loop())
+        # loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))
+        # loop.run_forever()
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
 
