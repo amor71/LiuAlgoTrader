@@ -240,9 +240,7 @@ async def producer_async_main(
 
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"),
-            [data_ws, trade_ws],
-            [trade_updates_task, main_task],
+            timezone("America/New_York"), [data_ws, trade_ws], [main_task],
         )
     )
 
