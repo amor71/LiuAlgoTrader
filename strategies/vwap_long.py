@@ -157,7 +157,7 @@ class VWAPLong(Strategy):
                     minute_history["close"], timeperiod=20,
                 )
 
-                stop_price = prev_minute.close
+                stop_price = min(prev_minute.close, data.avergae - 0.02)
                 target = upperband[-1]
 
                 if target - stop_price < 0.05:
@@ -260,6 +260,11 @@ class VWAPLong(Strategy):
                     True,
                     {"side": "sell", "qty": str(position), "type": "market",},
                 )
+
+        return False, {}
+
+
+"""
             elif doji(data.open, data.close, data.high, data.low):
                 sell_indicators[symbol] = {
                     "reason": "doji",
@@ -270,5 +275,4 @@ class VWAPLong(Strategy):
                     True,
                     {"side": "sell", "qty": str(position), "type": "market",},
                 )
-
-        return False, {}
+"""

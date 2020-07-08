@@ -349,7 +349,7 @@ class MomentumLong(Strategy):
             bail_threshold = (
                 latest_cost_basis[symbol] + scalp_threshold
             ) / 2.0
-            macd_below_signal = macd_val < macd_signal_val
+            macd_below_signal = round(macd_val, 2) < round(macd_signal_val, 2)
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
                 data.vwap > bail_threshold
