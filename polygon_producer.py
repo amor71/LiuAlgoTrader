@@ -46,6 +46,7 @@ async def trade_run(
             )
 
     await ws.subscribe(["trade_updates"])
+    tlog("trade_run() completed")
 
 
 async def run(
@@ -138,7 +139,7 @@ async def run(
         )
         traceback.print_exc()
     finally:
-        tlog("main Ploygin consumer task completed ")
+        tlog("main Polygon producer task completed ")
 
 
 async def teardown_task(
@@ -248,6 +249,8 @@ async def producer_async_main(
     await asyncio.gather(
         main_task, trade_updates_task, tear_down, return_exceptions=True,
     )
+
+    tlog("producer_async_main() completed")
 
 
 def polygon_producer_main(
