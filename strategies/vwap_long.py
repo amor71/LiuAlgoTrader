@@ -135,7 +135,9 @@ class VWAPLong(Strategy):
                 axis=1,
             )
 
-            add_daily_vwap(_df)
+            if not add_daily_vwap(_df):
+                return False, {}
+
             if debug:
                 tlog(
                     f"\n{tabulate(_df[-10:], headers='keys', tablefmt='psql')}"

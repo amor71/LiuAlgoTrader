@@ -6,11 +6,19 @@ from common import config
 from common.tlog import tlog
 
 
-def add_daily_vwap(minute_data: df, debug=False):
+def add_daily_vwap(minute_data: df, debug=False) -> bool:
     back_time = ts(config.market_open)
-    back_time_index = minute_data["close"].index.get_loc(
-        back_time, method="nearest"
-    )
+
+    try:
+        back_time_index = minute_data["close"].index.get_loc(
+            back_time, method="nearest"
+        )
+    except IndexError as e:
+        if debug:
+            tlog(
+                f"IndexError exception {e} in add_daily_vwap for {minute_data}"
+            )
+        return False
 
     minute_data["pv"] = minute_data.apply(
         lambda x: (x["close"] + x["high"] + x["low"]) / 3 * x["volume"], axis=1
@@ -31,3 +39,5 @@ def add_daily_vwap(minute_data: df, debug=False):
         tlog(
             f"\n{tabulate(minute_data[-10:], headers='keys', tablefmt='psql')}"
         )
+
+    return True
