@@ -11,6 +11,7 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
+from alpaca_trade_api.rest import APIError
 # from alpaca_trade_api.stream2 import StreamConn
 from google.cloud import error_reporting
 from pandas import DataFrame as df
@@ -402,33 +403,36 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         )
 
         if do:
-            if what["type"] == "limit":
-                o = trading_api.submit_order(
-                    symbol=symbol,
-                    qty=what["qty"],
-                    side=what["side"],
-                    type="limit",
-                    time_in_force="day",
-                    limit_price=what["limit_price"],
-                )
-            else:
-                o = trading_api.submit_order(
-                    symbol=symbol,
-                    qty=what["qty"],
-                    side=what["side"],
-                    type=what["type"],
-                    time_in_force="day",
-                )
+            try:
+                if what["type"] == "limit":
+                    o = trading_api.submit_order(
+                        symbol=symbol,
+                        qty=what["qty"],
+                        side=what["side"],
+                        type="limit",
+                        time_in_force="day",
+                        limit_price=what["limit_price"],
+                    )
+                else:
+                    o = trading_api.submit_order(
+                        symbol=symbol,
+                        qty=what["qty"],
+                        side=what["side"],
+                        type=what["type"],
+                        time_in_force="day",
+                    )
 
-            trading_data.open_orders[symbol] = (o, what["side"])
-            trading_data.open_order_strategy[symbol] = s
+                trading_data.open_orders[symbol] = (o, what["side"])
+                trading_data.open_order_strategy[symbol] = s
 
-            tlog(
-                f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-            )
-            if what["side"] == "buy":
-                trading_data.last_used_strategy[symbol] = s
-                break
+                tlog(
+                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
+                )
+                if what["side"] == "buy":
+                    trading_data.last_used_strategy[symbol] = s
+                    break
+            except APIError as e:
+                tlog(f"Exception APIError with {e} from {what}")
 
     return True
 
