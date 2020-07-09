@@ -262,12 +262,13 @@ def polygon_producer_main(
         config.market_close = market_close
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(
-            producer_async_main(queues, symbols, queue_id_hash)
-        )
-        loop.run_forever()
+        asyncio.run(producer_async_main(queues, symbols, queue_id_hash))
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(asyncio.new_event_loop())
+        # loop.run_until_complete(
+        #    producer_async_main(queues, symbols, queue_id_hash)
+        # )
+        # loop.run_forever()
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:

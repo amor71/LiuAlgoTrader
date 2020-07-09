@@ -404,6 +404,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
         if do:
             try:
+
                 if what["type"] == "limit":
                     o = trading_api.submit_order(
                         symbol=symbol,
@@ -432,7 +433,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                     trading_data.last_used_strategy[symbol] = s
                     break
             except APIError as e:
-                tlog(f"Exception APIError with {e} from {what}")
+                tlog(
+                    f"Exception APIError with {e} from {what}, checking if order filled"
+                )
 
     return True
 
@@ -549,6 +552,8 @@ async def consumer_async_main(
     await asyncio.gather(
         tear_down, queue_consumer_task, return_exceptions=True,
     )
+
+    tlog("consumer_async_main() completed")
 
 
 async def load_current_long_positions(
