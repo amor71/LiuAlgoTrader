@@ -165,6 +165,11 @@ class VWAPLong(Strategy):
                         f"target price {target} too close to stop price {stop_price}"
                     )
                     return False, {}
+                if target - data.close < 0.05:
+                    tlog(
+                        f"target price {target} too close to close price {data.close}"
+                    )
+                    return False, {}
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
