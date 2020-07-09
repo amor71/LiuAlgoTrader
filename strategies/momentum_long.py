@@ -62,7 +62,7 @@ class MomentumLong(Strategy):
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
-
+        prev_min = minute_history.iloc[-2]
         if (
             await super().is_buy_time(now)
             and not position
@@ -184,7 +184,9 @@ class MomentumLong(Strategy):
                             resistance = await find_resistances(
                                 symbol,
                                 self.name,
-                                data.close if not data.vwap else data.vwap,
+                                min(
+                                    data.low, prev_min.close
+                                ),  # data.close if not data.vwap else data.vwap,
                                 minute_history,
                                 debug,
                             )
@@ -192,7 +194,9 @@ class MomentumLong(Strategy):
                             supports = await find_supports(
                                 symbol,
                                 self.name,
-                                data.close if not data.vwap else data.vwap,
+                                min(
+                                    data.low, prev_min.close
+                                ),  # data.close if not data.vwap else data.vwap,
                                 minute_history,
                                 debug,
                             )
