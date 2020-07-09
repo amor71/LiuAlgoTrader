@@ -5,6 +5,7 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
+from queue import Empty
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -445,17 +446,23 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
 
     try:
         while True:
-            raw_data = queue.get()
-            data = json.loads(raw_data)
-            # print(f"got {data}")
-            if data["EV"] == "trade_update":
-                tlog(f"received trade_update: {data}")
-                await handle_trade_update(data)
-            else:
-                if not await handle_data_queue_msg(data, trading_api):
-                    while not queue.empty():
-                        _ = queue.get()
-                    tlog("cleaned queue")
+            try:
+                raw_data = queue.get(timeout=2)
+                print(raw_data)
+                data = json.loads(raw_data)
+                # print(f"got {data}")
+                if data["EV"] == "trade_update":
+                    tlog(f"received trade_update: {data}")
+                    await handle_trade_update(data)
+                else:
+                    if not await handle_data_queue_msg(data, trading_api):
+                        while not queue.empty():
+                            _ = queue.get()
+                        tlog("cleaned queue")
+
+            except Empty:
+                await asyncio.sleep(0)
+                continue
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
