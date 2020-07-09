@@ -157,7 +157,7 @@ class VWAPLong(Strategy):
                     minute_history["close"], timeperiod=20,
                 )
 
-                stop_price = min(prev_minute.close, data.avergae - 0.02)
+                stop_price = min(prev_minute.close, data.avergae - 0.01)
                 target = upperband[-1]
 
                 if target - stop_price < 0.05:
@@ -197,6 +197,10 @@ class VWAPLong(Strategy):
                 tlog(
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
+
+                if candle_s[-1].has_key("-100"):
+                    tlog(f"Bearish pattern exists {candle_s[-1]} -> skipping")
+                    return False, {}
 
                 if portfolio_value is None:
                     if trading_api:
