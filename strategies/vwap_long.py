@@ -203,7 +203,7 @@ class VWAPLong(Strategy):
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
 
-                if "-100" in candle_s[-1]:
+                if candle_s.size > 0 and "-100" in candle_s[-1]:
                     tlog(f"Bearish pattern exists {candle_s[-1]} -> skipping")
                     return False, {}
 
