@@ -124,7 +124,10 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             print(f"start time with data {new_now}")
             price = 0.0
             last_run_id = None
-            while new_now < start_time + duration:
+            while (
+                new_now < start_time + duration
+                and minute_index < symbol_data.index.size - 1
+            ):
                 if symbol_data.index[minute_index] != new_now:
                     print(
                         "mismatch!", symbol_data.index[minute_index], new_now

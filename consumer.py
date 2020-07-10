@@ -448,7 +448,7 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
         while True:
             try:
                 raw_data = queue.get(timeout=2)
-                print(raw_data)
+                # print(raw_data)
                 data = json.loads(raw_data)
                 # print(f"got {data}")
                 if data["EV"] == "trade_update":
