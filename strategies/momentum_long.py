@@ -13,7 +13,7 @@ from talib import MACD, RSI
 from common import config
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
-                                 sell_indicators, stop_prices,
+                                 open_orders, sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
 from fincalcs.candle_patterns import four_price_doji, gravestone_doji
 from fincalcs.support_resistance import (find_resistances, find_stop,
@@ -319,6 +319,12 @@ class MomentumLong(Strategy):
             and position > 0
             and symbol in latest_cost_basis
         ):
+            if open_orders.get(symbol) is not None:
+                tlog(
+                    f"momentum_long: open order for {symbol} exists, skipping"
+                )
+                return False, {}
+
             # Check for liquidation signals
             # Sell for a loss if it's fallen below our stop price
             # Sell for a loss if it's below our cost basis and MACD < 0
