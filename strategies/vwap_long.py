@@ -14,8 +14,8 @@ from talib import BBANDS, MACD, RSI
 from common import config
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, last_used_strategy,
-                                 latest_cost_basis, sell_indicators,
-                                 stop_prices, target_prices)
+                                 latest_cost_basis, open_orders,
+                                 sell_indicators, stop_prices, target_prices)
 from fincalcs.candle_patterns import doji
 from fincalcs.vwap import add_daily_vwap
 
@@ -262,6 +262,10 @@ class VWAPLong(Strategy):
             and symbol in latest_cost_basis
             and last_used_strategy[symbol].name == self.name
         ):
+            if open_orders.get(symbol) is not None:
+                tlog(f"vwap_long: open order for {symbol} exists, skipping")
+                return False, {}
+
             if data.vwap <= data.average - 0.02:
                 sell_indicators[symbol] = {
                     "reason": "below VWAP",
