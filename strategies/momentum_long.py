@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
 import numpy as np
+import talib
 from google.cloud import error_reporting
 from pandas import DataFrame as df
+from pandas import Series
+from pandas import Timestamp as ts
 from talib import MACD, RSI
 
 from common import config
@@ -421,6 +424,34 @@ class MomentumLong(Strategy):
             if to_sell:
                 # await asyncio.sleep(0)
                 try:
+                    close = minute_history["close"][-10:].dropna()
+                    open = minute_history["open"][-10:].dropna()
+                    high = minute_history["high"][-10:].dropna()
+                    low = minute_history["low"][-10:].dropna()
+
+                    patterns: Dict[ts, Dict[int, List[str]]] = {}
+                    pattern_functions = talib.get_function_groups()[
+                        "Pattern Recognition"
+                    ]
+                    for pattern in pattern_functions:
+                        pattern_value = getattr(talib, pattern)(
+                            open, high, low, close
+                        )
+                        result = pattern_value.to_numpy().nonzero()
+                        if result[0].size > 0:
+                            for timestamp, value in pattern_value.iloc[
+                                result
+                            ].items():
+                                t = ts(timestamp)
+                                if t not in patterns:
+                                    patterns[t] = {}
+                                if value not in patterns[t]:
+                                    patterns[t][value] = [pattern]
+                                else:
+                                    patterns[t][value].append(pattern)
+                    candle_s = Series(patterns)
+                    candle_s = candle_s.sort_index()
+
                     sell_indicators[symbol] = {
                         "rsi": rsi[-2:].tolist(),
                         "movement": movement,
@@ -431,6 +462,9 @@ class MomentumLong(Strategy):
                         "reasons": " AND ".join(
                             [str(elem) for elem in sell_reasons]
                         ),
+                        "patterns": candle_s.to_json()
+                        if candle_s.size > 0
+                        else None,
                     }
 
                     if not partial_sell:

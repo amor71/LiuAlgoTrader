@@ -198,6 +198,9 @@ class VWAPLong(Strategy):
                 tlog(f"{symbol} found conditions for VWAP strategy now:{now}")
                 candle_s = Series(patterns)
                 candle_s = candle_s.sort_index()
+
+                tlog(f"5-min VWAP {vwap_series}")
+                tlog(f"5-min close values {close}")
                 tlog(f"{candle_s}")
                 tlog(
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
@@ -259,7 +262,7 @@ class VWAPLong(Strategy):
             and symbol in latest_cost_basis
             and last_used_strategy[symbol].name == self.name
         ):
-            if data.vwap <= data.average:
+            if data.vwap <= data.average - 0.02:
                 sell_indicators[symbol] = {
                     "reason": "below VWAP",
                     "average": data.average,
