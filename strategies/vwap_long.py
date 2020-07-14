@@ -157,7 +157,11 @@ class VWAPLong(Strategy):
                     minute_history["close"], timeperiod=20,
                 )
 
-                stop_price = min(prev_minute.close, data.average - 0.01)
+                stop_price = min(
+                    prev_minute.close,
+                    data.average - 0.01,
+                    lowerband[-1] - 0.03,
+                )
                 target = upperband[-1]
 
                 if target - stop_price < 0.05:
