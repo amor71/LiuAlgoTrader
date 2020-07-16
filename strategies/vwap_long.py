@@ -210,8 +210,8 @@ class VWAPLong(Strategy):
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
 
-                if candle_s.size > 0 and "-100" in candle_s[-1]:
-                    tlog(f"Bearish pattern exists {candle_s[-1]} -> skipping")
+                if candle_s.size == 0 or "-100" in candle_s[-1]:
+                    tlog(f"Bullish pattern does not exists -> skipping")
                     return False, {}
 
                 if portfolio_value is None:
@@ -259,6 +259,21 @@ class VWAPLong(Strategy):
                             "type": "limit",
                             "limit_price": str(data.close),
                         },
+                    )
+            elif debug:
+                if not (data.low > data.average):
+                    tlog(
+                        f"failed data.low {data.low} > data.average {data.average}"
+                    )
+                if not (
+                    close[-1] > vwap_series[-1] > vwap_series[-2] > close[-2]
+                ):
+                    tlog(
+                        f"failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > close[-2] {close[-2]}"
+                    )
+                if not (prev_minute.high == prev_minute.close):
+                    tlog(
+                        f"failed prev_minute.high {prev_minute.high} == prev_minute.close {prev_minute.high}"
                     )
         elif (
             await super().is_sell_time(now)
