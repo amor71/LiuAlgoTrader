@@ -210,7 +210,12 @@ class VWAPLong(Strategy):
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
 
-                if candle_s.size == 0 or "-100" in candle_s[-1]:
+                if (
+                    candle_s.size == 0
+                    or "-100" in candle_s[-1]
+                    or candle_s.size > 2
+                    and "-100" in candle_s[-2]
+                ):
                     tlog(f"Bullish pattern does not exists -> skipping")
                     return False, {}
 
