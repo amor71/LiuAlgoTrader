@@ -355,7 +355,9 @@ class MomentumLong(Strategy):
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
 
-            round_factor = 2 if macd_val >= 0.1 else 3
+            round_factor = (
+                2 if macd_val >= 0.1 or macd_signal_val >= 0.1 else 3
+            )
             # await asyncio.sleep(0)
             if (
                 symbol_resistance
@@ -381,6 +383,13 @@ class MomentumLong(Strategy):
                 and macd_below_signal
                 and macd[-1] < macd[-2]
             )
+            bail_on_rsi = data.vwap > bail_threshold and rsi[-2] < rsi[-3]
+
+            if debug and not bail_out:
+                tlog(
+                    f"[{now}]{symbol} don't bail: data.vwap={data.vwap} bail_threshold={bail_threshold} macd_below_signal={macd_below_signal} macd[-1]={ macd[-1]} macd[-2]={macd[-2]}"
+                )
+
             scalp = movement > 0.02 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
 
@@ -412,6 +421,9 @@ class MomentumLong(Strategy):
             elif bail_out:
                 to_sell = True
                 sell_reasons.append("bail")
+            elif bail_on_rsi:
+                to_sell = True
+                sell_reasons.append("bail_on_rsi")
             elif scalp:
                 partial_sell = True
                 to_sell = True
@@ -471,7 +483,7 @@ class MomentumLong(Strategy):
                     candle_s = candle_s.sort_index()
 
                     sell_indicators[symbol] = {
-                        "rsi": rsi[-2:].tolist(),
+                        "rsi": rsi[-3:].tolist(),
                         "movement": movement,
                         "sell_macd": macd[-5:].tolist(),
                         "sell_macd_signal": macd_signal[-5:].tolist(),
