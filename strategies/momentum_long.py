@@ -203,22 +203,30 @@ class MomentumLong(Strategy):
                                 minute_history,
                                 debug,
                             )
-                            if (
-                                resistance is None
-                                or resistance == []
-                                or data.close == resistance[0]
-                            ):
+                            if resistance is None or resistance == []:
                                 tlog(
-                                    f"[{self.name}]no resistance for {symbol} -> skip buy"
+                                    f"[{self.name}] no resistance for {symbol} -> skip buy"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
                                 )
                                 return False, {}
 
-                            if resistance[0] - data.close < 0.05:
+                            next_resistance = None
+                            for potential_resistance in resistance:
+                                if potential_resistance > data.close:
+                                    next_resistance = potential_resistance
+                                    break
+
+                            if not next_resistance:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance[0]}"
+                                    f"[{self.name}] did not find resistance above {data.close}"
+                                )
+                                return False, {}
+
+                            if next_resistance - data.close < 0.05:
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
                                 )
                                 return False, {}
                             if data.close - supports[-1] < 0.05:
@@ -226,11 +234,11 @@ class MomentumLong(Strategy):
                                     f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
                                 )
                                 return False, {}
-                            if (resistance[0] - data.close) / (
+                            if (next_resistance - data.close) / (
                                 data.close - supports[-1]
                             ) < 0.8:
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {resistance[0]}"
+                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {next_resistance}"
                                 )
                                 cool_down[symbol] = now.replace(
                                     second=0, microsecond=0
@@ -238,7 +246,7 @@ class MomentumLong(Strategy):
                                 return False, {}
 
                             tlog(
-                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {resistance[0]}"
+                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {next_resistance}"
                             )
                             # Stock has passed all checks; figure out how much to buy
                             stop_price = find_stop(
@@ -253,7 +261,7 @@ class MomentumLong(Strategy):
                                 data.close
                                 + (data.close - stop_prices[symbol]) * 2
                             )
-                            symbol_resistance[symbol] = resistance[0]
+                            symbol_resistance[symbol] = next_resistance
 
                             if portfolio_value is None:
                                 if trading_api:
@@ -294,7 +302,7 @@ class MomentumLong(Strategy):
                                     "avg": data.average,
                                     "position_ratio": str(
                                         round(
-                                            (resistance[0] - data.close)
+                                            (next_resistance - data.close)
                                             / (data.close - supports[-1]),
                                             2,
                                         )
@@ -346,6 +354,8 @@ class MomentumLong(Strategy):
             ) / latest_cost_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
+
+            round_factor = 2 if macd_val >= 0.1 else 3
             # await asyncio.sleep(0)
             if (
                 symbol_resistance
@@ -362,7 +372,9 @@ class MomentumLong(Strategy):
             bail_threshold = (
                 latest_cost_basis[symbol] + scalp_threshold
             ) / 2.0
-            macd_below_signal = round(macd_val, 2) < round(macd_signal_val, 2)
+            macd_below_signal = round(macd_val, round_factor) < round(
+                macd_signal_val, round_factor
+            )
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
                 data.vwap > bail_threshold
