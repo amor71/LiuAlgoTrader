@@ -154,7 +154,7 @@ class VWAPLong(Strategy):
                 and prev_minute.high == prev_minute.close
             ):
                 upperband, middleband, lowerband = BBANDS(
-                    minute_history["close"], timeperiod=20,
+                    minute_history["close"], timeperiod=20
                 )
 
                 stop_price = min(
@@ -203,19 +203,14 @@ class VWAPLong(Strategy):
                 candle_s = Series(patterns)
                 candle_s = candle_s.sort_index()
 
-                tlog(f"5-min VWAP {vwap_series}")
-                tlog(f"5-min close values {close}")
-                tlog(f"{candle_s}")
+                tlog(f"{symbol} 5-min VWAP {vwap_series}")
+                tlog(f"{symbol} 5-min close values {close}")
+                tlog(f"{symbol} {candle_s}")
                 tlog(
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
 
-                if (
-                    candle_s.size == 0
-                    or "-100" in candle_s[-1]
-                    or candle_s.size > 2
-                    and "-100" in candle_s[-2]
-                ):
+                if candle_s.size == 0 or -100 in candle_s[-1]:
                     tlog(f"Bullish pattern does not exists -> skipping")
                     return False, {}
 
@@ -298,7 +293,7 @@ class VWAPLong(Strategy):
                 }
                 return (
                     True,
-                    {"side": "sell", "qty": str(position), "type": "market",},
+                    {"side": "sell", "qty": str(position), "type": "market"},
                 )
 
         return False, {}

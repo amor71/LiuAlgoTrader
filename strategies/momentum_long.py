@@ -108,7 +108,7 @@ class MomentumLong(Strategy):
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].min()
 
-                if (
+                if (now - config.market_open).seconds // 60 > 40 and (
                     last_30_max_close - last_30_min_close
                 ) / last_30_min_close > 0.1:
                     tlog(
@@ -130,7 +130,7 @@ class MomentumLong(Strategy):
                 macds = MACD(serie)
                 # await asyncio.sleep(0)
 
-                sell_macds = MACD(serie, 13, 21,)
+                sell_macds = MACD(serie, 13, 21)
                 # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
@@ -169,14 +169,14 @@ class MomentumLong(Strategy):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
-                    macd2 = MACD(serie, 40, 60,)[0]
+                    macd2 = MACD(serie, 40, 60)[0]
                     # await asyncio.sleep(0)
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
-                        rsi = RSI(serie, 14,)
+                        rsi = RSI(serie, 14)
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
                         if rsi[-1] <= 71:
