@@ -49,7 +49,7 @@ async def find_resistances(
         minute_history["close"][back_time_index:]
         .dropna()
         .between_time("9:30", "16:00")
-        .resample("5min")
+        .resample("15min")
         .max()
     ).dropna()
 
@@ -85,7 +85,7 @@ async def find_supports(
             minute_history["close"][-back_track_min:]
             .dropna()
             .between_time("9:30", "16:00")
-            .resample("5min")
+            .resample("15min")
             .min()
         ).dropna()
         diff = np.diff(series.values)
