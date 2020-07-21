@@ -381,7 +381,8 @@ class MomentumLong(Strategy):
                 # movement > min(0.02, movement_threshold) and macd_below_signal
                 data.vwap > bail_threshold
                 and macd_below_signal
-                and macd[-1] < macd[-2]
+                and round(macd[-1], round_factor)
+                < round(macd[-2], round_factor)
             )
             bail_on_rsi = data.vwap > bail_threshold and rsi[-2] < rsi[-3]
 
