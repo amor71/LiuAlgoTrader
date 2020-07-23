@@ -12,6 +12,7 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import pygit2
 import pytz
+from requests.exceptions import HTTPError
 
 from common import config, market_data, trading_data
 from common.database import create_db_connection
@@ -98,14 +99,18 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 print("--> using DEBUG mode")
 
             # load historical data
-            symbol_data = data_api.polygon.historic_agg_v2(
-                symbol,
-                1,
-                "minute",
-                _from=str(start_time - timedelta(days=8)),
-                to=str(start_time + timedelta(days=1)),
-                limit=10000,
-            ).df
+            try:
+                symbol_data = data_api.polygon.historic_agg_v2(
+                    symbol,
+                    1,
+                    "minute",
+                    _from=str(start_time - timedelta(days=8)),
+                    to=str(start_time + timedelta(days=1)),
+                    limit=10000,
+                ).df
+            except HTTPError as e:
+                tlog(f"Received HTTP error {e} for {symbol}")
+                return
 
             add_daily_vwap(
                 symbol_data, debug=debug_symbols and symbol in debug_symbols
