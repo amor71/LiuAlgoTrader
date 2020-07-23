@@ -177,6 +177,13 @@ class MomentumLong(Strategy):
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(serie, 14)
+
+                        if rsi[-1] < rsi[-2]:
+                            tlog(
+                                f"[{self.name}] {symbol} RSI counter MACD trend"
+                            )
+                            return False, {}
+
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
 

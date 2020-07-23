@@ -151,7 +151,7 @@ class VWAPLong(Strategy):
                 # and
                 data.low > data.average
                 and close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
-                and close[-1] > close[-2]
+                and close[-1] > high[-2]
                 and prev_minute.high == prev_minute.close
             ):
                 upperband, middleband, lowerband = BBANDS(
