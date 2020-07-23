@@ -161,7 +161,7 @@ class MomentumLong(Strategy):
                     and macd1[-3].round(3)
                     < macd1[-2].round(3)
                     < macd1[-1].round(3)
-                    and macd1[-1] > macd_signal[-1]
+                    # and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
                     and data.vwap > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
