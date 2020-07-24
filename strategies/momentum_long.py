@@ -266,9 +266,9 @@ class MomentumLong(Strategy):
                                 )
                                 target_prices[symbol] = target_price
                                 stop_prices[symbol] = stop_price
-                                resistance = target_price
-                                support = stop_price
-                                symbol_resistance[symbol] = resistance
+                                resistance = [target_price]
+                                support = [stop_price]
+                                symbol_resistance[symbol] = target_price
 
                             if portfolio_value is None:
                                 if trading_api:
