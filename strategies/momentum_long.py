@@ -189,8 +189,8 @@ class MomentumLong(Strategy):
 
                         rsi_limit = (
                             71
-                            if (now - config.market_open).seconds // 60 > 60
-                            else 77
+                            if (now - config.market_open).seconds // 60 > 45
+                            else 90
                         )
                         if rsi[-1] <= rsi_limit:
                             tlog(
@@ -378,7 +378,9 @@ class MomentumLong(Strategy):
 
             scalp = movement > 0.02 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
-
+            rsi_limit = (
+                79 if (now - config.market_open).seconds // 60 > 45 else 95
+            )
             to_sell = False
             partial_sell = False
             sell_reasons = []
@@ -398,7 +400,7 @@ class MomentumLong(Strategy):
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
-            elif rsi[-1] >= 79:
+            elif rsi[-1] >= rsi_limit:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
                 cool_down[symbol] = now.replace(
