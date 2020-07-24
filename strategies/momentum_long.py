@@ -134,14 +134,16 @@ class MomentumLong(Strategy):
                 # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
-
+                round_factor = (
+                    2 if macd1[-1] >= 0.1 or macd_signal[-1] >= 0.1 else 3
+                )
                 if debug:
-                    if macd1[-1].round(2) > 0:
+                    if macd1[-1].round(round_factor) > 0:
                         tlog(f"[{now}]{symbol} MACD > 0")
                     if (
-                        macd1[-3].round(3)
-                        < macd1[-2].round(3)
-                        < macd1[-1].round(3)
+                        macd1[-3].round(round_factor)
+                        < macd1[-2].round(round_factor)
+                        < macd1[-1].round(round_factor)
                     ):
                         tlog(f"[{now}]{symbol} MACD trending")
                     else:
@@ -157,10 +159,10 @@ class MomentumLong(Strategy):
                             f"[{now}]{symbol} close {data.close} BELOW open {data.open} -> failed"
                         )
                 if (
-                    macd1[-1].round(2) > 0
-                    and macd1[-3].round(3)
-                    < macd1[-2].round(3)
-                    < macd1[-1].round(3)
+                    macd1[-1].round(round_factor) > 0
+                    and macd1[-3].round(round_factor)
+                    < macd1[-2].round(round_factor)
+                    < macd1[-1].round(round_factor)
                     # and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
                     and data.vwap > data.open
