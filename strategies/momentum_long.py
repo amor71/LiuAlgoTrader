@@ -190,63 +190,85 @@ class MomentumLong(Strategy):
                         rsi_limit = (
                             71
                             if (now - config.market_open).seconds // 60 > 45
-                            else 90
+                            else 85
                         )
                         if rsi[-1] <= rsi_limit:
                             tlog(
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
                             )
 
-                            upperband, middleband, lowerband = BBANDS(
-                                minute_history["close"],
-                                timeperiod=20,
-                                nbdevup=3,
-                                nbdevdn=3,
+                            enforce_resistance = (
+                                True
+                                if (now - config.market_open).seconds // 60
+                                > 35
+                                else False
                             )
 
-                            resistance = round(upperband[-1], 2)
-                            support = round(lowerband[-1], 2)
+                            if enforce_resistance:
+                                upperband, middleband, lowerband = BBANDS(
+                                    minute_history["close"],
+                                    timeperiod=20,
+                                    nbdevup=3,
+                                    nbdevdn=3,
+                                )
 
-                            if resistance - data.vwap < 0.05:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance}"
-                                )
-                                return False, {}
-                            if data.vwap - support < 0.05:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to support {support} -> trend not established yet"
-                                )
-                                return False, {}
+                                resistance = round(upperband[-1], 2)
+                                support = round(lowerband[-1], 2)
 
-                            if (resistance - data.vwap) / (
-                                data.vwap - support
-                            ) < 0.6:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {support} and resistance {resistance}"
-                                )
-                                cool_down[symbol] = now.replace(
-                                    second=0, microsecond=0
-                                )
-                                return False, {}
+                                if resistance - data.vwap < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance}"
+                                    )
+                                    return False, {}
+                                if data.vwap - support < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to support {support} -> trend not established yet"
+                                    )
+                                    return False, {}
 
-                            tlog(
-                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {support} and resistance {resistance}"
-                            )
-                            # Stock has passed all checks; figure out how much to buy
-                            # stop_price = find_stop(
-                            #    data.close if not data.vwap else data.vwap,
-                            #    minute_history,
-                            #    now,
-                            # )
-                            stop_prices[
-                                symbol
-                            ] = support  # min(stop_price, support)
-                            target_prices[symbol] = resistance
-                            # (
-                            #    data.close
-                            #    + (data.close - stop_prices[symbol]) * 2
-                            # )
-                            symbol_resistance[symbol] = resistance
+                                if (resistance - data.vwap) / (
+                                    data.vwap - support
+                                ) < 0.6:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {support} and resistance {resistance}"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
+
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {support} and resistance {resistance}"
+                                )
+                                # Stock has passed all checks; figure out how much to buy
+                                # stop_price = find_stop(
+                                #    data.close if not data.vwap else data.vwap,
+                                #    minute_history,
+                                #    now,
+                                # )
+                                stop_prices[
+                                    symbol
+                                ] = support  # min(stop_price, support)
+                                target_prices[symbol] = resistance
+                                # (
+                                #    data.close
+                                #    + (data.close - stop_prices[symbol]) * 2
+                                # )
+                                symbol_resistance[symbol] = resistance
+                            else:
+                                stop_price = find_stop(
+                                    data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    now,
+                                )
+                                target_price = (
+                                    3 * (data.close - stop_price) + data.close
+                                )
+                                target_prices[symbol] = target_price
+                                stop_prices[symbol] = stop_price
+                                resistance = target_price
+                                support = stop_price
+                                symbol_resistance[symbol] = resistance
 
                             if portfolio_value is None:
                                 if trading_api:
