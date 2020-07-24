@@ -384,9 +384,14 @@ class MomentumLong(Strategy):
             macd_below_signal = round(macd_val, round_factor) < round(
                 macd_signal_val, round_factor
             )
+            open_rush = (
+                False
+                if (now - config.market_open).seconds // 60 > 45
+                else True
+            )
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.vwap > bail_threshold
+                (data.vwap > bail_threshold or open_rush)
                 and macd_below_signal
                 and round(macd[-1], round_factor)
                 < round(macd[-2], round_factor)
