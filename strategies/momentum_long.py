@@ -326,6 +326,12 @@ class MomentumLong(Strategy):
                                         "qty": str(shares_to_buy),
                                         "type": "limit",
                                         "limit_price": str(data.close),
+                                    }
+                                    if not morning_rush
+                                    else {
+                                        "side": "buy",
+                                        "qty": str(shares_to_buy),
+                                        "type": "market",
                                     },
                                 )
 
