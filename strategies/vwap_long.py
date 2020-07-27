@@ -17,6 +17,7 @@ from common.trading_data import (buy_indicators, last_used_strategy,
                                  latest_cost_basis, open_orders,
                                  sell_indicators, stop_prices, target_prices)
 from fincalcs.candle_patterns import doji
+from fincalcs.support_resistance import find_stop
 from fincalcs.vwap import add_daily_vwap
 
 from .base import Strategy
@@ -42,6 +43,16 @@ class VWAPLong(Strategy):
         await super().create()
         tlog(f"strategy {self.name} created")
 
+    async def is_buy_time(self, now: datetime):
+        return (
+            True
+            if 45
+            > (now - config.market_open).seconds // 60
+            > config.market_cool_down_minutes
+            or config.bypass_market_schedule
+            else False
+        )
+
     async def run(
         self,
         symbol: str,
@@ -55,19 +66,10 @@ class VWAPLong(Strategy):
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_minute = minute_history.iloc[-2]
-        if await super().is_buy_time(now) and not position:
-            # print(
-            #    symbol,
-            #    data.close,
-            #    data.average,
-            #    prev_minute.close,
-            #    prev_minute.average,
-            #    prev_two_minute.close,
-            #    prev_two_minute.average,
-            # )
+        if await self.is_buy_time(now) and not position:
             # Check for buy signals
             lbound = config.market_open
-            ubound = lbound + timedelta(minutes=16)
+            ubound = lbound + timedelta(minutes=15)
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
@@ -152,30 +154,38 @@ class VWAPLong(Strategy):
                 data.low > data.average
                 and close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
                 and close[-1] > high[-2]
-                and prev_minute.high == prev_minute.close
+                and prev_minute.close > prev_minute.open
                 and data.close > data.open
+                and low[-2] < vwap_series[-2] - 0.2
             ):
-                upperband, middleband, lowerband = BBANDS(
-                    minute_history["close"], timeperiod=20
+                stop_price = find_stop(
+                    data.close if not data.vwap else data.vwap,
+                    minute_history,
+                    now,
                 )
+                # upperband, middleband, lowerband = BBANDS(
+                #    minute_history["close"], timeperiod=20
+                # )
 
-                stop_price = min(
-                    prev_minute.close,
-                    data.average - 0.01,
-                    lowerband[-1] - 0.03,
-                )
-                target = upperband[-1]
+                # stop_price = min(
+                #    prev_minute.close,
+                #    data.average - 0.01,
+                #    lowerband[-1] - 0.03,
+                # )
+                target = (
+                    3 * (data.close - stop_price) + data.close
+                )  # upperband[-1]
 
-                if target - stop_price < 0.05:
-                    tlog(
-                        f"target price {target} too close to stop price {stop_price}"
-                    )
-                    return False, {}
-                if target - data.close < 0.05:
-                    tlog(
-                        f"target price {target} too close to close price {data.close}"
-                    )
-                    return False, {}
+                # if target - stop_price < 0.05:
+                #    tlog(
+                #        f"{symbol} target price {target} too close to stop price {stop_price}"
+                #    )
+                #    return False, {}
+                # if target - data.close < 0.05:
+                #    tlog(
+                #        f"{symbol} target price {target} too close to close price {data.close}"
+                #    )
+                #    return False, {}
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
@@ -213,7 +223,9 @@ class VWAPLong(Strategy):
                 )
 
                 if candle_s.size == 0 or -100 in candle_s[-1]:
-                    tlog(f"Bullish pattern does not exists -> skipping")
+                    tlog(
+                        f"{symbol} Bullish pattern does not exists -> skipping"
+                    )
                     return False, {}
 
                 if portfolio_value is None:
@@ -245,9 +257,9 @@ class VWAPLong(Strategy):
                         f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                     )
                     buy_indicators[symbol] = {
-                        "bbrand_lower": lowerband[-5:].tolist(),
-                        "bbrand_middle": middleband[-5:].tolist(),
-                        "bbrand_upper": upperband[-5:].tolist(),
+                        # bbrand_lower": lowerband[-5:].tolist(),
+                        # "bbrand_middle": middleband[-5:].tolist(),
+                        # "bbrand_upper": upperband[-5:].tolist(),
                         "average": round(data.average, 2),
                         "vwap": round(data.vwap, 2),
                         "patterns": candle_s.to_json(),
@@ -265,17 +277,17 @@ class VWAPLong(Strategy):
             elif debug:
                 if not (data.low > data.average):
                     tlog(
-                        f"failed data.low {data.low} > data.average {data.average}"
+                        f"{symbol }failed data.low {data.low} > data.average {data.average}"
                     )
                 if not (
-                    close[-1] > vwap_series[-1] > vwap_series[-2] > close[-2]
+                    close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
                 ):
                     tlog(
-                        f"failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > close[-2] {close[-2]}"
+                        f"{symbol} failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > low[-2] {low[-2]}"
                     )
-                if not (prev_minute.high == prev_minute.close):
+                if not (prev_minute.close > prev_minute.open):
                     tlog(
-                        f"failed prev_minute.high {prev_minute.high} == prev_minute.close {prev_minute.high}"
+                        f"{symbol} failed prev_minute.close {prev_minute.close} > prev_minute.open {prev_minute.open}"
                     )
         elif (
             await super().is_sell_time(now)

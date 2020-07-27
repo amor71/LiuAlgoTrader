@@ -67,14 +67,21 @@ class MomentumLong(Strategy):
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
+
         if (
             await super().is_buy_time(now)
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
+            morning_rush = (
+                True
+                if (now - config.market_open).seconds // 60 < 30
+                else False
+            )
+
             # Check for buy signals
             lbound = config.market_open
-            ubound = lbound + timedelta(minutes=16)
+            ubound = lbound + timedelta(minutes=15)
 
             if debug:
                 tlog(f"15 schedule {lbound}/{ubound}")
@@ -164,7 +171,7 @@ class MomentumLong(Strategy):
                     and macd1[-3].round(round_factor)
                     < macd1[-2].round(round_factor)
                     < macd1[-1].round(round_factor)
-                    # and macd1[-1] > macd_signal[-1]
+                    and macd1[-1] > macd_signal[-1]
                     and sell_macds[0][-1] > 0
                     and data.vwap > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
@@ -190,21 +197,14 @@ class MomentumLong(Strategy):
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
 
-                        rsi_limit = (
-                            71
-                            if (now - config.market_open).seconds // 60 > 45
-                            else 85
-                        )
+                        rsi_limit = 71 if not morning_rush else 88
                         if rsi[-1] <= rsi_limit:
                             tlog(
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
                             )
 
                             enforce_resistance = (
-                                True
-                                if (now - config.market_open).seconds // 60
-                                > 35
-                                else False
+                                True if not morning_rush else False
                             )
 
                             if enforce_resistance:
