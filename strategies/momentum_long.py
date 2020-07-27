@@ -188,9 +188,9 @@ class MomentumLong(Strategy):
                         # check RSI does not indicate overbought
                         rsi = RSI(serie, 14)
 
-                        if rsi[-2] < rsi[-3]:
+                        if not (rsi[-1] > rsi[-2] > rsi[-3]):
                             tlog(
-                                f"[{self.name}] {symbol} RSI counter MACD trend"
+                                f"[{self.name}] {symbol} RSI counter MACD trend ({rsi[-1]},{rsi[-2]},{rsi[-3]})"
                             )
                             return False, {}
 
