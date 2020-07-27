@@ -204,7 +204,6 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                     config.db_conn_pool, str(new_now),
                 )
 
-        start -= timedelta(minutes=7)
         symbols = await TrendingTickers.load(batch_id)
         print(f"loaded {len(symbols)}:\n {symbols} ")
         if len(symbols) > 0:
