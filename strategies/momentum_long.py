@@ -197,7 +197,7 @@ class MomentumLong(Strategy):
                         # await asyncio.sleep(0)
                         tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
 
-                        rsi_limit = 71 if not morning_rush else 88
+                        rsi_limit = 71 if not morning_rush else 80
                         if rsi[-1] <= rsi_limit:
                             tlog(
                                 f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
