@@ -15,7 +15,8 @@ from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  open_orders, sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
-from fincalcs.candle_patterns import (bullish_candle_followed_by_dragonfly,
+from fincalcs.candle_patterns import (bearish_candle,
+                                      bullish_candle_followed_by_dragonfly,
                                       four_price_doji, gravestone_doji,
                                       spinning_top_bearish_followup)
 from fincalcs.support_resistance import (find_resistances, find_stop,
@@ -69,17 +70,15 @@ class MomentumLong(Strategy):
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
 
+        morning_rush = (
+            True if (now - config.market_open).seconds // 60 < 30 else False
+        )
+
         if (
             await super().is_buy_time(now)
             and not position
             and not await self.should_cool_down(symbol, now)
         ):
-            morning_rush = (
-                True
-                if (now - config.market_open).seconds // 60 < 30
-                else False
-            )
-
             # Check for buy signals
             lbound = config.market_open
             ubound = lbound + timedelta(minutes=15)
@@ -522,6 +521,26 @@ class MomentumLong(Strategy):
                 )
                 to_sell = True
                 sell_reasons.append("bullish_candle_followed_by_dragonfly")
+            elif (
+                morning_rush
+                and bearish_candle(
+                    minute_history.iloc[-3].open,
+                    minute_history.iloc[-3].high,
+                    minute_history.iloc[-3].low,
+                    minute_history.iloc[-3].close,
+                )
+                and bearish_candle(
+                    minute_history.iloc[-2].open,
+                    minute_history.iloc[-2].high,
+                    minute_history.iloc[-2].low,
+                    minute_history.iloc[-2].close,
+                )
+            ):
+                tlog(
+                    f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                )
+                to_sell = True
+                sell_reasons.append("two_bears_in_the_morning")
 
             if to_sell:
                 # await asyncio.sleep(0)

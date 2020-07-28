@@ -38,6 +38,12 @@ def bullish_candle(open: float, high: float, low: float, close: float) -> bool:
     return close > open + 0.02 and body_size > shadow_size * 1.2
 
 
+def bearish_candle(open: float, high: float, low: float, close: float) -> bool:
+    body_size = close - open if close > open else open - close
+
+    return close < open and body_size >= 0.01
+
+
 def bull_dragonfly_candle(
     open: float, high: float, low: float, close: float
 ) -> bool:
