@@ -15,8 +15,9 @@ from common.tlog import tlog
 from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
                                  open_orders, sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
-from fincalcs.candle_patterns import (bull_spinning_top_bearish_followup,
-                                      four_price_doji, gravestone_doji)
+from fincalcs.candle_patterns import (bullish_candle_followed_by_dragonfly,
+                                      four_price_doji, gravestone_doji,
+                                      spinning_top_bearish_followup)
 from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
 
@@ -452,7 +453,9 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
-            elif gravestone_doji(data.open, data.close, data.high, data.low):
+            elif gravestone_doji(
+                prev_min.open, prev_min.close, prev_min.high, prev_min.low
+            ):
                 if debug:
                     tlog(
                         f"identified gravestone doji {data.open, data.close, data.low, data.high}"
@@ -475,7 +478,7 @@ class MomentumLong(Strategy):
                 elif debug:
                     tlog("gravestone doji did not follow up trend")
             elif (
-                bull_spinning_top_bearish_followup(
+                spinning_top_bearish_followup(
                     (
                         minute_history.iloc[-3].open,
                         minute_history.iloc[-3].high,
@@ -496,6 +499,29 @@ class MomentumLong(Strategy):
                 )
                 to_sell = True
                 sell_reasons.append("bull_spinning_top_bearish_followup")
+
+            elif (
+                bullish_candle_followed_by_dragonfly(
+                    (
+                        minute_history.iloc[-3].open,
+                        minute_history.iloc[-3].high,
+                        minute_history.iloc[-3].low,
+                        minute_history.iloc[-3].close,
+                    ),
+                    (
+                        minute_history.iloc[-2].open,
+                        minute_history.iloc[-2].high,
+                        minute_history.iloc[-2].low,
+                        minute_history.iloc[-2].close,
+                    ),
+                )
+                and data.vwap < data.open
+            ):
+                tlog(
+                    f"[{now}] {symbol} identified bullish candle  followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                )
+                to_sell = True
+                sell_reasons.append("bullish_candle_followed_by_dragonfly")
 
             if to_sell:
                 # await asyncio.sleep(0)
