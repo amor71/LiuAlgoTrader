@@ -400,7 +400,7 @@ class MomentumLong(Strategy):
             )
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                (data.vwap > bail_threshold or open_rush)
+                data.vwap > bail_threshold  # or open_rush)
                 and macd_below_signal
                 and round(macd[-1], round_factor)
                 < round(macd[-2], round_factor)
@@ -535,6 +535,8 @@ class MomentumLong(Strategy):
                     minute_history.iloc[-2].low,
                     minute_history.iloc[-2].close,
                 )
+                and minute_history.iloc[-3].close
+                < minute_history.iloc[-2].close
             ):
                 tlog(
                     f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
