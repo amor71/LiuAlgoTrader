@@ -516,31 +516,19 @@ class MomentumLong(Strategy):
                     f"[{now}] {symbol} min-2 = {minute_history.iloc[-2].open} {minute_history.iloc[-2].high}, {minute_history.iloc[-2].low}, {minute_history.iloc[-2].close}"
                 )
 
-            if gravestone_doji(
-                prev_min.open, prev_min.close, prev_min.high, prev_min.low
+            if (
+                gravestone_doji(
+                    prev_min.open, prev_min.close, prev_min.high, prev_min.low
+                )
+                and prev_min.close > latest_cost_basis[symbol]
             ):
-                if debug:
-                    tlog(
-                        f"identified gravestone doji {data.open, data.close, data.low, data.high}"
-                    )
-                prev_data = minute_history.iloc[-2]
-                if prev_data.close > prev_data.open:
-                    if debug:
-                        tlog(f"identified up-trend before gravestone doji")
+                tlog(
+                    f"identified gravestone doji {data.open, data.close, data.low, data.high}"
+                )
+                to_sell = True
+                partial_sell = False
+                sell_reasons.append("gravestone_doji")
 
-                    if rsi[-1] >= 70:
-                        if debug:
-                            tlog(f"RSI >= 70, accept doji")
-                        to_sell = True
-                        partial_sell = False
-                        sell_reasons.append("gravestone doji")
-                        if debug:
-                            tlog("sell on gravestone doji")
-                    elif debug:
-                        tlog(f"RSI < 70, do NOT accept doji")
-
-                elif debug:
-                    tlog("gravestone doji did not follow up trend")
             elif (
                 spinning_top_bearish_followup(
                     (

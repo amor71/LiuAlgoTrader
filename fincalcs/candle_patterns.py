@@ -4,8 +4,16 @@ from typing import Tuple
 def gravestone_doji(
     open: float, close: float, high: float, low: float
 ) -> bool:
+    body_size = close - open if close > open else open - close
+    upper_shadow = high - max(close, open)
+    lower_shadow = min(close, open) - low
+    shadow_size = upper_shadow + lower_shadow
+
     return (
-        close == open and high > open and (close - low) * 1.2 < (high - close)
+        body_size < 0.02
+        and lower_shadow * 1.2 < upper_shadow
+        and shadow_size > 3 * body_size
+        and shadow_size >= 0.01
     )
 
 
@@ -46,17 +54,16 @@ def bearish_candle(open: float, high: float, low: float, close: float) -> bool:
     return close < open and body_size >= 0.01
 
 
-def bull_dragonfly_candle(
+def dragonfly_candle(
     open: float, high: float, low: float, close: float
 ) -> bool:
-    upper_shadow = high - close
-    lower_shadow = open - low
+    upper_shadow = high - max(close, open)
+    lower_shadow = min(close, open) - low
     shadow_size = upper_shadow + lower_shadow
-    body_size = close - open
+    body_size = close - open if close > open else open - close
 
     return (
-        close > open
-        and body_size < 0.02
+        body_size < 0.01
         and lower_shadow > 2 * upper_shadow
         and shadow_size > 3 * body_size
     )
@@ -76,6 +83,8 @@ def bullish_candle_followed_by_dragonfly(
     minute1: Tuple[float, float, float, float],
     minute2: Tuple[float, float, float, float],
 ) -> bool:
-    return bullish_candle(
-        minute1[0], minute1[1], minute1[2], minute1[3]
-    ) and bull_dragonfly_candle(minute2[0], minute2[1], minute2[2], minute2[3])
+    return (
+        bullish_candle(minute1[0], minute1[1], minute1[2], minute1[3])
+        and dragonfly_candle(minute2[0], minute2[1], minute2[2], minute2[3])
+        and minute2[0] > minute1[3]
+    )
