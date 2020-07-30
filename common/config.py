@@ -43,6 +43,8 @@ max_share_price = 20.0
 # Minimum previous-day dollar volume for a stock we might consider
 min_last_dv = 500000
 
+min_volume_at_open = 30000
+
 # Stop limit to default to
 default_stop = 0.95
 
