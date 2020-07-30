@@ -20,12 +20,14 @@ def doji(open: float, close: float, high: float, low: float) -> bool:
 
 
 def spinning_top(open: float, high: float, low: float, close: float) -> bool:
-    upper_shadow = high - close
-    lower_shadow = open - low
+    upper_shadow = high - max(close, open)
+    lower_shadow = min(close, open) - low
     shadow_size = upper_shadow + lower_shadow
     body_size = close - open if close > open else open - close
     return (
-        shadow_size > 3 * body_size and 0.9 < upper_shadow / lower_shadow < 1.1
+        shadow_size >= 2 * body_size
+        and lower_shadow > 0
+        and 0.8 < upper_shadow / lower_shadow < 1.2
     )
 
 

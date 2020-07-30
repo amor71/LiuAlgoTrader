@@ -162,6 +162,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                             trading_data.last_used_strategy[symbol] = strategy
                         else:
                             position -= int(float(what["qty"]))
+                            trading_data.latest_cost_basis[symbol] = price
 
                         db_trade = NewTrade(
                             algo_run_id=strategy.algo_run.run_id,

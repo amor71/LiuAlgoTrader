@@ -18,6 +18,7 @@ from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
 from fincalcs.candle_patterns import (bearish_candle,
                                       bullish_candle_followed_by_dragonfly,
                                       four_price_doji, gravestone_doji,
+                                      spinning_top,
                                       spinning_top_bearish_followup)
 from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
@@ -204,36 +205,65 @@ class MomentumLong(Strategy):
                             )
 
                             enforce_resistance = (
-                                True if not morning_rush else False
+                                False  # (True if not morning_rush else False)
                             )
 
                             if enforce_resistance:
-                                upperband, middleband, lowerband = BBANDS(
-                                    minute_history["close"],
-                                    timeperiod=20,
-                                    nbdevup=3,
-                                    nbdevdn=3,
+                                resistances = await find_resistances(
+                                    symbol,
+                                    self.name,
+                                    min(
+                                        data.low, prev_min.close
+                                    ),  # data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    debug,
                                 )
 
-                                resistance = round(upperband[-1], 2)
-                                support = round(lowerband[-1], 2)
-
-                                if resistance - data.vwap < 0.05:
+                                supports = await find_supports(
+                                    symbol,
+                                    self.name,
+                                    min(
+                                        data.low, prev_min.close
+                                    ),  # data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    debug,
+                                )
+                                if resistances is None or resistances == []:
                                     tlog(
-                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {resistance}"
+                                        f"[{self.name}] no resistance for {symbol} -> skip buy"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
                                     )
                                     return False, {}
-                                if data.vwap - support < 0.05:
+
+                                next_resistance = None
+                                for potential_resistance in resistances:
+                                    if potential_resistance > data.close:
+                                        next_resistance = potential_resistance
+                                        break
+
+                                if not next_resistance:
                                     tlog(
-                                        f"[{self.name}] {symbol} at price {data.close} too close to support {support} -> trend not established yet"
+                                        f"[{self.name}] did not find resistance above {data.close}"
                                     )
                                     return False, {}
 
-                                if (resistance - data.vwap) / (
-                                    data.vwap - support
-                                ) < 0.6:
+                                if next_resistance - data.close < 0.05:
                                     tlog(
-                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {support} and resistance {resistance}"
+                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
+                                    )
+                                    return False, {}
+                                if data.close - supports[-1] < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
+                                    )
+                                    return False, {}
+                                if (next_resistance - data.close) / (
+                                    data.close - supports[-1]
+                                ) < 0.8:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {next_resistance}"
                                     )
                                     cool_down[symbol] = now.replace(
                                         second=0, microsecond=0
@@ -241,23 +271,50 @@ class MomentumLong(Strategy):
                                     return False, {}
 
                                 tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {support} and resistance {resistance}"
+                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {next_resistance}"
                                 )
                                 # Stock has passed all checks; figure out how much to buy
-                                # stop_price = find_stop(
-                                #    data.close if not data.vwap else data.vwap,
-                                #    minute_history,
-                                #    now,
-                                # )
-                                stop_prices[
-                                    symbol
-                                ] = support  # min(stop_price, support)
-                                target_prices[symbol] = resistance
-                                # (
-                                #    data.close
-                                #    + (data.close - stop_prices[symbol]) * 2
-                                # )
-                                symbol_resistance[symbol] = resistance
+                                stop_price = find_stop(
+                                    data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    now,
+                                )
+                                stop_prices[symbol] = min(
+                                    stop_price, supports[-1] - 0.05
+                                )
+                                target_prices[symbol] = (
+                                    data.close
+                                    + (data.close - stop_prices[symbol]) * 2
+                                )
+                                symbol_resistance[symbol] = next_resistance
+
+                                if next_resistance - data.vwap < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
+                                    )
+                                    return False, {}
+                                # if data.vwap - support < 0.05:
+                                #    tlog(
+                                #        f"[{self.name}] {symbol} at price {data.close} too close to support {support} -> trend not established yet"
+                                #    )
+                                #    return False, {}
+                                if (next_resistance - data.vwap) / (
+                                    data.vwap - stop_prices[symbol]
+                                ) < 0.8:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {stop_prices[symbol] } and resistance {next_resistance}"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
+
+                                tlog(
+                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {stop_prices[symbol]} and resistance {next_resistance}"
+                                )
+
+                                resistance = next_resistance
+                                support = target_prices[symbol]
                             else:
                                 stop_price = find_stop(
                                     data.close if not data.vwap else data.vwap,
@@ -452,7 +509,14 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
-            elif gravestone_doji(
+
+            # Check patterns
+            if debug:
+                tlog(
+                    f"[{now}] {symbol} min-2 = {minute_history.iloc[-2].open} {minute_history.iloc[-2].high}, {minute_history.iloc[-2].low}, {minute_history.iloc[-2].close}"
+                )
+
+            if gravestone_doji(
                 prev_min.open, prev_min.close, prev_min.high, prev_min.low
             ):
                 if debug:
@@ -468,6 +532,7 @@ class MomentumLong(Strategy):
                         if debug:
                             tlog(f"RSI >= 70, accept doji")
                         to_sell = True
+                        partial_sell = False
                         sell_reasons.append("gravestone doji")
                         if debug:
                             tlog("sell on gravestone doji")
@@ -479,16 +544,16 @@ class MomentumLong(Strategy):
             elif (
                 spinning_top_bearish_followup(
                     (
-                        minute_history.iloc[-3].open,
-                        minute_history.iloc[-3].high,
-                        minute_history.iloc[-3].low,
-                        minute_history.iloc[-3].close,
-                    ),
-                    (
                         minute_history.iloc[-2].open,
                         minute_history.iloc[-2].high,
                         minute_history.iloc[-2].low,
                         minute_history.iloc[-2].close,
+                    ),
+                    (
+                        minute_history.iloc[-1].open,
+                        minute_history.iloc[-1].high,
+                        minute_history.iloc[-1].low,
+                        minute_history.iloc[-1].close,
                     ),
                 )
                 and data.vwap < data.open
@@ -497,6 +562,7 @@ class MomentumLong(Strategy):
                     f"[{now}] {symbol} identified bullish spinning top followed by bearish candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
                 )
                 to_sell = True
+                partial_sell = False
                 sell_reasons.append("bull_spinning_top_bearish_followup")
 
             elif (
@@ -517,9 +583,10 @@ class MomentumLong(Strategy):
                 and data.vwap < data.open
             ):
                 tlog(
-                    f"[{now}] {symbol} identified bullish candle  followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                    f"[{now}] {symbol} identified bullish candle followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
                 )
                 to_sell = True
+                partial_sell = False
                 sell_reasons.append("bullish_candle_followed_by_dragonfly")
             elif (
                 morning_rush
@@ -535,13 +602,14 @@ class MomentumLong(Strategy):
                     minute_history.iloc[-2].low,
                     minute_history.iloc[-2].close,
                 )
-                and minute_history.iloc[-3].close
-                < minute_history.iloc[-2].close
+                and minute_history.iloc[-2].close
+                < minute_history.iloc[-3].close
             ):
                 tlog(
                     f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
                 )
                 to_sell = True
+                partial_sell = False
                 sell_reasons.append("two_bears_in_the_morning")
 
             if to_sell:
