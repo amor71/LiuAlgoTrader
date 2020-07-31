@@ -532,16 +532,16 @@ class MomentumLong(Strategy):
             elif (
                 spinning_top_bearish_followup(
                     (
+                        minute_history.iloc[-3].open,
+                        minute_history.iloc[-3].high,
+                        minute_history.iloc[-3].low,
+                        minute_history.iloc[-3].close,
+                    ),
+                    (
                         minute_history.iloc[-2].open,
                         minute_history.iloc[-2].high,
                         minute_history.iloc[-2].low,
                         minute_history.iloc[-2].close,
-                    ),
-                    (
-                        minute_history.iloc[-1].open,
-                        minute_history.iloc[-1].high,
-                        minute_history.iloc[-1].low,
-                        minute_history.iloc[-1].close,
                     ),
                 )
                 and data.vwap < data.open
