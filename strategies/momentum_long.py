@@ -146,18 +146,24 @@ class MomentumLong(Strategy):
                 round_factor = (
                     2 if macd1[-1] >= 0.1 or macd_signal[-1] >= 0.1 else 3
                 )
+
+                minute_shift = 0 if morning_rush else -1
+
                 if debug:
-                    if macd1[-1].round(round_factor) > 0:
+                    if macd1[-1 + minute_shift].round(round_factor) > 0:
                         tlog(f"[{now}]{symbol} MACD > 0")
                     if (
-                        macd1[-3].round(round_factor)
-                        < macd1[-2].round(round_factor)
-                        < macd1[-1].round(round_factor)
+                        macd1[-3 + minute_shift].round(round_factor)
+                        < macd1[-2 + minute_shift].round(round_factor)
+                        < macd1[-1 + minute_shift].round(round_factor)
                     ):
                         tlog(f"[{now}]{symbol} MACD trending")
                     else:
                         tlog(f"[{now}]{symbol} MACD NOT trending -> failed")
-                    if macd1[-1] > macd_signal[-1]:
+                    if (
+                        macd1[-1 + minute_shift]
+                        > macd_signal[-1 + minute_shift]
+                    ):
                         tlog(f"[{now}]{symbol} MACD above signal")
                     else:
                         tlog(f"[{now}]{symbol} MACD BELOW signal -> failed")
@@ -168,12 +174,13 @@ class MomentumLong(Strategy):
                             f"[{now}]{symbol} close {data.close} BELOW open {data.open} -> failed"
                         )
                 if (
-                    macd1[-1].round(round_factor) > 0
-                    and macd1[-3].round(round_factor)
-                    < macd1[-2].round(round_factor)
-                    < macd1[-1].round(round_factor)
-                    and macd1[-1] > macd_signal[-1]
-                    and sell_macds[0][-1] > 0
+                    macd1[-1 + minute_shift].round(round_factor) > 0
+                    and macd1[-3 + minute_shift].round(round_factor)
+                    < macd1[-2 + minute_shift].round(round_factor)
+                    < macd1[-1 + minute_shift].round(round_factor)
+                    and macd1[-1 + minute_shift]
+                    > macd_signal[-1 + minute_shift]
+                    and sell_macds[0][-1 + minute_shift] > 0
                     and data.vwap > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
@@ -182,26 +189,35 @@ class MomentumLong(Strategy):
                     )
                     macd2 = MACD(serie, 40, 60)[0]
                     # await asyncio.sleep(0)
-                    if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
+                    if (
+                        macd2[-1 + minute_shift] >= 0
+                        and np.diff(macd2)[-1 + minute_shift] >= 0
+                    ):
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(serie, 14)
 
-                        if not (rsi[-1] > rsi[-2] > rsi[-3]):
+                        if not (
+                            rsi[-1 + minute_shift]
+                            > rsi[-2 + minute_shift]
+                            > rsi[-3 + minute_shift]
+                        ):
                             tlog(
-                                f"[{self.name}] {symbol} RSI counter MACD trend ({rsi[-1]},{rsi[-2]},{rsi[-3]})"
+                                f"[{self.name}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
                             )
                             return False, {}
 
                         # await asyncio.sleep(0)
-                        tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
+                        tlog(
+                            f"[{self.name}] {symbol} RSI={round(rsi[-1+minute_shift], 2)}"
+                        )
 
                         rsi_limit = 71 if not morning_rush else 80
-                        if rsi[-1] <= rsi_limit:
+                        if rsi[-1 + minute_shift] <= rsi_limit:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1+minute_shift], 2)} <= {rsi_limit}"
                             )
 
                             enforce_resistance = (
@@ -355,13 +371,21 @@ class MomentumLong(Strategy):
 
                                 # await asyncio.sleep(0)
                                 buy_indicators[symbol] = {
-                                    "rsi": rsi[-1].tolist(),
-                                    "macd": macd1[-5:].tolist(),
-                                    "macd_signal": macd_signal[-5:].tolist(),
-                                    "slow macd": macd2[-5:].tolist(),
-                                    "sell_macd": sell_macds[0][-5:].tolist(),
+                                    "rsi": rsi[-1 + minute_shift].tolist(),
+                                    "macd": macd1[
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "macd_signal": macd_signal[
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "slow macd": macd2[
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "sell_macd": sell_macds[0][
+                                        -5 + minute_shift :
+                                    ].tolist(),
                                     "sell_macd_signal": sell_macds[1][
-                                        -5:
+                                        -5 + minute_shift :
                                     ].tolist(),
                                     "resistances": [resistance],
                                     "supports": [support],
