@@ -43,15 +43,15 @@ class VWAPLong(Strategy):
         await super().create()
         tlog(f"strategy {self.name} created")
 
-    async def is_buy_time(self, now: datetime):
-        return (
-            True
-            if 45
-            > (now - config.market_open).seconds // 60
-            > config.market_cool_down_minutes
-            or config.bypass_market_schedule
-            else False
-        )
+    # async def is_buy_time(self, now: datetime):
+    #    return (
+    #        True
+    #        if 45
+    #        > (now - config.market_open).seconds // 60
+    #        > config.market_cool_down_minutes
+    #        or config.bypass_market_schedule
+    #        else False
+    #    )
 
     async def run(
         self,
@@ -224,9 +224,9 @@ class VWAPLong(Strategy):
 
                 if candle_s.size > 0 and -100 in candle_s[-1]:
                     tlog(
-                        f"{symbol} Bullish pattern does not exists -> skipping"
+                        f"{symbol} Bullish pattern does not exists -> should skip"
                     )
-                    return False, {}
+                    # return False, {}
 
                 if portfolio_value is None:
                     if trading_api:
