@@ -2,7 +2,7 @@ from typing import Tuple
 
 
 def gravestone_doji(
-    open: float, close: float, high: float, low: float
+    open: float, high: float, low: float, close: float
 ) -> bool:
     body_size = close - open if close > open else open - close
     upper_shadow = high - max(close, open)
@@ -11,7 +11,7 @@ def gravestone_doji(
 
     return (
         body_size < 0.02
-        and lower_shadow * 1.2 < upper_shadow
+        and lower_shadow * 1.5 < upper_shadow
         and shadow_size > 3 * body_size
         and shadow_size >= 0.01
     )

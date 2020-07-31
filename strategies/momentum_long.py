@@ -542,7 +542,7 @@ class MomentumLong(Strategy):
 
             if (
                 gravestone_doji(
-                    prev_min.open, prev_min.close, prev_min.high, prev_min.low
+                    prev_min.open, prev_min.high, prev_min.low, prev_min.close
                 )
                 # and prev_min.close > latest_cost_basis[symbol]
             ):
