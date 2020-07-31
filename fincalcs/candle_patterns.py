@@ -35,6 +35,7 @@ def spinning_top(open: float, high: float, low: float, close: float) -> bool:
     return (
         shadow_size >= 2 * body_size
         and lower_shadow > 0
+        and upper_shadow > 0
         and 0.8 < upper_shadow / lower_shadow < 1.2
     )
 
