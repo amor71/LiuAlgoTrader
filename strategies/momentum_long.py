@@ -520,7 +520,7 @@ class MomentumLong(Strategy):
                 gravestone_doji(
                     prev_min.open, prev_min.close, prev_min.high, prev_min.low
                 )
-                and prev_min.close > latest_cost_basis[symbol]
+                # and prev_min.close > latest_cost_basis[symbol]
             ):
                 tlog(
                     f"identified gravestone doji {data.open, data.close, data.low, data.high}"
