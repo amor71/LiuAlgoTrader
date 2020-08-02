@@ -4,6 +4,11 @@ from typing import Tuple
 def gravestone_doji(
     open: float, high: float, low: float, close: float
 ) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     body_size = close - open if close > open else open - close
     upper_shadow = high - max(close, open)
     lower_shadow = min(close, open) - low
@@ -20,14 +25,29 @@ def gravestone_doji(
 def four_price_doji(
     open: float, close: float, high: float, low: float
 ) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     return close == open == high == low
 
 
 def doji(open: float, close: float, high: float, low: float) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     return close == open and low <= open - 0.01 and high >= open + 0.01
 
 
 def spinning_top(open: float, high: float, low: float, close: float) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     upper_shadow = high - max(close, open)
     lower_shadow = min(close, open) - low
     shadow_size = upper_shadow + lower_shadow
@@ -41,6 +61,11 @@ def spinning_top(open: float, high: float, low: float, close: float) -> bool:
 
 
 def bullish_candle(open: float, high: float, low: float, close: float) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     upper_shadow = high - close
     lower_shadow = open - low
     shadow_size = upper_shadow + lower_shadow
@@ -50,6 +75,11 @@ def bullish_candle(open: float, high: float, low: float, close: float) -> bool:
 
 
 def bearish_candle(open: float, high: float, low: float, close: float) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     body_size = close - open if close > open else open - close
 
     return close < open and body_size >= 0.01
@@ -58,6 +88,11 @@ def bearish_candle(open: float, high: float, low: float, close: float) -> bool:
 def dragonfly_candle(
     open: float, high: float, low: float, close: float
 ) -> bool:
+    open = round(open, 2)
+    high = round(high, 2)
+    low = round(low, 2)
+    close = round(close, 2)
+
     upper_shadow = high - max(close, open)
     lower_shadow = min(close, open) - low
     shadow_size = upper_shadow + lower_shadow

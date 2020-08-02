@@ -147,7 +147,7 @@ class MomentumLong(Strategy):
                     2 if macd1[-1] >= 0.1 or macd_signal[-1] >= 0.1 else 3
                 )
 
-                minute_shift = 0 if morning_rush else -1
+                minute_shift = 0 if morning_rush or debug else -1
 
                 if debug:
                     if macd1[-1 + minute_shift].round(round_factor) > 0:
@@ -182,11 +182,47 @@ class MomentumLong(Strategy):
                     > macd_signal[-1 + minute_shift]
                     and sell_macds[0][-1 + minute_shift] > 0
                     and data.vwap > data.open
+                    and data.close > prev_min.close
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
+
+                    if False:  # not morning_rush:
+                        back_time = ts(config.market_open)
+                        back_time_index = minute_history[
+                            "close"
+                        ].index.get_loc(back_time, method="nearest")
+                        close = (
+                            minute_history["close"][back_time_index:]
+                            .dropna()
+                            .between_time("9:30", "16:00")
+                            .resample("5min")
+                            .last()
+                        ).dropna()
+                        open = (
+                            minute_history["open"][back_time_index:]
+                            .dropna()
+                            .between_time("9:30", "16:00")
+                            .resample("5min")
+                            .first()
+                        ).dropna()
+                        if close[-1] > open[-1]:
+                            tlog(
+                                f"[{now}] {symbol} confirmed 5-min candle bull"
+                            )
+
+                            if debug:
+                                tlog(
+                                    f"[{now}] {symbol} open={open[-5:]} close={close[-5:]}"
+                                )
+                        else:
+                            tlog(
+                                f"[{now}] {symbol} did not confirm 5-min candle bull {close[-5:]} {open[-5:]}"
+                            )
+                            return False, {}
+
                     macd2 = MACD(serie, 40, 60)[0]
                     # await asyncio.sleep(0)
                     if (
@@ -365,8 +401,9 @@ class MomentumLong(Strategy):
                                 shares_to_buy = 1
                             shares_to_buy -= position
                             if shares_to_buy > 0:
+                                buy_price = max(data.close, data.vwap)
                                 tlog(
-                                    f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_prices[symbol]}"
+                                    f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {buy_price} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                                 )
 
                                 # await asyncio.sleep(0)
@@ -406,7 +443,7 @@ class MomentumLong(Strategy):
                                         "side": "buy",
                                         "qty": str(shares_to_buy),
                                         "type": "limit",
-                                        "limit_price": str(data.close),
+                                        "limit_price": str(buy_price),
                                     }
                                     if not morning_rush
                                     else {
