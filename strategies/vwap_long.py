@@ -91,35 +91,35 @@ class VWAPLong(Strategy):
                 back_time, method="nearest"
             )
             close = (
-                minute_history["close"][back_time_index:]
+                minute_history["close"][back_time_index:-1]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
                 .last()
             ).dropna()
             open = (
-                minute_history["open"][back_time_index:]
+                minute_history["open"][back_time_index:-1]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
                 .first()
             ).dropna()
             high = (
-                minute_history["high"][back_time_index:]
+                minute_history["high"][back_time_index:-1]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
                 .max()
             ).dropna()
             low = (
-                minute_history["low"][back_time_index:]
+                minute_history["low"][back_time_index:-1]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
                 .min()
             ).dropna()
             volume = (
-                minute_history["volume"][back_time_index:]
+                minute_history["volume"][back_time_index:-1]
                 .dropna()
                 .between_time("9:30", "16:00")
                 .resample("5min")
@@ -138,11 +138,12 @@ class VWAPLong(Strategy):
             )
 
             if not add_daily_vwap(_df):
+                tlog(f"[{now}]failed add_daily_vwap")
                 return False, {}
 
             if debug:
                 tlog(
-                    f"\n{tabulate(_df[-10:], headers='keys', tablefmt='psql')}"
+                    f"\n[{now}]{symbol} {tabulate(_df[-10:], headers='keys', tablefmt='psql')}"
                 )
             vwap_series = _df["average"]
 
@@ -275,20 +276,34 @@ class VWAPLong(Strategy):
                         },
                     )
             elif debug:
+                tlog(f"[{now}]{symbol} failed vwap strategy")
                 if not (data.low > data.average):
                     tlog(
-                        f"{symbol }failed data.low {data.low} > data.average {data.average}"
+                        f"[{now}]{symbol} failed data.low {data.low} > data.average {data.average}"
                     )
                 if not (
                     close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
                 ):
                     tlog(
-                        f"{symbol} failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > low[-2] {low[-2]}"
+                        f"[{now}]{symbol} failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > low[-2] {low[-2]}"
                     )
                 if not (prev_minute.close > prev_minute.open):
                     tlog(
-                        f"{symbol} failed prev_minute.close {prev_minute.close} > prev_minute.open {prev_minute.open}"
+                        f"[{now}]{symbol} failed prev_minute.close {prev_minute.close} > prev_minute.open {prev_minute.open}"
                     )
+                if not (close[-1] > high[-2]):
+                    tlog(
+                        f"[{now}]{symbol} failed close[-1] {close[-1]} > high[-2] {high[-2]}"
+                    )
+                if not (data.close > data.open):
+                    tlog(
+                        f"[{now}]{symbol} failed data.close {data.close} > data.open {data.open}"
+                    )
+                if not low[-2] < vwap_series[-2] - 0.2:
+                    tlog(
+                        f"[{now}]{symbol} failed low[-2] {low[-2]} < vwap_series[-2] {vwap_series[-2] } - 0.2"
+                    )
+
         elif (
             await super().is_sell_time(now)
             and position > 0
