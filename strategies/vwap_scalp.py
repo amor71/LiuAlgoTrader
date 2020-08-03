@@ -131,6 +131,10 @@ class VWAPScalp(Strategy):
             else:
                 vwap_series = minute_history["average"]
 
+            if len(vwap_series) < 3:
+                tlog(f"[{now}]{symbol}: missing vwap values {vwap_series}")
+                return False, {}
+
             if (
                 prev_2minutes.close > vwap_series[-3]
                 and prev_minute.close < vwap_series[-2]
