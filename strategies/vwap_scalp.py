@@ -37,7 +37,6 @@ class VWAPScalp(Strategy):
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price
-        target_prices[symbol] = price + 0.02
 
     async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
         latest_cost_basis[symbol] = price
@@ -165,7 +164,7 @@ class VWAPScalp(Strategy):
                     minute_history,
                     now,
                 )
-                target = data.close + 0.02
+                target = data.close + 0.03
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
@@ -214,7 +213,8 @@ class VWAPScalp(Strategy):
                         {
                             "side": "buy",
                             "qty": str(shares_to_buy),
-                            "type": "market",
+                            "type": "limit",
+                            "limit_price": str(data.close + 0.01),
                         },
                     )
 
