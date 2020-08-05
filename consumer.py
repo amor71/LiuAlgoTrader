@@ -617,7 +617,9 @@ async def load_current_long_positions(
                     if "resistances" in indicators
                     else None
                 )
-                trading_data.buy_time[symbol] = timestamp
+                trading_data.buy_time[symbol] = timestamp.astimezone(
+                    tz=timezone("America/New_York")
+                )
 
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol
