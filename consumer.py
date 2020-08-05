@@ -444,6 +444,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                 )
                 if what["side"] == "buy":
                     trading_data.last_used_strategy[symbol] = s
+                    trading_data.buy_time[symbol] = datetime.now(
+                        tz=timezone("America/New_York")
+                    ).replace(second=0, microsecond=0)
                     break
             except APIError as e:
                 tlog(
@@ -595,6 +598,7 @@ async def load_current_long_positions(
                     stop_price,
                     target_price,
                     indicators,
+                    timestamp,
                 ) = await NewTrade.load_latest_long(
                     config.db_conn_pool, symbol, strategy.name
                 )
@@ -613,6 +617,7 @@ async def load_current_long_positions(
                     if "resistances" in indicators
                     else None
                 )
+                trading_data.buy_time[symbol] = timestamp
 
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol

@@ -12,8 +12,9 @@ from talib import BBANDS, MACD, RSI
 
 from common import config
 from common.tlog import tlog
-from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
-                                 open_orders, sell_indicators, stop_prices,
+from common.trading_data import (buy_indicators, buy_time, cool_down,
+                                 latest_cost_basis, open_orders,
+                                 sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
 from fincalcs.candle_patterns import (bearish_candle,
                                       bullish_candle_followed_by_dragonfly,
@@ -578,7 +579,8 @@ class MomentumLong(Strategy):
                 )
 
             if (
-                gravestone_doji(
+                now - buy_time[symbol] > timedelta(minutes=1)
+                and gravestone_doji(
                     prev_min.open, prev_min.high, prev_min.low, prev_min.close
                 )
                 # and prev_min.close > latest_cost_basis[symbol]
@@ -591,7 +593,8 @@ class MomentumLong(Strategy):
                 sell_reasons.append("gravestone_doji")
 
             elif (
-                spinning_top_bearish_followup(
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and spinning_top_bearish_followup(
                     (
                         minute_history.iloc[-3].open,
                         minute_history.iloc[-3].high,
@@ -615,7 +618,8 @@ class MomentumLong(Strategy):
                 sell_reasons.append("bull_spinning_top_bearish_followup")
 
             elif (
-                bullish_candle_followed_by_dragonfly(
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and bullish_candle_followed_by_dragonfly(
                     (
                         minute_history.iloc[-3].open,
                         minute_history.iloc[-3].high,
@@ -638,7 +642,8 @@ class MomentumLong(Strategy):
                 partial_sell = False
                 sell_reasons.append("bullish_candle_followed_by_dragonfly")
             elif (
-                morning_rush
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and morning_rush
                 and bearish_candle(
                     minute_history.iloc[-3].open,
                     minute_history.iloc[-3].high,

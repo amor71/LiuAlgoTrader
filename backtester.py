@@ -161,6 +161,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                             position += int(float(what["qty"]))
                             trading_data.latest_cost_basis[symbol] = price
                             trading_data.last_used_strategy[symbol] = strategy
+                            trading_data.buy_time[symbol] = new_now.replace(
+                                second=0, microsecond=0
+                            )
                         else:
                             position -= int(float(what["qty"]))
                             trading_data.latest_cost_basis[symbol] = price
