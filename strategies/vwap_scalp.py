@@ -142,8 +142,10 @@ class VWAPScalp(Strategy):
 
             if (
                 data.low > vwap_series[-1]
-                and data.vwap > data.open
-                and data.close > prev_minute.close > vwap_series[-2]
+                and data.close
+                > data.open
+                >= prev_minute.close
+                > vwap_series[-2]
                 and prev_2minutes.low < vwap_series[-3]
             ):
 
