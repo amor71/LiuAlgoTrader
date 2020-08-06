@@ -555,7 +555,7 @@ async def consumer_async_main(
         nyc, trading_api
     )
 
-    strategy_types = [MomentumLong, VWAPLong, VWAPScalp]
+    strategy_types = [MomentumLong]  # , VWAPScalp] #VWAPLong,
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
         s = strategy_type(batch_id=unique_id)

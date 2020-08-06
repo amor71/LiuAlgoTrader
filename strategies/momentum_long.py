@@ -13,8 +13,8 @@ from talib import BBANDS, MACD, RSI
 from common import config
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, buy_time, cool_down,
-                                 latest_cost_basis, open_orders,
-                                 sell_indicators, stop_prices,
+                                 last_used_strategy, latest_cost_basis,
+                                 open_orders, sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
 from fincalcs.candle_patterns import (bearish_candle,
                                       bullish_candle_followed_by_dragonfly,
@@ -461,6 +461,7 @@ class MomentumLong(Strategy):
             await super().is_sell_time(now)
             and position > 0
             and symbol in latest_cost_basis
+            and last_used_strategy[symbol].name == self.name
         ):
             if open_orders.get(symbol) is not None:
                 tlog(
