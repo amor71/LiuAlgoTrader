@@ -72,83 +72,89 @@ class VWAPScalp(Strategy):
 
         if await self.is_buy_time(now) and not position:
             # Check for buy signals
-            if backtesting:
-                back_time = ts(config.market_open)
-                back_time_index = minute_history["close"].index.get_loc(
-                    back_time, method="nearest"
-                )
-                close = (
-                    minute_history["close"][back_time_index:-1]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
-                open = (
-                    minute_history["open"][back_time_index:-1]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
-                high = (
-                    minute_history["high"][back_time_index:-1]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
-                low = (
-                    minute_history["low"][back_time_index:-1]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
-                volume = (
-                    minute_history["volume"][back_time_index:-1]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
-                _df = concat(
-                    [
-                        open.rename("open"),
-                        high.rename("high"),
-                        low.rename("low"),
-                        close.rename("close"),
-                        volume.rename("volume"),
-                    ],
-                    axis=1,
-                )
 
-                if not add_daily_vwap(_df):
-                    tlog(f"[{now}]failed add_daily_vwap")
-                    return False, {}
+            back_time = ts(config.market_open)
+            back_time_index = minute_history["close"].index.get_loc(
+                back_time, method="nearest"
+            )
+            close = (
+                minute_history["close"][back_time_index:-1]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .last()
+            ).dropna()
+            open = (
+                minute_history["open"][back_time_index:-1]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .first()
+            ).dropna()
+            high = (
+                minute_history["high"][back_time_index:-1]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .max()
+            ).dropna()
+            low = (
+                minute_history["low"][back_time_index:-1]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .min()
+            ).dropna()
+            volume = (
+                minute_history["volume"][back_time_index:-1]
+                .dropna()
+                .between_time("9:30", "16:00")
+                .resample("5min")
+                .sum()
+            ).dropna()
 
-                if debug:
-                    tlog(
-                        f"\n[{now}]{symbol} {tabulate(_df[-10:], headers='keys', tablefmt='psql')}"
-                    )
-                vwap_series = _df["average"]
+            _df = concat(
+                [
+                    open.rename("open"),
+                    high.rename("high"),
+                    low.rename("low"),
+                    close.rename("close"),
+                    volume.rename("volume"),
+                ],
+                axis=1,
+            )
+            if not add_daily_vwap(_df):
+                tlog(f"[{now}]failed add_daily_vwap")
+                return False, {}
 
-                if debug:
-                    tlog(
-                        f"[{now}] {symbol} close:{round(data.close,2)} vwap:{round(vwap_series[-1],2)}"
-                    )
-            else:
-                vwap_series = minute_history["average"]
+            if debug:
+                tlog(
+                    f"\n[{now}]{symbol} {tabulate(_df[-10:], headers='keys', tablefmt='psql')}"
+                )
+            vwap_series = _df["average"]
+
+            if debug:
+                tlog(
+                    f"[{now}] {symbol} close:{round(data.close,2)} vwap:{round(vwap_series[-1],2)}"
+                )
 
             if len(vwap_series) < 3:
                 tlog(f"[{now}]{symbol}: missing vwap values {vwap_series}")
                 return False, {}
 
-            if (
-                prev_2minutes.close > vwap_series[-3]
-                and prev_minute.close < vwap_series[-2]
-            ):
-                down_cross[symbol] = minute_history.index[-3].to_pydatetime()
+            if close[-2] > vwap_series[-2] and close[-1] < vwap_series[-1]:
+                down_cross[symbol] = vwap_series.index[-1].to_pydatetime()
+                tlog(
+                    f"[{now}] {symbol} down-crossing on 5-min bars at {down_cross[symbol]}"
+                )
+                return False, {}
 
             if (
-                data.low > vwap_series[-1]
-                and data.close
-                > data.open
-                >= prev_minute.close
-                > vwap_series[-2]
-                and prev_2minutes.low < vwap_series[-3]
+                close[-2] > vwap_series[-2]
+                and close[-3] < vwap_series[-3]
+                and data.close > prev_minute.close
+                and data.close > data.average
             ):
-
                 if not symbol in down_cross:
                     tlog(
                         f"[{now}] {symbol} did not find download crossing in the past 15 min"
@@ -156,7 +162,7 @@ class VWAPScalp(Strategy):
                     return False, {}
                 if minute_history.index[-1].to_pydatetime() - down_cross[
                     symbol
-                ] >= timedelta(minutes=15):
+                ] > timedelta(minutes=30):
                     tlog(
                         f"[{now}] {symbol} down-crossing too far {down_cross[symbol]} from now"
                     )
@@ -166,7 +172,7 @@ class VWAPScalp(Strategy):
                     minute_history,
                     now,
                 )
-                target = data.close + 0.03
+                target = data.close + 0.05
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
@@ -239,6 +245,14 @@ class VWAPScalp(Strategy):
             elif data.close >= target_prices[symbol]:
                 to_sell = True
                 reason = "vwap scalp"
+            elif data.close >= target_prices[symbol]:
+                to_sell = True
+                reason = "vwap scalp"
+            elif (
+                prev_minute.close < prev_minute.open and data.close < data.open
+            ):
+                to_sell = True
+                reason = "vwap scalp no bears"
 
             if to_sell:
                 sell_indicators[symbol] = {
