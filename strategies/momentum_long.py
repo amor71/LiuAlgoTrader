@@ -184,6 +184,7 @@ class MomentumLong(Strategy):
                     and sell_macds[0][-1 + minute_shift] > 0
                     and data.vwap > data.open
                     and data.close > prev_min.close
+                    and data.close > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     tlog(
