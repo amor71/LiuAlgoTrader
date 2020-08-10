@@ -224,8 +224,8 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             config.trade_buy_window = duration.seconds / 60
 
             strategy_types = [
-                VWAPScalp,
-            ]  # MomentumLong, [ VWAPLong, VWAPScalp]
+                MomentumLong
+            ]  # MomentumLong, [ VWAPLong,  VWAPScalp, VWAPScalp]
             config.env = "BACKTEST"
             for strategy_type in strategy_types:
                 tlog(f"initializing {strategy_type.name}")
