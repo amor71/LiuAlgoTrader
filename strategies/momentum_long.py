@@ -8,14 +8,19 @@ from google.cloud import error_reporting
 from pandas import DataFrame as df
 from pandas import Series
 from pandas import Timestamp as ts
-from talib import MACD, RSI
+from talib import BBANDS, MACD, RSI
 
 from common import config
 from common.tlog import tlog
-from common.trading_data import (buy_indicators, cool_down, latest_cost_basis,
+from common.trading_data import (buy_indicators, buy_time, cool_down,
+                                 last_used_strategy, latest_cost_basis,
                                  open_orders, sell_indicators, stop_prices,
                                  symbol_resistance, target_prices)
-from fincalcs.candle_patterns import four_price_doji, gravestone_doji
+from fincalcs.candle_patterns import (bearish_candle,
+                                      bullish_candle_followed_by_dragonfly,
+                                      four_price_doji, gravestone_doji,
+                                      spinning_top,
+                                      spinning_top_bearish_followup)
 from fincalcs.support_resistance import (find_resistances, find_stop,
                                          find_supports)
 
@@ -66,6 +71,11 @@ class MomentumLong(Strategy):
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
+
+        morning_rush = (
+            True if (now - config.market_open).seconds // 60 < 30 else False
+        )
+
         if (
             await super().is_buy_time(now)
             and not position
@@ -73,7 +83,7 @@ class MomentumLong(Strategy):
         ):
             # Check for buy signals
             lbound = config.market_open
-            ubound = lbound + timedelta(minutes=16)
+            ubound = lbound + timedelta(minutes=15)
 
             if debug:
                 tlog(f"15 schedule {lbound}/{ubound}")
@@ -108,7 +118,7 @@ class MomentumLong(Strategy):
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].min()
 
-                if (now - config.market_open).seconds // 60 > 40 and (
+                if (now - config.market_open).seconds // 60 > 90 and (
                     last_30_max_close - last_30_min_close
                 ) / last_30_min_close > 0.1:
                     tlog(
@@ -134,19 +144,27 @@ class MomentumLong(Strategy):
                 # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
+                round_factor = (
+                    2 if macd1[-1] >= 0.1 or macd_signal[-1] >= 0.1 else 3
+                )
+
+                minute_shift = 0 if morning_rush or debug else -1
 
                 if debug:
-                    if macd1[-1].round(2) > 0:
+                    if macd1[-1 + minute_shift].round(round_factor) > 0:
                         tlog(f"[{now}]{symbol} MACD > 0")
                     if (
-                        macd1[-3].round(3)
-                        < macd1[-2].round(3)
-                        < macd1[-1].round(3)
+                        macd1[-3 + minute_shift].round(round_factor)
+                        < macd1[-2 + minute_shift].round(round_factor)
+                        < macd1[-1 + minute_shift].round(round_factor)
                     ):
                         tlog(f"[{now}]{symbol} MACD trending")
                     else:
                         tlog(f"[{now}]{symbol} MACD NOT trending -> failed")
-                    if macd1[-1] > macd_signal[-1]:
+                    if (
+                        macd1[-1 + minute_shift]
+                        > macd_signal[-1 + minute_shift]
+                    ):
                         tlog(f"[{now}]{symbol} MACD above signal")
                     else:
                         tlog(f"[{now}]{symbol} MACD BELOW signal -> failed")
@@ -157,111 +175,214 @@ class MomentumLong(Strategy):
                             f"[{now}]{symbol} close {data.close} BELOW open {data.open} -> failed"
                         )
                 if (
-                    macd1[-1].round(2) > 0
-                    and macd1[-3].round(3)
-                    < macd1[-2].round(3)
-                    < macd1[-1].round(3)
-                    and macd1[-1] > macd_signal[-1]
-                    and sell_macds[0][-1] > 0
+                    macd1[-1 + minute_shift].round(round_factor) > 0
+                    and macd1[-3 + minute_shift].round(round_factor)
+                    < macd1[-2 + minute_shift].round(round_factor)
+                    < macd1[-1 + minute_shift].round(round_factor)
+                    and macd1[-1 + minute_shift]
+                    > macd_signal[-1 + minute_shift]
+                    and sell_macds[0][-1 + minute_shift] > 0
                     and data.vwap > data.open
+                    and data.close > prev_min.close
+                    and data.close > data.open
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     tlog(
                         f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
+
+                    if False:  # not morning_rush:
+                        back_time = ts(config.market_open)
+                        back_time_index = minute_history[
+                            "close"
+                        ].index.get_loc(back_time, method="nearest")
+                        close = (
+                            minute_history["close"][back_time_index:]
+                            .dropna()
+                            .between_time("9:30", "16:00")
+                            .resample("5min")
+                            .last()
+                        ).dropna()
+                        open = (
+                            minute_history["open"][back_time_index:]
+                            .dropna()
+                            .between_time("9:30", "16:00")
+                            .resample("5min")
+                            .first()
+                        ).dropna()
+                        if close[-1] > open[-1]:
+                            tlog(
+                                f"[{now}] {symbol} confirmed 5-min candle bull"
+                            )
+
+                            if debug:
+                                tlog(
+                                    f"[{now}] {symbol} open={open[-5:]} close={close[-5:]}"
+                                )
+                        else:
+                            tlog(
+                                f"[{now}] {symbol} did not confirm 5-min candle bull {close[-5:]} {open[-5:]}"
+                            )
+                            return False, {}
+
                     macd2 = MACD(serie, 40, 60)[0]
                     # await asyncio.sleep(0)
-                    if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
+                    if (
+                        macd2[-1 + minute_shift] >= 0
+                        and np.diff(macd2)[-1 + minute_shift] >= 0
+                    ):
                         tlog(
                             f"[{self.name}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(serie, 14)
+
+                        if not (
+                            rsi[-1 + minute_shift]
+                            > rsi[-2 + minute_shift]
+                            > rsi[-3 + minute_shift]
+                        ):
+                            tlog(
+                                f"[{self.name}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
+                            )
+                            return False, {}
+
                         # await asyncio.sleep(0)
-                        tlog(f"[{self.name}] {symbol} RSI={round(rsi[-1], 2)}")
-                        if rsi[-1] <= 71:
+                        tlog(
+                            f"[{self.name}] {symbol} RSI={round(rsi[-1+minute_shift], 2)}"
+                        )
+
+                        rsi_limit = 71 if not morning_rush else 80
+                        if rsi[-1 + minute_shift] <= rsi_limit:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1], 2)} <= 71"
+                                f"[{self.name}] {symbol} RSI {round(rsi[-1+minute_shift], 2)} <= {rsi_limit}"
                             )
 
-                            resistance = await find_resistances(
-                                symbol,
-                                self.name,
-                                min(
-                                    data.low, prev_min.close
-                                ),  # data.close if not data.vwap else data.vwap,
-                                minute_history,
-                                debug,
+                            enforce_resistance = (
+                                False  # (True if not morning_rush else False)
                             )
 
-                            supports = await find_supports(
-                                symbol,
-                                self.name,
-                                min(
-                                    data.low, prev_min.close
-                                ),  # data.close if not data.vwap else data.vwap,
-                                minute_history,
-                                debug,
-                            )
-                            if resistance is None or resistance == []:
+                            if enforce_resistance:
+                                resistances = await find_resistances(
+                                    symbol,
+                                    self.name,
+                                    min(
+                                        data.low, prev_min.close
+                                    ),  # data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    debug,
+                                )
+
+                                supports = await find_supports(
+                                    symbol,
+                                    self.name,
+                                    min(
+                                        data.low, prev_min.close
+                                    ),  # data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    debug,
+                                )
+                                if resistances is None or resistances == []:
+                                    tlog(
+                                        f"[{self.name}] no resistance for {symbol} -> skip buy"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
+
+                                next_resistance = None
+                                for potential_resistance in resistances:
+                                    if potential_resistance > data.close:
+                                        next_resistance = potential_resistance
+                                        break
+
+                                if not next_resistance:
+                                    tlog(
+                                        f"[{self.name}] did not find resistance above {data.close}"
+                                    )
+                                    return False, {}
+
+                                if next_resistance - data.close < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
+                                    )
+                                    return False, {}
+                                if data.close - supports[-1] < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
+                                    )
+                                    return False, {}
+                                if (next_resistance - data.close) / (
+                                    data.close - supports[-1]
+                                ) < 0.8:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {next_resistance}"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
+
                                 tlog(
-                                    f"[{self.name}] no resistance for {symbol} -> skip buy"
+                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {next_resistance}"
                                 )
-                                cool_down[symbol] = now.replace(
-                                    second=0, microsecond=0
+                                # Stock has passed all checks; figure out how much to buy
+                                stop_price = find_stop(
+                                    data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    now,
                                 )
-                                return False, {}
+                                stop_prices[symbol] = min(
+                                    stop_price, supports[-1] - 0.05
+                                )
+                                target_prices[symbol] = (
+                                    data.close
+                                    + (data.close - stop_prices[symbol]) * 2
+                                )
+                                symbol_resistance[symbol] = next_resistance
 
-                            next_resistance = None
-                            for potential_resistance in resistance:
-                                if potential_resistance > data.close:
-                                    next_resistance = potential_resistance
-                                    break
+                                if next_resistance - data.vwap < 0.05:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
+                                    )
+                                    return False, {}
+                                # if data.vwap - support < 0.05:
+                                #    tlog(
+                                #        f"[{self.name}] {symbol} at price {data.close} too close to support {support} -> trend not established yet"
+                                #    )
+                                #    return False, {}
+                                if (next_resistance - data.vwap) / (
+                                    data.vwap - stop_prices[symbol]
+                                ) < 0.8:
+                                    tlog(
+                                        f"[{self.name}] {symbol} at price {data.close} missed entry point between support {stop_prices[symbol] } and resistance {next_resistance}"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
 
-                            if not next_resistance:
                                 tlog(
-                                    f"[{self.name}] did not find resistance above {data.close}"
+                                    f"[{self.name}] {symbol} at price {data.close} found entry point between support {stop_prices[symbol]} and resistance {next_resistance}"
                                 )
-                                return False, {}
 
-                            if next_resistance - data.close < 0.05:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to resistance {next_resistance}"
+                                resistance = next_resistance
+                                support = target_prices[symbol]
+                            else:
+                                stop_price = find_stop(
+                                    data.close if not data.vwap else data.vwap,
+                                    minute_history,
+                                    now,
                                 )
-                                return False, {}
-                            if data.close - supports[-1] < 0.05:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} too close to support {supports[-1]} -> trend not established yet"
+                                target_price = (
+                                    3 * (data.close - stop_price) + data.close
                                 )
-                                return False, {}
-                            if (next_resistance - data.close) / (
-                                data.close - supports[-1]
-                            ) < 0.8:
-                                tlog(
-                                    f"[{self.name}] {symbol} at price {data.close} missed entry point between support {supports[-1]} and resistance {next_resistance}"
-                                )
-                                cool_down[symbol] = now.replace(
-                                    second=0, microsecond=0
-                                )
-                                return False, {}
-
-                            tlog(
-                                f"[{self.name}] {symbol} at price {data.close} found entry point between support {supports[-1]} and resistance {next_resistance}"
-                            )
-                            # Stock has passed all checks; figure out how much to buy
-                            stop_price = find_stop(
-                                data.close if not data.vwap else data.vwap,
-                                minute_history,
-                                now,
-                            )
-                            stop_prices[symbol] = min(
-                                stop_price, supports[-1] - 0.05
-                            )
-                            target_prices[symbol] = (
-                                data.close
-                                + (data.close - stop_prices[symbol]) * 2
-                            )
-                            symbol_resistance[symbol] = next_resistance
+                                target_prices[symbol] = target_price
+                                stop_prices[symbol] = stop_price
+                                resistance = target_price
+                                support = stop_price
+                                symbol_resistance[symbol] = target_price
 
                             if portfolio_value is None:
                                 if trading_api:
@@ -282,28 +403,37 @@ class MomentumLong(Strategy):
                                 shares_to_buy = 1
                             shares_to_buy -= position
                             if shares_to_buy > 0:
+                                buy_price = max(data.close, data.vwap)
                                 tlog(
-                                    f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_price}"
+                                    f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {buy_price} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                                 )
 
                                 # await asyncio.sleep(0)
                                 buy_indicators[symbol] = {
-                                    "rsi": rsi[-1].tolist(),
-                                    "macd": macd1[-5:].tolist(),
-                                    "macd_signal": macd_signal[-5:].tolist(),
-                                    "slow macd": macd2[-5:].tolist(),
-                                    "sell_macd": sell_macds[0][-5:].tolist(),
-                                    "sell_macd_signal": sell_macds[1][
-                                        -5:
+                                    "rsi": rsi[-1 + minute_shift].tolist(),
+                                    "macd": macd1[
+                                        -5 + minute_shift :
                                     ].tolist(),
-                                    "resistances": resistance,
-                                    "supports": supports,
+                                    "macd_signal": macd_signal[
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "slow macd": macd2[
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "sell_macd": sell_macds[0][
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "sell_macd_signal": sell_macds[1][
+                                        -5 + minute_shift :
+                                    ].tolist(),
+                                    "resistances": [resistance],
+                                    "supports": [support],
                                     "vwap": data.vwap,
                                     "avg": data.average,
                                     "position_ratio": str(
                                         round(
-                                            (next_resistance - data.close)
-                                            / (data.close - supports[-1]),
+                                            (resistance - data.vwap)
+                                            / (data.vwap - support),
                                             2,
                                         )
                                     ),
@@ -315,7 +445,13 @@ class MomentumLong(Strategy):
                                         "side": "buy",
                                         "qty": str(shares_to_buy),
                                         "type": "limit",
-                                        "limit_price": str(data.close),
+                                        "limit_price": str(buy_price),
+                                    }
+                                    if not morning_rush
+                                    else {
+                                        "side": "buy",
+                                        "qty": str(shares_to_buy),
+                                        "type": "market",
                                     },
                                 )
 
@@ -326,6 +462,7 @@ class MomentumLong(Strategy):
             await super().is_sell_time(now)
             and position > 0
             and symbol in latest_cost_basis
+            and last_used_strategy[symbol].name == self.name
         ):
             if open_orders.get(symbol) is not None:
                 tlog(
@@ -377,9 +514,14 @@ class MomentumLong(Strategy):
             macd_below_signal = round(macd_val, round_factor) < round(
                 macd_signal_val, round_factor
             )
+            open_rush = (
+                False
+                if (now - config.market_open).seconds // 60 > 45
+                else True
+            )
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.vwap > bail_threshold
+                data.vwap > bail_threshold  # or open_rush)
                 and macd_below_signal
                 and round(macd[-1], round_factor)
                 < round(macd[-2], round_factor)
@@ -393,7 +535,9 @@ class MomentumLong(Strategy):
 
             scalp = movement > 0.02 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
-
+            rsi_limit = (
+                79 if (now - config.market_open).seconds // 60 > 45 else 95
+            )
             to_sell = False
             partial_sell = False
             sell_reasons = []
@@ -413,7 +557,7 @@ class MomentumLong(Strategy):
             elif data.close >= target_prices[symbol] and macd[-1] <= 0:
                 to_sell = True
                 sell_reasons.append("above target & macd negative")
-            elif rsi[-1] >= 79:
+            elif rsi[-1] >= rsi_limit:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
                 cool_down[symbol] = now.replace(
@@ -429,28 +573,100 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
-            elif gravestone_doji(data.open, data.close, data.high, data.low):
-                if debug:
-                    tlog(
-                        f"identified gravestone doji {data.open, data.close, data.low, data.high}"
-                    )
-                prev_data = minute_history.iloc[-2]
-                if prev_data.close > prev_data.open:
-                    if debug:
-                        tlog(f"identified up-trend before gravestone doji")
 
-                    if rsi[-1] >= 70:
-                        if debug:
-                            tlog(f"RSI >= 70, accept doji")
-                        to_sell = True
-                        sell_reasons.append("gravestone doji")
-                        if debug:
-                            tlog("sell on gravestone doji")
-                    elif debug:
-                        tlog(f"RSI < 70, do NOT accept doji")
+            # Check patterns
+            if debug:
+                tlog(
+                    f"[{now}] {symbol} min-2 = {minute_history.iloc[-2].open} {minute_history.iloc[-2].high}, {minute_history.iloc[-2].low}, {minute_history.iloc[-2].close}"
+                )
 
-                elif debug:
-                    tlog("gravestone doji did not follow up trend")
+            if (
+                now - buy_time[symbol] > timedelta(minutes=1)
+                and gravestone_doji(
+                    prev_min.open, prev_min.high, prev_min.low, prev_min.close
+                )
+                # and prev_min.close > latest_cost_basis[symbol]
+            ):
+                tlog(
+                    f"identified gravestone doji {data.open, data.close, data.low, data.high}"
+                )
+                to_sell = True
+                partial_sell = False
+                sell_reasons.append("gravestone_doji")
+
+            elif (
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and spinning_top_bearish_followup(
+                    (
+                        minute_history.iloc[-3].open,
+                        minute_history.iloc[-3].high,
+                        minute_history.iloc[-3].low,
+                        minute_history.iloc[-3].close,
+                    ),
+                    (
+                        minute_history.iloc[-2].open,
+                        minute_history.iloc[-2].high,
+                        minute_history.iloc[-2].low,
+                        minute_history.iloc[-2].close,
+                    ),
+                )
+                and data.vwap < data.open
+            ):
+                tlog(
+                    f"[{now}] {symbol} identified bullish spinning top followed by bearish candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                )
+                to_sell = True
+                partial_sell = False
+                sell_reasons.append("bull_spinning_top_bearish_followup")
+
+            elif (
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and bullish_candle_followed_by_dragonfly(
+                    (
+                        minute_history.iloc[-3].open,
+                        minute_history.iloc[-3].high,
+                        minute_history.iloc[-3].low,
+                        minute_history.iloc[-3].close,
+                    ),
+                    (
+                        minute_history.iloc[-2].open,
+                        minute_history.iloc[-2].high,
+                        minute_history.iloc[-2].low,
+                        minute_history.iloc[-2].close,
+                    ),
+                )
+                and data.vwap < data.open
+            ):
+                tlog(
+                    f"[{now}] {symbol} identified bullish candle followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                )
+                to_sell = True
+                partial_sell = False
+                sell_reasons.append("bullish_candle_followed_by_dragonfly")
+            elif (
+                now - buy_time[symbol] > timedelta(minutes=2)
+                and morning_rush
+                and bearish_candle(
+                    minute_history.iloc[-3].open,
+                    minute_history.iloc[-3].high,
+                    minute_history.iloc[-3].low,
+                    minute_history.iloc[-3].close,
+                )
+                and bearish_candle(
+                    minute_history.iloc[-2].open,
+                    minute_history.iloc[-2].high,
+                    minute_history.iloc[-2].low,
+                    minute_history.iloc[-2].close,
+                )
+                and minute_history.iloc[-2].close
+                < minute_history.iloc[-3].close
+            ):
+                tlog(
+                    f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                )
+                to_sell = True
+                partial_sell = False
+                sell_reasons.append("two_bears_in_the_morning")
 
             if to_sell:
                 # await asyncio.sleep(0)
