@@ -28,3 +28,6 @@ snapshot: Dict[str, TickerSnapshot] = {}
 cool_down: Dict[str, Optional[datetime]] = {}
 
 queues: Dict[str, Queue] = {}
+down_cross: Dict[str, datetime] = {}
+
+buy_time: Dict[str, datetime] = {}

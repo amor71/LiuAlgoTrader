@@ -12,6 +12,7 @@ import alpaca_trade_api as tradeapi
 import pandas as pd
 import pygit2
 import pytz
+from requests.exceptions import HTTPError
 
 from common import config, market_data, trading_data
 from common.database import create_db_connection
@@ -24,6 +25,7 @@ from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
 from strategies.vwap_long import VWAPLong
+from strategies.vwap_scalp import VWAPScalp
 
 
 def get_batch_list():
@@ -98,14 +100,18 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 print("--> using DEBUG mode")
 
             # load historical data
-            symbol_data = data_api.polygon.historic_agg_v2(
-                symbol,
-                1,
-                "minute",
-                _from=str(start_time - timedelta(days=8)),
-                to=str(start_time + timedelta(days=1)),
-                limit=10000,
-            ).df
+            try:
+                symbol_data = data_api.polygon.historic_agg_v2(
+                    symbol,
+                    1,
+                    "minute",
+                    _from=str(start_time - timedelta(days=8)),
+                    to=str(start_time + timedelta(days=1)),
+                    limit=10000,
+                ).df
+            except HTTPError as e:
+                tlog(f"Received HTTP error {e} for {symbol}")
+                return
 
             add_daily_vwap(
                 symbol_data, debug=debug_symbols and symbol in debug_symbols
@@ -155,8 +161,12 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                             position += int(float(what["qty"]))
                             trading_data.latest_cost_basis[symbol] = price
                             trading_data.last_used_strategy[symbol] = strategy
+                            trading_data.buy_time[symbol] = new_now.replace(
+                                second=0, microsecond=0
+                            )
                         else:
                             position -= int(float(what["qty"]))
+                            trading_data.latest_cost_basis[symbol] = price
 
                         db_trade = NewTrade(
                             algo_run_id=strategy.algo_run.run_id,
@@ -213,7 +223,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
             print(f"market_open{config.market_open}")
             config.trade_buy_window = duration.seconds / 60
 
-            strategy_types = [MomentumLong, VWAPLong]
+            strategy_types = [
+                VWAPScalp,
+            ]  # MomentumLong, [ VWAPLong, VWAPScalp]
             config.env = "BACKTEST"
             for strategy_type in strategy_types:
                 tlog(f"initializing {strategy_type.name}")
