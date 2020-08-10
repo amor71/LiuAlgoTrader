@@ -64,15 +64,39 @@ async def run(
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
-        # tlog(f"trade event: {conn} {channel} {data}")
-        global last_msg_tstamp
-        last_msg_tstamp = datetime.now()
+        try:
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=10):  # type: ignore
+                tlog(f"T$ {data.symbol}: data out of sync {time_diff}")
+                pass
+            else:
+                data.__dict__["_raw"]["EV"] = "T"
+                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
+                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+                global last_msg_tstamp
+                last_msg_tstamp = datetime.now()
+        except Exception as e:
+            tlog(
+                f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
+            )
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
-        # tlog(f"quote event: {conn} {channel} {data}")
-        global last_msg_tstamp
-        last_msg_tstamp = datetime.now()
+        try:
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=10):  # type: ignore
+                tlog(f"Q$ {data.symbol}: data out of sync {time_diff}")
+                pass
+            else:
+                data.__dict__["_raw"]["EV"] = "Q"
+                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
+                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+
+                global last_msg_tstamp
+                last_msg_tstamp = datetime.now()
+        except Exception as e:
+            tlog(
+                f"Exception in handle_quote_event(): exception of type {type(e).__name__} with args {e.args}"
+            )
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
@@ -120,7 +144,7 @@ async def run(
                 tlog(
                     f"no data activity since {last_msg_tstamp} attempting reconnect"
                 )
-                await data_ws.close()
+                await data_ws.close(False)
                 data_ws.data_ws = polygon.StreamConn(config.prod_api_key_id)
                 await data_ws.data_ws.connect()
                 data_ws.register(r"AM$", handle_minute_bar)
