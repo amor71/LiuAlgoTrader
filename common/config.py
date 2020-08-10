@@ -43,6 +43,8 @@ max_share_price = 20.0
 # Minimum previous-day dollar volume for a stock we might consider
 min_last_dv = 500000
 
+min_volume_at_open = 30000
+
 # Stop limit to default to
 default_stop = 0.95
 
@@ -54,7 +56,7 @@ today_change_percent = 3.5
 group_margin = 0.02
 
 # trade times
-market_cool_down_minutes: int = 20
+market_cool_down_minutes: int = 15
 market_liquidation_end_time_minutes: int = 15
 market_open: datetime
 market_close: datetime

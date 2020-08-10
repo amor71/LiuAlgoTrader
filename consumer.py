@@ -27,6 +27,7 @@ from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
 from strategies.momentum_long import MomentumLong
 from strategies.vwap_long import VWAPLong
+from strategies.vwap_scalp import VWAPScalp
 
 error_logger = error_reporting.Client()
 
@@ -443,6 +444,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                 )
                 if what["side"] == "buy":
                     trading_data.last_used_strategy[symbol] = s
+                    trading_data.buy_time[symbol] = datetime.now(
+                        tz=timezone("America/New_York")
+                    ).replace(second=0, microsecond=0)
                     break
             except APIError as e:
                 tlog(
@@ -551,7 +555,7 @@ async def consumer_async_main(
         nyc, trading_api
     )
 
-    strategy_types = [MomentumLong, VWAPLong]
+    strategy_types = [MomentumLong]  # , VWAPScalp] #VWAPLong,
     for strategy_type in strategy_types:
         tlog(f"initializing {strategy_type.name}")
         s = strategy_type(batch_id=unique_id)
@@ -594,6 +598,7 @@ async def load_current_long_positions(
                     stop_price,
                     target_price,
                     indicators,
+                    timestamp,
                 ) = await NewTrade.load_latest_long(
                     config.db_conn_pool, symbol, strategy.name
                 )
@@ -611,6 +616,9 @@ async def load_current_long_positions(
                     indicators["resistances"][0]
                     if "resistances" in indicators
                     else None
+                )
+                trading_data.buy_time[symbol] = timestamp.astimezone(
+                    tz=timezone("America/New_York")
                 )
 
                 await NewTrade.rename_algo_run_id(
