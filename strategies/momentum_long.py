@@ -122,7 +122,7 @@ class MomentumLong(Strategy):
                     last_30_max_close - last_30_min_close
                 ) / last_30_min_close > 0.1:
                     tlog(
-                        f"[{self.name}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
+                        f"[{self.name}][{now}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
                     )
                     cool_down[symbol] = now.replace(
                         second=0, microsecond=0
@@ -188,7 +188,7 @@ class MomentumLong(Strategy):
                     # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
                     tlog(
-                        f"[{self.name}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
+                        f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
 
                     if False:  # not morning_rush:
@@ -232,7 +232,7 @@ class MomentumLong(Strategy):
                         and np.diff(macd2)[-1 + minute_shift] >= 0
                     ):
                         tlog(
-                            f"[{self.name}] MACD(40,60) for {symbol} trending up!"
+                            f"[{self.name}][{now}] MACD(40,60) for {symbol} trending up!"
                         )
                         # check RSI does not indicate overbought
                         rsi = RSI(serie, 14)
@@ -243,19 +243,19 @@ class MomentumLong(Strategy):
                             > rsi[-3 + minute_shift]
                         ):
                             tlog(
-                                f"[{self.name}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
+                                f"[{self.name}][{now}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
                             )
                             return False, {}
 
                         # await asyncio.sleep(0)
                         tlog(
-                            f"[{self.name}] {symbol} RSI={round(rsi[-1+minute_shift], 2)}"
+                            f"[{self.name}][{now}] {symbol} RSI={round(rsi[-1+minute_shift], 2)}"
                         )
 
                         rsi_limit = 71 if not morning_rush else 80
                         if rsi[-1 + minute_shift] <= rsi_limit:
                             tlog(
-                                f"[{self.name}] {symbol} RSI {round(rsi[-1+minute_shift], 2)} <= {rsi_limit}"
+                                f"[{self.name}][{now}] {symbol} RSI {round(rsi[-1+minute_shift], 2)} <= {rsi_limit}"
                             )
 
                             enforce_resistance = (
@@ -585,6 +585,8 @@ class MomentumLong(Strategy):
                 and gravestone_doji(
                     prev_min.open, prev_min.high, prev_min.low, prev_min.close
                 )
+                # and data.close < data.open
+                # and data.vwap < data.open
                 # and prev_min.close > latest_cost_basis[symbol]
             ):
                 tlog(
