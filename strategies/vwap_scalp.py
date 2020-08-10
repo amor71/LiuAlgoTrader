@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
+import pandas as pd
 import talib
 from google.cloud import error_reporting
 from pandas import DataFrame as df
@@ -13,9 +14,10 @@ from talib import BBANDS, MACD, RSI
 
 from common import config
 from common.tlog import tlog
-from common.trading_data import (buy_indicators, last_used_strategy,
-                                 latest_cost_basis, open_orders,
-                                 sell_indicators, stop_prices, target_prices)
+from common.trading_data import (buy_indicators, down_cross,
+                                 last_used_strategy, latest_cost_basis,
+                                 open_orders, sell_indicators, stop_prices,
+                                 target_prices)
 from fincalcs.candle_patterns import doji
 from fincalcs.support_resistance import find_stop
 from fincalcs.vwap import add_daily_vwap
@@ -25,8 +27,8 @@ from .base import Strategy
 error_logger = error_reporting.Client()
 
 
-class VWAPLong(Strategy):
-    name = "vwap_long"
+class VWAPScalp(Strategy):
+    name = "vwap_scalp"
 
     def __init__(self, batch_id: str, ref_run_id: int = None):
         super().__init__(
@@ -66,25 +68,10 @@ class VWAPLong(Strategy):
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_minute = minute_history.iloc[-2]
+        prev_2minutes = minute_history.iloc[-3]
+
         if await self.is_buy_time(now) and not position:
             # Check for buy signals
-            lbound = config.market_open
-            ubound = lbound + timedelta(minutes=15)
-            try:
-                high_15m = minute_history[lbound:ubound][  # type: ignore
-                    "high"
-                ].max()
-
-                if data.vwap < high_15m:
-                    return False, {}
-            except Exception as e:
-                error_logger.report_exception()
-                # Because we're aggregating on the fly, sometimes the datetime
-                # index can get messy until it's healed by the minute bars
-                tlog(
-                    f"[{self.name}] error aggregation {e} - maybe should use nearest?"
-                )
-                return False, {}
 
             back_time = ts(config.market_open)
             back_time_index = minute_history["close"].index.get_loc(
@@ -136,7 +123,6 @@ class VWAPLong(Strategy):
                 ],
                 axis=1,
             )
-
             if not add_daily_vwap(_df):
                 tlog(f"[{now}]failed add_daily_vwap")
                 return False, {}
@@ -147,87 +133,57 @@ class VWAPLong(Strategy):
                 )
             vwap_series = _df["average"]
 
+            if debug:
+                tlog(
+                    f"[{now}] {symbol} close:{round(data.close,2)} vwap:{round(vwap_series[-1],2)}"
+                )
+
+            if len(vwap_series) < 3:
+                tlog(f"[{now}]{symbol}: missing vwap values {vwap_series}")
+                return False, {}
+
+            if close[-2] > vwap_series[-2] and close[-1] < vwap_series[-1]:
+                down_cross[symbol] = vwap_series.index[-1].to_pydatetime()
+                tlog(
+                    f"[{now}] {symbol} down-crossing on 5-min bars at {down_cross[symbol]}"
+                )
+                return False, {}
+
             if (
-                # data.vwap > close_series[-1] > close_series[-2]
-                # and round(data.average, 2) > round(vwap_series[-1], 2)
-                # and data.vwap > data.average
-                # and
-                data.low > data.average
-                and close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
-                and close[-1] > high[-2]
-                and prev_minute.close > prev_minute.open
-                and data.close > data.open
-                and low[-2] < vwap_series[-2] - 0.2
+                close[-2] > vwap_series[-2]
+                and close[-3] < vwap_series[-3]
+                and data.close > prev_minute.close
+                and data.close > data.average
             ):
+                if not symbol in down_cross:
+                    tlog(
+                        f"[{now}] {symbol} did not find download crossing in the past 15 min"
+                    )
+                    return False, {}
+                if minute_history.index[-1].to_pydatetime() - down_cross[
+                    symbol
+                ] > timedelta(minutes=30):
+                    tlog(
+                        f"[{now}] {symbol} down-crossing too far {down_cross[symbol]} from now"
+                    )
+                    return False, {}
                 stop_price = find_stop(
                     data.close if not data.vwap else data.vwap,
                     minute_history,
                     now,
                 )
-                # upperband, middleband, lowerband = BBANDS(
-                #    minute_history["close"], timeperiod=20
-                # )
-
-                # stop_price = min(
-                #    prev_minute.close,
-                #    data.average - 0.01,
-                #    lowerband[-1] - 0.03,
-                # )
-                target = (
-                    3 * (data.close - stop_price) + data.close
-                )  # upperband[-1]
-
-                # if target - stop_price < 0.05:
-                #    tlog(
-                #        f"{symbol} target price {target} too close to stop price {stop_price}"
-                #    )
-                #    return False, {}
-                # if target - data.close < 0.05:
-                #    tlog(
-                #        f"{symbol} target price {target} too close to close price {data.close}"
-                #    )
-                #    return False, {}
+                target = data.close + 0.05
 
                 stop_prices[symbol] = stop_price
                 target_prices[symbol] = target
 
-                patterns: Dict[ts, Dict[int, List[str]]] = {}
-                pattern_functions = talib.get_function_groups()[
-                    "Pattern Recognition"
-                ]
-                for pattern in pattern_functions:
-                    pattern_value = getattr(talib, pattern)(
-                        open, high, low, close
-                    )
-                    result = pattern_value.to_numpy().nonzero()
-                    if result[0].size > 0:
-                        for timestamp, value in pattern_value.iloc[
-                            result
-                        ].items():
-                            t = ts(timestamp)
-                            if t not in patterns:
-                                patterns[t] = {}
-                            if value not in patterns[t]:
-                                patterns[t][value] = [pattern]
-                            else:
-                                patterns[t][value].append(pattern)
+                tlog(
+                    f"{symbol} found conditions for VWAP-Scalp strategy now:{now}"
+                )
 
-                tlog(f"{symbol} found conditions for VWAP strategy now:{now}")
-                candle_s = Series(patterns)
-                candle_s = candle_s.sort_index()
-
-                tlog(f"{symbol} 5-min VWAP {vwap_series}")
-                tlog(f"{symbol} 5-min close values {close}")
-                tlog(f"{symbol} {candle_s}")
                 tlog(
                     f"\n{tabulate(minute_history[-10:], headers='keys', tablefmt='psql')}"
                 )
-
-                if candle_s.size > 0 and -100 in candle_s[-1]:
-                    tlog(
-                        f"{symbol} Bullish pattern does not exists -> should skip"
-                    )
-                    # return False, {}
 
                 if portfolio_value is None:
                     if trading_api:
@@ -246,9 +202,6 @@ class VWAPLong(Strategy):
                     // data.close
                     # // (data.close - stop_prices[symbol])
                 )
-                print(
-                    f"shares to buy {shares_to_buy} {data.close} {stop_prices[symbol]}"
-                )
                 if not shares_to_buy:
                     shares_to_buy = 1
                 shares_to_buy -= position
@@ -258,12 +211,9 @@ class VWAPLong(Strategy):
                         f"[{self.name}] Submitting buy for {shares_to_buy} shares of {symbol} at {data.close} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                     )
                     buy_indicators[symbol] = {
-                        # bbrand_lower": lowerband[-5:].tolist(),
-                        # "bbrand_middle": middleband[-5:].tolist(),
-                        # "bbrand_upper": upperband[-5:].tolist(),
                         "average": round(data.average, 2),
                         "vwap": round(data.vwap, 2),
-                        "patterns": candle_s.to_json(),
+                        "patterns": None,
                     }
 
                     return (
@@ -272,36 +222,8 @@ class VWAPLong(Strategy):
                             "side": "buy",
                             "qty": str(shares_to_buy),
                             "type": "limit",
-                            "limit_price": str(data.close),
+                            "limit_price": str(data.close + 0.01),
                         },
-                    )
-            elif debug:
-                tlog(f"[{now}]{symbol} failed vwap strategy")
-                if not (data.low > data.average):
-                    tlog(
-                        f"[{now}]{symbol} failed data.low {data.low} > data.average {data.average}"
-                    )
-                if not (
-                    close[-1] > vwap_series[-1] > vwap_series[-2] > low[-2]
-                ):
-                    tlog(
-                        f"[{now}]{symbol} failed close[-1] {close[-1]} > vwap_series[-1] {vwap_series[-1]} > vwap_series[-2]{ vwap_series[-2]} > low[-2] {low[-2]}"
-                    )
-                if not (prev_minute.close > prev_minute.open):
-                    tlog(
-                        f"[{now}]{symbol} failed prev_minute.close {prev_minute.close} > prev_minute.open {prev_minute.open}"
-                    )
-                if not (close[-1] > high[-2]):
-                    tlog(
-                        f"[{now}]{symbol} failed close[-1] {close[-1]} > high[-2] {high[-2]}"
-                    )
-                if not (data.close > data.open):
-                    tlog(
-                        f"[{now}]{symbol} failed data.close {data.close} > data.open {data.open}"
-                    )
-                if not low[-2] < vwap_series[-2] - 0.2:
-                    tlog(
-                        f"[{now}]{symbol} failed low[-2] {low[-2]} < vwap_series[-2] {vwap_series[-2] } - 0.2"
                     )
 
         elif (
@@ -311,18 +233,43 @@ class VWAPLong(Strategy):
             and last_used_strategy[symbol].name == self.name
         ):
             if open_orders.get(symbol) is not None:
-                tlog(f"vwap_long: open order for {symbol} exists, skipping")
+                tlog(f"vwap_scalp: open order for {symbol} exists, skipping")
                 return False, {}
 
-            if data.vwap <= data.average - 0.02:
+            to_sell = False
+            to_sell_market = False
+            if data.vwap <= data.average - 0.05:
+                to_sell = True
+                reason = "below VWAP"
+                to_sell_market = True
+            elif data.close >= target_prices[symbol]:
+                to_sell = True
+                reason = "vwap scalp"
+            elif data.close >= target_prices[symbol]:
+                to_sell = True
+                reason = "vwap scalp"
+            elif (
+                prev_minute.close < prev_minute.open and data.close < data.open
+            ):
+                to_sell = True
+                reason = "vwap scalp no bears"
+
+            if to_sell:
                 sell_indicators[symbol] = {
-                    "reason": "below VWAP",
+                    "reason": reason,
                     "average": data.average,
                     "vwap": data.vwap,
                 }
                 return (
                     True,
-                    {"side": "sell", "qty": str(position), "type": "market"},
+                    {"side": "sell", "qty": str(position), "type": "market"}
+                    if to_sell_market
+                    else {
+                        "side": "sell",
+                        "qty": str(position),
+                        "type": "limit",
+                        "limit_price": str(data.close),
+                    },
                 )
 
         return False, {}

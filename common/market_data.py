@@ -242,6 +242,7 @@ def get_polygon_tickers(data_api: tradeapi) -> List[Ticker]:
                     and ticker.prevDay["v"] * ticker.lastTrade["p"]
                     > config.min_last_dv
                     and ticker.todaysChangePerc >= config.today_change_percent
+                    and ticker.day["v"] > config.min_volume_at_open
                 )
             ]
             if len(unsorted) > 0:
