@@ -20,7 +20,9 @@ target_prices: Dict[str, float] = {}
 stop_prices: Dict[str, float] = {}
 partial_fills: Dict[str, float] = {}
 symbol_resistance: Dict[str, float] = {}
-
+voi: Dict[str, float] = {}
+voi_ask: Dict[str, Tuple[float, float, datetime]] = {}
+voi_bid: Dict[str, Tuple[float, float, datetime]] = {}
 industry_trend: Dict[str, float] = {}
 sector_trend: Dict[str, float] = {}
 snapshot: Dict[str, TickerSnapshot] = {}

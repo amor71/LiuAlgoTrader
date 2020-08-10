@@ -15,7 +15,7 @@ from common.tlog import tlog
 from common.trading_data import (buy_indicators, buy_time, cool_down,
                                  last_used_strategy, latest_cost_basis,
                                  open_orders, sell_indicators, stop_prices,
-                                 symbol_resistance, target_prices)
+                                 symbol_resistance, target_prices, voi)
 from fincalcs.candle_patterns import (bearish_candle,
                                       bullish_candle_followed_by_dragonfly,
                                       four_price_doji, gravestone_doji,
@@ -438,6 +438,8 @@ class MomentumLong(Strategy):
                                         )
                                     ),
                                 }
+                                if symbol in voi:
+                                    buy_indicators[symbol]["voi"] = voi[symbol]
 
                                 return (
                                     True,
@@ -715,6 +717,9 @@ class MomentumLong(Strategy):
                         if candle_s.size > 0
                         else None,
                     }
+
+                    if symbol in voi:
+                        sell_indicators[symbol]["voi"] = voi[symbol]
 
                     if not partial_sell:
                         tlog(
