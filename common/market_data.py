@@ -24,6 +24,7 @@ except Exception:
 
 volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
+quotes: Dict[str, df] = {}
 
 
 def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
@@ -115,7 +116,7 @@ def get_historical_data_from_polygon(
 
                             minute_history[symbol] = _df
                             tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c}/{max_tickers}"
+                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c+1}/{max_tickers}"
                             )
                             c += 1
                             break
@@ -242,7 +243,10 @@ def get_polygon_tickers(data_api: tradeapi) -> List[Ticker]:
                     and ticker.prevDay["v"] * ticker.lastTrade["p"]
                     > config.min_last_dv
                     and ticker.todaysChangePerc >= config.today_change_percent
-                    and ticker.day["v"] > config.min_volume_at_open
+                    and (
+                        ticker.day["v"] > config.min_volume_at_open
+                        or config.bypass_market_schedule
+                    )
                 )
             ]
             if len(unsorted) > 0:

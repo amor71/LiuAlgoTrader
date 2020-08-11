@@ -2,6 +2,7 @@
 Get Market data from Polygon and pump to consumers
 """
 import asyncio
+import fileinput
 import json
 import os
 import traceback
@@ -65,7 +66,7 @@ async def run(
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
         try:
-            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=10):  # type: ignore
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 tlog(f"T$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
@@ -83,7 +84,7 @@ async def run(
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
         try:
-            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=10):  # type: ignore
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 tlog(f"Q$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
@@ -192,7 +193,7 @@ async def teardown_task(
 
         tlog("poylgon_producer teardown closing web-sockets")
         for w in ws:
-            await w.close()
+            await w.close(False)
 
         tlog("poylgon_producer teardown closing tasks")
 
@@ -264,7 +265,7 @@ async def producer_async_main(
 
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"), [data_ws, trade_ws], [main_task],
+            timezone("America/New_York"), [data_ws, trade_ws], [main_task,],
         )
     )
 

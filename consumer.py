@@ -290,16 +290,6 @@ async def handle_trade_update(data: Dict) -> bool:
 
 async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     symbol = data["symbol"]
-    # print(f"got [{symbol}] to handle_queue_msg")
-
-    # First, aggregate 1s bars for up-to-date MACD calculations
-    original_ts = ts = pd.Timestamp(
-        data["start"], tz="America/New_York", unit="ms"
-    )
-    ts = ts.replace(
-        second=0, microsecond=0
-    )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
-
     if symbol not in market_data.minute_history:
         _df = trading_api.polygon.historic_agg_v2(
             symbol,
@@ -314,15 +304,10 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
-    try:
-        current = market_data.minute_history[symbol].loc[ts]
-    except KeyError:
-        current = None
 
     if data["EV"] == "Q":
         prev_ask = trading_data.voi_ask.get(symbol, None)
         prev_bid = trading_data.voi_bid.get(symbol, None)
-        tlog(f"{symbol} QUOTE: {data}")
         trading_data.voi_ask[symbol] = (
             data["askprice"],
             data["asksize"],
@@ -341,17 +326,41 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             if data["bidprice"] > prev_bid[0]
             else data["bidsize"] - prev_bid[1]
         )
+        # if prev_bid:
+        #    tlog(f"{symbol} bid_delta_volume= {bid_delta_volume} time_delta={data['timestamp']-prev_bid[2]}")
+
         ask_delta_volume = (
             0
-            if not prev_ask or data["askprice"] < prev_ask[0]
+            if not prev_ask or data["askprice"] > prev_ask[0]
             else data["asksize"]
-            if data["askprice"] > prev_ask[0]
-            else data["askdsize"] - prev_ask[1]
+            if data["askprice"] < prev_ask[0]
+            else data["asksize"] - prev_ask[1]
         )
+        # if prev_ask:
+        #    tlog(f"{symbol} ask_delta_volume= {ask_delta_volume} time_delta={data['timestamp']-prev_ask[2] }")
 
-        trading_data.voi[symbol] = bid_delta_volume - ask_delta_volume
+        k = 2.0 / (100 + 1)
+        trading_data.voi[symbol] = round(
+            trading_data.voi.get(symbol, 0.0) * (1.0 - k)
+            + k * (bid_delta_volume - ask_delta_volume),
+            2,
+        )
+        # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
+        # First, aggregate 1s bars for up-to-date MACD calculations
+        original_ts = ts = pd.Timestamp(
+            data["start"], tz="America/New_York", unit="ms"
+        )
+        ts = ts.replace(
+            second=0, microsecond=0
+        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+
+        try:
+            current = market_data.minute_history[symbol].loc[ts]
+        except KeyError:
+            current = None
+
         if current is None:
             new_data = [
                 data["open"],
