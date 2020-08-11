@@ -344,6 +344,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             voi_stack = [0.0]
         elif len(voi_stack) == 10:
             voi_stack[0:9] = voi_stack[1:10]
+            voi_stack.pop()
 
         k = 2.0 / (100 + 1)
         voi_stack.append(
