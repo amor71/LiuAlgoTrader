@@ -339,12 +339,21 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         # if prev_ask:
         #    tlog(f"{symbol} ask_delta_volume= {ask_delta_volume} time_delta={data['timestamp']-prev_ask[2] }")
 
+        voi_stack = trading_data.voi.get(symbol, None)
+        if not voi_stack:
+            voi_stack = [0.0]
+        elif len(voi_stack) == 10:
+            voi_stack[0:9] = voi_stack[1:10]
+
         k = 2.0 / (100 + 1)
-        trading_data.voi[symbol] = round(
-            trading_data.voi.get(symbol, 0.0) * (1.0 - k)
-            + k * (bid_delta_volume - ask_delta_volume),
-            2,
+        voi_stack.append(
+            round(
+                voi_stack[-1] * (1.0 - k)
+                + k * (bid_delta_volume - ask_delta_volume),
+                2,
+            )
         )
+        trading_data.voi[symbol] = voi_stack
         # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
