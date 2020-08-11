@@ -23,6 +23,8 @@ symbol_resistance: Dict[str, float] = {}
 voi: Dict[str, float] = {}
 voi_ask: Dict[str, Tuple[float, float, datetime]] = {}
 voi_bid: Dict[str, Tuple[float, float, datetime]] = {}
+
+
 industry_trend: Dict[str, float] = {}
 sector_trend: Dict[str, float] = {}
 snapshot: Dict[str, TickerSnapshot] = {}
