@@ -309,6 +309,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         if "askprice" not in data or "bidprice" not in data:
             return True
 
+        print(data)
         prev_ask = trading_data.voi_ask.get(symbol, None)
         prev_bid = trading_data.voi_bid.get(symbol, None)
         trading_data.voi_ask[symbol] = (
