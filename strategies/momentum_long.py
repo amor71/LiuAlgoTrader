@@ -188,7 +188,7 @@ class MomentumLong(Strategy):
                 ):
                     if symbol in voi and voi[symbol][-1] < 0:
                         tlog(
-                            f"[{self.name}][{now}] Don't buy on negative voi {voi}"
+                            f"[{self.name}][{now}] Don't buy on negative voi {voi[symbol]}"
                         )
                         return False, {}
 
