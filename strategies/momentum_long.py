@@ -553,6 +553,7 @@ class MomentumLong(Strategy):
             )
             to_sell = False
             partial_sell = False
+            limit_sell = False
             sell_reasons = []
             if data.close <= stop_prices[symbol]:
                 to_sell = True
@@ -593,6 +594,7 @@ class MomentumLong(Strategy):
             ):
                 to_sell = True
                 sell_reasons.append("bail on voi")
+                limit_sell = True
 
             # Check patterns
             if debug:
@@ -740,17 +742,32 @@ class MomentumLong(Strategy):
                         sell_indicators[symbol]["voi"] = voi[symbol]
 
                     if not partial_sell:
-                        tlog(
-                            f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
-                        )
-                        return (
-                            True,
-                            {
-                                "side": "sell",
-                                "qty": str(position),
-                                "type": "market",
-                            },
-                        )
+
+                        if not limit_sell:
+                            tlog(
+                                f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
+                            )
+                            return (
+                                True,
+                                {
+                                    "side": "sell",
+                                    "qty": str(position),
+                                    "type": "market",
+                                },
+                            )
+                        else:
+                            tlog(
+                                f"[{self.name}] Submitting sell for {position} shares of {symbol} at {data.close}"
+                            )
+                            return (
+                                True,
+                                {
+                                    "side": "sell",
+                                    "qty": str(position),
+                                    "type": "limit",
+                                    "limit_price": str(data.close),
+                                },
+                            )
                     else:
                         qty = int(position / 2) if position > 1 else 1
                         tlog(
