@@ -191,7 +191,11 @@ class MomentumLong(Strategy):
                             f"[{self.name}][{now}] Don't buy on negative voi {voi[symbol]}"
                         )
                         return False, {}
-
+                    if symbol in voi and voi[symbol][-1] < voi[symbol][-2]:
+                        tlog(
+                            f"[{self.name}][{now}] Don't buy if voi not trending up {voi[symbol]}"
+                        )
+                        return False, {}
                     tlog(
                         f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
