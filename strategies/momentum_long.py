@@ -254,7 +254,7 @@ class MomentumLong(Strategy):
                             tlog(
                                 f"[{self.name}][{now}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
                             )
-                            return False, {}
+                            # return False, {}
 
                         # await asyncio.sleep(0)
                         tlog(
