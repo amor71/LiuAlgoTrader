@@ -185,8 +185,13 @@ class MomentumLong(Strategy):
                     and data.vwap > data.open
                     and data.close > prev_min.close
                     and data.close > data.open
-                    # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
+                    if symbol in voi and voi[symbol][-1] < 0:
+                        tlog(
+                            f"[{self.name}][{now}] Don't buy on negative voi {voi}"
+                        )
+                        return False, {}
+
                     tlog(
                         f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
@@ -535,7 +540,9 @@ class MomentumLong(Strategy):
                     f"[{now}]{symbol} don't bail: data.vwap={data.vwap} bail_threshold={bail_threshold} macd_below_signal={macd_below_signal} macd[-1]={ macd[-1]} macd[-2]={macd[-2]}"
                 )
 
-            scalp = movement > 0.02 or data.vwap > scalp_threshold
+            scalp = (movement > 0.02 or data.vwap > scalp_threshold) and (
+                symbol not in voi or voi[symbol][-1] < voi[symbol][-2]
+            )
             below_cost_base = data.vwap < latest_cost_basis[symbol]
             rsi_limit = (
                 79 if (now - config.market_open).seconds // 60 > 45 else 95
@@ -575,6 +582,13 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
+            elif (
+                symbol in voi
+                and voi[symbol][-1] < 0
+                and voi[symbol][-1] < voi[symbol][-2]
+            ):
+                to_sell = True
+                sell_reasons.append("bail on voi")
 
             # Check patterns
             if debug:
