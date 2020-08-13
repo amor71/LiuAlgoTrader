@@ -181,7 +181,7 @@ class MomentumLong(Strategy):
                     and data.close > prev_min.close
                     and data.close > data.open
                 ):
-                    if symbol in voi and voi[symbol][-1] < 0:
+                    if symbol in voi and min(voi[symbol]) < 0:
                         tlog(
                             f"[{self.name}][{now}] Don't buy {symbol} on negative voi {voi[symbol]}"
                         )
