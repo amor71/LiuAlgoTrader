@@ -592,9 +592,10 @@ class MomentumLong(Strategy):
                 and voi[symbol][-1] < 0
                 and voi[symbol][-1] < voi[symbol][-2]
             ):
-                to_sell = True
-                sell_reasons.append("bail on voi")
-                limit_sell = True
+                tlog(f"bail-on-voi identified but not acted")
+                # to_sell = True
+                # sell_reasons.append("bail on voi")
+                # limit_sell = True
 
             # Check patterns
             if debug:
