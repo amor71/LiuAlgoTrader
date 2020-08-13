@@ -687,9 +687,9 @@ class MomentumLong(Strategy):
                 tlog(
                     f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
                 )
-                to_sell = True
-                partial_sell = False
-                sell_reasons.append("two_bears_in_the_morning")
+                # to_sell = True
+                # partial_sell = False
+                # sell_reasons.append("two_bears_in_the_morning")
 
             if to_sell:
                 # await asyncio.sleep(0)
