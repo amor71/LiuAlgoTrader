@@ -305,7 +305,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
 
-    if data["EV"] == "Q":
+    if data["EV"] == "T":
+        tlog(f"trade={data}")
+    elif data["EV"] == "Q":
         if "askprice" not in data or "bidprice" not in data:
             return True
 
