@@ -113,8 +113,6 @@ class MomentumLong(Strategy):
                         f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
                     )
 
-                # check for a positive, increasing MACD
-
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].min()
 
@@ -138,10 +136,7 @@ class MomentumLong(Strategy):
                 if data.vwap:
                     serie[-1] = data.vwap
                 macds = MACD(serie)
-                # await asyncio.sleep(0)
-
                 sell_macds = MACD(serie, 13, 21)
-                # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 round_factor = (
@@ -545,7 +540,8 @@ class MomentumLong(Strategy):
                 )
 
             scalp = (movement > 0.02 or data.vwap > scalp_threshold) and (
-                symbol not in voi or voi[symbol][-1] < voi[symbol][-2]
+                symbol not in voi
+                or voi[symbol][-1] < voi[symbol][-2] < voi[symbol][-3]
             )
             below_cost_base = data.vwap < latest_cost_basis[symbol]
             rsi_limit = (
@@ -592,7 +588,7 @@ class MomentumLong(Strategy):
                 and voi[symbol][-1] < 0
                 and voi[symbol][-1] < voi[symbol][-2]
             ):
-                tlog(f"bail-on-voi identified but not acted")
+                tlog(f"[{now}]{symbol}bail-on-voi identified but not acted")
                 # to_sell = True
                 # sell_reasons.append("bail on voi")
                 # limit_sell = True
