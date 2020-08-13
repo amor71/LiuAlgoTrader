@@ -191,9 +191,11 @@ class MomentumLong(Strategy):
                             f"[{self.name}][{now}] Don't buy {symbol} if voi not trending up {voi[symbol]}"
                         )
                         return False, {}
+
                     tlog(
                         f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
+                    tlog(f"[{self.name}][{now}] {symbol} voi {voi[symbol]}")
 
                     if False:  # not morning_rush:
                         back_time = ts(config.market_open)
@@ -588,7 +590,7 @@ class MomentumLong(Strategy):
                 and voi[symbol][-1] < 0
                 and voi[symbol][-1] < voi[symbol][-2]
             ):
-                tlog(f"[{now}]{symbol}bail-on-voi identified but not acted")
+                tlog(f"[{now}] {symbol} bail-on-voi identified but not acted")
                 # to_sell = True
                 # sell_reasons.append("bail on voi")
                 # limit_sell = True
