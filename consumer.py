@@ -307,14 +307,18 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         )
 
     if data["EV"] == "T":
-        if any(item in data["conditions"] for item in TRADE_CONDITIONS):
+        if "conditions" in data and any(
+            item in data["conditions"] for item in TRADE_CONDITIONS
+        ):
             # tlog(f"trade={data}")
             return True
         return True
     elif data["EV"] == "Q":
         if "askprice" not in data or "bidprice" not in data:
             return True
-        if any(item in data["conditions"] for item in QUOTE_SKIP_CONDITIONS):
+        if "condition" in data and any(
+            item == data["condition"] for item in QUOTE_SKIP_CONDITIONS
+        ):
             return True
 
         # tlog(f"quote={data}")
