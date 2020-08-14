@@ -22,7 +22,7 @@ from pytz.tzinfo import DstTzInfo
 from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.tlog import tlog
-from fincalcs.data_conditions import TRADE_CONDITIONS
+from fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS, TRADE_CONDITIONS
 from models.new_trades import NewTrade
 from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
@@ -308,13 +308,16 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
     if data["EV"] == "T":
         if any(item in data["conditions"] for item in TRADE_CONDITIONS):
-            tlog(f"trade={data}")
+            # tlog(f"trade={data}")
+            return True
         return True
     elif data["EV"] == "Q":
         if "askprice" not in data or "bidprice" not in data:
             return True
+        if any(item in data["conditions"] for item in QUOTE_SKIP_CONDITIONS):
+            return True
 
-        tlog(f"quote={data}")
+        # tlog(f"quote={data}")
         prev_ask = trading_data.voi_ask.get(symbol, None)
         prev_bid = trading_data.voi_bid.get(symbol, None)
         trading_data.voi_ask[symbol] = (
@@ -335,9 +338,6 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             if data["bidprice"] > prev_bid[0]
             else data["bidsize"] - prev_bid[1]
         )
-        # if prev_bid:
-        #    tlog(f"{symbol} bid_delta_volume= {bid_delta_volume} time_delta={data['timestamp']-prev_bid[2]}")
-
         ask_delta_volume = (
             0
             if not prev_ask or data["askprice"] > prev_ask[0]
@@ -345,9 +345,6 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             if data["askprice"] < prev_ask[0]
             else data["asksize"] - prev_ask[1]
         )
-        # if prev_ask:
-        #    tlog(f"{symbol} ask_delta_volume= {ask_delta_volume} time_delta={data['timestamp']-prev_ask[2] }")
-
         voi_stack = trading_data.voi.get(symbol, None)
         if not voi_stack:
             voi_stack = [0.0]
@@ -364,7 +361,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             )
         )
         trading_data.voi[symbol] = voi_stack
-        tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
+        # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
         # First, aggregate 1s bars for up-to-date MACD calculations
