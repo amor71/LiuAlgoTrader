@@ -22,6 +22,7 @@ from pytz.tzinfo import DstTzInfo
 from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.tlog import tlog
+from fincalcs.data_conditions import TRADE_CONDITIONS
 from models.new_trades import NewTrade
 from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
@@ -306,13 +307,14 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         )
 
     if data["EV"] == "T":
-        # tlog(f"trade={data}")
+        if any(item in data["conditions"] for item in TRADE_CONDITIONS):
+            tlog(f"trade={data}")
         return True
     elif data["EV"] == "Q":
         if "askprice" not in data or "bidprice" not in data:
             return True
 
-        # tlog(f"quote={data}")
+        tlog(f"quote={data}")
         prev_ask = trading_data.voi_ask.get(symbol, None)
         prev_bid = trading_data.voi_bid.get(symbol, None)
         trading_data.voi_ask[symbol] = (
@@ -362,7 +364,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             )
         )
         trading_data.voi[symbol] = voi_stack
-        # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
+        tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
         # First, aggregate 1s bars for up-to-date MACD calculations
