@@ -606,8 +606,8 @@ class MomentumLong(Strategy):
                 and gravestone_doji(
                     prev_min.open, prev_min.high, prev_min.low, prev_min.close
                 )
-                # and data.close < data.open
-                # and data.vwap < data.open
+                and data.close < data.open
+                and data.vwap < data.open
                 # and prev_min.close > latest_cost_basis[symbol]
             ):
                 tlog(
