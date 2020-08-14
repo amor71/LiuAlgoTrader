@@ -338,16 +338,16 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         bid_delta_volume = (
             0
             if not prev_bid or data["bidprice"] < prev_bid[0]
-            else data["bidsize"]
+            else 100 * data["bidsize"]
             if data["bidprice"] > prev_bid[0]
-            else data["bidsize"] - prev_bid[1]
+            else 100 * (data["bidsize"] - prev_bid[1])
         )
         ask_delta_volume = (
             0
             if not prev_ask or data["askprice"] > prev_ask[0]
-            else data["asksize"]
+            else 100 * data["asksize"]
             if data["askprice"] < prev_ask[0]
-            else data["asksize"] - prev_ask[1]
+            else 100 * (data["asksize"] - prev_ask[1])
         )
         voi_stack = trading_data.voi.get(symbol, None)
         if not voi_stack:
