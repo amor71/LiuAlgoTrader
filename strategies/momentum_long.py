@@ -588,7 +588,7 @@ class MomentumLong(Strategy):
             elif (
                 symbol in voi
                 and voi[symbol][-1] < 0
-                and voi[symbol][-1] < voi[symbol][-2]
+                and voi[symbol][-1] < voi[symbol][-2] < voi[symbol][-3]
             ):
                 tlog(f"[{now}] {symbol} bail-on-voi identified but not acted")
                 # to_sell = True
