@@ -112,9 +112,8 @@ def ready_to_start(trading_api: tradeapi) -> bool:
                         f"market open, wait {config.market_cool_down_minutes} minutes"
                     )
                     while (
-                        since_market_open.seconds // 60
-                        < config.market_cool_down_minutes
-                    ):
+                        since_market_open.seconds // 60 < 5
+                    ):  # config.market_cool_down_minutes
                         time.sleep(1)
                         since_market_open = (
                             datetime.today().astimezone(nyc)
