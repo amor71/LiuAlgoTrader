@@ -15,7 +15,7 @@ def gravestone_doji(
     shadow_size = upper_shadow + lower_shadow
 
     return (
-        body_size < 0.02
+        body_size < 0.02 < shadow_size
         and lower_shadow * 1.5 < upper_shadow
         and shadow_size > 3 * body_size
         and shadow_size >= 0.01
