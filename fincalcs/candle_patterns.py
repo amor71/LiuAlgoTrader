@@ -53,8 +53,8 @@ def spinning_top(open: float, high: float, low: float, close: float) -> bool:
     body_size = close - open if close > open else open - close
     return (
         shadow_size >= 2 * body_size
-        and lower_shadow > 0
-        and upper_shadow > 0
+        and lower_shadow > 0.02
+        and upper_shadow > 0.02
         and 0.8 < upper_shadow / lower_shadow < 1.2
     )
 
