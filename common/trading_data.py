@@ -13,6 +13,7 @@ open_orders: Dict[str, Tuple[Order, str]] = {}
 open_order_strategy: Dict[str, Strategy] = {}
 last_used_strategy: Dict[str, Strategy] = {}
 latest_cost_basis: Dict[str, float] = {}
+latest_scalp_basis: Dict[str, float] = {}
 sell_indicators: Dict[str, Dict] = {}
 buy_indicators: Dict[str, Dict] = {}
 positions: Dict[str, float] = {}
