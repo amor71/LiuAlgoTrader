@@ -611,7 +611,7 @@ class MomentumLong(Strategy):
                 # and prev_min.close > latest_cost_basis[symbol]
             ):
                 tlog(
-                    f"identified gravestone doji {data.open, data.close, data.low, data.high}"
+                    f"[{now}]{symbol} identified gravestone doji {prev_min.open, prev_min.high, prev_min.low, prev_min.close}"
                 )
                 to_sell = True
                 partial_sell = False
