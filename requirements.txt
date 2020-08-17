@@ -24,5 +24,5 @@ pytest-asyncio==0.14.0
 pytest-cov==2.10.1
 websockets==8.1
 nb-clean==1.4.3
-matplotlib==3.3.0
+matplotlib==3.3.1
 tabulate==0.8.7
