@@ -18,7 +18,6 @@ from typing import List
 sys.path.insert(0, os.path.abspath("."))
 
 
-
 project = "LiuAlgoTrader"
 copyright = "2020, amor71"
 author = "amor71"
@@ -26,7 +25,7 @@ author = "amor71"
 # The full version, including alpha/beta/rc tags
 release = "0.0.1"
 
-
+master_doc = "index"
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
