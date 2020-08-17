@@ -310,7 +310,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         if "conditions" in data and any(
             item in data["conditions"] for item in TRADE_CONDITIONS
         ):
-            tlog(f"trade={data}")
+            #tlog(f"trade={data}")
             return True
         return True
     elif data["EV"] == "Q":
@@ -321,7 +321,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         ):
             return True
 
-        tlog(f"quote={data}")
+        #tlog(f"quote={data}")
         prev_ask = trading_data.voi_ask.get(symbol, None)
         prev_bid = trading_data.voi_bid.get(symbol, None)
         trading_data.voi_ask[symbol] = (
@@ -365,7 +365,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             )
         )
         trading_data.voi[symbol] = voi_stack
-        tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
+        #tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
         # First, aggregate 1s bars for up-to-date MACD calculations
@@ -667,7 +667,7 @@ async def load_current_long_positions(
                 trading_data.positions[symbol] = int(position.qty)
                 trading_data.stop_prices[symbol] = stop_price
                 trading_data.target_prices[symbol] = target_price
-                trading_data.latest_cost_basis[symbol] = price
+                trading_data.latest_cost_basis[symbol] = trading_data.latest_scalp_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
                 trading_data.symbol_resistance[symbol] = (
