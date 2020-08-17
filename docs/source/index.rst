@@ -23,7 +23,7 @@ disregard events that are over-due and ensuring
 that strategies never act upon old data.
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 2
 
    WIP
    Quickstart
