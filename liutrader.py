@@ -139,9 +139,7 @@ if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
 
     uid = str(uuid.uuid4())
-    motd(
-        filename=config.filename, version=config.build_label, unique_id=uid,
-    )
+    motd(filename=config.filename, version=config.build_label, unique_id=uid)
     try:
         opts, args = getopt.getopt(
             sys.argv[1:], "", ["finnhub", "finnhub-history"]
@@ -213,7 +211,7 @@ if __name__ == "__main__":
         tlog(f"Tracking {len(symbols)} symbols")
 
         if use_finnhub or use_finnhub_history:
-            minute_history = get_historical_data_from_finnhub(symbols=symbols,)
+            minute_history = get_historical_data_from_finnhub(symbols=symbols)
         elif use_polygon:
             minute_history = get_historical_data_from_polygon(
                 api=data_api,
