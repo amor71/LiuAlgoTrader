@@ -14,8 +14,9 @@ from common import config
 from common.tlog import tlog
 from common.trading_data import (buy_indicators, buy_time, cool_down,
                                  last_used_strategy, latest_cost_basis,
-                                 open_orders, sell_indicators, stop_prices,
-                                 symbol_resistance, target_prices)
+                                 latest_scalp_basis, open_orders,
+                                 sell_indicators, stop_prices,
+                                 symbol_resistance, target_prices, voi)
 from fincalcs.candle_patterns import (bearish_candle,
                                       bullish_candle_followed_by_dragonfly,
                                       four_price_doji, gravestone_doji,
@@ -38,10 +39,10 @@ class MomentumLong(Strategy):
         )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
-        latest_cost_basis[symbol] = price
+        latest_scalp_basis[symbol] = latest_cost_basis[symbol] = price
 
     async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
-        latest_cost_basis[symbol] = price
+        latest_scalp_basis[symbol] = price
 
     async def create(self) -> None:
         await super().create()
@@ -113,8 +114,6 @@ class MomentumLong(Strategy):
                         f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
                     )
 
-                # check for a positive, increasing MACD
-
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].min()
 
@@ -138,10 +137,7 @@ class MomentumLong(Strategy):
                 if data.vwap:
                     serie[-1] = data.vwap
                 macds = MACD(serie)
-                # await asyncio.sleep(0)
-
                 sell_macds = MACD(serie, 13, 21)
-                # await asyncio.sleep(0)
                 macd1 = macds[0]
                 macd_signal = macds[1]
                 round_factor = (
@@ -185,8 +181,19 @@ class MomentumLong(Strategy):
                     and data.vwap > data.open
                     and data.close > prev_min.close
                     and data.close > data.open
-                    # and 0 < macd1[-2] - macd1[-3] < macd1[-1] - macd1[-2]
                 ):
+                    if symbol in voi and voi[symbol][-1] < 0:
+                        tlog(
+                            f"[{self.name}][{now}] Don't buy {symbol} on negative voi {voi[symbol]}"
+                        )
+                        return False, {}
+                    if symbol in voi and voi[symbol][-1] < voi[symbol][-2]:
+                        tlog(
+                            f"[{self.name}][{now}] Don't buy {symbol} if voi not trending up {voi[symbol]}"
+                        )
+                        return False, {}
+
+                    tlog(f"[{self.name}][{now}] {symbol} voi {voi[symbol]}")
                     tlog(
                         f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
@@ -245,7 +252,7 @@ class MomentumLong(Strategy):
                             tlog(
                                 f"[{self.name}][{now}] {symbol} RSI counter MACD trend ({rsi[-1+minute_shift]},{rsi[-2+minute_shift]},{rsi[-3+minute_shift]})"
                             )
-                            return False, {}
+                            # return False, {}
 
                         # await asyncio.sleep(0)
                         tlog(
@@ -438,6 +445,8 @@ class MomentumLong(Strategy):
                                         )
                                     ),
                                 }
+                                if symbol in voi:
+                                    buy_indicators[symbol]["voi"] = voi[symbol]
 
                                 return (
                                     True,
@@ -487,8 +496,8 @@ class MomentumLong(Strategy):
                 14,
             )
             movement = (
-                data.close - latest_cost_basis[symbol]
-            ) / latest_cost_basis[symbol]
+                data.close - latest_scalp_basis[symbol]
+            ) / latest_scalp_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
 
@@ -502,14 +511,14 @@ class MomentumLong(Strategy):
                 and symbol_resistance[symbol]
             ):
                 scalp_threshold = (
-                    symbol_resistance[symbol] + latest_cost_basis[symbol]
+                    symbol_resistance[symbol] + latest_scalp_basis[symbol]
                 ) / 2.0
             else:
                 scalp_threshold = (
-                    target_prices[symbol] + latest_cost_basis[symbol]
+                    target_prices[symbol] + latest_scalp_basis[symbol]
                 ) / 2.0
             bail_threshold = (
-                latest_cost_basis[symbol] + scalp_threshold
+                latest_scalp_basis[symbol] + scalp_threshold
             ) / 2.0
             macd_below_signal = round(macd_val, round_factor) < round(
                 macd_signal_val, round_factor
@@ -533,13 +542,15 @@ class MomentumLong(Strategy):
                     f"[{now}]{symbol} don't bail: data.vwap={data.vwap} bail_threshold={bail_threshold} macd_below_signal={macd_below_signal} macd[-1]={ macd[-1]} macd[-2]={macd[-2]}"
                 )
 
-            scalp = movement > 0.02 or data.vwap > scalp_threshold
-            below_cost_base = data.vwap < latest_cost_basis[symbol]
-            rsi_limit = (
-                79 if (now - config.market_open).seconds // 60 > 45 else 95
+            scalp = (movement > 0.02 or data.vwap > scalp_threshold) and (
+                symbol not in voi
+                or voi[symbol][-1] < voi[symbol][-2] < voi[symbol][-3]
             )
+            below_cost_base = data.vwap < latest_cost_basis[symbol]
+            rsi_limit = 79 if not morning_rush else 85
             to_sell = False
             partial_sell = False
+            limit_sell = False
             sell_reasons = []
             if data.close <= stop_prices[symbol]:
                 to_sell = True
@@ -573,6 +584,15 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
+            elif (
+                symbol in voi
+                and voi[symbol][-1] < 0
+                and voi[symbol][-1] < voi[symbol][-2] < voi[symbol][-3]
+            ):
+                tlog(f"[{now}] {symbol} bail-on-voi identified but not acted")
+                # to_sell = True
+                # sell_reasons.append("bail on voi")
+                # limit_sell = True
 
             # Check patterns
             if debug:
@@ -580,95 +600,99 @@ class MomentumLong(Strategy):
                     f"[{now}] {symbol} min-2 = {minute_history.iloc[-2].open} {minute_history.iloc[-2].high}, {minute_history.iloc[-2].low}, {minute_history.iloc[-2].close}"
                 )
 
-            if (
-                now - buy_time[symbol] > timedelta(minutes=1)
-                and gravestone_doji(
-                    prev_min.open, prev_min.high, prev_min.low, prev_min.close
-                )
-                # and data.close < data.open
-                # and data.vwap < data.open
-                # and prev_min.close > latest_cost_basis[symbol]
-            ):
-                tlog(
-                    f"identified gravestone doji {data.open, data.close, data.low, data.high}"
-                )
-                to_sell = True
-                partial_sell = False
-                sell_reasons.append("gravestone_doji")
+            if config.check_patterns:
+                if (
+                    now - buy_time[symbol] > timedelta(minutes=1)
+                    and gravestone_doji(
+                        prev_min.open,
+                        prev_min.high,
+                        prev_min.low,
+                        prev_min.close,
+                    )
+                    and data.close < data.open
+                    and data.vwap < data.open
+                    and prev_min.close > latest_cost_basis[symbol]
+                ):
+                    tlog(
+                        f"[{now}]{symbol} identified gravestone doji {prev_min.open, prev_min.high, prev_min.low, prev_min.close}"
+                    )
+                    to_sell = True
+                    partial_sell = False
+                    sell_reasons.append("gravestone_doji")
 
-            elif (
-                now - buy_time[symbol] > timedelta(minutes=2)
-                and spinning_top_bearish_followup(
-                    (
+                elif (
+                    now - buy_time[symbol] > timedelta(minutes=2)
+                    and spinning_top_bearish_followup(
+                        (
+                            minute_history.iloc[-3].open,
+                            minute_history.iloc[-3].high,
+                            minute_history.iloc[-3].low,
+                            minute_history.iloc[-3].close,
+                        ),
+                        (
+                            minute_history.iloc[-2].open,
+                            minute_history.iloc[-2].high,
+                            minute_history.iloc[-2].low,
+                            minute_history.iloc[-2].close,
+                        ),
+                    )
+                    and data.vwap < data.open
+                ):
+                    tlog(
+                        f"[{now}] {symbol} identified bullish spinning top followed by bearish candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                    )
+                    to_sell = True
+                    partial_sell = False
+                    sell_reasons.append("bull_spinning_top_bearish_followup")
+
+                elif (
+                    now - buy_time[symbol] > timedelta(minutes=2)
+                    and bullish_candle_followed_by_dragonfly(
+                        (
+                            minute_history.iloc[-3].open,
+                            minute_history.iloc[-3].high,
+                            minute_history.iloc[-3].low,
+                            minute_history.iloc[-3].close,
+                        ),
+                        (
+                            minute_history.iloc[-2].open,
+                            minute_history.iloc[-2].high,
+                            minute_history.iloc[-2].low,
+                            minute_history.iloc[-2].close,
+                        ),
+                    )
+                    and data.vwap < data.open
+                ):
+                    tlog(
+                        f"[{now}] {symbol} identified bullish candle followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                    )
+                    to_sell = True
+                    partial_sell = False
+                    sell_reasons.append("bullish_candle_followed_by_dragonfly")
+                elif (
+                    now - buy_time[symbol] > timedelta(minutes=2)
+                    and morning_rush
+                    and bearish_candle(
                         minute_history.iloc[-3].open,
                         minute_history.iloc[-3].high,
                         minute_history.iloc[-3].low,
                         minute_history.iloc[-3].close,
-                    ),
-                    (
+                    )
+                    and bearish_candle(
                         minute_history.iloc[-2].open,
                         minute_history.iloc[-2].high,
                         minute_history.iloc[-2].low,
                         minute_history.iloc[-2].close,
-                    ),
-                )
-                and data.vwap < data.open
-            ):
-                tlog(
-                    f"[{now}] {symbol} identified bullish spinning top followed by bearish candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
-                )
-                to_sell = True
-                partial_sell = False
-                sell_reasons.append("bull_spinning_top_bearish_followup")
-
-            elif (
-                now - buy_time[symbol] > timedelta(minutes=2)
-                and bullish_candle_followed_by_dragonfly(
-                    (
-                        minute_history.iloc[-3].open,
-                        minute_history.iloc[-3].high,
-                        minute_history.iloc[-3].low,
-                        minute_history.iloc[-3].close,
-                    ),
-                    (
-                        minute_history.iloc[-2].open,
-                        minute_history.iloc[-2].high,
-                        minute_history.iloc[-2].low,
-                        minute_history.iloc[-2].close,
-                    ),
-                )
-                and data.vwap < data.open
-            ):
-                tlog(
-                    f"[{now}] {symbol} identified bullish candle followed by dragonfly candle {(minute_history.iloc[-3].open, minute_history.iloc[-3].high,minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
-                )
-                to_sell = True
-                partial_sell = False
-                sell_reasons.append("bullish_candle_followed_by_dragonfly")
-            elif (
-                now - buy_time[symbol] > timedelta(minutes=2)
-                and morning_rush
-                and bearish_candle(
-                    minute_history.iloc[-3].open,
-                    minute_history.iloc[-3].high,
-                    minute_history.iloc[-3].low,
-                    minute_history.iloc[-3].close,
-                )
-                and bearish_candle(
-                    minute_history.iloc[-2].open,
-                    minute_history.iloc[-2].high,
-                    minute_history.iloc[-2].low,
-                    minute_history.iloc[-2].close,
-                )
-                and minute_history.iloc[-2].close
-                < minute_history.iloc[-3].close
-            ):
-                tlog(
-                    f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
-                )
-                to_sell = True
-                partial_sell = False
-                sell_reasons.append("two_bears_in_the_morning")
+                    )
+                    and minute_history.iloc[-2].close
+                    < minute_history.iloc[-3].close
+                ):
+                    tlog(
+                        f"[{now}] {symbol} identified two consequtive bullish candles during morning rush{(minute_history.iloc[-3].open, minute_history.iloc[-3].high, minute_history.iloc[-3].low, minute_history.iloc[-3].close), (minute_history.iloc[-2].open, minute_history.iloc[-2].high, minute_history.iloc[-2].low, minute_history.iloc[-2].close)}"
+                    )
+                    # to_sell = True
+                    # partial_sell = False
+                    # sell_reasons.append("two_bears_in_the_morning")
 
             if to_sell:
                 # await asyncio.sleep(0)
@@ -716,18 +740,36 @@ class MomentumLong(Strategy):
                         else None,
                     }
 
+                    if symbol in voi:
+                        sell_indicators[symbol]["voi"] = voi[symbol]
+
                     if not partial_sell:
-                        tlog(
-                            f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
-                        )
-                        return (
-                            True,
-                            {
-                                "side": "sell",
-                                "qty": str(position),
-                                "type": "market",
-                            },
-                        )
+
+                        if not limit_sell:
+                            tlog(
+                                f"[{self.name}] Submitting sell for {position} shares of {symbol} at market"
+                            )
+                            return (
+                                True,
+                                {
+                                    "side": "sell",
+                                    "qty": str(position),
+                                    "type": "market",
+                                },
+                            )
+                        else:
+                            tlog(
+                                f"[{self.name}] Submitting sell for {position} shares of {symbol} at {data.close}"
+                            )
+                            return (
+                                True,
+                                {
+                                    "side": "sell",
+                                    "qty": str(position),
+                                    "type": "limit",
+                                    "limit_price": str(data.close),
+                                },
+                            )
                     else:
                         qty = int(position / 2) if position > 1 else 1
                         tlog(
