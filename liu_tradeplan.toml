@@ -1,0 +1,25 @@
+# This is a TOML document.
+
+[scanner]
+    [momentum]              # kind of scanner to use currently supported values are 'momentum'
+    min_volume = 30000      # scan for tickers with minimal volume since day start
+    min_gap = 3.5           # minimum daily percentage gap
+
+from_market_open = 15       # How many minutes from market open, to start running scanner
+recurrence = None           # scanner frequency in minutes, None for one time run only
+
+# trading strategies
+[strategy]
+    [strategies/momentum_long.py]  # strategy file
+        name = "MomentumLong"      # class name, must implement Strategy class
+
+        # trading schedules block, trades many have several windows within the same day
+        [schedule]
+            [window]
+            start = 15      # in this case, immediately after first scan ends
+            duration = 150
+
+
+
+
+
