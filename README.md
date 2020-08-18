@@ -19,7 +19,7 @@ Contribution section for further details.
 
 ## Documentation
 
-Is available [here](https://https://liualgotrader.readthedocs.io/en/latest/).
+Is available [here](https://liualgotrader.readthedocs.io/en/latest/).
 
 ## Development
 
