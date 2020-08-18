@@ -64,6 +64,8 @@ market_close: datetime
 # total number of tickers to follow
 total_tickers = 440
 
+# algo attributes
+check_patterns: bool = False
 #
 # WS Data Channels
 #

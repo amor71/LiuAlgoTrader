@@ -22,6 +22,7 @@ from pytz.tzinfo import DstTzInfo
 from common import config, market_data, trading_data
 from common.database import create_db_connection
 from common.tlog import tlog
+from fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS, TRADE_CONDITIONS
 from models.new_trades import NewTrade
 from models.trending_tickers import TrendingTickers
 from strategies.base import Strategy
@@ -290,16 +291,6 @@ async def handle_trade_update(data: Dict) -> bool:
 
 async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     symbol = data["symbol"]
-    # print(f"got [{symbol}] to handle_queue_msg")
-
-    # First, aggregate 1s bars for up-to-date MACD calculations
-    original_ts = ts = pd.Timestamp(
-        data["start"], tz="America/New_York", unit="ms"
-    )
-    ts = ts.replace(
-        second=0, microsecond=0
-    )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
-
     if symbol not in market_data.minute_history:
         _df = trading_api.polygon.historic_agg_v2(
             symbol,
@@ -314,144 +305,211 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
-    try:
-        current = market_data.minute_history[symbol].loc[ts]
-    except KeyError:
-        current = None
 
-    first_blood = False
-    if current is None:
-        new_data = [
-            data["open"],
-            data["high"],
-            data["low"],
-            data["close"],
-            data["volume"],
-            data["vwap"],
-            data["average"],
-        ]
-        first_blood = True
-    else:
-        new_data = [
-            current.open,
-            max(data["high"], current.high),
-            min(data["low"], current.low),
-            data["close"],
-            current.volume + data["volume"],
-            data["vwap"],
-            data["average"],
-        ]
-    market_data.minute_history[symbol].loc[ts] = new_data
-    market_data.volume_today[symbol] = data["totalvolume"]
-
-    if data["EV"] == "A":
-        if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
-            tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
-            return False
-    elif data["EV"] == "AM":
-        return True
-    else:
-        tlog(f"[ERROR] unknown EV {data['EV']}")
-
-    # Next, check for existing orders for the stock
-    existing_order = trading_data.open_orders.get(symbol)
-    if existing_order is not None:
-        existing_order = existing_order[0]
-        try:
-            if await should_cancel_order(existing_order, original_ts):
-                inflight_order = await get_order(
-                    trading_api, existing_order.id
-                )
-                if inflight_order and inflight_order.status == "filled":
-                    tlog(
-                        f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
-                    )
-                    await update_filled_order(
-                        trading_data.open_order_strategy[symbol],
-                        inflight_order,
-                    )
-                elif (
-                    inflight_order
-                    and inflight_order.status == "partially_filled"
-                ):
-                    tlog(
-                        f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
-                    )
-                    await update_partially_filled_order(
-                        trading_data.open_order_strategy[symbol],
-                        inflight_order,
-                    )
-                else:
-                    # Cancel it so we can try again for a fill
-                    tlog(
-                        f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"
-                    )
-                    trading_api.cancel_order(existing_order.id)
-                    trading_data.open_orders.pop(symbol, None)
-
+    if data["EV"] == "T":
+        if "conditions" in data and any(
+            item in data["conditions"] for item in TRADE_CONDITIONS
+        ):
+            #tlog(f"trade={data}")
             return True
-        except AttributeError:
-            error_logger.report_exception()
-            tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
+        return True
+    elif data["EV"] == "Q":
+        if "askprice" not in data or "bidprice" not in data:
+            return True
+        if "condition" in data and any(
+            item == data["condition"] for item in QUOTE_SKIP_CONDITIONS
+        ):
+            return True
 
-    # do we have a position?
-    symbol_position = trading_data.positions.get(symbol, 0)
-
-    # do we need to liquidate for the day?
-    until_market_close = config.market_close - ts
-    if (
-        until_market_close.seconds // 60
-        <= config.market_liquidation_end_time_minutes
-    ):
-        await liquidate(symbol, symbol_position, trading_api)
-
-    # run strategies
-    for s in trading_data.strategies:
-        do, what = await s.run(
-            symbol,
-            symbol_position,
-            market_data.minute_history[symbol],
-            ts,
-            trading_api=trading_api,
+        #tlog(f"quote={data}")
+        prev_ask = trading_data.voi_ask.get(symbol, None)
+        prev_bid = trading_data.voi_bid.get(symbol, None)
+        trading_data.voi_ask[symbol] = (
+            data["askprice"],
+            data["asksize"],
+            data["timestamp"],
+        )
+        trading_data.voi_bid[symbol] = (
+            data["bidprice"],
+            data["bidsize"],
+            data["timestamp"],
         )
 
-        if do:
+        bid_delta_volume = (
+            0
+            if not prev_bid or data["bidprice"] < prev_bid[0]
+            else 100 * data["bidsize"]
+            if data["bidprice"] > prev_bid[0]
+            else 100 * (data["bidsize"] - prev_bid[1])
+        )
+        ask_delta_volume = (
+            0
+            if not prev_ask or data["askprice"] > prev_ask[0]
+            else 100 * data["asksize"]
+            if data["askprice"] < prev_ask[0]
+            else 100 * (data["asksize"] - prev_ask[1])
+        )
+        voi_stack = trading_data.voi.get(symbol, None)
+        if not voi_stack:
+            voi_stack = [0.0]
+        elif len(voi_stack) == 10:
+            voi_stack[0:9] = voi_stack[1:10]
+            voi_stack.pop()
+
+        k = 2.0 / (100 + 1)
+        voi_stack.append(
+            round(
+                voi_stack[-1] * (1.0 - k)
+                + k * (bid_delta_volume - ask_delta_volume),
+                2,
+            )
+        )
+        trading_data.voi[symbol] = voi_stack
+        #tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
+
+    elif data["EV"] in ("A", "AM"):
+        # First, aggregate 1s bars for up-to-date MACD calculations
+        original_ts = ts = pd.Timestamp(
+            data["start"], tz="America/New_York", unit="ms"
+        )
+        ts = ts.replace(
+            second=0, microsecond=0
+        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+
+        try:
+            current = market_data.minute_history[symbol].loc[ts]
+        except KeyError:
+            current = None
+
+        if current is None:
+            new_data = [
+                data["open"],
+                data["high"],
+                data["low"],
+                data["close"],
+                data["volume"],
+                data["vwap"],
+                data["average"],
+            ]
+        else:
+            new_data = [
+                current.open,
+                max(data["high"], current.high),
+                min(data["low"], current.low),
+                data["close"],
+                current.volume + data["volume"],
+                data["vwap"],
+                data["average"],
+            ]
+        market_data.minute_history[symbol].loc[ts] = new_data
+        market_data.volume_today[symbol] = data["totalvolume"]
+
+        if data["EV"] == "A":
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
+                tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
+                return False
+        elif data["EV"] == "AM":
+            return True
+
+        # Next, check for existing orders for the stock
+        existing_order = trading_data.open_orders.get(symbol)
+        if existing_order is not None:
+            existing_order = existing_order[0]
             try:
-
-                if what["type"] == "limit":
-                    o = trading_api.submit_order(
-                        symbol=symbol,
-                        qty=what["qty"],
-                        side=what["side"],
-                        type="limit",
-                        time_in_force="day",
-                        limit_price=what["limit_price"],
+                if await should_cancel_order(existing_order, original_ts):
+                    inflight_order = await get_order(
+                        trading_api, existing_order.id
                     )
-                else:
-                    o = trading_api.submit_order(
-                        symbol=symbol,
-                        qty=what["qty"],
-                        side=what["side"],
-                        type=what["type"],
-                        time_in_force="day",
+                    if inflight_order and inflight_order.status == "filled":
+                        tlog(
+                            f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                        )
+                        await update_filled_order(
+                            trading_data.open_order_strategy[symbol],
+                            inflight_order,
+                        )
+                    elif (
+                        inflight_order
+                        and inflight_order.status == "partially_filled"
+                    ):
+                        tlog(
+                            f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                        )
+                        await update_partially_filled_order(
+                            trading_data.open_order_strategy[symbol],
+                            inflight_order,
+                        )
+                    else:
+                        # Cancel it so we can try again for a fill
+                        tlog(
+                            f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"
+                        )
+                        trading_api.cancel_order(existing_order.id)
+                        trading_data.open_orders.pop(symbol, None)
+
+                return True
+            except AttributeError:
+                error_logger.report_exception()
+                tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
+
+        # do we have a position?
+        symbol_position = trading_data.positions.get(symbol, 0)
+
+        # do we need to liquidate for the day?
+        until_market_close = config.market_close - ts
+        if (
+            until_market_close.seconds // 60
+            <= config.market_liquidation_end_time_minutes
+        ):
+            await liquidate(symbol, symbol_position, trading_api)
+
+        # run strategies
+        for s in trading_data.strategies:
+            do, what = await s.run(
+                symbol,
+                symbol_position,
+                market_data.minute_history[symbol],
+                ts,
+                trading_api=trading_api,
+            )
+
+            if do:
+                try:
+
+                    if what["type"] == "limit":
+                        o = trading_api.submit_order(
+                            symbol=symbol,
+                            qty=what["qty"],
+                            side=what["side"],
+                            type="limit",
+                            time_in_force="day",
+                            limit_price=what["limit_price"],
+                        )
+                    else:
+                        o = trading_api.submit_order(
+                            symbol=symbol,
+                            qty=what["qty"],
+                            side=what["side"],
+                            type=what["type"],
+                            time_in_force="day",
+                        )
+
+                    trading_data.open_orders[symbol] = (o, what["side"])
+                    trading_data.open_order_strategy[symbol] = s
+
+                    tlog(
+                        f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
                     )
-
-                trading_data.open_orders[symbol] = (o, what["side"])
-                trading_data.open_order_strategy[symbol] = s
-
-                tlog(
-                    f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-                )
-                if what["side"] == "buy":
-                    trading_data.last_used_strategy[symbol] = s
-                    trading_data.buy_time[symbol] = datetime.now(
-                        tz=timezone("America/New_York")
-                    ).replace(second=0, microsecond=0)
-                    break
-            except APIError as e:
-                tlog(
-                    f"Exception APIError with {e} from {what}, checking if order filled"
-                )
+                    if what["side"] == "buy":
+                        trading_data.last_used_strategy[symbol] = s
+                        trading_data.buy_time[symbol] = datetime.now(
+                            tz=timezone("America/New_York")
+                        ).replace(second=0, microsecond=0)
+                        break
+                except APIError as e:
+                    tlog(
+                        f"Exception APIError with {e} from {what}, checking if order filled"
+                    )
 
     return True
 
@@ -609,7 +667,7 @@ async def load_current_long_positions(
                 trading_data.positions[symbol] = int(position.qty)
                 trading_data.stop_prices[symbol] = stop_price
                 trading_data.target_prices[symbol] = target_price
-                trading_data.latest_cost_basis[symbol] = price
+                trading_data.latest_cost_basis[symbol] = trading_data.latest_scalp_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
                 trading_data.symbol_resistance[symbol] = (
