@@ -4,7 +4,7 @@
 [![Updates](https://pyup.io/repos/github/amor71/LiuAlgoTrader/shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
 [![Documentation Status](https://readthedocs.org/projects/liualgotrader/badge/?version=latest)](https://liualgotrader.readthedocs.io/en/latest/?badge=latest)
 
-###Introduction
+## Introduction
 
 **LiuAlgoTrader** is a Pythonic all-batteries-included framework
 for effective algorithmic trading. The framework is
@@ -17,11 +17,11 @@ Assistance in development is highly appreciated,
 as well as comments and suggestions. Please check the
 Contribution section for further details.
 
-###Documentation
+## Documentation
 
 Is available [here](https://https://liualgotrader.readthedocs.io/en/latest/).
 
-###Development
+## Development
 
 Would you like to help me complete & evolve LiuAlgoTrader? 
 Do you have a suggestion, comment, idea for improvement or 
