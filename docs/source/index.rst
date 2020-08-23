@@ -22,11 +22,27 @@ time-stamp and the consumer infrastructure will
 disregard events that are over-due and ensuring
 that strategies never act upon old data.
 
+LiuAlgoTrader is made of the following components:
+
+- **trader**: the main application for trading
+- **backtester**: re-running past trading sessions
+- **market_miner**: application for collecting segments data
+- **analysis notebooks**: collection of notebooks for analysis of trading sessions, backtesting, as well as various tools for improving trading algos.
+
+The rest of the documentation explains how to install,
+setup, configure and run trading & analysis
+sessions w/ LiuAlgoTrader.
+
+
 .. toctree::
    :maxdepth: 2
 
    WIP
    Quickstart
+   Installation & Setup
+   Configuration
+   Scanners
+   Strategies
    Analysis
    Back-testing
    How to Contribute
