@@ -55,17 +55,13 @@ risk = 0.001
 group_margin = 0.02
 
 # trade times
-market_cool_down_minutes: int = 15
 market_liquidation_end_time_minutes: int = 15
 
 
-# liualgotrader attributes
-check_patterns: bool = False
 #
 # WS Data Channels
 #
 WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
-
 
 # performance parameters
 num_consumer_processes_ratio: int = 75

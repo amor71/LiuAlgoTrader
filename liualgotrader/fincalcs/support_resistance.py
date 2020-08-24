@@ -78,7 +78,7 @@ async def find_supports(
     current_value: float,
     minute_history: df,
     debug=False,
-) -> Optional[List[float]]:
+) -> List[float]:
     """calculate supports"""
     for back_track_min in range(120, len(minute_history.index), 60):
         series = (
@@ -104,7 +104,7 @@ async def find_supports(
                 # )
                 return local_maximas
 
-    return None
+    return []
 
 
 def find_stop(current_value, minute_history, now):
