@@ -41,7 +41,7 @@ bypass_market_schedule = true
         # several windows within the same day
         [[strategies.MomentumLong.schedule]]
             start = 15
-            duration = 150
+            duration = 330
 
 
 

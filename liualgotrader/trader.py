@@ -32,7 +32,6 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog(f"{filename} {version} starting")
     tlog(f"unique id: {unique_id}")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-    tlog(f"TRADE_BUY_WINDOW: {config.trade_buy_window}")
     tlog(f"DSN: {config.dsn}")
     tlog(f"MAX SYMBOLS: {config.total_tickers}")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
