@@ -33,12 +33,7 @@ class AlgoRun:
                         self.strategy_name,
                         env if env else config.env,
                         config.build_label,
-                        json.dumps(
-                            {
-                                "TRADE_BUY_WINDOW": config.trade_buy_window,
-                                "DSN": config.dsn,
-                            }
-                        ),
+                        json.dumps({"DSN": config.dsn,}),
                         self.batch_id,
                     )
                 else:
@@ -52,12 +47,7 @@ class AlgoRun:
                         self.strategy_name,
                         env if env else config.env,
                         config.build_label,
-                        json.dumps(
-                            {
-                                "TRADE_BUY_WINDOW": config.trade_buy_window,
-                                "DSN": config.dsn,
-                            }
-                        ),
+                        json.dumps({"DSN": config.dsn,}),
                         self.batch_id,
                         ref_algo_run_id,
                     )
