@@ -1,4 +1,5 @@
 import asyncio
+import importlib.util
 import json
 import os
 import sys
@@ -6,7 +7,7 @@ import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
 from queue import Empty
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -19,11 +20,11 @@ from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from common import market_data, trading_data
-from common.tlog import tlog
-from fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS, TRADE_CONDITIONS
-from liualgotrader.common import config
+from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.tlog import tlog
+from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
+                                                    TRADE_CONDITIONS)
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy
@@ -137,7 +138,7 @@ async def save(
     new_qty: int,
     last_op: str,
     price: float,
-    indicators: Dict,
+    indicators: Dict[Any, Any],
     now: str,
 ) -> None:
     db_trade = NewTrade(
@@ -176,7 +177,7 @@ async def update_partially_filled_order(
     trading_data.positions[order.symbol] += qty
     trading_data.open_orders[order.symbol] = (
         order,
-        trading_data.open_orders.get(order.symbol)[1],
+        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
     )
 
     try:
@@ -186,24 +187,24 @@ async def update_partially_filled_order(
             else trading_data.sell_indicators[order.symbol]
         )
     except KeyError:
-        indicators = None
+        indicators = None  # type: ignore
 
     await save(
         order.symbol,
-        new_qty,
-        trading_data.open_orders.get(order.symbol)[1],
+        int(new_qty),
+        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
         float(order.filled_avg_price),
-        indicators if indicators else "",
+        indicators if indicators else "",  # type: ignore
         order.updated_at,
     )
 
     if order.side == "buy":
         await strategy.buy_callback(
-            order.symbol, float(order.filled_avg_price), new_qty
+            order.symbol, float(order.filled_avg_price), int(new_qty)
         )
     else:
         await strategy.sell_callback(
-            order.symbol, float(order.filled_avg_price), new_qty
+            order.symbol, float(order.filled_avg_price), int(new_qty)
         )
 
 
@@ -226,29 +227,29 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
             else trading_data.sell_indicators[order.symbol]
         )
     except KeyError:
-        indicators = None
+        indicators = None  # type: ignore
 
     await save(
         order.symbol,
-        new_qty,
-        trading_data.open_orders.get(order.symbol)[1],
+        int(new_qty),
+        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
         float(order.filled_avg_price),
-        indicators if indicators else "",
+        indicators if indicators else "",  # type: ignore
         order.filled_at,
     )
 
     if order.side == "buy":
-        trading_data.buy_indicators[order.symbol] = None
+        trading_data.buy_indicators[order.symbol] = None  # type: ignore
     else:
-        trading_data.sell_indicators[order.symbol] = None
+        trading_data.sell_indicators[order.symbol] = None  # type: ignore
 
     if order.side == "buy":
         await strategy.buy_callback(
-            order.symbol, float(order.filled_avg_price), new_qty
+            order.symbol, float(order.filled_avg_price), int(new_qty)
         )
     else:
         await strategy.sell_callback(
-            order.symbol, float(order.filled_avg_price), new_qty
+            order.symbol, float(order.filled_avg_price), int(new_qty)
         )
 
     trading_data.open_orders.pop(order.symbol, None)
@@ -260,7 +261,7 @@ async def handle_trade_update(data: Dict) -> bool:
     if trading_data.open_orders.get(symbol) is None:
         return False
 
-    last_order = trading_data.open_orders.get(symbol)[0]
+    last_order = trading_data.open_orders.get(symbol)[0]  # type: ignore
     if last_order is not None:
         event = data["event"]
         tlog(f"trade update for {symbol} data={data} with event {event}")
@@ -414,11 +415,11 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             try:
                 if await should_cancel_order(existing_order, original_ts):
                     inflight_order = await get_order(
-                        trading_api, existing_order.id
+                        trading_api, existing_order.id  # type: ignore
                     )
                     if inflight_order and inflight_order.status == "filled":
                         tlog(
-                            f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"
+                            f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"  # type: ignore
                         )
                         await update_filled_order(
                             trading_data.open_order_strategy[symbol],
@@ -429,7 +430,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                         and inflight_order.status == "partially_filled"
                     ):
                         tlog(
-                            f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"
+                            f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"  # type: ignore
                         )
                         await update_partially_filled_order(
                             trading_data.open_order_strategy[symbol],
@@ -438,9 +439,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                     else:
                         # Cancel it so we can try again for a fill
                         tlog(
-                            f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"
+                            f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                         )
-                        trading_api.cancel_order(existing_order.id)
+                        trading_api.cancel_order(existing_order.id)  # type: ignore
                         trading_data.open_orders.pop(symbol, None)
 
                 return True
@@ -456,13 +457,13 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             until_market_close.seconds // 60
             <= config.market_liquidation_end_time_minutes
         ):
-            await liquidate(symbol, symbol_position, trading_api)
+            await liquidate(symbol, int(symbol_position), trading_api)
 
         # run strategies
         for s in trading_data.strategies:
             do, what = await s.run(
                 symbol,
-                symbol_position,
+                int(symbol_position),
                 market_data.minute_history[symbol],
                 ts,
                 trading_api=trading_api,
@@ -574,7 +575,7 @@ def get_trading_windows(tz, api):
 
 
 async def consumer_async_main(
-    queue: Queue, symbols: List[str], unique_id: str
+    queue: Queue, symbols: List[str], unique_id: str, strategies_conf: Dict,
 ):
     await create_db_connection(str(config.dsn))
 
@@ -607,11 +608,45 @@ async def consumer_async_main(
     config.market_open, config.market_close = get_trading_windows(
         nyc, trading_api
     )
+    strategy_types = []
+    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+    for strategy in strategies_conf:
+        strategy_name = list(strategy.keys())[0]
+        strategy_details = strategy[strategy_name]
+        if strategy_name == "MomentumLong":
+            tlog(f"strategy {strategy_name} selected")
+            strategy_types += [(MomentumLong, strategy_details)]
+        else:
+            tlog(f"custom strategy {strategy_name} selected")
 
-    strategy_types = [MomentumLong]  # , VWAPScalp] #VWAPLong,
-    for strategy_type in strategy_types:
+            try:
+                spec = importlib.util.spec_from_file_location(
+                    "module.name", strategy_details["filename"]
+                )
+                custom_strategy_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(  # type: ignore
+                    custom_strategy_module
+                )
+                class_name = list(strategy.keys())[0]
+                custom_strategy = getattr(custom_strategy_module, class_name)
+
+                if not issubclass(custom_strategy, Strategy):
+                    tlog(
+                        f"custom scanner must inherit from class {Strategy.__name__}"
+                    )
+                    exit(0)
+
+                strategy_types += [(custom_strategy, strategy_details)]
+
+            except Exception as e:
+                tlog(f"Error {e}")
+                exit(0)
+
+    for strategy_tuple in strategy_types:
+        strategy_type = strategy_tuple[0]
+        strategy_details = strategy_tuple[1]
         tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(batch_id=unique_id)
+        s = strategy_type(batch_id=unique_id, **strategy_details)
         await s.create()
 
         trading_data.strategies.append(s)
@@ -696,6 +731,7 @@ def consumer_main(
     symbols: List[str],
     minute_history: Dict[str, df],
     unique_id: str,
+    strategies_conf: Dict,
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
@@ -707,7 +743,9 @@ def consumer_main(
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(consumer_async_main(queue, symbols, unique_id))
+        asyncio.run(
+            consumer_async_main(queue, symbols, unique_id, strategies_conf)
+        )
         # loop = asyncio.new_event_loop()
         # asyncio.set_event_loop(asyncio.new_event_loop())
         # loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))

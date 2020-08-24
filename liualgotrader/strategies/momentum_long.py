@@ -4,25 +4,25 @@ from typing import Dict, List, Tuple
 import alpaca_trade_api as tradeapi
 import numpy as np
 import talib
-from google.cloud import error_reporting
 from pandas import DataFrame as df
 from pandas import Series
 from pandas import Timestamp as ts
 from talib import BBANDS, MACD, RSI
 
-from common.tlog import tlog
-from common.trading_data import (buy_indicators, buy_time, cool_down,
-                                 last_used_strategy, latest_cost_basis,
-                                 latest_scalp_basis, open_orders,
-                                 sell_indicators, stop_prices,
-                                 symbol_resistance, target_prices, voi)
-from fincalcs.candle_patterns import (bearish_candle,
-                                      bullish_candle_followed_by_dragonfly,
-                                      four_price_doji, gravestone_doji,
-                                      spinning_top,
-                                      spinning_top_bearish_followup)
-from fincalcs.support_resistance import (find_resistances, find_stop,
-                                         find_supports)
+from liualgotrader.common.tlog import tlog
+from liualgotrader.common.trading_data import (buy_indicators, buy_time,
+                                               cool_down, last_used_strategy,
+                                               latest_cost_basis,
+                                               latest_scalp_basis, open_orders,
+                                               sell_indicators, stop_prices,
+                                               symbol_resistance,
+                                               target_prices, voi)
+from liualgotrader.fincalcs.candle_patterns import (
+    bearish_candle, bullish_candle_followed_by_dragonfly, gravestone_doji,
+    spinning_top_bearish_followup)
+from liualgotrader.fincalcs.support_resistance import (find_resistances,
+                                                       find_stop,
+                                                       find_supports)
 
 from ..common import config
 from .base import Strategy
@@ -31,9 +31,19 @@ from .base import Strategy
 class MomentumLong(Strategy):
     name = "momentum_long"
 
-    def __init__(self, batch_id: str, ref_run_id: int = None):
+    def __init__(
+        self,
+        batch_id: str,
+        schedule: List[Dict],
+        ref_run_id: int = None,
+        check_patterns: bool = False,
+    ):
+        self.check_patterns = check_patterns
         super().__init__(
-            name=self.name, batch_id=batch_id, ref_run_id=ref_run_id
+            name=self.name,
+            batch_id=batch_id,
+            ref_run_id=ref_run_id,
+            schedule=schedule,
         )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
@@ -50,7 +60,7 @@ class MomentumLong(Strategy):
         if (
             symbol in cool_down
             and cool_down[symbol]
-            and cool_down[symbol] >= now.replace(second=0, microsecond=0)
+            and cool_down[symbol] >= now.replace(second=0, microsecond=0)  # type: ignore
         ):
             return True
 
@@ -289,6 +299,14 @@ class MomentumLong(Strategy):
                                 if resistances is None or resistances == []:
                                     tlog(
                                         f"[{self.name}] no resistance for {symbol} -> skip buy"
+                                    )
+                                    cool_down[symbol] = now.replace(
+                                        second=0, microsecond=0
+                                    )
+                                    return False, {}
+                                if supports is None or supports == []:
+                                    tlog(
+                                        f"[{self.name}] no supports for {symbol} -> skip buy"
                                     )
                                     cool_down[symbol] = now.replace(
                                         second=0, microsecond=0
@@ -597,7 +615,7 @@ class MomentumLong(Strategy):
                     f"[{now}] {symbol} min-2 = {minute_history.iloc[-2].open} {minute_history.iloc[-2].high}, {minute_history.iloc[-2].low}, {minute_history.iloc[-2].close}"
                 )
 
-            if config.check_patterns:
+            if self.check_patterns:
                 if (
                     now - buy_time[symbol] > timedelta(minutes=1)
                     and gravestone_doji(

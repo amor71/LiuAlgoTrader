@@ -150,7 +150,6 @@ if __name__ == "__main__":
             tlog(f"- {list(scanner.keys())[0]} scanner detected")
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -304,7 +303,13 @@ if __name__ == "__main__":
             consumers = [
                 mp.Process(
                     target=consumer_main,
-                    args=(queues[i], symbol_by_queue[i], minute_history, uid),
+                    args=(
+                        queues[i],
+                        symbol_by_queue[i],
+                        minute_history,
+                        uid,
+                        conf_dict["strategies"],
+                    ),
                 )
                 for i in range(_num_consumer_processes)
             ]

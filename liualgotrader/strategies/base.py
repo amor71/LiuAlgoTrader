@@ -1,6 +1,6 @@
 """Base Class for Strategies"""
 from datetime import datetime
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
@@ -10,10 +10,17 @@ from liualgotrader.models.algo_run import AlgoRun
 
 
 class Strategy:
-    def __init__(self, name: str, batch_id: str, ref_run_id: int = None):
+    def __init__(
+        self,
+        name: str,
+        batch_id: str,
+        schedule: List[Dict],
+        ref_run_id: int = None,
+    ):
         self.name = name
         self.ref_run_id = ref_run_id
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
+        self.schedule = schedule
 
     async def create(self):
         await self.algo_run.save(
@@ -37,9 +44,12 @@ class Strategy:
         return (
             True
             if (
-                (now - config.market_open).seconds // 60
-                >= config.market_cool_down_minutes
-                or config.bypass_market_schedule
+                any(
+                    (now - config.market_open).seconds // 60
+                    >= schedule["start"]
+                    or config.bypass_market_schedule
+                    for schedule in self.schedule
+                )
             )
             and (config.market_close - now).seconds // 60 > 15
             else False
@@ -48,10 +58,13 @@ class Strategy:
     async def is_buy_time(self, now: datetime):
         return (
             True
-            if config.trade_buy_window
-            > (now - config.market_open).seconds // 60
-            > config.market_cool_down_minutes
-            or config.bypass_market_schedule
+            if any(
+                schedule["duration"]
+                > (now - config.market_open).seconds // 60
+                > schedule["start"]
+                or config.bypass_market_schedule
+                for schedule in self.schedule
+            )
             else False
         )
 
