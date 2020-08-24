@@ -47,7 +47,6 @@ class Strategy:
                 any(
                     (now - config.market_open).seconds // 60
                     >= schedule["start"]
-                    or config.bypass_market_schedule
                     for schedule in self.schedule
                 )
             )
@@ -62,7 +61,6 @@ class Strategy:
                 schedule["duration"]
                 > (now - config.market_open).seconds // 60
                 > schedule["start"]
-                or config.bypass_market_schedule
                 for schedule in self.schedule
             )
             else False
