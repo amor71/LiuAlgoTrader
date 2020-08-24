@@ -97,7 +97,10 @@ class Momentum(Scanner):
                         > self.min_last_dv
                         and ticker.todaysChangePerc
                         >= self.today_change_percent
-                        and ticker.day["v"] > self.min_share_price
+                        and (
+                            ticker.day["v"] > self.min_share_price
+                            or config.bypass_market_schedule
+                        )
                     )
                 ]
                 if len(unsorted) > 0:
@@ -107,12 +110,12 @@ class Momentum(Scanner):
                         reverse=True,
                     )
                     tlog(f"picked {len(ticker_by_volume)} symbols")
-                    return [x.symbol for x in ticker_by_volume][
+                    return [x.ticker for x in ticker_by_volume][
                         : self.max_symbols
                     ]
 
-            tlog("got no data :-( waiting then re-trying")
-            time.sleep(30)
+                tlog("did not find gaping stock, retrying")
+                time.sleep(30)
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
             pass
