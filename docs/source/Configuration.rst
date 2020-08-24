@@ -24,16 +24,20 @@ which is not kept in the repository:
     #!/bin/bash
     set -e
 
+    # used for paper-trading accounts
     export ALPACA_PAPER_BASEURL=
     export ALPACA_PAPER_API_KEY=
     export ALPACA_PAPER_API_SECRET=
 
+    # used for data-feeds, and live trading
     export ALPACA_LIVE_BASEURL=
     export ALPACA_LIVE_API_KEY=
     export ALPACA_LIVE_API_SECRET=
 
+    # database connectivity
     export DSN="postgresql://momentum@localhost/tradedb"
 
+    # used by Analysis notebooks
     export APCA_API_KEY_ID=
     export APCA_API_SECRET_KEY=
 

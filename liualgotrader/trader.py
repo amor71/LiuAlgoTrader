@@ -40,7 +40,7 @@ def motd(filename: str, version: str, unique_id: str) -> None:
 
 def get_trading_windows(tz, api):
     """Get start and end time for trading"""
-
+    tlog("checking market schedule")
     today = datetime.today().astimezone(tz)
     today_str = datetime.today().astimezone(tz).strftime("%Y-%m-%d")
 
@@ -78,9 +78,11 @@ def ready_to_start(trading_api: tradeapi) -> bool:
     )
 
     if config.market_open or config.bypass_market_schedule:
-        tlog(
-            f"markets open {config.market_open} market close {config.market_close}"
-        )
+
+        if not config.bypass_market_schedule:
+            tlog(
+                f"markets open {config.market_open} market close {config.market_close}"
+            )
 
         # Wait until just before we might want to trade
         current_dt = datetime.today().astimezone(nyc)
@@ -123,7 +125,7 @@ if __name__ == "__main__":
         f"loading configuration file from {os.getcwd()}/{config.configuration_filename}"
     )
     conf_dict = toml.load(config.configuration_filename)
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+    print("")
 
     # parse configuration
     config.bypass_market_schedule = conf_dict.get(
@@ -158,9 +160,9 @@ if __name__ == "__main__":
     if ready_to_start(data_api):
         symbols: List = []
         for scanner in scanners:
-            scanner_object: Scanner
-            if list(scanner.keys())[0] == str(Momentum):
-                scanner_details = scanner[list(scanner.keys())[0]]
+            scanner_name = list(scanner.keys())[0]
+            if scanner_name == "momentum":
+                scanner_details = scanner[scanner_name]
                 try:
                     print(
                         "+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+"
@@ -173,14 +175,13 @@ if __name__ == "__main__":
                         max_share_price=scanner_details["max_share_price"],
                         min_volume=scanner_details["min_volume"],
                         from_market_open=scanner_details["from_market_open"],
-                        today_change_percent=scanner_details[
-                            "today_change_percent"
-                        ],
+                        today_change_percent=scanner_details["min_gap"],
                         recurrence=scanner_details.get("recurrence", False),
                         max_symbols=scanner_details.get(
                             "max_symbols", config.total_tickers
                         ),
                     )
+                    tlog(f"instantiated momentum scanner")
                 except KeyError as e:
                     tlog(
                         f"Error {e} in processing of scanner configuration {scanner_details}"
@@ -188,8 +189,8 @@ if __name__ == "__main__":
                     exit(0)
             else:
                 print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-                tlog(f"custom scanner {list(scanner.keys())[0]} selected")
-                scanner_details = scanner[list(scanner.keys())[0]]
+                tlog(f"custom scanner {scanner_name} selected")
+                scanner_details = scanner[scanner_name]
                 try:
                     spec = importlib.util.spec_from_file_location(
                         "module.name", scanner_details["filename"]
@@ -226,6 +227,7 @@ if __name__ == "__main__":
 
             symbols += scanner_object.run()
 
+        print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
         # add open positions
         base_url = (
             config.prod_base_url

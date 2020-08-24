@@ -43,6 +43,7 @@ sessions w/ LiuAlgoTrader.
    Configuration
    Scanners
    Strategies
+   Under-the-hood
    Analysis
    Back-testing
    How to Contribute
