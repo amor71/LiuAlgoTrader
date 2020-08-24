@@ -270,6 +270,7 @@ if __name__ == "__main__":
         symbols = list(minute_history.keys())
 
         if len(symbols) > 0:
+            print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             mp.set_start_method("spawn")
 
             # Consumers first
