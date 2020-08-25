@@ -29,8 +29,10 @@ script:
   - coverage run -m pytest
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  - python setup.py sdist bdist_wheel
 deploy:
   provider: pypi
+  file: dist/*
   username: __token__
   password:
     secure: deploy.password
