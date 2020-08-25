@@ -32,7 +32,7 @@ Database Connection
 
 The **DSN** environment variable holds the connection string to the database. For example:
 
-.. code-block::
+.. code-block:: bash
 
     export DSN="postgresql://momentum@localhost/tradedb"
 
