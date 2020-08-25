@@ -34,3 +34,5 @@ deploy:
   username: __token__
   password:
     secure: deploy.password
+  on:
+    tags: true
