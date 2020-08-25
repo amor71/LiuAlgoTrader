@@ -207,7 +207,10 @@ class MomentumLong(Strategy):
                         )
                         return False, {}
 
-                    tlog(f"[{self.name}][{now}] {symbol} voi {voi[symbol]}")
+                    if symbol in voi:
+                        tlog(
+                            f"[{self.name}][{now}] {symbol} voi {voi[symbol]}"
+                        )
                     tlog(
                         f"[{self.name}][{now}] MACD(12,26) for {symbol} trending up!, MACD(13,21) trending up and above signals"
                     )
