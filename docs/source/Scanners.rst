@@ -92,7 +92,7 @@ Here is an example of *my_scanner.py*:
 
 Configuring the custom scanner in the *tradeplan* TOML file is as easy:
 
-.. code-block:: TOML
+.. code-block:: none
 
     [[scanners]]
         [scanners.MyScanner]
