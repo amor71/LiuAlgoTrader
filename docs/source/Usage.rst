@@ -28,7 +28,7 @@ Usage
 
 To run the market_miner app type:
 
-.. code-block::
+.. code-block:: bash
 
     python liualgotrader/market_miner.py
 
