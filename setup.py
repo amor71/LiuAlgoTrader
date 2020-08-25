@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="liualgotrader-amor71",
+    name="liualgotrader",
     version="0.0.1",
     author="amor71",
     author_email="amichay@sgeltd.com",
