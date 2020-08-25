@@ -27,3 +27,6 @@ matplotlib==3.3.1
 tabulate==0.8.7
 sphinx==3.2.1
 sphinx-autodoc-typehints==1.11.0
+setuptools
+wheel
+twine
