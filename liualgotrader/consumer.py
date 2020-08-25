@@ -731,7 +731,7 @@ def consumer_main(
     symbols: List[str],
     minute_history: Dict[str, df],
     unique_id: str,
-    strategies_conf: Dict,
+    conf: Dict,
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
@@ -739,12 +739,14 @@ def consumer_main(
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
 
+    config.bypass_market_schedule = conf.get("bypass_market_schedule", False)
+
     market_data.minute_history = minute_history
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         asyncio.run(
-            consumer_async_main(queue, symbols, unique_id, strategies_conf)
+            consumer_async_main(queue, symbols, unique_id, conf["strategies"])
         )
         # loop = asyncio.new_event_loop()
         # asyncio.set_event_loop(asyncio.new_event_loop())
