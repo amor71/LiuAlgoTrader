@@ -125,9 +125,13 @@ class MomentumLong(Strategy):
                 last_30_max_close = minute_history[-30:]["close"].max()
                 last_30_min_close = minute_history[-30:]["close"].min()
 
-                if (now - config.market_open).seconds // 60 > 90 and (
-                    last_30_max_close - last_30_min_close
-                ) / last_30_min_close > 0.1:
+                if (
+                    (now - config.market_open).seconds // 60 > 90
+                    and (last_30_max_close - last_30_min_close)
+                    / last_30_min_close
+                    > 0.1
+                    and not config.bypass_market_schedule
+                ):
                     tlog(
                         f"[{self.name}][{now}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"
                     )
@@ -548,12 +552,16 @@ class MomentumLong(Strategy):
             )
             bail_out = (
                 # movement > min(0.02, movement_threshold) and macd_below_signal
-                data.vwap > bail_threshold  # or open_rush)
+                (
+                    movement > 0.01 or data.vwap > bail_threshold
+                )  # or open_rush)
                 and macd_below_signal
                 and round(macd[-1], round_factor)
                 < round(macd[-2], round_factor)
             )
-            bail_on_rsi = data.vwap > bail_threshold and rsi[-2] < rsi[-3]
+            bail_on_rsi = (
+                movement > 0.01 or data.vwap > bail_threshold
+            ) and rsi[-2] < rsi[-3]
 
             if debug and not bail_out:
                 tlog(
