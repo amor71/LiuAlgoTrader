@@ -31,6 +31,6 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: pypi
-  username: amor71
+  username: __token__
   password:
     secure: deploy.password
