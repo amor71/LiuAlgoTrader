@@ -66,7 +66,7 @@ see Scanner and Strategies section respectively
 to learn more on the available tools, and how to extend
 them with your own.
 
-.. code-block:: TOML
+.. code-block:: none
 
     # This is a TOML configuration file.
 
