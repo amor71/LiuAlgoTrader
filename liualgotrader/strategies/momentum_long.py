@@ -100,7 +100,6 @@ class MomentumLong(Strategy):
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
-
                 if debug:
                     tlog(f"{minute_history[lbound:ubound]}")  # type: ignore
             except Exception as e:
@@ -115,7 +114,9 @@ class MomentumLong(Strategy):
                 tlog(f"15 minutes high:{high_15m}")
 
             # Get the change since yesterday's market close
-            if data.close > high_15m:  # and volume_today[symbol] > 30000:
+            if (
+                data.close > high_15m or config.bypass_market_schedule
+            ):  # and volume_today[symbol] > 30000:
                 if debug:
                     tlog(
                         f"[{now}]{symbol} {data.close} above 15 minute high {high_15m}"
@@ -163,7 +164,9 @@ class MomentumLong(Strategy):
                     ):
                         tlog(f"[{now}]{symbol} MACD trending")
                     else:
-                        tlog(f"[{now}]{symbol} MACD NOT trending -> failed")
+                        tlog(
+                            f"[{now}]{symbol} MACD NOT trending -> failed {macd1[-3 + minute_shift].round(round_factor)} {macd1[-2 + minute_shift].round(round_factor)} {macd1[-1 + minute_shift].round(round_factor)}"
+                        )
                     if (
                         macd1[-1 + minute_shift]
                         > macd_signal[-1 + minute_shift]

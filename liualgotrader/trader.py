@@ -307,7 +307,7 @@ if __name__ == "__main__":
                         symbol_by_queue[i],
                         minute_history,
                         uid,
-                        conf_dict["strategies"],
+                        conf_dict,
                     ),
                 )
                 for i in range(_num_consumer_processes)

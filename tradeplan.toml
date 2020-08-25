@@ -25,7 +25,7 @@ bypass_market_schedule = true
         # How many minutes from market open, to start running scanner
         from_market_open = 15
 
-        recurrence = 5
+        # recurrence = 5
 
         # max_symbols = 440
 
