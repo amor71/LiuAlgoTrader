@@ -1,7 +1,7 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-bypass_market_schedule = true
+# bypass_market_schedule = true
 
 # ticket scanners, may have several
 # scanners during the day
