@@ -41,6 +41,7 @@ sessions w/ LiuAlgoTrader.
    Quickstart
    Installation & Setup
    Configuration
+   Usage
    Scanners
    Strategies
    Under-the-hood
