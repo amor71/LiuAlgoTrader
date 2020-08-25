@@ -34,6 +34,6 @@ deploy:
   file: dist/*
   username: __token__
   password:
-    secure: deploy.password
+    secure: deployp
   on:
     tags: true
