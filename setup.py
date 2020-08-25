@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="liualgotrader",
-    version="0.0.1",
+    version="0.0.3",
     author="amor71",
     author_email="amichay@sgeltd.com",
     description="a Pythonic all-batteries-included framework for effective algorithmic trading. The framework is intended to simplify development, testing, deployment and evaluating algo trading strategies.",
