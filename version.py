@@ -46,7 +46,7 @@ def call_git_describe(abbrev):
         )
         p.stderr.close()
         line = p.stdout.readlines()[0]
-        return line.strip()
+        return line.strip().decode("utf-8")
 
     except:
         return None
@@ -90,11 +90,11 @@ def write_release_version(version):
 def get_git_version(abbrev=7):
     # Read in the version that's currently in RELEASE-VERSION.
 
-    release_version = read_release_version()
+    release_version = str(read_release_version())
 
     # First try to get the current version using “git describe”.
 
-    version = call_git_describe(abbrev)
+    version = str(call_git_describe(abbrev))
     if is_dirty():
         version += "-dirty"
 
@@ -102,7 +102,7 @@ def get_git_version(abbrev=7):
     # RELEASE-VERSION.
 
     if version is None:
-        version = release_version
+        version = str(release_version)
 
     # If we still don't have anything, that's an error.
 
@@ -117,7 +117,7 @@ def get_git_version(abbrev=7):
 
     # Finally, return the current version.
 
-    return version
+    return str(version)
 
 
 if __name__ == "__main__":
