@@ -67,7 +67,7 @@ Here is an example of *my_scanner.py*:
 
     import alpaca_trade_api as tradeapi
 
-    from liualgotrader.scanners.base import Scanner
+    from scanners.base import Scanner
 
 
     class MyScanner(Scanner):

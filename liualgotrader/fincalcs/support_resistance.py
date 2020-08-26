@@ -6,8 +6,8 @@ import pytz
 from pandas import DataFrame as df
 from pandas import Timestamp as ts
 
+from common import config
 from common.tlog import tlog
-from liualgotrader.common import config
 
 
 def grouper(iterable):

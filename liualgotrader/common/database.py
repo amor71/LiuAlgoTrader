@@ -1,7 +1,7 @@
 import asyncpg
 
+from common import config
 from common.tlog import tlog
-from liualgotrader.common import config
 
 
 async def create_db_connection(dsn: str = None) -> None:

@@ -16,13 +16,13 @@ import pygit2
 import toml
 from pytz import timezone
 
-from liualgotrader.common import config
-from liualgotrader.common.market_data import get_historical_data_from_polygon
-from liualgotrader.common.tlog import tlog
-from liualgotrader.consumer import consumer_main
-from liualgotrader.polygon_producer import polygon_producer_main
-from liualgotrader.scanners.base import Scanner
-from liualgotrader.scanners.momentum import Momentum
+from common import config
+from common.market_data import get_historical_data_from_polygon
+from common.tlog import tlog
+from consumer import consumer_main
+from polygon_producer import polygon_producer_main
+from scanners.base import Scanner
+from scanners.momentum import Momentum
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
@@ -113,9 +113,14 @@ starting
 
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
-    config.build_label = pygit2.Repository("./").describe(
-        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
-    )
+
+    try:
+        config.build_label = pygit2.Repository("../").describe(
+            describe_strategy=pygit2.GIT_DESCRIBE_TAGS
+        )
+    except pygit2.GitError:
+        config.build_label = liualgotrader.__version__  # type: ignore
+
     uid = str(uuid.uuid4())
     motd(filename=config.filename, version=config.build_label, unique_id=uid)
 

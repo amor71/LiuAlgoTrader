@@ -15,8 +15,8 @@ from google.cloud import error_reporting
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
+from common import config
 from common.tlog import tlog
-from liualgotrader.common import config
 
 last_msg_tstamp: datetime = datetime.now()
 

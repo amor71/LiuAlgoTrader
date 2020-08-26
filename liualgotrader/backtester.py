@@ -13,15 +13,15 @@ import pygit2
 import pytz
 from requests.exceptions import HTTPError
 
-from liualgotrader.common import config, market_data, trading_data
-from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.decorators import timeit
-from liualgotrader.common.tlog import tlog
-from liualgotrader.fincalcs.vwap import add_daily_vwap
-from liualgotrader.models.algo_run import AlgoRun
-from liualgotrader.models.new_trades import NewTrade
-from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.strategies.momentum_long import MomentumLong
+from common import config, market_data, trading_data
+from common.database import create_db_connection
+from common.decorators import timeit
+from common.tlog import tlog
+from fincalcs.vwap import add_daily_vwap
+from models.algo_run import AlgoRun
+from models.new_trades import NewTrade
+from models.trending_tickers import TrendingTickers
+from strategies.momentum_long import MomentumLong
 
 
 def get_batch_list():

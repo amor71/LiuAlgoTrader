@@ -1,7 +1,7 @@
 import asyncio
 import time
 
-from liualgotrader.common.tlog import tlog
+from common.tlog import tlog
 
 
 def timeit(func):

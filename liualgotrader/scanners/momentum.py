@@ -6,9 +6,9 @@ import alpaca_trade_api as tradeapi
 import requests
 from pytz import timezone
 
-from liualgotrader.common import config
-from liualgotrader.common.decorators import timeit
-from liualgotrader.common.tlog import tlog
+from common import config
+from common.decorators import timeit
+from common.tlog import tlog
 
 from .base import Scanner
 

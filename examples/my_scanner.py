@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import alpaca_trade_api as tradeapi
 
-from liualgotrader.scanners.base import Scanner
+from scanners.base import Scanner
 
 
 class MyScanner(Scanner):

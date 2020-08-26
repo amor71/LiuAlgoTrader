@@ -5,8 +5,8 @@ from typing import Dict, List, Tuple
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
-from liualgotrader.common import config
-from liualgotrader.models.algo_run import AlgoRun
+from common import config
+from models.algo_run import AlgoRun
 
 
 class Strategy:
