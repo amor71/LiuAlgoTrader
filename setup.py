@@ -30,7 +30,7 @@ setuptools.setup(
     python_requires=">=3.8",
     scripts=[
         "liualgotrader/trader",
-        "liualgotrader/market_minder",
+        "liualgotrader/market_miner",
         "liualgotrader/backtester",
     ],
 )
