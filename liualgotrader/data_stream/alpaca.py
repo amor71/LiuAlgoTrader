@@ -4,10 +4,9 @@ from multiprocessing import Queue
 from typing import Awaitable, Dict, List
 
 import websockets
-from google.cloud import error_reporting
 
-from common import market_data
-from common.tlog import tlog
+from liualgotrader.common import market_data
+from liualgotrader.common.tlog import tlog
 
 from ..common import config
 from .streaming_base import StreamingBase, WSConnectState
