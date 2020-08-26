@@ -1,10 +1,8 @@
-import json
-from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
-from common import config
+from liualgotrader.common import config
 
 
 class TrendingTickers:

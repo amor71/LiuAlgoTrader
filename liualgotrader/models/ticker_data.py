@@ -4,7 +4,7 @@ from typing import List
 from asyncpg.exceptions import TooManyConnectionsError
 from asyncpg.pool import Pool
 
-from common.tlog import tlog
+from liualgotrader.common.tlog import tlog
 
 
 @dataclass

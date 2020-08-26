@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
-from common import config
+from liualgotrader.common import config
 
 
 class AlgoRun:

@@ -9,19 +9,21 @@ from pandas import Series
 from pandas import Timestamp as ts
 from talib import BBANDS, MACD, RSI
 
-from common import config
-from common.tlog import tlog
-from common.trading_data import (buy_indicators, buy_time, cool_down,
-                                 last_used_strategy, latest_cost_basis,
-                                 latest_scalp_basis, open_orders,
-                                 sell_indicators, stop_prices,
-                                 symbol_resistance, target_prices, voi)
-from fincalcs.candle_patterns import (bearish_candle,
-                                      bullish_candle_followed_by_dragonfly,
-                                      gravestone_doji,
-                                      spinning_top_bearish_followup)
-from fincalcs.support_resistance import (find_resistances, find_stop,
-                                         find_supports)
+from liualgotrader.common import config
+from liualgotrader.common.tlog import tlog
+from liualgotrader.common.trading_data import (buy_indicators, buy_time,
+                                               cool_down, last_used_strategy,
+                                               latest_cost_basis,
+                                               latest_scalp_basis, open_orders,
+                                               sell_indicators, stop_prices,
+                                               symbol_resistance,
+                                               target_prices, voi)
+from liualgotrader.fincalcs.candle_patterns import (
+    bearish_candle, bullish_candle_followed_by_dragonfly, gravestone_doji,
+    spinning_top_bearish_followup)
+from liualgotrader.fincalcs.support_resistance import (find_resistances,
+                                                       find_stop,
+                                                       find_supports)
 
 from .base import Strategy
 

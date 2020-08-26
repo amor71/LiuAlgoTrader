@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Cluster tickers by industry & sector """
 import asyncio
 import os
@@ -11,11 +13,11 @@ import requests
 from alpaca_trade_api.common import get_polygon_credentials
 from alpaca_trade_api.polygon.entity import Ticker
 
-from common import config
-from common.database import create_db_connection
-from common.decorators import timeit
-from common.tlog import tlog
-from models.ticker_data import TickerData
+from liualgotrader.common import config
+from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.decorators import timeit
+from liualgotrader.common.tlog import tlog
+from liualgotrader.models.ticker_data import TickerData
 
 
 def _get_count(session) -> int:
