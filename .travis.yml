@@ -1,39 +1,35 @@
 language: python
 python:
-  - "3.8"
+- '3.8'
 os: linux
 services:
-  - postgresql
+- postgresql
 env:
   global:
-    - DEPS_DIR=$HOME/dependencies
+  - DEPS_DIR=$HOME/dependencies
   matrix:
-    - WITH_TA_LIBRARY=yes
-      TA_INCLUDE_PATH=$DEPS_DIR/include
-      LD_LIBRARY_PATH=$DEPS_DIR/lib
-      TA_LIBRARY_PATH=$DEPS_DIR/lib
+  - WITH_TA_LIBRARY=yes TA_INCLUDE_PATH=$DEPS_DIR/include LD_LIBRARY_PATH=$DEPS_DIR/lib
+    TA_LIBRARY_PATH=$DEPS_DIR/lib
 cache:
   directories:
-    - $DEPS_DIR
+  - "$DEPS_DIR"
 install:
-  - pip install --upgrade pip wheel
-  - pip install coverage
-  - if [ $WITH_TA_LIBRARY = "yes" ]; then
-      ./tools/build_talib_from_source.bash $DEPS_DIR;
-    fi
-  - pip install -r requirements.txt
+- pip install --upgrade pip wheel
+- pip install coverage
+- if [ $WITH_TA_LIBRARY = "yes" ]; then ./tools/build_talib_from_source.bash $DEPS_DIR;
+  fi
+- pip install -r requirements.txt
 before_script:
-  - psql -c 'create database travis_ci_test;' -U postgres
-  - psql -d travis_ci_test -U postgres -f liualgotrader/setup/db-script.sql
+- psql -c 'create database travis_ci_test;' -U postgres
+- psql -d travis_ci_test -U postgres -f liualgotrader/setup/db-script.sql
 script:
-  - coverage run -m pytest
+- coverage run -m pytest
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+- bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: pypi
-  file: dist/*
   username: __token__
   password:
-    secure: deployp
+    secure: InGzQS2S+tz1iWO7h46gKjWI3xWjmH5vsvB24ohN3CNtqE2HjbjhlPfY0GRFVE6wyJfzPS0e3XB35qQh4vlMmlrJPlynANlF3JAIoE2Ar3hAC2Y1iP+PwWg1EHqX37lU/3V9fVKeXh1ZGMPRPMb84lnWfsRQgdH6yzpf0oYdwWdlocg4EJG0qsedg+ZhGwA2277AkaFbJSTSY2Ynca+YGsvP8Gf7fefF3Ubxn6g4AByX0X3xkEBhoiU8FI4K9iQg32k6FU97JwRMrYSIwg4GHVXTCxIn99PjFsZDmOtotXkfrbrV4sLHr6W4ARmA9spre4K4CQ/ye6LNfyjhPkRAAjtuHOVGEibmM021Qo/PZZkJZz3AvRgFgWFD7iKDQnnGmCi2PisfGrdwYfI452hA1LhfQLGXu8bxWcbu5lPIaPnocuMcWke7VZYLcJanizL0PNtzUMvJ8pjpPYEIjyDCC42pxhOs9LkKMyPvUO2q7Lb0rR1kiH4ifv3ZTMl5j/wkKDxdUSGagWeL+vdtUtMNqVRtGlkEbmtKcLRsptl0m7knRuROvho4aZLWPCtz3xL6H6qMUnGs+REyxQxvlYf5uuIVW0d/67D/sDE2Ao2DFXAd3wMruXtoofZG3+roed8Qicux+X63Omu2w8f85lsGN4ZC0NF4LXF8E8ODIGjMjew=
   on:
     tags: true
