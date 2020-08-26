@@ -18,13 +18,13 @@ import pygit2
 import toml
 from pytz import timezone
 
-from common import config
-from common.market_data import get_historical_data_from_polygon
-from common.tlog import tlog
-from consumer import consumer_main
-from polygon_producer import polygon_producer_main
-from scanners.base import Scanner
-from scanners.momentum import Momentum
+from liualgotrader.common import config
+from liualgotrader.common.market_data import get_historical_data_from_polygon
+from liualgotrader.common.tlog import tlog
+from liualgotrader.consumer import consumer_main
+from liualgotrader.polygon_producer import polygon_producer_main
+from liualgotrader.scanners.base import Scanner
+from liualgotrader.scanners.momentum import Momentum
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
