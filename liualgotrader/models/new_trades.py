@@ -5,8 +5,8 @@ from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
+from common import config
 from common.tlog import tlog
-from liualgotrader.common import config
 
 
 class NewTrade:

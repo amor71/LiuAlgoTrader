@@ -2,8 +2,8 @@ from pandas import DataFrame as df
 from pandas import Timestamp as ts
 from tabulate import tabulate
 
+from common import config
 from common.tlog import tlog
-from liualgotrader.common import config
 
 
 def add_daily_vwap(minute_data: df, debug=False) -> bool:

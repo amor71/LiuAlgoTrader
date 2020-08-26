@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 
 from asyncpg.pool import Pool
 
-from liualgotrader.common import config
+from common import config
 
 
 class TrendingTickers:

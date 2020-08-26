@@ -20,15 +20,14 @@ from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
-from liualgotrader.common import config, market_data, trading_data
-from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
-from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
-                                                    TRADE_CONDITIONS)
-from liualgotrader.models.new_trades import NewTrade
-from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.strategies.base import Strategy
-from liualgotrader.strategies.momentum_long import MomentumLong
+from common import config, market_data, trading_data
+from common.database import create_db_connection
+from common.tlog import tlog
+from fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS, TRADE_CONDITIONS
+from models.new_trades import NewTrade
+from models.trending_tickers import TrendingTickers
+from strategies.base import Strategy
+from strategies.momentum_long import MomentumLong
 
 
 async def end_time(reason: str):

@@ -11,11 +11,10 @@ from pandas import DataFrame as df
 from pandas import Timestamp
 from pytz import timezone
 
-from common import trading_data
+from common import config, trading_data
 from common.decorators import timeit
 from common.tlog import tlog
-from liualgotrader.common import config
-from liualgotrader.models.ticker_snapshot import TickerSnapshot
+from models.ticker_snapshot import TickerSnapshot
 
 volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
