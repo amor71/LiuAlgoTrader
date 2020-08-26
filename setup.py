@@ -28,5 +28,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
-    scripts=["liualgotrader/trader"],
+    scripts=[
+        "liualgotrader/trader",
+        "liualgotrader/market_minder",
+        "liualgotrader/backtester",
+    ],
 )
