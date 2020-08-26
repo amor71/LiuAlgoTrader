@@ -75,7 +75,6 @@ Here is an example of *my_scanner.py*:
         name = "myCustomScanner"
 
         def __init__(self, recurrence: Optional[timedelta], data_api: tradeapi, **args):
-            print(args)
             super().__init__(
                 name=self.name,
                 recurrence=recurrence,
