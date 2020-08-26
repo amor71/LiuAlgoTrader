@@ -6,13 +6,17 @@ analysis notebooks.
 
 The applications are:
 
-- *market_minder.py*
-- *trader.py*
-- *backtester.py*
+- *trader*
+- *market_minder*
+- *backtester*
 
 
 This section describes the three applications,
 while the notebooks are described in the `Analysis` section.
+
+
+trader
+------
 
 market_miner
 ------------
@@ -30,9 +34,9 @@ To run the market_miner app type:
 
 .. code-block:: bash
 
-    python liualgotrader/market_miner.py
+    market_miner
 
-The expect result should look like:
+The expected result should look like:
 
 .. image:: /images/market-miner-usage.png
     :width: 600
@@ -40,8 +44,6 @@ The expect result should look like:
     :alt: *market_miner* output
 
 
-trader
-------
 
 backtester
 ----------
