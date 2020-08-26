@@ -1,5 +1,5 @@
-How to Install & Setup LiuAlgoTrader
-====================================
+How to Install & Setup
+======================
 
 This section describes the sets and processes to install and setup LiuAlgoTrader for first use.
 
@@ -14,6 +14,13 @@ Prerequisite
 
 Installation
 ------------
+
+To install LiuAlgoTrader just type:
+
+.. code-block:: bash
+
+   pip install liualgotrader
+
 
 
 Database Setup
@@ -36,6 +43,10 @@ The **DSN** environment variable holds the connection string to the database. Fo
 
     export DSN="postgresql://momentum@localhost/tradedb"
 
+To `learn more`_ on how to select your connection stream.
+
+.. _learn more: https://www.postgresql.org/docs/9.3/libpq-connect.html#LIBPQ-CONNSTRING
+
 
 Database Schema script
 **********************
@@ -47,7 +58,6 @@ The following SQL script may be used to create the required database schema to L
     CREATE TYPE trade_operation AS ENUM ('buy', 'sell');
     CREATE TYPE trade_env AS ENUM ('PAPER', 'PROD');
     CREATE SEQUENCE IF NOT EXISTS transaction_id_seq START 1;
-
     CREATE TABLE IF NOT EXISTS algo_run (
         algo_run_id serial PRIMARY KEY,
         algo_name text NOT NULL,
@@ -58,8 +68,6 @@ The following SQL script may be used to create the required database schema to L
         end_time timestamp,
         end_reason text
     );
-
-
     CREATE TABLE IF NOT EXISTS trades (
         trade_id serial PRIMARY KEY,
         algo_run_id integer REFERENCES algo_run(algo_run_id),
@@ -78,7 +86,6 @@ The following SQL script may be used to create the required database schema to L
     CREATE INDEX ON trades(symbol);
     CREATE INDEX ON trades(algo_run_id);
     CREATE INDEX ON trades(is_win);
-
     CREATE TABLE IF NOT EXISTS new_trades (
         trade_id serial PRIMARY KEY,
         algo_run_id integer REFERENCES algo_run(algo_run_id),
@@ -92,13 +99,10 @@ The following SQL script may be used to create the required database schema to L
     );
     CREATE INDEX ON new_trades(symbol);
     CREATE INDEX ON new_trades(algo_run_id);
-
     ALTER TABLE new_trades ADD COLUMN stop_price decimal (8, 2);
     ALTER TABLE new_trades ADD COLUMN target_price decimal (8, 2);
-
     ALTER TYPE trade_operation ADD VALUE 'sell_short';
     ALTER TYPE trade_operation ADD VALUE 'buy_short';
-
     CREATE TABLE IF NOT EXISTS ticker_data (
         symbol text PRIMARY KEY,
         name text NOT NULL,
@@ -116,34 +120,23 @@ The following SQL script may be used to create the required database schema to L
     CREATE INDEX ON ticker_data(industry);
     CREATE INDEX ON ticker_data(tags);
     CREATE INDEX ON ticker_data(similar_tickers);
-
-
     ALTER TABLE algo_run ADD COLUMN batch_id text NOT NULL DEFAULT '';
     CREATE INDEX ON algo_run(batch_id);
-
     ALTER TABLE algo_run ADD COLUMN ref_algo_run integer REFERENCES algo_run(algo_run_id);
-
     ALTER TABLE new_trades ADD COLUMN expire_tstamp timestamp;
-
     CREATE TABLE IF NOT EXISTS trending_tickers (
         trending_id serial PRIMARY KEY,
         batch_id text NOT NULL,
         symbol text NOT NULL,
         create_tstamp timestamp DEFAULT current_timestamp
     );
-
     CREATE INDEX ON trending_tickers(batch_id);
-
-    #
-    # Script to populate DB
-    #
     INSERT INTO trending_tickers (symbol, batch_id)
         SELECT distinct t.symbol, r.batch_id
         FROM new_trades as t, algo_run as r
         WHERE
             t.algo_run_id = r.algo_run_id AND
             batch_id != '';
-
 
     BEGIN
     alter table new_trades drop constraint "new_trades_qty_check";
@@ -179,8 +172,8 @@ while Polygon.io is hosted in Equinix. It is a good idea to locate
 the trading servers close to the brokerage servers to best
 execution times.
 
-
+<tbd add more>
 
 Preparing your trades
 ---------------------
-
+<tbd add more>
