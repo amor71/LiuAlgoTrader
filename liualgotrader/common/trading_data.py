@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Tuple
 
 from alpaca_trade_api.entity import Order
 
-from models.ticker_snapshot import TickerSnapshot
-from strategies.base import Strategy
+from liualgotrader.models.ticker_snapshot import TickerSnapshot
+from liualgotrader.strategies.base import Strategy
 
 strategies: List[Strategy] = []
 open_orders: Dict[str, Tuple[Order, str]] = {}

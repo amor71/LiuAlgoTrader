@@ -3,7 +3,7 @@ from datetime import datetime
 
 from google.cloud import logging
 
-from common import config
+from liualgotrader.common import config
 
 try:
     logger = logging.Client().logger("trader")
