@@ -43,7 +43,7 @@ The **DSN** environment variable holds the connection string to the database. Fo
 
     export DSN="postgresql://momentum@localhost/tradedb"
 
-To `learn more`_ on how to select your connection stream.
+To `learn more`_ on how to select your connection string.
 
 .. _learn more: https://www.postgresql.org/docs/9.3/libpq-connect.html#LIBPQ-CONNSTRING
 
