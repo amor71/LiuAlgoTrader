@@ -121,7 +121,7 @@ if __name__ == "__main__":
     except pygit2.GitError:
         import liualgotrader
 
-        config.build_label = liualgotrader.__version__  # type: ignore
+        config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     uid = str(uuid.uuid4())
     motd(filename=config.filename, version=config.build_label, unique_id=uid)
