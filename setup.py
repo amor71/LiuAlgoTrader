@@ -5,7 +5,7 @@ from version import get_git_version
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("requirements.txt") as f:
+with open("liualgotrader/requirements.txt") as f:
     requirements = f.read().splitlines()
 
 
