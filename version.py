@@ -40,9 +40,7 @@ from subprocess import PIPE, Popen  # nosec
 def call_git_describe(abbrev):
     try:
         p = Popen(
-            ["git", "describe", "--abbrev=%d" % abbrev],
-            stdout=PIPE,
-            stderr=PIPE,
+            ["git", "branch", "--show-current"], stdout=PIPE, stderr=PIPE,
         )
         p.stderr.close()
         line = p.stdout.readlines()[0]

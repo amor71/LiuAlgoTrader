@@ -119,6 +119,8 @@ if __name__ == "__main__":
             describe_strategy=pygit2.GIT_DESCRIBE_TAGS
         )
     except pygit2.GitError:
+        import liualgotrader
+
         config.build_label = liualgotrader.__version__  # type: ignore
 
     uid = str(uuid.uuid4())
