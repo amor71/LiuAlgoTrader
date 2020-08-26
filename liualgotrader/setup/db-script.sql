@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS algo_run (
     end_reason text
 );
 
-
 CREATE TABLE IF NOT EXISTS trades (
     trade_id serial PRIMARY KEY,
     algo_run_id integer REFERENCES algo_run(algo_run_id),
@@ -88,9 +87,6 @@ CREATE TABLE IF NOT EXISTS trending_tickers (
 
 CREATE INDEX ON trending_tickers(batch_id);
 
-#
-# Script to populate DB
-#
 INSERT INTO trending_tickers (symbol, batch_id)
     SELECT distinct t.symbol, r.batch_id
     FROM new_trades as t, algo_run as r
