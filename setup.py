@@ -20,6 +20,7 @@ setuptools.setup(
     url="https://github.com/amor71/LiuAlgoTrader",
     license="MIT",
     install_requires=requirements,
+    data_files=[("liualgotrader", ["liualgotrader/requirements.txt"])],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
