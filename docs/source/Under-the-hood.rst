@@ -15,6 +15,46 @@ Understanding the multiprocessing approach
 Understanding the project structure
 -----------------------------------
 
+Understanding the project structure is the first step in
+uncovering the tools available to the custom strategy
+developer. Below is the project
+structure highlighting important
+files for a future developer.
+
+::
+
+    ├── AUTHORS
+    ├── LICENCE.
+    ├── analysis_notebooks
+    │   ├── area.py
+    │   └── bboxinout.py
+    ├── liualgotrader
+    │   ├── common
+    |   |   ├── config.py
+    |   |   ├── market_data.py
+    |   |   ├── tlog.py
+    |   |   └── trading_data.py
+    │   ├─── data_stream
+    |   |    ├── alpaca.py
+    |   |    └── streaming_base.py
+    │   ├── fincals
+    |   |    ├── candle_patterns.py
+    |   |    ├── support_resistance.py
+    |   |    └── vwap.py
+    │   ├── models
+    |   |    ├── algo_run.py
+    |   |    └── new_trades.py
+    │   ├── scanners
+    |   |    ├── base.py
+    |   |    └── momentum.py
+    │   ├── strategies
+    |   |    ├── base.py
+    |   |    └── momentum_long.py
+    │   ├── consumer.py
+    │   └── polygon_producer.py
+    ├── examples
+    ├── tools
+    └── tests
 
 
 
