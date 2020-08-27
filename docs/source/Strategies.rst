@@ -328,7 +328,19 @@ instantiate the `MyStrategy` class, and call it with the arguments defined
 in the `tradeplan` configuration file, while adding the trade-api object.
 
 
+Building a winning strategy
+---------------------------
 
+LiuAlgoTrader framework comes with a lot of tools
+and capabilities which constantly evolve.
+In order to write a winning strategy that
+goes beyond the basic sample presented here,
+it is best advised to go through the `under the hood`
+section to understand how to re-use the framework
+capabilities.
+
+Hey, if you created an awesome strategy,
+please share it with the rest of the community!
 
 
 
