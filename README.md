@@ -25,19 +25,19 @@ Contribution section for further details.
 
 This section describes the steps  to install and setup LiuAlgoTrader for first use.
 
-###Prerequisite
+### Prerequisite
 
 - Paper, and preferable a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
 - Installed [PostgreSQL](https://www.postgresql.org/) database.
 
-###Installation
+### Installation
 
 
 To install LiuAlgoTrader just type:
 
 `pip install liualgotrader`
 
-###First time run
+### First time run
 
 LiuAlgoTrader applications require some 
 configuration and setup which are best described 
