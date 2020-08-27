@@ -1,3 +1,5 @@
+.. _`How to Install & Setup`:
+
 How to Install & Setup
 ======================
 
