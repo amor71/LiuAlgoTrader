@@ -36,7 +36,7 @@ Prerequisites
 *************
 1. Installed & configured `PostgreSQL` instance, hosting a database w/ LiuAlgoTrader schema,
 2. Ensuring environment variables are properly set including Alpaca Market API credentials, and the database DSN,
-3. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure`_ section.
+3. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
 
 Usage
 *****
@@ -72,7 +72,7 @@ The *trader* application writes output to STDOUT
 logging to `google-cloud-logging` if those are
 configured. To learn more on how to configure
 this feature read
-the `How to Install & Setup`_ section.
+the `How to Install & Setup` section.
 
 The *trader* application uses a producer-consumers
 design patterns. In other words, when executed the
@@ -80,16 +80,16 @@ scanners would run according to the tradeplan
 specifications, and then a single producer process
 will spawn and a collection of consumer processes.
 To understand the inner workings
-read the `Understanding what's under the hood`_ section.
+read the `Understanding what's under the hood` section.
 
 The *trader* application writes log outs in sections
 to help troubleshooting and for better readability.
 
-- The first section presents the filename being executed (`trader` in most cases) followed by a unique-id (GUID) which represents the trading session. Each time the `trader` application is run, a new batch-id will be created. To understand more read the `How to analyze your trades`_ section.
+- The first section presents the filename being executed (`trader` in most cases) followed by a unique-id (GUID) which represents the trading session. Each time the `trader` application is run, a new batch-id will be created. To understand more read the `How to analyze your trades` section.
 - The second section displays non-secure environment variables that may affect the trading beviour. You should see the DSN (database connection string) properly displayed, and when you don't that's normally a sign that the env variables were not properly set.
 - The third section displays the location of the trade-plan file, and parsing of the trade-plan header. A basic validation of the trade-plan file is done during that point and error messages will be presented for crudely format erros.
-- The fourth section normally displays the scanner execution. For more details on scanners read the `Scanners`_ section.
-- The fifth and last section displays the strategies execution. For more details on strategies read the `Strategies`_ section.
+- The fourth section normally displays the scanner execution. For more details on scanners read the `Scanners` section.
+- The fifth and last section displays the strategies execution. For more details on strategies read the `Strategies` section.
 
 
 Liquidation
