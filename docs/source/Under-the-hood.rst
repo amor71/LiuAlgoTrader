@@ -12,6 +12,12 @@ the on-going development of LiuAlgoTrader.
 Understanding the multiprocessing approach
 ------------------------------------------
 
+Understanding the project structure
+-----------------------------------
+
+
+
+
 Understanding the Data Model
 ----------------------------
 
