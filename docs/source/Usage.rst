@@ -14,9 +14,19 @@ The applications are:
 This section describes the three applications,
 while the notebooks are described in the `Analysis` section.
 
+No Liability Disclaimer
+-----------------------
+LiuAlgoTrader is provided with sample scanners and
+out-of-the-box strategies. You may choose to use it,
+modify it or completely disregard it - Regardless,
+LiuAlgoTrader and its Authors bare no responsibility
+to any possible loses from using LiuAlgoTrader,
+or any of its derivatives (on the other hand, they
+also won't share your profits, if there are any).
 
-trader
-------
+
+*trader*
+--------
 
 The trader application is the main application in
 the LiuAlgoTrading package and it run algorithmic
@@ -82,9 +92,17 @@ to help troubleshooting and for better readability.
 - The fifth and last section displays the strategies execution. For more details on strategies read the `Strategies`_ section.
 
 
+Liquidation
+***********
 
-market_miner
-------------
+15 minutes before end of the trading-day
+LiuAlgoTrader will start closing positions,
+you need to be aware of this behaviour if you
+build custom strategies for end-of-day.
+
+
+*market_miner*
+--------------
 
 Prerequisites
 *************

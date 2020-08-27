@@ -45,7 +45,6 @@ sessions w/ LiuAlgoTrader.
    :maxdepth: 2
 
    WIP
-   Quickstart
    Installation & Setup
    Configuration
    Usage
