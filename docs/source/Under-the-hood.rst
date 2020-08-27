@@ -24,7 +24,7 @@ files for a future developer.
 ::
 
     ├── AUTHORS
-    ├── LICENCE.
+    ├── LICENCE
     ├── analysis_notebooks
     │   ├── portfolio_performance_analysis.ipynb
     │   └── backtest_performance_analysis.ipynb
