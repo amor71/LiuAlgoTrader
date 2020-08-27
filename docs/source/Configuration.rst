@@ -1,3 +1,5 @@
+.. _`How to Configure`:
+
 How to Configure
 ================
 

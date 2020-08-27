@@ -1,3 +1,5 @@
+.. _`Strategies`:
+
 Strategies
 ==========
 

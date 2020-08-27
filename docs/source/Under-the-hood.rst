@@ -1,3 +1,5 @@
+.. _`Understanding what's under the hood`:
+
 Understanding what's under the hood
 ===================================
 
@@ -6,7 +8,8 @@ query LiuAlgoTrader database directly, optimize the application
 for their specific setup, or contributing to
 the on-going development of LiuAlgoTrader.
 
-
+Understanding the multiprocessing approach
+------------------------------------------
 
 Understanding the Data Model
 ----------------------------

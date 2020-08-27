@@ -1,3 +1,5 @@
+.. _`How to analyze your trades`:
+
 How to analyze your trades
 ==========================
 
