@@ -26,8 +26,8 @@ files for a future developer.
     ├── AUTHORS
     ├── LICENCE.
     ├── analysis_notebooks
-    │   ├── area.py
-    │   └── bboxinout.py
+    │   ├── portfolio_performance_analysis.ipynb
+    │   └── backtest_performance_analysis.ipynb
     ├── liualgotrader
     │   ├── common
     |   |   ├── config.py
