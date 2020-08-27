@@ -174,8 +174,8 @@ while Polygon.io is hosted in Equinix. It is a good idea to locate
 the trading servers close to the brokerage servers to best
 execution times.
 
-<tbd add more>
+**Complete documentation in release 0.0.36**
 
 Preparing your trades
 ---------------------
-<tbd add more>
+**Complete documentation in release 0.0.36**
