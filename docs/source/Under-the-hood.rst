@@ -1,8 +1,8 @@
 .. _`Understanding what's under the hood`:
 
 
-Understanding what's under the hood
-===================================
+Under the hood
+==============
 
 This section explain the inner working of LiuAlgoTrader. It may be used to developer who wish
 query LiuAlgoTrader database directly, optimize the application
@@ -158,7 +158,7 @@ Those are helper functions for strategy developers:
 
 models
 ******
-Data abstraction layer implementing the persistancy and loading of the data model.
+Data abstraction layer implementing the persistence and loading of the data model.
 
 Data Model
 ----------
