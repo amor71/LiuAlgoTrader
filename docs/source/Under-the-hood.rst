@@ -163,6 +163,8 @@ Data abstraction layer implementing the persistence and loading of the data mode
 Data Model
 ----------
 
+**Complete documentation in release 0.0.37**
+
 The data-model, as represented in the database tables can
 be used by the various strategies, as well as for analysis
 and back-testing.

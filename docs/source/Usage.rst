@@ -127,9 +127,7 @@ The expected result should look like:
     :alt: *market_miner* output
 
 
-
 backtester
 ----------
-
-
+**Complete documentation in release 0.0.35**
 
