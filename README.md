@@ -16,14 +16,14 @@ LiuAlgoTrader can run on a Macbook laptop and
 and it will optimize for best performance for either. 
 
 LiuAlgoTrader is Work-In-Progress, however it is a fully
-functional framework that may be used almost out-of-the-box.
+functional and powerful framework that may be used almost out-of-the-box.
 Assistance in development is highly appreciated,
 as well as comments and suggestions. Please check the
 Contribution section for further details.
 
 ## Quickstart
 
-This section describes the steps  to install and setup LiuAlgoTrader for first use.
+This section describes the steps to install and setup LiuAlgoTrader for first use.
 
 ### Prerequisite
 
