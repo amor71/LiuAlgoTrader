@@ -737,9 +737,14 @@ def consumer_main(
 ) -> None:
     tlog(f"*** consumer_main() starting w pid {os.getpid()} ***")
 
-    config.build_label = pygit2.Repository("./").describe(
-        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
-    )
+    try:
+        config.build_label = pygit2.Repository("../").describe(
+            describe_strategy=pygit2.GIT_DESCRIBE_TAGS
+        )
+    except pygit2.GitError:
+        import liualgotrader
+
+        config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     config.bypass_market_schedule = conf.get("bypass_market_schedule", False)
 
