@@ -632,14 +632,16 @@ async def consumer_async_main(
 
                 if not issubclass(custom_strategy, Strategy):
                     tlog(
-                        f"custom scanner must inherit from class {Strategy.__name__}"
+                        f"custom strartegy must inherit from class {Strategy.__name__}"
                     )
                     exit(0)
-
+                strategy_details.pop("filename", None)
                 strategy_types += [(custom_strategy, strategy_details)]
 
             except Exception as e:
-                tlog(f"Error {e}")
+                tlog(
+                    f"[Error]exception of type {type(e).__name__} with args {e.args}"
+                )
                 exit(0)
 
     for strategy_tuple in strategy_types:
