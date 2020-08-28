@@ -7,8 +7,10 @@ import pprint
 import sys
 import traceback
 import uuid
+import toml
+import importlib.util
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Dict
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -24,6 +26,7 @@ from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.momentum_long import MomentumLong
+from liualgotrader.strategies.base import Strategy
 
 
 def get_batch_list():
@@ -72,7 +75,7 @@ def show_version(filename: str, version: str) -> None:
     print(f"filename:{filename}\ngit version:{version}\n")
 
 
-def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
+def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = None) -> None:
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -185,6 +188,10 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                         print(what)
 
                         if what["side"] == "buy":
+                            await strategy.buy_callback(symbol, price, int(float(what["qty"])))
+                            break
+                        elif what["side"] == "sell":
+                            await strategy.sell_callback(symbol, price, int(float(what["qty"])))
                             break
                     last_run_id = strategy.algo_run.run_id
 
@@ -206,6 +213,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
 
         symbols = await TrendingTickers.load(batch_id)
         print(f"loaded {len(symbols)}:\n {symbols}")
+
         if len(symbols) > 0:
             est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
@@ -216,17 +224,49 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
                 hour=16, minute=0, second=0, microsecond=0
             )
             print(f"market_open{config.market_open}")
-            #config.trade_buy_window = duration.seconds // 60
+            strategy_types = []
+            print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+            for strategy in conf_dict["strategies"]:
+                strategy_name = list(strategy.keys())[0]
+                strategy_details = strategy[strategy_name]
+                if strategy_name == "MomentumLong":
+                    tlog(f"strategy {strategy_name} selected")
+                    strategy_types += [(MomentumLong, strategy_details)]
+                else:
+                    tlog(f"custom strategy {strategy_name} selected")
 
-            strategy_types = [
-                MomentumLong
-            ]  # MomentumLong, [ VWAPLong,  VWAPScalp, VWAPScalp]
-            config.env = "BACKTEST"
-            for strategy_type in strategy_types:
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            "module.name", strategy_details["filename"]
+                        )
+                        custom_strategy_module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(  # type: ignore
+                            custom_strategy_module
+                        )
+                        class_name = list(strategy.keys())[0]
+                        custom_strategy = getattr(custom_strategy_module, class_name)
+
+                        if not issubclass(custom_strategy, Strategy):
+                            tlog(
+                                f"custom strartegy must inherit from class {Strategy.__name__}"
+                            )
+                            exit(0)
+                        strategy_details.pop("filename", None)
+                        strategy_types += [(custom_strategy, strategy_details)]
+
+                    except Exception as e:
+                        tlog(
+                            f"[Error]exception of type {type(e).__name__} with args {e.args}"
+                        )
+                        exit(0)
+
+            for strategy_tuple in strategy_types:
+                strategy_type = strategy_tuple[0]
+                strategy_details = strategy_tuple[1]
+                config.env = "BACKTEST"
                 tlog(f"initializing {strategy_type.name}")
-                s = strategy_type(batch_id=uid, ref_run_id=ref_run_id, schedule=[{}])
+                s = strategy_type(batch_id=uid, ref_run_id=ref_run_id,  **strategy_details)
                 await s.create()
-
                 trading_data.strategies.append(s)
 
             for symbol in symbols:
@@ -236,14 +276,14 @@ def backtest(batch_id: str, debug_symbols: List[str] = None) -> None:
     async def backtest_worker():
         await create_db_connection()
         run_details = await AlgoRun.get_batch_details(batch_id)
-        run_ids, starts, durations, _ = zip(*run_details)
+        run_ids, starts, _ = zip(*run_details)
 
         if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
             await backtest_run(
                 start=min(starts),
-                duration=max(durations),
+                duration=timedelta(minutes=max([w['duration'] for w in [dict(list(s.values())[0])['schedule'][0] for s in conf_dict['strategies']]])),
                 ref_run_id=run_ids[0],
             )
 
@@ -270,7 +310,8 @@ if __name__ == "__main__":
         describe_strategy=pygit2.GIT_DESCRIBE_TAGS
     )
     config.filename = os.path.basename(__file__)
-
+    conf_dict = toml.load(config.configuration_filename)
+    tlog(f"tradeplan file {config.configuration_filename} loaded")
     if len(sys.argv) == 1:
         show_usage()
         sys.exit(0)
@@ -291,7 +332,7 @@ if __name__ == "__main__":
                 debug_symbols.append(arg)
 
         for arg in args:
-            backtest(arg, debug_symbols)
+            backtest(arg, debug_symbols, conf_dict)
 
     except getopt.GetoptError as e:
         print(f"Error parsing options:{e}\n")

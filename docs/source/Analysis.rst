@@ -47,6 +47,7 @@ Notebook rundown
 2. Cell #8 will list execution of strategies *per process* done during the time frame.
 3. Cell #14 will list all the symbols traded during the time-frame, including the number of trades, and the $ value per stock symbol, as well as a profit/loss summary for the time-frame **per trading session** :
 
+
 .. image:: /images/port-analysis-2.png
     :width: 400
     :align: left
@@ -56,6 +57,7 @@ Notebook rundown
     :width: 800
     :align: left
     :alt: how was my bad day
+
 
 4. Cell #15 (Toggle-Scroll recommended) is the main cell to analyze your strategy, for each traded stock, the cell would list the trades calculate their horizontal support & resistance levels as calculated up to that point of the trade, as well as present the details of the trade including a graphic summary:
 

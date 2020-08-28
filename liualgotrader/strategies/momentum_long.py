@@ -114,8 +114,9 @@ class MomentumLong(Strategy):
                 tlog(f"15 minutes high:{high_15m}")
 
             # Get the change since yesterday's market close
-            if (
-                data.close > high_15m or config.bypass_market_schedule
+            if data.close > high_15m or (
+                hasattr(config, "bypass_market_schedule")
+                and config.bypass_market_schedule
             ):  # and volume_today[symbol] > 30000:
                 if debug:
                     tlog(
@@ -130,7 +131,10 @@ class MomentumLong(Strategy):
                     and (last_30_max_close - last_30_min_close)
                     / last_30_min_close
                     > 0.1
-                    and not config.bypass_market_schedule
+                    and (
+                        not hasattr(config, "bypass_market_schedule")
+                        or not config.bypass_market_schedule
+                    )
                 ):
                     tlog(
                         f"[{self.name}][{now}] too sharp {symbol} increase in last 30 minutes, can't trust MACD, cool down for 15 minutes"

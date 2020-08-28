@@ -49,7 +49,10 @@ class Strategy:
                     >= schedule["start"]
                     for schedule in self.schedule
                 )
-                or config.bypass_market_schedule
+                or (
+                    hasattr(config, "bypass_market_schedule")
+                    and config.bypass_market_schedule
+                )
             )
             and (config.market_close - now).seconds // 60 > 15
             else False
@@ -64,7 +67,10 @@ class Strategy:
                 > schedule["start"]
                 for schedule in self.schedule
             )
-            or config.bypass_market_schedule
+            or (
+                hasattr(config, "bypass_market_schedule")
+                and config.bypass_market_schedule
+            )
             else False
         )
 
