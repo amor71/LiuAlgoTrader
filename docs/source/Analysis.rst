@@ -48,7 +48,7 @@ Notebook rundown
 3. Cell #14 will list all the symbols traded during the time-frame, including the number of trades, and the $ value per stock symbol, as well as a profit/loss summary for the time-frame **per trading session** :
 
 .. image:: /images/port-analysis-2.png
-    :width: 800
+    :width: 400
     :align: left
     :alt: how was my day
 
