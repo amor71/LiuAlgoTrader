@@ -38,6 +38,28 @@ Prerequisites
 2. Ensuring environment variables are properly set including Alpaca Market API credentials, and the database DSN,
 3. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
 
+Trading session
+***************
+Each run of the `trader` application generates a unique
+`batch-id`. The `batch-id` is displayed at the beginning
+of the execution of the  `trader` application, as well
+as at the end of the session.
+
+All trades done during a trade session (and based on the
+tradeplan defined in the `tradeplan.toml` file) are
+associated to the `batch-id`. This is important when
+analysing a trading day, or backtesting. When you backtest,
+you re-run a batch-id, simulating market condition while
+applying changes to the strategies being used.
+
+**Note**: If a trading session is interrupted, the next run of
+the `trader` application will review all current open
+positions, and if such exist, and are found in an earlier
+session, the trades done at the earlier session will be
+`relocated` to the new session - this is done in order to
+simplify trade session analysis. See the Analysis section
+for more information.
+
 Usage
 *****
 
@@ -101,6 +123,50 @@ you need to be aware of this behaviour if you
 build custom strategies for end-of-day.
 
 
+*backtester*
+------------
+
+The `backtester` application is a powerful tool to
+improve a trading strategy.
+
+Prerequisites
+*************
+1. Installed & configured `PostgreSQL` instance, hosting a database w/ LiuAlgoTrader schema,
+2. Ensuring environment variables are properly set including Alpaca Market API credentials, and the database DSN,
+3. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section,
+4. The batch-id (UUID) of a trade session to reply. The id is presented by the `trader` application, is available in the database, and is also displayed in the analysis notebook (see the Analysis section for more information). Additionally the `backtester` appplication may list all recent batch-ids.
+
+Usage
+*****
+
+To run the `backtester` application type:
+
+.. code-block:: bash
+
+    backtester
+
+The expected response should be:
+
+.. image:: /images/backtester1.png
+    :width: 600
+    :align: left
+    :alt: *backtester* usage
+
+Running
+
+.. code-block:: bash
+
+    backtester --batch-list
+
+Will return a list of all recent trading sessopn. For example:
+
+.. image:: /images/backtester2.png
+    :width: 600
+    :align: left
+    :alt: *backtester* usage2
+
+
+
 *market_miner*
 --------------
 
@@ -127,7 +193,5 @@ The expected result should look like:
     :alt: *market_miner* output
 
 
-backtester
-----------
-**Complete documentation in release 0.0.35**
+
 
