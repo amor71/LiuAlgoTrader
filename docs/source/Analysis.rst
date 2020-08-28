@@ -60,6 +60,7 @@ Notebook rundown
     :alt: how was my day
 
 |br|
+|br|
 
 .. image:: /images/port-analysis-3.png
     :width: 800
@@ -67,6 +68,8 @@ Notebook rundown
     :alt: how was my bad day
 
 |br|
+|br|
+
 4. Cell #15 (Toggle-Scroll recommended) is the main cell to analyze your strategy, for each traded stock, the cell would list the trades calculate their horizontal support & resistance levels as calculated up to that point of the trade, as well as present the details of the trade including a graphic summary:
 
 .. image:: /images/port-analysis-4.png
@@ -74,6 +77,7 @@ Notebook rundown
     :align: left
     :alt: trade run down
 
+|br|
 |br|
 
 .. image:: /images/port-analysis-5.png
@@ -83,6 +87,7 @@ Notebook rundown
 
 |br|
 |br|
+
 **Notes**:
 
 1. The graph shows buy trades in green, and sell in red
