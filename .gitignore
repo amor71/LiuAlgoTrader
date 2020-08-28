@@ -6,7 +6,7 @@
 /wip/
 /legacy/
 /tools/set_keys.bash
-/liualgotrader/analyis_notebooks/.ipynb_checkpoints/
+/analyis_notebooks/.ipynb_checkpoints/
 /liualgotrader/__pycache__/
 /tests/__pycache__/
 /.idea/
