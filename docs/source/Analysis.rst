@@ -29,6 +29,7 @@ Prerequisites
 .. _here:
     https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/portfolio_performance_analysis.ipynb
 
+
 Usage
 *****
 
@@ -95,6 +96,30 @@ Notebook rundown
 3. The indicators column displays whatever JSON is submitted as buy or sell indicators returning from the `Strategy.run()` function.
 
 |br|
+
+
+
+Analyze *backtester* session
+----------------------------
+
+Prerequisites
+*************
+
+1. Make sure that the `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables are properly set and include the authentication data to your account (can be either PAPER or LIVE).
+2. Make sure you know your DSN connection string.
+3. Download the latest version of backtester analysis notebook_.
+
+.. _notebook :
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/backtest_performance_analysis.ipynb
+
+Usage
+*****
+
+Using the `backtester` notebook is similar to using
+the `trader` notebook, with the difference of entering
+the backtester `batch-id` instead of the time-frame
+as with the `trader` notebook.
+
 
 
 
