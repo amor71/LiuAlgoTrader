@@ -59,14 +59,14 @@ starting
 
 def show_usage():
     print(
-        f"usage: {sys.argv[0]} -b -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL\n"
+        f"usage: {sys.argv[0]} -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL\n"
     )
     print("-v, --version\t\tDetailed version details")
     print(
-        "-b, --batch-list\tDisplay list of trading sessions, list limited to last 30 days"
+        "--batch-list\tDisplay list of trading sessions, list limited to last 30 days"
     )
     print(
-        "-d, --debug-symbol\tWrite verbose debug information for symbol SYMBOL during back-testing"
+        "--debug-symbol\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
 
 
