@@ -56,7 +56,7 @@ Notebook rundown
 
 .. image:: /images/port-analysis-2.png
     :width: 200
-    :align: left
+    :align: center
     :alt: how was my day
 
 |br|
@@ -64,7 +64,7 @@ Notebook rundown
 
 .. image:: /images/port-analysis-3.png
     :width: 800
-    :align: left
+    :align: center
     :alt: how was my bad day
 
 |br|
