@@ -73,12 +73,17 @@ Notebook rundown
     :alt: how was my day
 
 |br|
+
 .. image:: /images/port-analysis-5.png
     :width: 800
     :align: left
     :alt: how was my bad day
 
-
+|br|
+**Notes**:
+1. The graph shows buy trades in green, and sell in red
+2. green horizontal lines are at support levels, red on resistance
+3. The indicators column displays whatever JSON is submitted as buy or sell indicators returning from the `Strategy.run()` function.
 
 
 
