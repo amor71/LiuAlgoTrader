@@ -3,6 +3,12 @@
 Analyze your trades
 ===================
 
+
+.. # define a hard line break for HTML
+.. |br| raw:: html
+
+   <br />
+
 **Complete documentation in release 0.0.36**
 
 LiuAlgoTrader comes equipment with a jupyter notebook
@@ -33,7 +39,7 @@ When the notebook opens up you should see a screen similar to:
     :align: left
     :alt: analysis top
 
-
+|br|
 The steps  to run the notebook are:
 
 1. Select the relevant date range on the cell #2 (`start_day_to_analyze`, `end_day_to_analyze`),
@@ -58,7 +64,7 @@ Notebook rundown
     :align: left
     :alt: how was my bad day
 
-
+|br|
 4. Cell #15 (Toggle-Scroll recommended) is the main cell to analyze your strategy, for each traded stock, the cell would list the trades calculate their horizontal support & resistance levels as calculated up to that point of the trade, as well as present the details of the trade including a graphic summary:
 
 .. image:: /images/port-analysis-4.png
@@ -66,6 +72,7 @@ Notebook rundown
     :align: left
     :alt: how was my day
 
+|br|
 .. image:: /images/port-analysis-5.png
     :width: 800
     :align: left
