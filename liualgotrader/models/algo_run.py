@@ -95,7 +95,7 @@ class AlgoRun:
     @classmethod
     async def get_batch_details(
         cls, batch_id: str, pool: Pool = None
-    ) -> List[Tuple[int, datetime, timedelta]]:
+    ) -> List[Tuple[int, datetime, str]]:
         rc: List = []
         if not pool:
             pool = config.db_conn_pool
@@ -112,16 +112,6 @@ class AlgoRun:
                 )
 
                 if rows:
-                    rc = [
-                        (
-                            row[0],
-                            row[1],
-                            timedelta(
-                                minutes=json.loads(row[2])["TRADE_BUY_WINDOW"]
-                            ),
-                            row[3],
-                        )
-                        for row in rows
-                    ]
+                    rc = [(row[0], row[1], row[3],) for row in rows]
 
         return rc
