@@ -33,11 +33,41 @@ When the notebook opens up you should see a screen similar to:
     :align: left
     :alt: analysis top
 
+
 The steps  to run the notebook are:
 
 1. Select the relevant date range on the cell #2 (`start_day_to_analyze`, `end_day_to_analyze`),
 2. Confirm the DSN is correctly setup on cell #3.
 3. Select `Restart & Run All`
+
+Notebook rundown
+****************
+
+1. Cell #6 will present the DataFrame including all trades (including partial fills) taken during the selected time frame.
+2. Cell #8 will list execution of strategies *per process* done during the time frame.
+3. Cell #14 will list all the symbols traded during the time-frame, including the number of trades, and the $ value per stock symbol, as well as a profit/loss summary for the time-frame **per trading session** :
+
+.. image:: /images/port-analysis-2.png
+    :width: 800
+    :align: left
+    :alt: how was my day
+
+.. image:: /images/port-analysis-3.png
+    :width: 800
+    :align: left
+    :alt: how was my bad day
+
+4. Cell #15 (Toggle-Scroll recommended) is the main cell to analyze your strategy, for each traded stock, the cell would list the trades calculate their horizontal support & resistance levels as calculated up to that point of the trade, as well as present the details of the trade including a graphic summary:
+
+.. image:: /images/port-analysis-4.png
+    :width: 800
+    :align: left
+    :alt: how was my day
+
+.. image:: /images/port-analysis-5.png
+    :width: 800
+    :align: left
+    :alt: how was my bad day
 
 
 
