@@ -52,7 +52,6 @@ sessions w/ LiuAlgoTrader.
    Strategies
    Under-the-hood
    Analysis
-   Back-testing
    How to Contribute
 
 
