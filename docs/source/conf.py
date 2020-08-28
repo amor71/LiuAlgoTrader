@@ -23,7 +23,7 @@ copyright = "2020, amor71"
 author = "amor71"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.34"
+release = "0.0.35"
 
 # -- General configuration ---------------------------------------------------
 
