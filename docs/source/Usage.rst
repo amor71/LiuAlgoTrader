@@ -1,6 +1,11 @@
 How To Use
 ==========
 
+.. # define a hard line break for HTML
+.. |br| raw:: html
+
+   <br />
+
 LiuAlgoTrader exposes three applications and a set of
 analysis notebooks.
 
@@ -152,8 +157,8 @@ The expected response should be:
     :align: left
     :alt: *backtester* usage
 
-
-| Running
+|br|
+Running
 
 .. code-block:: bash
 
@@ -166,10 +171,26 @@ Will return a list of all recent trading sessopn. For example:
     :align: left
     :alt: *backtester* usage2
 
-
-**Note** there is a debug mode, per symbol. The debug flag
+|br|
+|br|
+**Note**: `backtester` supports a debug mode, per symbol. The debug flag
 is passed to the implementation for `Strategy.run()`,
 allowing more verbose logging during backtesting.
+
+Running the `backtester` application with a valid batch-id will display input as below:
+
+.. image:: /images/backtester3.png
+    :width: 600
+    :align: left
+    :alt: *backtester* usage2
+
+|br|
+|br|
+**Notes**:
+1. A backtest session creates a `batch-id`. This is helpful when running analysis of a backtest session. See the Analysis section for more details.
+2. Strategies running in a backtesting session are marked with `BACKTEST` environment when logging trades, this is helpful to identify between backtest trades, paper and live trades when querying the datanase.
+3. When the `backtester` application starts, it will list all the stocks picked by the scanners during the trading session.
+4. `backtester` re-runs each session, by loading per-minute candles for the stock trading session (up to one week back). This reply simulates per-minute trading, vs. per-second trading during `trader` execution (though, the `trader` application can also be configured to execute strategies per minute and not per secord).
 
 
 
