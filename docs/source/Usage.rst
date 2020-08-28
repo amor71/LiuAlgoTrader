@@ -152,7 +152,8 @@ The expected response should be:
     :align: left
     :alt: *backtester* usage
 
-Running
+
+| Running
 
 .. code-block:: bash
 
@@ -164,6 +165,11 @@ Will return a list of all recent trading sessopn. For example:
     :width: 600
     :align: left
     :alt: *backtester* usage2
+
+
+**Note** there is a debug mode, per symbol. The debug flag
+is passed to the implementation for `Strategy.run()`,
+allowing more verbose logging during backtesting.
 
 
 
