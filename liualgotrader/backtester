@@ -113,7 +113,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = N
                 tlog(f"Received HTTP error {e} for {symbol}")
                 return
 
-            if len(market_data.minute_history[symbol].index) < 100:
+            if len(symbol_data) < 100:
                 tlog(f"not enough data-points  for {symbol}")
                 return
 
@@ -134,8 +134,9 @@ def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = N
             print(f"start time with data {new_now}")
             price = 0.0
             last_run_id = None
+            # start_time + duration
             while (
-                new_now < start_time + duration
+                new_now < config.market_close
                 and minute_index < symbol_data.index.size - 1
             ):
                 if symbol_data.index[minute_index] != new_now:
@@ -213,7 +214,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = N
                     indicators={"liquidate": 1},
                 )
 
-                await db_trade.save(config.db_conn_pool, str(new_now))
+                await db_trade.save(config.db_conn_pool, str(symbol_data.index[minute_index-1]))
 
         symbols = await TrendingTickers.load(batch_id)
         print(f"loaded {len(symbols)}:\n {symbols}")
