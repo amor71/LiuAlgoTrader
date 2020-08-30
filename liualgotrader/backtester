@@ -116,7 +116,7 @@ def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = N
             if len(market_data.minute_history[symbol].index) < 100:
                 tlog(f"not enough data-points  for {symbol}")
                 return
-            
+
             add_daily_vwap(
                 symbol_data, debug=debug_symbols and symbol in debug_symbols
             )
