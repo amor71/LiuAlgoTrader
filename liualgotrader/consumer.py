@@ -27,7 +27,7 @@ from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
                                                     TRADE_CONDITIONS)
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.strategies.base import Strategy
+from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.strategies.momentum_long import MomentumLong
 
 
@@ -456,6 +456,8 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         if (
             until_market_close.seconds // 60
             <= config.market_liquidation_end_time_minutes
+            and trading_data.last_used_strategy[symbol].type
+            == StrategyType.DAY_TRADE
         ):
             await liquidate(symbol, int(symbol_position), trading_api)
 

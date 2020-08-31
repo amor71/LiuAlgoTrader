@@ -1,5 +1,6 @@
 """Base Class for Strategies"""
 from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
@@ -9,15 +10,22 @@ from liualgotrader.common import config
 from liualgotrader.models.algo_run import AlgoRun
 
 
+class StrategyType(Enum):
+    DAY_TRADE = 1
+    SWING = 2
+
+
 class Strategy:
     def __init__(
         self,
         name: str,
+        type: StrategyType,
         batch_id: str,
         schedule: List[Dict],
         ref_run_id: int = None,
     ):
         self.name = name
+        self.type = type
         self.ref_run_id = ref_run_id
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
         self.schedule = schedule
