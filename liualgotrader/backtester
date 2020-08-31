@@ -26,7 +26,7 @@ from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.momentum_long import MomentumLong
-from liualgotrader.strategies.base import Strategy
+from liualgotrader.strategies.base import Strategy, StrategyType
 
 
 def get_batch_list():
@@ -202,17 +202,17 @@ def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = N
                 new_now = symbol_data.index[minute_index]
 
             if position > 0:
-                print(f"liquidate {position}")
-                db_trade = NewTrade(
-                    algo_run_id=last_run_id,  # type: ignore
-                    symbol=symbol,
-                    qty=int(position),
-                    operation="sell",
-                    price=price,
-                    indicators={"liquidate": 1},
-                )
-
-                await db_trade.save(config.db_conn_pool, str(symbol_data.index[minute_index-1]))
+                if trading_data.last_used_strategy[symbol].type == StrategyType.DAY_TRADE:
+                    print(f"liquidate {position}")
+                    db_trade = NewTrade(
+                        algo_run_id=last_run_id,  # type: ignore
+                        symbol=symbol,
+                        qty=int(position),
+                        operation="sell",
+                        price=price,
+                        indicators={"liquidate": 1},
+                    )
+                    await db_trade.save(config.db_conn_pool, str(symbol_data.index[minute_index-1]))
 
         symbols = await TrendingTickers.load(batch_id)
         print(f"loaded {len(symbols)}:\n {symbols}")

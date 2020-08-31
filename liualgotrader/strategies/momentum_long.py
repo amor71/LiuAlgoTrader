@@ -25,7 +25,7 @@ from liualgotrader.fincalcs.support_resistance import (find_resistances,
                                                        find_stop,
                                                        find_supports)
 
-from .base import Strategy
+from .base import Strategy, StrategyType
 
 
 class MomentumLong(Strategy):
@@ -41,6 +41,7 @@ class MomentumLong(Strategy):
         self.check_patterns = check_patterns
         super().__init__(
             name=self.name,
+            type=StrategyType.DAY_TRADE,
             batch_id=batch_id,
             ref_run_id=ref_run_id,
             schedule=schedule,
