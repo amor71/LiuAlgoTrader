@@ -33,7 +33,7 @@
 [[strategies]]
     # strategy class name, must implement Strategy class
     [strategies.MomentumLong]
-        # filename = "strategies/momentum_long.py"
+        # filename = ""
 
         # check_patterns = true
 
@@ -41,7 +41,7 @@
         # several windows within the same day
         [[strategies.MomentumLong.schedule]]
             start = 15
-            duration = 150
+            duration = 60
 
 
 
