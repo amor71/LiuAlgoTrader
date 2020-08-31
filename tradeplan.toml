@@ -32,16 +32,16 @@
 # trading strategies, can have several *strategy* blocks
 [[strategies]]
     # strategy class name, must implement Strategy class
-    [strategies.MomentumLong]
-        # filename = "strategies/momentum_long.py"
+    [strategies.MomentumLongV2]
+        filename = "~/dev/trades/momentum_long.py"
 
         # check_patterns = true
 
         # trading schedules block, trades many have
         # several windows within the same day
-        [[strategies.MomentumLong.schedule]]
+        [[strategies.MomentumLongV2.schedule]]
             start = 15
-            duration = 150
+            duration = 60
 
 
 
