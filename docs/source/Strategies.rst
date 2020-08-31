@@ -75,6 +75,19 @@ Creating your own custom strategy is as easy as
 inheriting from the Strategy class, and implementing
 the *run()* function which returns the selected stock symbols.
 
+LiuAlgoTrader support different strategy types:
+
++------------------+-----------------------------------------------+
+| Name             | Description                                   |
++------------------+-----------------------------------------------+
+| DAY_TRADING      | Transaction will be automatically liquidated  |
+|                  | by end of                                     |
++------------------+-----------------------------------------------+
+| SWING            | No automatic liquidation                      |
++------------------+-----------------------------------------------+
+
+
+
 Here is an example of *my_strategy.py*:
 
 .. code-block:: python
@@ -97,7 +110,7 @@ Here is an example of *my_strategy.py*:
                                                    sell_indicators, stop_prices, target_prices)
 
 
-    from liualgotrader.strategies.base import Strategy
+    from liualgotrader.strategies.base import Strategy, StrategyType
 
     #
     # TALIB is available is avaliable as part
@@ -120,6 +133,7 @@ Here is an example of *my_strategy.py*:
         ):
             super().__init__(
                 name=self.name,
+                type=StrategyType.DAY_TRADE,
                 batch_id=batch_id,
                 ref_run_id=ref_run_id,
                 schedule=schedule,
