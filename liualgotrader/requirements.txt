@@ -29,4 +29,4 @@ sphinx==3.2.1
 sphinx-autodoc-typehints==1.11.0
 setuptools==50.0.0
 wheel==0.35.1
-twine
+twine==3.2.0
