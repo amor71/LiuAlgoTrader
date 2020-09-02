@@ -14,8 +14,6 @@ import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.rest import APIError
-# from alpaca_trade_api.stream2 import StreamConn
-from google.cloud import error_reporting
 from pandas import DataFrame as df
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
@@ -85,7 +83,9 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
 
 
 async def liquidate(
-    symbol: str, symbol_position: int, trading_api: tradeapi,
+    symbol: str,
+    symbol_position: int,
+    trading_api: tradeapi,
 ) -> None:
 
     if symbol_position:
@@ -456,6 +456,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         if (
             until_market_close.seconds // 60
             <= config.market_liquidation_end_time_minutes
+            and symbol_position != 0
             and trading_data.last_used_strategy[symbol].type
             == StrategyType.DAY_TRADE
         ):
@@ -512,7 +513,10 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
     return True
 
 
-async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
+async def queue_consumer(
+    queue: Queue,
+    trading_api: tradeapi,
+) -> None:
     tlog("queue_consumer() starting")
 
     try:
@@ -534,6 +538,16 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
             except Empty:
                 await asyncio.sleep(0)
                 continue
+            except Exception as e:
+                tlog(
+                    f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args} inside loop"
+                )
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
@@ -542,6 +556,9 @@ async def queue_consumer(queue: Queue, trading_api: tradeapi,) -> None:
             f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
         )
         exc_info = sys.exc_info()
+        lines = traceback.format_exception(*exc_info)
+        for line in lines:
+            tlog(f"error: {line}")
         traceback.print_exception(*exc_info)
         del exc_info
     finally:
@@ -577,7 +594,10 @@ def get_trading_windows(tz, api):
 
 
 async def consumer_async_main(
-    queue: Queue, symbols: List[str], unique_id: str, strategies_conf: Dict,
+    queue: Queue,
+    symbols: List[str],
+    unique_id: str,
+    strategies_conf: Dict,
 ):
     await create_db_connection(str(config.dsn))
 
@@ -626,9 +646,7 @@ async def consumer_async_main(
                     "module.name", strategy_details["filename"]
                 )
                 custom_strategy_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(  # type: ignore
-                    custom_strategy_module
-                )
+                spec.loader.exec_module(custom_strategy_module)  # type: ignore
                 class_name = list(strategy.keys())[0]
                 custom_strategy = getattr(custom_strategy_module, class_name)
 
@@ -664,7 +682,9 @@ async def consumer_async_main(
         teardown_task(timezone("America/New_York"), queue_consumer_task)
     )
     await asyncio.gather(
-        tear_down, queue_consumer_task, return_exceptions=True,
+        tear_down,
+        queue_consumer_task,
+        return_exceptions=True,
     )
 
     tlog("consumer_async_main() completed")
