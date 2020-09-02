@@ -7,6 +7,7 @@ import os
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
+from multiprocessing.connection import Connection
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -253,7 +254,9 @@ async def producer_async_main(
         else config.paper_api_secret
     )
     trade_ws = tradeapi.StreamConn(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+        base_url=base_url,
+        key_id=api_key_id,
+        secret_key=api_secret,
     )
 
     trade_updates_task = asyncio.create_task(
@@ -263,12 +266,19 @@ async def producer_async_main(
 
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"), [data_ws, trade_ws], [main_task,],
+            timezone("America/New_York"),
+            [data_ws, trade_ws],
+            [
+                main_task,
+            ],
         )
     )
 
     await asyncio.gather(
-        main_task, trade_updates_task, tear_down, return_exceptions=True,
+        main_task,
+        trade_updates_task,
+        tear_down,
+        return_exceptions=True,
     )
 
     tlog("producer_async_main() completed")
@@ -293,10 +303,10 @@ def polygon_producer_main(
         # )
         # loop.run_forever()
     except KeyboardInterrupt:
-        tlog("producer_main() - Caught KeyboardInterrupt")
+        tlog("polygon_producer_main() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
-            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
+            f"polygon_producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
 
-    tlog("*** producer_main() completed ***")
+    tlog("*** polygon_producer_main() completed ***")
