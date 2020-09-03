@@ -410,7 +410,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                 tlog(
                     f"A$ {symbol} data {time_diff} cross minute boundaries {curr_min} > {ts}"
                 )
-                return False
+                return True
         elif data["EV"] == "AM":
             return True
 
