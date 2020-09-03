@@ -365,13 +365,10 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
-        # First, aggregate 1s bars for up-to-date MACD calculations
         original_ts = ts = pd.Timestamp(
             data["start"], tz="America/New_York", unit="ms"
         )
-        ts = ts.replace(
-            second=0, microsecond=0
-        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+        ts = ts.replace(second=0, microsecond=0)
 
         try:
             current = market_data.minute_history[symbol].loc[ts]
@@ -403,7 +400,16 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
         if data["EV"] == "A":
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
-                tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
+                tlog(f"A$ {symbol} too out of sync w {time_diff}")
+                return False
+            elif (
+                curr_min := datetime.now(
+                    tz=timezone("America/New_York")
+                ).replace(second=0, microsecond=0)
+            ) > ts:
+                tlog(
+                    f"A$ {symbol} data {time_diff} cross minute boundaries {curr_min} > {ts}"
+                )
                 return False
         elif data["EV"] == "AM":
             return True
