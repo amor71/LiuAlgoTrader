@@ -407,9 +407,6 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
                     tz=timezone("America/New_York")
                 ).replace(second=0, microsecond=0)
             ) > ts:
-                tlog(
-                    f"A$ {symbol} data {time_diff} cross minute boundaries {curr_min} > {ts}"
-                )
                 return True
         elif data["EV"] == "AM":
             return True
