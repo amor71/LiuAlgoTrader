@@ -48,6 +48,26 @@ which is not kept in the repository:
 
     export LIU_MAX_SYMBOLS=440
 
+Additional parameters
+*********************
+
+LiuAlgoTrader is a multi-process framework implementing
+producer-consumer design pattern. As such there is a
+single process to interact with the data-stream
+providers (e.g `Polygon.io`), a process for scanning
+& picking stocks, and consumer processes.
+
+The number of consumer processes, is a function of the number of CPU cores, load average and a
+multiplication factor. The default multiplication
+factor is **2.0** by default. However it is possible to
+change this number using the environment variable
+`CPU_FACTOR`. If you notice that the load average
+on your system is quite low when running the `trader`
+application it's recommended to increase the number
+iterative (depending on the complexity of your
+strategies). If the load on the system is too high, it is recommended to lower the number.
+
+
 TOML configuration file
 -----------------------
 the **trader** application expects a TOML configuration file.
