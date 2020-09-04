@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import uuid
+import math
 from datetime import datetime
 from math import ceil
 from typing import List
@@ -107,6 +108,14 @@ def ready_to_start(trading_api: tradeapi) -> bool:
             return True
 
     return False
+
+
+def calc_num_consumer_processes() -> int:
+    num_cpus = os.cpu_count()
+    load_avg = sum(os.getloadavg())/3
+    num_processes = ceil(num_cpus / min(load_avg, 1.0) * config.proc_factor if num_cpus else config.proc_factor / min(load_avg, 1.0))
+
+    return num_processes
 
 
 """
@@ -282,11 +291,10 @@ if __name__ == "__main__":
             mp.set_start_method("spawn")
 
             # Consumers first
-            _num_consumer_processes = ceil(
-                1.0 * len(symbols) / config.num_consumer_processes_ratio
-            )
+            num_consumer_processes = calc_num_consumer_processes()
+            tlog(f"number of consumer processes: {num_consumer_processes}")
             queues: List[mp.Queue] = [
-                mp.Queue() for i in range(_num_consumer_processes)
+                mp.Queue() for i in range(num_consumer_processes)
             ]
 
             q_id_hash = {}
@@ -295,7 +303,7 @@ if __name__ == "__main__":
             for symbol in symbols:
                 _index = int(
                     list(minute_history.keys()).index(symbol)
-                    / config.num_consumer_processes_ratio
+                    / num_consumer_processes
                 )
 
                 q_id_hash[symbol] = _index
@@ -320,7 +328,7 @@ if __name__ == "__main__":
                         conf_dict,
                     ),
                 )
-                for i in range(_num_consumer_processes)
+                for i in range(num_consumer_processes)
             ]
             for p in consumers:
                 # p.daemon = True
