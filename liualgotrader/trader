@@ -261,7 +261,7 @@ if __name__ == "__main__":
 
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             tlog("Starting scanners process")
-            scanner = mp.Process(target=main, args=(scanners_conf, config.market_close, scanner_queue))
+            scanner = mp.Process(target=main, args=(scanners_conf, config.market_open, config.market_close, scanner_queue))
             scanner.start()
 
             # wait for completion and hope everyone plays nicely

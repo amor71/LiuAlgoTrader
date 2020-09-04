@@ -36,6 +36,7 @@ async def scanner_input(
                 symbol = scanner_queue.get(timeout=2)
 
                 if symbol not in symbols:
+                    tlog(f"received new symbol from scanner {symbol}")
                     symbol_channels = [
                         f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
                     ]
@@ -105,7 +106,7 @@ async def run(
     async def handle_trade_event(conn, channel, data):
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
-                tlog(f"T$ {data.symbol}: data out of sync {time_diff}")
+                # tlog(f"T$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
                 data.__dict__["_raw"]["EV"] = "T"
@@ -123,7 +124,7 @@ async def run(
     async def handle_quote_event(conn, channel, data):
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
-                tlog(f"Q$ {data.symbol}: data out of sync {time_diff}")
+                # tlog(f"Q$ {data.symbol}: data out of sync {time_diff}")
                 pass
             else:
                 data.__dict__["_raw"]["EV"] = "Q"
