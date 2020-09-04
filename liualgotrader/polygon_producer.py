@@ -4,15 +4,15 @@ Get Market data from Polygon and pump to consumers
 import asyncio
 import json
 import os
+import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from multiprocessing.connection import Connection
+from queue import Empty
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 from alpaca_trade_api.stream2 import StreamConn, polygon
-from google.cloud import error_reporting
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
@@ -20,6 +20,46 @@ from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 
 last_msg_tstamp: datetime = datetime.now()
+symbols: List[str]
+data_channels: List = []
+
+
+async def scanner_input(
+    scanner_queue: Queue,
+    data_ws: StreamConn,
+) -> None:
+    global data_channels
+    tlog("scanner_input() task starting ")
+    try:
+        while True:
+            try:
+                symbol = scanner_queue.get(timeout=2)
+
+                if symbol not in symbols:
+                    symbol_channels = [
+                        f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
+                    ]
+                    await data_ws.subscribe(data_channels)
+                    data_channels += symbol_channels
+
+            except Empty:
+                await asyncio.sleep(0)
+                continue
+            except Exception as e:
+                tlog(
+                    f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
+                )
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
+
+    except asyncio.CancelledError:
+        tlog("scanner_input task task cancelled ")
+
+    tlog("scanner_input() task completed ")
 
 
 async def trade_run(
@@ -27,7 +67,7 @@ async def trade_run(
 ) -> None:
 
     tlog("trade_run() starting using Alpaca trading  ")
-    # Use trade updates to keep track of our portfolio
+
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
 
@@ -42,7 +82,7 @@ async def trade_run(
 
         except Exception as e:
             tlog(
-                f"Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
+                f"[ERROR]Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
             )
 
     await ws.subscribe(["trade_updates"])
@@ -50,12 +90,11 @@ async def trade_run(
 
 
 async def run(
-    symbols: List[str],
     data_ws: StreamConn,
     queues: List[Queue],
     queue_id_hash: Dict[str, int],
 ) -> None:
-    data_channels = []
+    global data_channels
     for symbol in symbols:
         symbol_channels = [f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS]
         data_channels += symbol_channels
@@ -221,7 +260,7 @@ process main
 
 
 async def producer_async_main(
-    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
+    queues: List[Queue], queue_id_hash: Dict[str, int], scanner_queue: Queue
 ):
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
@@ -232,7 +271,6 @@ async def producer_async_main(
 
     main_task = asyncio.create_task(
         run(
-            symbols=symbols,
             data_ws=data_ws,
             queues=queues,
             queue_id_hash=queue_id_hash,
@@ -264,19 +302,22 @@ async def producer_async_main(
         name="trade_updates_task",
     )
 
+    scanner_input_task = asyncio.create_task(
+        scanner_input(scanner_queue, data_ws),
+        name="scanner_input",
+    )
     tear_down = asyncio.create_task(
         teardown_task(
             timezone("America/New_York"),
             [data_ws, trade_ws],
-            [
-                main_task,
-            ],
+            [main_task, scanner_input_task],
         )
     )
 
     await asyncio.gather(
         main_task,
         trade_updates_task,
+        scanner_input_task,
         tear_down,
         return_exceptions=True,
     )
@@ -286,22 +327,20 @@ async def producer_async_main(
 
 def polygon_producer_main(
     queues: List[Queue],
-    symbols: List[str],
+    current_symbols: List[str],
     queue_id_hash: Dict[str, int],
     market_close: datetime,
+    scanner_queue: Queue,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
+        global symbols
+        symbols = current_symbols
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(producer_async_main(queues, symbols, queue_id_hash))
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(asyncio.new_event_loop())
-        # loop.run_until_complete(
-        #    producer_async_main(queues, symbols, queue_id_hash)
-        # )
-        # loop.run_forever()
+        asyncio.run(producer_async_main(queues, queue_id_hash, scanner_queue))
+
     except KeyboardInterrupt:
         tlog("polygon_producer_main() - Caught KeyboardInterrupt")
     except Exception as e:
