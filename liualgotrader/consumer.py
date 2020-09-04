@@ -606,12 +606,19 @@ async def consumer_async_main(
 
     try:
         trending_db = TrendingTickers(unique_id)
-        for symbol in symbols:
-            await trending_db.save(symbol)
+        if symbols:
+            for symbol in symbols:
+                await trending_db.save(symbol)
     except Exception as e:
         tlog(
             f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
         )
+        exc_info = sys.exc_info()
+        lines = traceback.format_exception(*exc_info)
+        for line in lines:
+            tlog(f"error: {line}")
+        traceback.print_exception(*exc_info)
+        del exc_info
 
     base_url = (
         config.prod_base_url if config.env == "PROD" else config.paper_base_url
@@ -675,7 +682,8 @@ async def consumer_async_main(
         await s.create()
 
         trading_data.strategies.append(s)
-        await load_current_long_positions(trading_api, symbols, s)
+        if symbols:
+            await load_current_long_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
