@@ -5,7 +5,7 @@ Under the hood
 ==============
 
 This section explain the inner working of LiuAlgoTrader. It may be used to developer who wish
-query LiuAlgoTrader database directly, optimize the application
+query LiuAlgoTrader database directly, developers of strategies, optimize the application
 for their specific setup, or contributing to
 the on-going development of LiuAlgoTrader.
 
@@ -49,7 +49,8 @@ inter-process lightweight threading. This architecture
 provides high throughput which maximizes the hardware
 capabilities.
 
-Each consumer has a designated cross-process Queue and a
+A *link* between the producer a consumer is maintained over
+a Python multi-processing Queue (vs. a pipe for future extensions). Each consumer has a designated cross-process Queue and a
 pre-defined list of stocks that the process is tracking.
 The producer's role is to receive updates over the WebSocket,
 post them into the relevant consumer's Queue, and return to
@@ -134,7 +135,9 @@ files for a future developer.
     |   |    ├── base.py
     |   |    └── momentum_long.py
     │   ├── consumer.py
+    │   ├── scanners_runner.py
     │   └── polygon_producer.py
+    |
     ├── examples
     ├── tools
     └── tests
@@ -163,23 +166,84 @@ Data abstraction layer implementing the persistence and loading of the data mode
 Data Model
 ----------
 
-**Complete documentation in release 0.0.37**
-
 The data-model, as represented in the database tables can
 be used by the various strategies, as well as for analysis
 and back-testing.
 
 This section describes the database schema and usage patterns.
 
+batch_id
+********
+
+Each execution of the `trader` application generates a unique-id
+internally referred as a `batch_id`.
+
+main database tables
+********************
+
+The main database tables are:
+
++-------------------+-----------------------------------------------+
+| Name              | Description                                   |
++-------------------+-----------------------------------------------+
+| trending_tickers  | Tracks picked stocks, per `batch_id`.         |
+|                   | including time-stamp.                         |
++-------------------+-----------------------------------------------+
+| algo_run          | Strategy execution log, per `batch_id` and    |
+|                   | consumer process. More details below.         |
++-------------------+-----------------------------------------------+
+| new_trades        | Tracking each order (including partial), that |
+|                   | was executed, per `algo_run`, including       |
+|                   | whatever reasoning is persisted by the        |
+|                   | executed strategy.                            |
++-------------------+-----------------------------------------------+
+
+`algo_run` table
+^^^^^^^^^^^^^^^^
+
+The table entry is created by the `consumer` process, upon and
+execution of a strategy. Therefore, each line in the table
+represents an executed strategy, per process, per `batch_id`.
+
+The table tracks a collection of information that helps to
+reconstruct the trading day and analysis it post-analysis and
+backtesting:
+
+- `batch_id`
+- start and end time-stamps. If an end-date is missing, it means execution was stopped during the trading day.
+- strategy name
+- environment (PAPER, BACKTEST, PROD)
+
+`new_trades` table
+^^^^^^^^^^^^^^^^^^
+
+the table persist each trading operation
+(including partial fills), each trade is linked to an
+`algo_run_id` (a unique-id per `algo_run` row).
+
+The table tracks:
+
+- symbol
+- amount & price
+- `algo_run_id`
+- database time-stamp and client time stamp: the executed time-stamp of order.
+- target/stop price (if available)
+- indicators - a JSON construct that may be filled by the strategy in any way fitting post analysis.
+
+
+
+Additional tables
+*****************
+
 ticker_data
-***********
+^^^^^^^^^^^
 
 The ticker_data table keeps basic data on traded stocks
 which include the symbol name, company name & description
 as well as industry & sector and similar symbols.
 
 It is recommended to use the *market_miner* application
-to periodically refresh the data.
+to periodically mine fresh data.
 
 The industry & sector data is informative for creating
 a per sector / industry trend.
