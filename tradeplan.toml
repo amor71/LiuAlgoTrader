@@ -41,7 +41,7 @@
         # several windows within the same day
         [[strategies.MomentumLong.schedule]]
             start = 15
-            duration = 60
+            duration = 400
 
 
 

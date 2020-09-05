@@ -255,13 +255,16 @@ if __name__ == "__main__":
             scanner_queue: mp.Queue = mp.Queue()
             producer = mp.Process(
                 target=polygon_producer_main,
-                args=(queues, symbols, q_id_hash, config.market_close, scanner_queue),
+                args=(queues, symbols, q_id_hash, config.market_close, scanner_queue, num_consumer_processes),
             )
             producer.start()
 
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             tlog("Starting scanners process")
-            scanner = mp.Process(target=main, args=(scanners_conf, config.market_open, config.market_close, scanner_queue))
+            scanner = mp.Process(
+                target=main,
+                args=(scanners_conf, config.market_open, config.market_close, scanner_queue)
+            )
             scanner.start()
 
             # wait for completion and hope everyone plays nicely
