@@ -12,7 +12,7 @@ class Scanner:
         self.recurrence = recurrence
         self.data_api = data_api
 
-    def run(self) -> List[str]:
+    async def run(self) -> List[str]:
         return []
 
     @classmethod
