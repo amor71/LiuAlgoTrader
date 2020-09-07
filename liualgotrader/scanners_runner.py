@@ -2,15 +2,51 @@ import asyncio
 import importlib.util
 import multiprocessing as mp
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
+from pytz import timezone
+from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
+
+scanner_tasks = []
+
+
+async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
+    try:
+        while True:
+            symbols = scanner.run()
+
+            for symbol in symbols:
+                try:
+                    queue.put(symbol)
+                    await asyncio.sleep(0)
+                except Exception as e:
+                    tlog(
+                        f"[ERROR]Exception in scanner_runner({scanner.name}): exception of type {type(e).__name__} with args {e.args}"
+                    )
+
+            if scanner.recurrence:
+                try:
+                    await asyncio.sleep(scanner.recurrence.total_seconds())
+                except asyncio.CancelledError:
+                    tlog(
+                        f"scanner_runner({scanner.name}) cancelled during sleep, closing scanner task"
+                    )
+                    break
+            else:
+                break
+    except asyncio.CancelledError:
+        tlog(
+            f"scanner_runner() cancelled, closing scanner task {scanner.name}"
+        )
+    finally:
+        tlog(f"scanner {scanner.name} completed")
 
 
 async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
@@ -76,20 +112,100 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                         data_api=data_api, **scanner_details
                     )
 
+                scanner_tasks.append(
+                    asyncio.create_task(scanner_runner(scanner_object, queue))
+                )
+
             except Exception as e:
                 tlog(f"Error {e}")
                 exit(0)
 
-        symbols = scanner_object.run()
+    try:
+        await asyncio.gather(
+            *scanner_tasks,
+            return_exceptions=True,
+        )
 
-        for symbol in symbols:
+    except asyncio.CancelledError:
+        tlog(
+            "scanners_runner.scanners_runner() cancelled, closing scanner tasks"
+        )
+
+        for task in scanner_tasks:
+            tlog(
+                f"scanners_runner.scanners_runner()  requesting task {task.get_name()} to cancel"
+            )
+            task.cancel()
             try:
-                queue.put(symbol)
-
-            except Exception as e:
+                await task
+            except asyncio.CancelledError:
                 tlog(
-                    f"[ERROR]Exception in scanners_runner(): exception of type {type(e).__name__} with args {e.args}"
+                    "scanners_runner.scanners_runner()  task is cancelled now"
                 )
+
+    finally:
+        tlog("scanners_runner.teardown_task() done.")
+
+
+async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
+    tlog("scanners_runner.teardown_task() starting")
+    dt = datetime.today().astimezone(tz)
+    to_market_close: timedelta
+    try:
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        )
+        tlog(
+            f"scanners_runner.teardown_task() task waiting for market close: {to_market_close}"
+        )
+    except Exception as e:
+        tlog(
+            f"scanners_runner.teardown_task() - exception of type {type(e).__name__} with args {e.args}"
+        )
+        return
+
+    try:
+        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
+        tlog("scanners_runner.teardown_task() closing tasks")
+
+        for task in tasks:
+            tlog(
+                f"scanners_runner.teardown_task() requesting task {task.get_name()} to cancel"
+            )
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                tlog("scanners_runner.teardown_task() task is cancelled now")
+
+    except asyncio.CancelledError:
+        tlog("scanners_runner.teardown_task() cancelled during sleep")
+    finally:
+        tlog("scanners_runner.teardown_task() done.")
+
+
+async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
+    main_task = asyncio.create_task(
+        scanners_runner(scanners_conf, queue),
+        name="main_task",
+    )
+
+    tear_down = asyncio.create_task(
+        teardown_task(
+            timezone("America/New_York"),
+            [main_task],
+        )
+    )
+
+    await asyncio.gather(
+        main_task,
+        tear_down,
+        return_exceptions=True,
+    )
+
+    tlog("producer_async_main() completed")
 
 
 def main(
@@ -104,7 +220,7 @@ def main(
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(scanners_runner(scanners_conf, scanner_queue))
+        asyncio.run(async_main(scanners_conf, scanner_queue))
 
     except KeyboardInterrupt:
         tlog("scanners_runner.main() - Caught KeyboardInterrupt")
