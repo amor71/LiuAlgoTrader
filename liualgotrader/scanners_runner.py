@@ -20,7 +20,7 @@ scanner_tasks = []
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
     try:
         while True:
-            symbols = scanner.run()
+            symbols = await scanner.run()
 
             for symbol in symbols:
                 try:
@@ -118,7 +118,6 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
 
             except Exception as e:
                 tlog(f"Error {e}")
-                exit(0)
 
     try:
         await asyncio.gather(
@@ -205,8 +204,6 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
         return_exceptions=True,
     )
 
-    tlog("producer_async_main() completed")
-
 
 def main(
     scanners_conf: Dict,
@@ -221,7 +218,6 @@ def main(
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         asyncio.run(async_main(scanners_conf, scanner_queue))
-
     except KeyboardInterrupt:
         tlog("scanners_runner.main() - Caught KeyboardInterrupt")
     except Exception as e:

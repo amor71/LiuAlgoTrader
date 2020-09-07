@@ -1,3 +1,4 @@
+import asyncio
 import time
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -38,14 +39,16 @@ class Momentum(Scanner):
         self.max_symbols = max_symbols
 
         super().__init__(
-            name=self.name, recurrence=recurrence, data_api=data_api,
+            name=self.name,
+            recurrence=recurrence,
+            data_api=data_api,
         )
 
     @classmethod
     def __str__(cls) -> str:
         return cls.name
 
-    def _wait_time(self) -> None:
+    async def _wait_time(self) -> None:
         if config.market_open:
             nyc = timezone("America/New_York")
             since_market_open = (
@@ -55,7 +58,7 @@ class Momentum(Scanner):
             if since_market_open.seconds // 60 < self.from_market_open:
                 tlog(f"market open, wait {self.from_market_open} minutes")
                 while since_market_open.seconds // 60 < self.from_market_open:
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                     since_market_open = (
                         datetime.today().astimezone(nyc) - config.market_open
                     )
@@ -74,7 +77,7 @@ class Momentum(Scanner):
         )
         return trade_able_symbols
 
-    def run_polygon(self) -> List[str]:
+    async def run_polygon(self) -> List[str]:
         tlog(f"{self.name}: run_polygon(): started")
         try:
             while True:
@@ -114,14 +117,14 @@ class Momentum(Scanner):
                     ]
 
                 tlog("did not find gaping stock, retrying")
-                time.sleep(30)
+                await asyncio.sleep(30)
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
             pass
 
         return []
 
-    def run_finnhub(self) -> List[str]:
+    async def run_finnhub(self) -> List[str]:
         tlog(f"{self.name}: run_finnhub(): started")
         trade_able_symbols = self._get_trade_able_symbols()
 
@@ -191,13 +194,13 @@ class Momentum(Scanner):
         tlog(f"loaded {len(symbols)} from Finnhub")
         return symbols
 
-    def run(self) -> List[str]:
-        self._wait_time()
+    async def run(self) -> List[str]:
+        await self._wait_time()
 
         if self.provider == "polygon":
-            return self.run_polygon()
+            return await self.run_polygon()
         elif self.provider == "finnhub":
-            return self.run_finnhub()
+            return await self.run_finnhub()
         else:
             raise Exception(
                 f"Invalid provider {self.provider} for scanner {self.name}"
