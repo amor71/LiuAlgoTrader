@@ -1,9 +1,9 @@
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
 import numpy as np
-import talib
 from pandas import DataFrame as df
 from talib import BBANDS, MACD, RSI
 
@@ -178,9 +178,26 @@ class MomentumLong(Strategy):
 
                         if portfolio_value is None:
                             if trading_api:
-                                portfolio_value = float(
-                                    trading_api.get_account().portfolio_value
-                                )
+
+                                retry = 3
+                                while retry > 0:
+                                    try:
+                                        portfolio_value = float(
+                                            trading_api.get_account().portfolio_value
+                                        )
+                                        break
+                                    except ConnectionError as e:
+                                        tlog(
+                                            f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
+                                        )
+                                        await asyncio.sleep(0)
+                                        retry -= 1
+
+                                if not portfolio_value:
+                                    tlog(
+                                        "f[{symbol}][{now}[Error] failed to get portfolio_value"
+                                    )
+                                    return False, {}
                             else:
                                 raise Exception(
                                     f"{self.name}: both portfolio_value and trading_api can't be None"
@@ -200,7 +217,6 @@ class MomentumLong(Strategy):
                                 f"[{self.name}][{now}] Submitting buy for {shares_to_buy} shares of {symbol} at {buy_price} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                             )
 
-                            # await asyncio.sleep(0)
                             buy_indicators[symbol] = {
                                 "macd": macd[-5:].tolist(),
                                 "macd_signal": macd_signal[-5:].tolist(),
