@@ -13,5 +13,9 @@ except Exception:
 
 def tlog(msg: str) -> None:
     if logger:
-        logger.log_text(f"[{config.env}][{os.getpid()}] {msg}")
+        try:
+            logger.log_text(f"[{config.env}][{os.getpid()}] {msg}")
+        except Exception as e:
+            print(f"[Error] exception when trying to log to Stackdriver {e}")
+            pass
     print(f"[{os.getpid()}]{datetime.now()}:{msg}")
