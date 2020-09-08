@@ -83,19 +83,14 @@ class MomentumLong(Strategy):
             and not await self.should_cool_down(symbol, now)
         ):
             # Check for buy signals
-            lbound = config.market_open
+            lbound = config.market_open.replace(second=0, microsecond=0)
             ubound = lbound + timedelta(minutes=15)
-
-            if debug:
-                tlog(f"15 schedule {lbound}/{ubound}")
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
             except Exception as e:
-                tlog(
-                    f"[{self.name}] error aggregation {e} - maybe should use nearest?"
-                )
+                tlog(f"{symbol}[{now}] failed to aggregate {ubound}:{lbound}")
                 return False, {}
 
             if data.close > high_15m or (
@@ -132,7 +127,12 @@ class MomentumLong(Strategy):
                     and macd_trending
                     and macd_above_signal
                     and macd_hist_trending
-                    and data.vwap > data.open > prev_min.close
+                    and (
+                        data.vwap > data.open > prev_min.close
+                        and data.vwap != 0.0
+                        or data.vwap == 0.0
+                        and data.close > data.open > prev_min.close
+                    )
                 ):
                     macd2 = MACD(close, 40, 60)[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
