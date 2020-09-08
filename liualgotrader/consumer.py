@@ -365,13 +365,10 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
-        # First, aggregate 1s bars for up-to-date MACD calculations
         original_ts = ts = pd.Timestamp(
             data["start"], tz="America/New_York", unit="ms"
         )
-        ts = ts.replace(
-            second=0, microsecond=0
-        )  # timedelta(seconds=ts.second, microseconds=ts.microsecond)
+        ts = ts.replace(second=0, microsecond=0)
 
         try:
             current = market_data.minute_history[symbol].loc[ts]
@@ -403,8 +400,14 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
         if data["EV"] == "A":
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
-                tlog(f"consumer A$ {symbol} out of sync w {time_diff}")
+                tlog(f"A$ {symbol} too out of sync w {time_diff}")
                 return False
+            elif (
+                curr_min := datetime.now(
+                    tz=timezone("America/New_York")
+                ).replace(second=0, microsecond=0)
+            ) > ts:
+                return True
         elif data["EV"] == "AM":
             return True
 
@@ -523,9 +526,8 @@ async def queue_consumer(
         while True:
             try:
                 raw_data = queue.get(timeout=2)
-                # print(raw_data)
                 data = json.loads(raw_data)
-                # print(f"got {data}")
+
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
@@ -603,12 +605,19 @@ async def consumer_async_main(
 
     try:
         trending_db = TrendingTickers(unique_id)
-        for symbol in symbols:
-            await trending_db.save(symbol)
+        if symbols:
+            for symbol in symbols:
+                await trending_db.save(symbol)
     except Exception as e:
         tlog(
             f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
         )
+        exc_info = sys.exc_info()
+        lines = traceback.format_exception(*exc_info)
+        for line in lines:
+            tlog(f"error: {line}")
+        traceback.print_exception(*exc_info)
+        del exc_info
 
     base_url = (
         config.prod_base_url if config.env == "PROD" else config.paper_base_url
@@ -672,7 +681,8 @@ async def consumer_async_main(
         await s.create()
 
         trading_data.strategies.append(s)
-        await load_current_long_positions(trading_api, symbols, s)
+        if symbols:
+            await load_current_long_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
