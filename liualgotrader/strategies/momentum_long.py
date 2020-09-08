@@ -83,19 +83,14 @@ class MomentumLong(Strategy):
             and not await self.should_cool_down(symbol, now)
         ):
             # Check for buy signals
-            lbound = config.market_open
+            lbound = config.market_open.replace(second=0, microsecond=0)
             ubound = lbound + timedelta(minutes=15)
-
-            if debug:
-                tlog(f"15 schedule {lbound}/{ubound}")
             try:
                 high_15m = minute_history[lbound:ubound][  # type: ignore
                     "high"
                 ].max()
             except Exception as e:
-                tlog(
-                    f"[{self.name}] error aggregation {e} - maybe should use nearest?"
-                )
+                tlog(f"{symbol}[{now}] failed to aggregate {ubound}:{lbound}")
                 return False, {}
 
             if data.close > high_15m or (
@@ -132,6 +127,12 @@ class MomentumLong(Strategy):
                     and macd_trending
                     and macd_above_signal
                     and macd_hist_trending
+                    and (
+                        data.vwap > data.open > prev_min.close
+                        and data.vwap != 0.0
+                        or data.vwap == 0.0
+                        and data.close > data.open > prev_min.close
+                    )
                 ):
                     macd2 = MACD(close, 40, 60)[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
@@ -237,11 +238,19 @@ class MomentumLong(Strategy):
                 )
                 return False, {}
 
+            serie = (
+                minute_history["close"].dropna().between_time("9:30", "16:00")
+            )
+
+            if data.vwap:
+                serie[-1] = data.vwap
+
             macds = MACD(
-                minute_history["close"].dropna().between_time("9:30", "16:00"),
+                serie,
                 13,
                 21,
             )
+
             macd = macds[0]
             macd_signal = macds[1]
             rsi = RSI(
@@ -266,13 +275,16 @@ class MomentumLong(Strategy):
                 macd_signal_val, round_factor
             )
             bail_out = (
-                latest_scalp_basis[symbol] > latest_cost_basis[symbol]
+                (
+                    latest_scalp_basis[symbol] > latest_cost_basis[symbol]
+                    or movement > 0.02
+                )
                 and macd_below_signal
                 and round(macd[-1], round_factor)
                 < round(macd[-2], round_factor)
             )
 
-            scalp = movement > 0.02 or data.vwap > scalp_threshold
+            scalp = movement > 0.04 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
 
             rsi_limit = 79 if not morning_rush else 85

@@ -4,14 +4,16 @@ Get Market data from Polygon and pump to consumers
 import asyncio
 import json
 import os
+import random
+import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
+from queue import Empty
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 from alpaca_trade_api.stream2 import StreamConn, polygon
-from google.cloud import error_reporting
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
@@ -19,29 +21,98 @@ from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 
 last_msg_tstamp: datetime = datetime.now()
+symbols: List[str]
+data_channels: List = []
+queue_id_hash: Dict[str, int]
+
+
+async def scanner_input(
+    scanner_queue: Queue,
+    data_ws: StreamConn,
+    num_consumer_processes: int,
+) -> None:
+    tlog("scanner_input() task starting ")
+    global data_channels
+    global queue_id_hash
+
+    try:
+        new_symbols: List = []
+        delay_factor = 1
+        while True:
+            try:
+                symbol = scanner_queue.get(False)
+
+                if symbol and symbol not in symbols:
+                    delay_factor = 1
+                    new_symbols.append(symbol)
+
+            except Empty:
+                if len(new_symbols):
+                    new_channels = []
+
+                    for symbol in new_symbols:
+                        new_channels += [
+                            f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
+                        ]
+                    await asyncio.sleep(0)
+                    data_channels += new_channels
+                    await data_ws.subscribe(new_channels)
+                    await asyncio.sleep(0)
+
+                    for symbol in new_symbols:
+                        consumer_queue_index = random.SystemRandom().randint(
+                            0, num_consumer_processes
+                        )
+                        queue_id_hash[symbol] = consumer_queue_index - 1
+                        symbols.append(symbol)
+
+                    tlog(f"added {len(new_symbols)}:{new_symbols}")
+                    await asyncio.sleep(0)
+
+                new_symbols = []
+                await asyncio.sleep(1 * delay_factor)
+                delay_factor = max(delay_factor + 1, 60)
+
+            except Exception as e:
+                tlog(
+                    f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
+                )
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
+
+    except asyncio.CancelledError:
+        tlog("scanner_input task task cancelled ")
+
+    tlog("scanner_input() task completed ")
 
 
 async def trade_run(
-    ws: StreamConn, queues: List[Queue], queue_id_hash: Dict[str, int]
+    ws: StreamConn,
+    queues: List[Queue],
 ) -> None:
 
     tlog("trade_run() starting using Alpaca trading  ")
-    # Use trade updates to keep track of our portfolio
+
     @ws.on(r"trade_update")
     async def handle_trade_update(conn, channel, data):
-
+        global queue_id_hash
         try:
             tlog(f"TRADE UPDATE! {data.__dict__}")
-            data.__dict__["_raw"]["EV"] = "trade_update"
-            data.__dict__["_raw"]["symbol"] = data.__dict__["_raw"]["order"][
-                "symbol"
-            ]
-            q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-            queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+            symbol = data.__dict__["_raw"]["order"]["symbol"]
+            if symbol in queue_id_hash:
+                data.__dict__["_raw"]["EV"] = "trade_update"
+                data.__dict__["_raw"]["symbol"] = symbol
+                queues[queue_id_hash[symbol]].put(
+                    json.dumps(data.__dict__["_raw"])
+                )
 
         except Exception as e:
             tlog(
-                f"Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
+                f"[ERROR]Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
             )
 
     await ws.subscribe(["trade_updates"])
@@ -49,12 +120,11 @@ async def trade_run(
 
 
 async def run(
-    symbols: List[str],
     data_ws: StreamConn,
     queues: List[Queue],
-    queue_id_hash: Dict[str, int],
 ) -> None:
-    data_channels = []
+    global data_channels
+    global queue_id_hash
     for symbol in symbols:
         symbol_channels = [f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS]
         data_channels += symbol_channels
@@ -63,17 +133,17 @@ async def run(
 
     @data_ws.on(r"T$")
     async def handle_trade_event(conn, channel, data):
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
+
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
-                tlog(f"T$ {data.symbol}: data out of sync {time_diff}")
-                pass
-            else:
+                return
+            elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "T"
-                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
-
-                global last_msg_tstamp
-                last_msg_tstamp = datetime.now()
+                queues[queue_id_hash[event_symbol]].put(
+                    json.dumps(data.__dict__["_raw"])
+                )
         except Exception as e:
             tlog(
                 f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
@@ -81,17 +151,18 @@ async def run(
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
+
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
-                tlog(f"Q$ {data.symbol}: data out of sync {time_diff}")
-                pass
-            else:
+                return
+            elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "Q"
-                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+                queues[queue_id_hash[event_symbol]].put(
+                    json.dumps(data.__dict__["_raw"])
+                )
 
-                global last_msg_tstamp
-                last_msg_tstamp = datetime.now()
         except Exception as e:
             tlog(
                 f"Exception in handle_quote_event(): exception of type {type(e).__name__} with args {e.args}"
@@ -99,18 +170,19 @@ async def run(
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
-        # print(f"A {data.__dict__['_raw']['symbol']}")
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
+
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
                 tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass
-            else:
+            elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "A"
-                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-                queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+                queues[queue_id_hash[event_symbol]].put(
+                    json.dumps(data.__dict__["_raw"])
+                )
 
-                global last_msg_tstamp
-                last_msg_tstamp = datetime.now()
         except Exception as e:
             tlog(
                 f"Exception in handle_second_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -118,14 +190,16 @@ async def run(
 
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
-        # print(f"AM {data.__dict__['_raw']['symbol']}")
-        try:
-            data.__dict__["_raw"]["EV"] = "AM"
-            q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
-            queues[q_id].put(json.dumps(data.__dict__["_raw"]))
+        global last_msg_tstamp
+        last_msg_tstamp = datetime.now()
 
-            global last_msg_tstamp
-            last_msg_tstamp = datetime.now()
+        try:
+            if (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
+                data.__dict__["_raw"]["EV"] = "AM"
+                queues[queue_id_hash[event_symbol]].put(
+                    json.dumps(data.__dict__["_raw"])
+                )
+
         except Exception as e:
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
@@ -151,7 +225,9 @@ async def run(
                 data_ws.register(r"Q$", handle_quote_event)
                 data_ws.register(r"T$", handle_trade_event)
                 await data_ws.subscribe(data_channels)
-                tlog("Polygon.io reconnected")
+                tlog(
+                    f"Polygon.io reconnected for {len(data_channels)} channels"
+                )
                 last_msg_tstamp = datetime.now()
             await asyncio.sleep(config.polygon_seconds_timeout / 2)
     except asyncio.CancelledError:
@@ -220,7 +296,9 @@ process main
 
 
 async def producer_async_main(
-    queues: List[Queue], symbols: List[str], queue_id_hash: Dict[str, int]
+    queues: List[Queue],
+    scanner_queue: Queue,
+    num_consumer_processes: int,
 ):
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
@@ -231,10 +309,8 @@ async def producer_async_main(
 
     main_task = asyncio.create_task(
         run(
-            symbols=symbols,
             data_ws=data_ws,
             queues=queues,
-            queue_id_hash=queue_id_hash,
         ),
         name="main_task",
     )
@@ -253,22 +329,34 @@ async def producer_async_main(
         else config.paper_api_secret
     )
     trade_ws = tradeapi.StreamConn(
-        base_url=base_url, key_id=api_key_id, secret_key=api_secret,
+        base_url=base_url,
+        key_id=api_key_id,
+        secret_key=api_secret,
     )
 
     trade_updates_task = asyncio.create_task(
-        trade_run(ws=trade_ws, queues=queues, queue_id_hash=queue_id_hash),
+        trade_run(ws=trade_ws, queues=queues),
         name="trade_updates_task",
     )
 
+    scanner_input_task = asyncio.create_task(
+        scanner_input(scanner_queue, data_ws, num_consumer_processes),
+        name="scanner_input",
+    )
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"), [data_ws, trade_ws], [main_task,],
+            timezone("America/New_York"),
+            [data_ws, trade_ws],
+            [main_task, scanner_input_task],
         )
     )
 
     await asyncio.gather(
-        main_task, trade_updates_task, tear_down, return_exceptions=True,
+        main_task,
+        trade_updates_task,
+        scanner_input_task,
+        tear_down,
+        return_exceptions=True,
     )
 
     tlog("producer_async_main() completed")
@@ -276,27 +364,31 @@ async def producer_async_main(
 
 def polygon_producer_main(
     queues: List[Queue],
-    symbols: List[str],
-    queue_id_hash: Dict[str, int],
+    current_symbols: List[str],
+    current_queue_id_hash: Dict[str, int],
     market_close: datetime,
+    scanner_queue: Queue,
+    num_consumer_processes: int,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
+        global symbols
+        global queue_id_hash
+
+        symbols = current_symbols
+        queue_id_hash = current_queue_id_hash
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(producer_async_main(queues, symbols, queue_id_hash))
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(asyncio.new_event_loop())
-        # loop.run_until_complete(
-        #    producer_async_main(queues, symbols, queue_id_hash)
-        # )
-        # loop.run_forever()
-    except KeyboardInterrupt:
-        tlog("producer_main() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(
-            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
+        asyncio.run(
+            producer_async_main(queues, scanner_queue, num_consumer_processes)
         )
 
-    tlog("*** producer_main() completed ***")
+    except KeyboardInterrupt:
+        tlog("polygon_producer_main() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"polygon_producer_main() - exception of type {type(e).__name__} with args {e.args}"
+        )
+
+    tlog("*** polygon_producer_main() completed ***")
