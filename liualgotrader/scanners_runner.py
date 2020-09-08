@@ -34,6 +34,7 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
             if scanner.recurrence:
                 try:
                     await asyncio.sleep(scanner.recurrence.total_seconds())
+                    tlog(f"scanner {scanner.name} re-running")
                 except asyncio.CancelledError:
                     tlog(
                         f"scanner_runner({scanner.name}) cancelled during sleep, closing scanner task"
@@ -62,6 +63,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
             scanner_details = scanner[scanner_name]
             try:
                 print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+                recurrence = scanner_details.get("recurrence", None)
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
                     data_api=data_api,
@@ -71,7 +73,9 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     min_volume=scanner_details["min_volume"],
                     from_market_open=scanner_details["from_market_open"],
                     today_change_percent=scanner_details["min_gap"],
-                    recurrence=scanner_details.get("recurrence", False),
+                    recurrence=timedelta(minutes=recurrence)
+                    if recurrence
+                    else None,
                     max_symbols=scanner_details.get(
                         "max_symbols", config.total_tickers
                     ),
@@ -103,21 +107,24 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
 
                 if "recurrence" not in scanner_details:
                     scanner_object = custom_scanner(
-                        recurrence=False,
+                        recurrence=None,
                         data_api=data_api,
                         **scanner_details,
                     )
                 else:
+                    recurrence = scanner_details.pop("recurrence")
                     scanner_object = custom_scanner(
-                        data_api=data_api, **scanner_details
+                        data_api=data_api,
+                        **scanner_details,
+                        recurrence=timedelta(minutes=recurrence),
                     )
-
-                scanner_tasks.append(
-                    asyncio.create_task(scanner_runner(scanner_object, queue))
-                )
 
             except Exception as e:
                 tlog(f"Error {e}")
+
+        scanner_tasks.append(
+            asyncio.create_task(scanner_runner(scanner_object, queue))
+        )
 
     try:
         await asyncio.gather(
@@ -143,7 +150,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 )
 
     finally:
-        tlog("scanners_runner.teardown_task() done.")
+        tlog("scanners_runner.scanners_runner()  done.")
 
 
 async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:

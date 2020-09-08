@@ -63,7 +63,8 @@ async def scanner_input(
                         consumer_queue_index = random.SystemRandom().randint(
                             0, num_consumer_processes
                         )
-                        queue_id_hash[symbol] = consumer_queue_index
+                        queue_id_hash[symbol] = consumer_queue_index - 1
+                        symbols.append(symbol)
 
                     tlog(f"added {len(new_symbols)}:{new_symbols}")
                     await asyncio.sleep(0)
@@ -195,7 +196,6 @@ async def run(
         try:
             if (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "AM"
-                q_id = queue_id_hash[data.__dict__["_raw"]["symbol"]]
                 queues[queue_id_hash[event_symbol]].put(
                     json.dumps(data.__dict__["_raw"])
                 )

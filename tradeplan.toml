@@ -1,7 +1,7 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-# bypass_market_schedule = true
+bypass_market_schedule = true
 
 # ticket scanners, may have several
 # scanners during the day
@@ -25,7 +25,7 @@
         # How many minutes from market open, to start running scanner
         from_market_open = 15
 
-        # recurrence = 5
+        recurrence = 5
 
         # max_symbols = 440
 
