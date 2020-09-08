@@ -90,7 +90,7 @@ async def liquidate(
 
     if symbol_position:
         tlog(
-            f"Trading over, trying to liquidating remaining position {symbol_position} in {symbol}"
+            f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
         )
         try:
             trading_data.sell_indicators[symbol] = {"liquidation": 1}
@@ -464,54 +464,53 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             == StrategyType.DAY_TRADE
         ):
             await liquidate(symbol, int(symbol_position), trading_api)
+        else:
+            # run strategies
+            for s in trading_data.strategies:
+                do, what = await s.run(
+                    symbol,
+                    int(symbol_position),
+                    market_data.minute_history[symbol],
+                    ts,
+                    trading_api=trading_api,
+                )
 
-        # run strategies
-        for s in trading_data.strategies:
-            do, what = await s.run(
-                symbol,
-                int(symbol_position),
-                market_data.minute_history[symbol],
-                ts,
-                trading_api=trading_api,
-            )
+                if do:
+                    try:
+                        if what["type"] == "limit":
+                            o = trading_api.submit_order(
+                                symbol=symbol,
+                                qty=what["qty"],
+                                side=what["side"],
+                                type="limit",
+                                time_in_force="day",
+                                limit_price=what["limit_price"],
+                            )
+                        else:
+                            o = trading_api.submit_order(
+                                symbol=symbol,
+                                qty=what["qty"],
+                                side=what["side"],
+                                type=what["type"],
+                                time_in_force="day",
+                            )
 
-            if do:
-                try:
+                        trading_data.open_orders[symbol] = (o, what["side"])
+                        trading_data.open_order_strategy[symbol] = s
 
-                    if what["type"] == "limit":
-                        o = trading_api.submit_order(
-                            symbol=symbol,
-                            qty=what["qty"],
-                            side=what["side"],
-                            type="limit",
-                            time_in_force="day",
-                            limit_price=what["limit_price"],
+                        tlog(
+                            f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
                         )
-                    else:
-                        o = trading_api.submit_order(
-                            symbol=symbol,
-                            qty=what["qty"],
-                            side=what["side"],
-                            type=what["type"],
-                            time_in_force="day",
+                        if what["side"] == "buy":
+                            trading_data.last_used_strategy[symbol] = s
+                            trading_data.buy_time[symbol] = datetime.now(
+                                tz=timezone("America/New_York")
+                            ).replace(second=0, microsecond=0)
+                            break
+                    except APIError as e:
+                        tlog(
+                            f"Exception APIError with {e} from {what}, checking if order filled"
                         )
-
-                    trading_data.open_orders[symbol] = (o, what["side"])
-                    trading_data.open_order_strategy[symbol] = s
-
-                    tlog(
-                        f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
-                    )
-                    if what["side"] == "buy":
-                        trading_data.last_used_strategy[symbol] = s
-                        trading_data.buy_time[symbol] = datetime.now(
-                            tz=timezone("America/New_York")
-                        ).replace(second=0, microsecond=0)
-                        break
-                except APIError as e:
-                    tlog(
-                        f"Exception APIError with {e} from {what}, checking if order filled"
-                    )
 
     return True
 
