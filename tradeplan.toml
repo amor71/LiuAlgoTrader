@@ -3,6 +3,8 @@
 # if set to true, allow running outside market open hours
 bypass_market_schedule = false
 
+events = ["second", "minute", "trade", "quote"]
+
 # ticket scanners, may have several
 # scanners during the day
 [[scanners]]

@@ -60,7 +60,7 @@ market_liquidation_end_time_minutes: int = 15
 #
 # WS Data Channels
 #
-WS_DATA_CHANNELS: List[str] = ["A", "AM", "T", "Q"]
+WS_DATA_CHANNELS: List[str]
 
 # performance parameters
 proc_factor: float = float(os.getenv("CPU_FACTOR", "2.0"))
