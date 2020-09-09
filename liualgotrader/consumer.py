@@ -37,6 +37,40 @@ async def end_time(reason: str):
         )
 
 
+async def liquidator(trading_api: tradeapi) -> None:
+    tlog("liquidator() task starting")
+    try:
+        dt = datetime.today().astimezone(timezone("America/New_York"))
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        ) - timedelta(minutes=5)
+        await asyncio.sleep(to_market_close.total_seconds())
+
+    except asyncio.CancelledError:
+        tlog("liquidator() cancelled during sleep")
+    except KeyboardInterrupt:
+        tlog("liquidator() - Caught KeyboardInterrupt")
+
+    try:
+        for symbol in trading_data.positions:
+            if (
+                trading_data.positions[symbol] != 0
+                and trading_data.last_used_strategy[symbol].type
+                == StrategyType.DAY_TRADE
+            ):
+                await liquidate(
+                    symbol, int(trading_data.positions[symbol]), trading_api
+                )
+    except asyncio.CancelledError:
+        tlog("liquidator() cancelled")
+    except KeyboardInterrupt:
+        tlog("liquidator() - Caught KeyboardInterrupt")
+
+    tlog("liquidator() task completed")
+
+
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
     tlog(f"consumer-teardown_task() - starting ")
     to_market_close: timedelta
@@ -687,11 +721,13 @@ async def consumer_async_main(
         queue_consumer(queue, trading_api)
     )
 
+    liquidate_task = asyncio.create_task(liquidator(trading_api))
     tear_down = asyncio.create_task(
         teardown_task(timezone("America/New_York"), queue_consumer_task)
     )
     await asyncio.gather(
         tear_down,
+        liquidate_task,
         queue_consumer_task,
         return_exceptions=True,
     )
