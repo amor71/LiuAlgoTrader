@@ -150,6 +150,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 )
 
     finally:
+        queue.close()
         tlog("scanners_runner.scanners_runner()  done.")
 
 

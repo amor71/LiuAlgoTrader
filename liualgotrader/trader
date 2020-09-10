@@ -109,7 +109,7 @@ def calc_num_consumer_processes() -> int:
     num_cpus = os.cpu_count()
     load_avg = sum(os.getloadavg()) / 3
     if not load_avg:
-        load_avg = 1.0 
+        load_avg = 1.0
     num_processes = min(
         1,
         ceil(
@@ -297,6 +297,7 @@ if __name__ == "__main__":
                 p.join()
         except KeyboardInterrupt:
             producer.terminate()
+            scanner.terminate()
             for p in consumers:
                 p.terminate()
 

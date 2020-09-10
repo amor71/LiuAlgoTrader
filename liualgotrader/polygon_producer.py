@@ -238,6 +238,8 @@ async def run(
         )
         traceback.print_exc()
     finally:
+        for q in queues:
+            q.close()
         tlog("main Polygon producer task completed ")
 
 
