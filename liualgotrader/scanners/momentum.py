@@ -38,6 +38,7 @@ class Momentum(Scanner):
         self.from_market_open = from_market_open
         self.max_symbols = max_symbols
 
+        print(f"recurrence {self.recurrence}")
         super().__init__(
             name=self.name,
             recurrence=recurrence,

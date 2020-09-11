@@ -108,13 +108,16 @@ def ready_to_start(trading_api: tradeapi) -> bool:
 def calc_num_consumer_processes() -> int:
     num_cpus = os.cpu_count()
     load_avg = sum(os.getloadavg()) / 3
+
+    tlog(f"15-min load_avg:{load_avg}, num_cpus:{num_cpus}, proc_factor:{config.proc_factor}")
     if not load_avg:
         load_avg = 1.0
-    num_processes = min(
+
+    num_processes = max(
         1,
         ceil(
             num_cpus / min(load_avg, 1.0) * config.proc_factor
-            if num_cpus
+            if num_cpus > 0
             else config.proc_factor / min(load_avg, 1.0)
         ),
     )
@@ -179,11 +182,7 @@ if __name__ == "__main__":
 
     scanners_conf = conf_dict["scanners"]
     for scanner in scanners_conf:
-        if len(list(scanner.keys())) != 1:
-            tlog(f"invalid scanner configuration {scanner}")
-            exit(0)
-        else:
-            tlog(f"- {list(scanner.keys())[0]} scanner detected")
+        tlog(f"- {scanner} scanner detected")
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,

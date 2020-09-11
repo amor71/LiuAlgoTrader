@@ -18,6 +18,7 @@ scanner_tasks = []
 
 
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
+    print("+------ MEMEMEMEMEME -----------+")
     try:
         while True:
             symbols = await scanner.run()
@@ -57,12 +58,12 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
         secret_key=config.prod_api_secret,
     )
 
-    for scanner in scanners_conf:
-        scanner_name = list(scanner.keys())[0]
+    for scanner_name in scanners_conf:
         if scanner_name == "momentum":
-            scanner_details = scanner[scanner_name]
+            scanner_details = scanners_conf[scanner_name]
             try:
                 print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+
                 recurrence = scanner_details.get("recurrence", None)
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
@@ -89,14 +90,14 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
         else:
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             tlog(f"custom scanner {scanner_name} selected")
-            scanner_details = scanner[scanner_name]
+            scanner_details = scanners_conf[scanner_name]
             try:
                 spec = importlib.util.spec_from_file_location(
                     "module.name", scanner_details["filename"]
                 )
                 custom_scanner_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(custom_scanner_module)  # type: ignore
-                class_name = list(scanner.keys())[0]
+                class_name = scanner_name
                 custom_scanner = getattr(custom_scanner_module, class_name)
 
                 if not issubclass(custom_scanner, Scanner):
