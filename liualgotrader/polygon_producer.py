@@ -160,6 +160,7 @@ async def run(
                 return
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "Q"
+                print(queue_id_hash[event_symbol], len(queues))
                 queues[queue_id_hash[event_symbol]].put(
                     json.dumps(data.__dict__["_raw"])
                 )
