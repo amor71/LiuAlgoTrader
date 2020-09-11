@@ -342,12 +342,14 @@ async def handle_trade_update(data: Dict) -> bool:
     return False
 
 
-async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
+async def handle_data_queue_msg(
+    data: Dict, trading_api: tradeapi, data_api: tradeapi
+) -> bool:
     global shortable
 
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
-        _df = trading_api.polygon.historic_agg_v2(
+        _df = data_api.polygon.historic_agg_v2(
             symbol,
             1,
             "minute",
@@ -360,9 +362,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
-        shortable[symbol] = await is_shortable(trading_api, symbol)
+        shortable[symbol] = await is_shortable(data_api, symbol)
     elif not shortable.get(symbol):
-        shortable[symbol] = await is_shortable(trading_api, symbol)
+        shortable[symbol] = await is_shortable(data_api, symbol)
 
     if data["EV"] == "T":
         if "conditions" in data and any(
@@ -580,6 +582,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 async def queue_consumer(
     queue: Queue,
     trading_api: tradeapi,
+    data_api: tradeapi,
 ) -> None:
     tlog("queue_consumer() starting")
 
@@ -593,7 +596,9 @@ async def queue_consumer(
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
-                    if not await handle_data_queue_msg(data, trading_api):
+                    if not await handle_data_queue_msg(
+                        data, trading_api, data_api
+                    ):
                         while not queue.empty():
                             _ = queue.get()
                         tlog("cleaned queue")
@@ -696,6 +701,11 @@ async def consumer_async_main(
     trading_api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
+    data_api = tradeapi.REST(
+        base_url=config.prod_base_url,
+        key_id=config.prod_api_key_id,
+        secret_key=config.prod_api_secret,
+    )
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, trading_api
@@ -745,7 +755,7 @@ async def consumer_async_main(
             await load_current_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
-        queue_consumer(queue, trading_api)
+        queue_consumer(queue, trading_api, data_api)
     )
 
     liquidate_task = asyncio.create_task(liquidator(trading_api))
