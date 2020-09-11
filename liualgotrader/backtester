@@ -236,9 +236,11 @@ def backtest(
             print(f"market_open{config.market_open}")
             strategy_types = []
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+            print(conf_dict["strategies"])
             for strategy in conf_dict["strategies"]:
-                strategy_name = list(strategy.keys())[0]
-                strategy_details = strategy[strategy_name]
+                print(strategy)
+                strategy_name = strategy
+                strategy_details = conf_dict["strategies"][strategy_name]
                 if strategy_name == "MomentumLong":
                     tlog(f"strategy {strategy_name} selected")
                     strategy_types += [(MomentumLong, strategy_details)]
@@ -251,7 +253,7 @@ def backtest(
                         )
                         custom_strategy_module = importlib.util.module_from_spec(spec)
                         spec.loader.exec_module(custom_strategy_module)  # type: ignore
-                        class_name = list(strategy.keys())[0]
+                        class_name = strategy_name
                         custom_strategy = getattr(custom_strategy_module, class_name)
 
                         if not issubclass(custom_strategy, Strategy):
@@ -297,11 +299,7 @@ def backtest(
                 duration=timedelta(
                     minutes=max(
                         [
-                            w["duration"]
-                            for w in [
-                                dict(list(s.values())[0])["schedule"][0]
-                                for s in conf_dict["strategies"]
-                            ]
+                            w["duration"] for w in [item for sublist in [conf_dict["strategies"][s]["schedule"] for s in conf_dict["strategies"]] for item in sublist]
                         ]
                     )
                 ),

@@ -32,7 +32,7 @@ events = ["second", "minute", "trade", "quote"]
         max_symbols = 440
 
 # trading strategies, can have several *strategy* blocks
-[[strategies]]
+[strategies]
     # strategy class name, must implement Strategy class
     [strategies.VWAPShort]
         filename = "/Users/amichayoren/dev/trades/vwap_short.py"
@@ -42,8 +42,14 @@ events = ["second", "minute", "trade", "quote"]
         [[strategies.VWAPShort.schedule]]
             start = 15
             duration = 400
+    [strategies.MomentumLong]
+        #filename = "/Users/amichayoren/dev/trades/vwap_short.py"
 
-
+        # trading schedules block, trades many have
+        # several windows within the same day
+        [[strategies.MomentumLong.schedule]]
+            start = 15
+            duration = 400
 
 
 
