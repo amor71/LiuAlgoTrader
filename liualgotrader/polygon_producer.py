@@ -113,6 +113,7 @@ async def trade_run(
             tlog(
                 f"[ERROR]Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     await ws.subscribe(["trade_updates"])
     tlog("trade_run() completed")
@@ -147,6 +148,7 @@ async def run(
             tlog(
                 f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
@@ -166,6 +168,7 @@ async def run(
             tlog(
                 f"Exception in handle_quote_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
@@ -186,6 +189,7 @@ async def run(
             tlog(
                 f"Exception in handle_second_bar(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
@@ -203,6 +207,7 @@ async def run(
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     global last_msg_tstamp
     try:
