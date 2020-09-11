@@ -29,19 +29,17 @@ events = ["second", "minute", "trade", "quote"]
 
         recurrence = 5
 
-        # max_symbols = 440
+        max_symbols = 440
 
 # trading strategies, can have several *strategy* blocks
 [[strategies]]
     # strategy class name, must implement Strategy class
-    [strategies.MomentumLong]
-        # filename = ""
-
-        # check_patterns = true
+    [strategies.VWAPShort]
+        filename = "/Users/amichayoren/dev/trades/vwap_short.py"
 
         # trading schedules block, trades many have
         # several windows within the same day
-        [[strategies.MomentumLong.schedule]]
+        [[strategies.VWAPShort.schedule]]
             start = 15
             duration = 400
 

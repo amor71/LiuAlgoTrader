@@ -94,8 +94,7 @@ INSERT INTO trending_tickers (symbol, batch_id)
         t.algo_run_id = r.algo_run_id AND
         batch_id != '';
 
-
-BEGIN
+BEGIN;
 alter table new_trades drop constraint "new_trades_qty_check";
-alter table new_trades add check (qty >= 0);
+alter table new_trades add check (qty != 0);
 COMMIT;

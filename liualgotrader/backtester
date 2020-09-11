@@ -262,6 +262,7 @@ def backtest(
                         tlog(
                             f"[Error]exception of type {type(e).__name__} with args {e.args}"
                         )
+                        traceback.print_exc()
                         exit(0)
 
             for strategy_tuple in strategy_types:
