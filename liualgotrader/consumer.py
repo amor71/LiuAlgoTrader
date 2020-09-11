@@ -715,7 +715,7 @@ async def consumer_async_main(
 
         trading_data.strategies.append(s)
         if symbols:
-            await load_current_long_positions(trading_api, symbols, s)
+            await load_current_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api)
@@ -735,7 +735,7 @@ async def consumer_async_main(
     tlog("consumer_async_main() completed")
 
 
-async def load_current_long_positions(
+async def load_current_positions(
     trading_api: tradeapi, symbols: List[str], strategy: Strategy
 ) -> None:
     for symbol in symbols:
@@ -756,7 +756,7 @@ async def load_current_long_positions(
                     target_price,
                     indicators,
                     timestamp,
-                ) = await NewTrade.load_latest_long(
+                ) = await NewTrade.load_latest(
                     config.db_conn_pool, symbol, strategy.name
                 )
 
@@ -791,7 +791,7 @@ async def load_current_long_positions(
                 pass
             except Exception as e:
                 tlog(
-                    f"load_current_long_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
+                    f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )
 
 
