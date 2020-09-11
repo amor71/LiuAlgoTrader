@@ -156,7 +156,12 @@ def backtest(
                         backtesting=True,
                     )
                     if do:
-                        if what["side"] == "buy":
+                        if (
+                            what["side"] == "buy"
+                            and float(what["qty"]) > 0
+                            or what["side"] == "sell"
+                            and float(what["qty"]) < 0
+                        ):
                             position += int(float(what["qty"]))
                             trading_data.last_used_strategy[symbol] = strategy
                             trading_data.buy_time[symbol] = new_now.replace(
@@ -182,7 +187,6 @@ def backtest(
                             trading_data.stop_prices[symbol],
                             trading_data.target_prices[symbol],
                         )
-                        print(what)
 
                         if what["side"] == "buy":
                             await strategy.buy_callback(
@@ -199,17 +203,17 @@ def backtest(
                 minute_index += 1
                 new_now = symbol_data.index[minute_index]
 
-            if position > 0:
+            if position:
                 if (
                     trading_data.last_used_strategy[symbol].type
                     == StrategyType.DAY_TRADE
                 ):
-                    print(f"liquidate {position}")
+                    tlog(f"[{new_now}]{symbol} liquidate {position} at {price}")
                     db_trade = NewTrade(
                         algo_run_id=last_run_id,  # type: ignore
                         symbol=symbol,
-                        qty=int(position),
-                        operation="sell",
+                        qty=int(position) if int(position) > 0 else -int(position),
+                        operation="sell" if position > 0 else "buy",
                         price=price,
                         indicators={"liquidate": 1},
                     )
