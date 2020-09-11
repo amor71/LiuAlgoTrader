@@ -362,9 +362,9 @@ async def handle_data_queue_msg(
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
-        shortable[symbol] = await is_shortable(data_api, symbol)
+        shortable[symbol] = True  # await is_shortable(data_api, symbol)
     elif not shortable.get(symbol):
-        shortable[symbol] = await is_shortable(data_api, symbol)
+        shortable[symbol] = True  # await is_shortable(data_api, symbol)
 
     if data["EV"] == "T":
         if "conditions" in data and any(
