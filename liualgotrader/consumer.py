@@ -40,7 +40,15 @@ async def end_time(reason: str):
 
 
 async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
-    asset = trading_api.get_asset(symbol)
+
+    asset = None
+    while not asset:
+        try:
+            asset = trading_api.get_asset(symbol)
+        except Exception as e:
+            tlog(f"is_shortable({symbol}) got exception {e}, retrying...")
+            await asyncio.sleep(10)
+
     return (
         False
         if asset.tradable is False
