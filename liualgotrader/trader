@@ -219,7 +219,7 @@ if __name__ == "__main__":
         q_id_hash = {}
         symbol_by_queue = {}
         for symbol in symbols:
-            _index = random.SystemRandom().randint(0, num_consumer_processes)
+            _index = random.SystemRandom().randint(0, num_consumer_processes-1)
             q_id_hash[symbol] = _index
             if _index not in symbol_by_queue:
                 symbol_by_queue[_index] = [symbol]

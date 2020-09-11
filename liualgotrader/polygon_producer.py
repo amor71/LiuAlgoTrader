@@ -60,9 +60,9 @@ async def scanner_input(
 
                     for symbol in new_symbols:
                         consumer_queue_index = random.SystemRandom().randint(
-                            0, num_consumer_processes
+                            0, num_consumer_processes - 1
                         )
-                        queue_id_hash[symbol] = consumer_queue_index - 1
+                        queue_id_hash[symbol] = consumer_queue_index
                         symbols.append(symbol)
 
                     tlog(f"added {len(new_symbols)}:{new_symbols}")
