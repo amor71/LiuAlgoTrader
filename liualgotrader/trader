@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import uuid
+import random
 from datetime import datetime
 from math import ceil
 from typing import List
@@ -219,9 +220,7 @@ if __name__ == "__main__":
         symbol_by_queue = {}
         c = 0
         for symbol in symbols:
-            _index = int(
-                list(minute_history.keys()).index(symbol) / num_consumer_processes
-            )
+            _index = random.SystemRandom().randint(0, num_consumer_processes)
 
             q_id_hash[symbol] = _index
             if _index not in symbol_by_queue:
