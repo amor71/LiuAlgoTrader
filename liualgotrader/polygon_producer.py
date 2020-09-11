@@ -136,18 +136,19 @@ async def run(
         global last_msg_tstamp
         last_msg_tstamp = datetime.now()
 
+        queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 return
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "T"
-                queues[queue_id_hash[event_symbol]].put(
-                    json.dumps(data.__dict__["_raw"])
-                )
+                queue_id = queue_id_hash[event_symbol]
+                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
         except Exception as e:
             tlog(
                 f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            print(queue_id, len(queues))
             traceback.print_exc()
 
     @data_ws.on(r"Q$")
@@ -155,20 +156,20 @@ async def run(
         global last_msg_tstamp
         last_msg_tstamp = datetime.now()
 
+        queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 return
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "Q"
-                print(queue_id_hash[event_symbol], len(queues))
-                queues[queue_id_hash[event_symbol]].put(
-                    json.dumps(data.__dict__["_raw"])
-                )
+                queue_id = queue_id_hash[event_symbol]
+                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
                 f"Exception in handle_quote_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            print(queue_id, len(queues))
             traceback.print_exc()
 
     @data_ws.on(r"A$")
