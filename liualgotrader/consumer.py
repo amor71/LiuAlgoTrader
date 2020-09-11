@@ -28,6 +28,8 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.strategies.momentum_long import MomentumLong
 
+shortable: Dict = {}
+
 
 async def end_time(reason: str):
     for s in trading_data.strategies:
@@ -35,6 +37,18 @@ async def end_time(reason: str):
         await s.algo_run.update_end_time(
             pool=config.db_conn_pool, end_reason=reason
         )
+
+
+async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
+    asset = trading_api.get_asset(symbol)
+    return (
+        False
+        if asset.tradable is False
+        or asset.shortable is False
+        or asset.status == "inactive"
+        or asset.easy_to_borrow is False
+        else True
+    )
 
 
 async def liquidator(trading_api: tradeapi) -> None:
@@ -321,6 +335,8 @@ async def handle_trade_update(data: Dict) -> bool:
 
 
 async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
+    global shortable
+
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
         _df = trading_api.polygon.historic_agg_v2(
@@ -336,6 +352,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
+        shortable[symbol] = await is_shortable(trading_api, symbol)
+    elif not shortable.get(symbol):
+        shortable[symbol] = await is_shortable(trading_api, symbol)
 
     if data["EV"] == "T":
         if "conditions" in data and any(
@@ -503,6 +522,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             for s in trading_data.strategies:
                 do, what = await s.run(
                     symbol,
+                    shortable[symbol],
                     int(symbol_position),
                     market_data.minute_history[symbol],
                     ts,

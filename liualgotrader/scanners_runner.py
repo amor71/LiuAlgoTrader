@@ -18,7 +18,7 @@ scanner_tasks = []
 
 
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
-    print("+------ MEMEMEMEMEME -----------+")
+
     try:
         while True:
             symbols = await scanner.run()
@@ -62,8 +62,6 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
         if scanner_name == "momentum":
             scanner_details = scanners_conf[scanner_name]
             try:
-                print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-
                 recurrence = scanner_details.get("recurrence", None)
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
@@ -88,7 +86,6 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 )
                 exit(0)
         else:
-            print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             tlog(f"custom scanner {scanner_name} selected")
             scanner_details = scanners_conf[scanner_name]
             try:
@@ -215,7 +212,7 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
 
 
 def main(
-    scanners_conf: Dict,
+    conf_dict: Dict,
     market_open: datetime,
     market_close: datetime,
     scanner_queue: mp.Queue,
@@ -223,6 +220,10 @@ def main(
     tlog(f"*** scanners_runner.main() starting w pid {os.getpid()} ***")
     config.market_open = market_open
     config.market_close = market_close
+    config.bypass_market_schedule = conf_dict.get(
+        "bypass_market_schedule", False
+    )
+    scanners_conf = conf_dict["scanners"]
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()

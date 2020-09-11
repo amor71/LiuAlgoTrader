@@ -41,7 +41,6 @@ async def scanner_input(
         while True:
             try:
                 symbol = scanner_queue.get(False)
-
                 if symbol and symbol not in symbols:
                     delay_factor = 1
                     new_symbols.append(symbol)
@@ -369,12 +368,33 @@ def polygon_producer_main(
     current_symbols: List[str],
     current_queue_id_hash: Dict[str, int],
     market_close: datetime,
+    conf_dict: Dict,
     scanner_queue: Queue,
     num_consumer_processes: int,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
+
+        events = conf_dict.get("events", None)
+
+        if not events:
+            config.WS_DATA_CHANNELS = ["A", "AM", "T", "Q"]
+        else:
+            config.WS_DATA_CHANNELS = []
+
+            if "second" in events:
+                config.WS_DATA_CHANNELS.append("AM")
+            if "minute" in events:
+                config.WS_DATA_CHANNELS.append("A")
+            if "trade" in events:
+                config.WS_DATA_CHANNELS.append("T")
+            if "quote" in events:
+                config.WS_DATA_CHANNELS.append("Q")
+
+        tlog(
+            f"polygon_producer_main(): listening for events {config.WS_DATA_CHANNELS}"
+        )
         global symbols
         global queue_id_hash
 
