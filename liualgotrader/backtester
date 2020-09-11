@@ -236,7 +236,6 @@ def backtest(
             print(f"market_open{config.market_open}")
             strategy_types = []
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-            print(conf_dict["strategies"])
             for strategy in conf_dict["strategies"]:
                 print(strategy)
                 strategy_name = strategy

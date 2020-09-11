@@ -674,9 +674,8 @@ async def consumer_async_main(
     )
     strategy_types = []
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-    for strategy in strategies_conf:
-        strategy_name = list(strategy.keys())[0]
-        strategy_details = strategy[strategy_name]
+    for strategy_name in strategies_conf:
+        strategy_details = strategies_conf[strategy_name]
         if strategy_name == "MomentumLong":
             tlog(f"strategy {strategy_name} selected")
             strategy_types += [(MomentumLong, strategy_details)]
@@ -689,7 +688,7 @@ async def consumer_async_main(
                 )
                 custom_strategy_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(custom_strategy_module)  # type: ignore
-                class_name = list(strategy.keys())[0]
+                class_name = strategy_name
                 custom_strategy = getattr(custom_strategy_module, class_name)
 
                 if not issubclass(custom_strategy, Strategy):
