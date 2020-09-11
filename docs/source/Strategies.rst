@@ -15,6 +15,9 @@ which is based on `MACD signals`_ enforced with RSI_ and LOB imbalance signals.
 You can easily extend the available strategies,
 by inheriting from the *Strategy* base class as explained below.
 
+**NOTE**:
+LiuAlgoTrader supports both *long* and *short* strategies: short buy returns negative quantity while short sell returns positive quantity.
+
 No Liability Disclaimer
 -----------------------
 The *momentum-strategy* is provided as a sample strategy,
@@ -24,8 +27,8 @@ no responsibility to any possible loses from using
 the strategy, or any other part of LiuAlgoTrader (on the other hand, they also won't
 share your profits, if there are any).
 
-Momentum Strategy
------------------
+Momentum Strategy Sample
+------------------------
 Strategies are defined in the *tradeplan.toml* TOML
 configuration file under the section:
 
