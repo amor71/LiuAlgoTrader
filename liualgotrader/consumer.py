@@ -149,7 +149,6 @@ async def liquidate(
             f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
         )
         try:
-            trading_data.sell_indicators[symbol] = {"liquidation": 1}
             if symbol_position < 0:
                 o = trading_api.submit_order(
                     symbol=symbol,
@@ -158,7 +157,8 @@ async def liquidate(
                     type="market",
                     time_in_force="day",
                 )
-                op = "buy_short"
+                op = "buy"
+                trading_data.buy_indicators[symbol] = {"liquidation": 1}
             else:
 
                 o = trading_api.submit_order(
@@ -169,6 +169,7 @@ async def liquidate(
                     time_in_force="day",
                 )
                 op = "sell"
+                trading_data.sell_indicators[symbol] = {"liquidation": 1}
 
             trading_data.open_orders[symbol] = (o, op)
             trading_data.open_order_strategy[
@@ -237,11 +238,10 @@ async def update_partially_filled_order(
     )
 
     try:
-        indicators = (
-            trading_data.buy_indicators[order.symbol]
-            if order.side == "buy"
-            else trading_data.sell_indicators[order.symbol]
-        )
+        indicators = {
+            "buy": trading_data.buy_indicators.get(order.symbol, None),
+            "sell": trading_data.sell_indicators.get(order.symbol, None),
+        }
     except KeyError:
         indicators = None  # type: ignore
 
@@ -250,7 +250,7 @@ async def update_partially_filled_order(
         int(new_qty),
         trading_data.open_orders.get(order.symbol)[1],  # type: ignore
         float(order.filled_avg_price),
-        indicators if indicators else "",  # type: ignore
+        indicators if indicators else "{}",  # type: ignore
         order.updated_at,
     )
 
@@ -277,11 +277,10 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.positions[order.symbol] += qty
 
     try:
-        indicators = (
-            trading_data.buy_indicators[order.symbol]
-            if order.side == "buy"
-            else trading_data.sell_indicators[order.symbol]
-        )
+        indicators = {
+            "buy": trading_data.buy_indicators.get(order.symbol, None),
+            "sell": trading_data.sell_indicators.get(order.symbol, None),
+        }
     except KeyError:
         indicators = None  # type: ignore
 
@@ -290,7 +289,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
         int(new_qty),
         trading_data.open_orders.get(order.symbol)[1],  # type: ignore
         float(order.filled_avg_price),
-        indicators if indicators else "",  # type: ignore
+        indicators if indicators else "{}",  # type: ignore
         order.filled_at,
     )
 
