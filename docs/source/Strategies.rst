@@ -3,7 +3,7 @@
 Strategies
 ==========
 
-LiuAlgoTrader comes equipped with a **momentum** strategy,
+`LiuAlgoTrader` comes equipped with a **momentum** strategy,
 which is based on `MACD signals`_ enforced with RSI_ and LOB imbalance signals.
 
 .. _`MACD signals`:
@@ -15,16 +15,19 @@ which is based on `MACD signals`_ enforced with RSI_ and LOB imbalance signals.
 You can easily extend the available strategies,
 by inheriting from the *Strategy* base class as explained below.
 
-**NOTE**:
-LiuAlgoTrader supports both *long* and *short* strategies: short buy returns negative quantity while short sell returns positive quantity.
+Notes for strategy developers
+-----------------------------
+1. `LiuAlgoTrader` supports both *long* and *short* strategies: short buy returns sell w/ positive quantity while short sell returns buy with positive quantity.
+2. Each strategy may have a collection of schedule windows as part of the TOML `tradeplan` file. It is the responsibility of the strategy and **not** `LiuAlgoTrader` framework to enfroce the trading windows.
+
 
 No Liability Disclaimer
 -----------------------
 The *momentum-strategy* is provided as a sample strategy,
 You may choose to use it, modify it or completely
-disregard it - LiuAlgoTrader and its authors bare
+disregard it - `LiuAlgoTrader` and its authors bare
 no responsibility to any possible loses from using
-the strategy, or any other part of LiuAlgoTrader (on the other hand, they also won't
+the strategy, or any other part of `LiuAlgoTrader` (on the other hand, they also won't
 share your profits, if there are any).
 
 Momentum Strategy Sample
@@ -34,7 +37,7 @@ configuration file under the section:
 
 .. code-block:: bash
 
-    [[strategies]]
+    [strategies]
 
 Note that several Strategies may run, yet the order
 of execution is based the order presented in the *tradeplan* file.
@@ -57,7 +60,7 @@ the subsection
 
 .. code-block:: bash
 
-    [[strategies.MomentumLong.schedule]]
+    [strategies.MomentumLong.schedule]
 
 The schedule properties are:
 
@@ -78,7 +81,7 @@ Creating your own custom strategy is as easy as
 inheriting from the Strategy class, and implementing
 the *run()* function which returns the selected stock symbols.
 
-LiuAlgoTrader support different strategy types:
+`LiuAlgoTrader` support different strategy types:
 
 +------------------+-----------------------------------------------+
 | Name             | Description                                   |
@@ -302,7 +305,7 @@ Configuring the custom strategy in the *tradeplan* TOML file is as easy:
 
     # ticket scanners, may have several
     # scanners during the day
-    [[scanners]]
+    [scanners]
         [scanners.momentum]
             # check documentation for supported providers
             provider = 'polygon'
@@ -327,7 +330,7 @@ Configuring the custom strategy in the *tradeplan* TOML file is as easy:
             # max_symbols = 440
 
     # trading strategies, can have several *strategy* blocks
-    [[strategies]]
+    [strategies]
         # strategy class name, must implement Strategy class
         [strategies.MyStrategy]
             filename = "examples/my_strategy.py"
@@ -336,7 +339,7 @@ Configuring the custom strategy in the *tradeplan* TOML file is as easy:
 
             # trading schedules block, trades many have
             # several windows within the same day
-            [[strategies.MyStrategy.schedule]]
+            [strategies.MyStrategy.schedule]
                 start = 15
                 duration = 150
 
@@ -348,7 +351,7 @@ in the `tradeplan` configuration file, while adding the trade-api object.
 Building a winning strategy
 ---------------------------
 
-LiuAlgoTrader framework comes with a lot of tools
+`LiuAlgoTrader` framework comes with a lot of tools
 and capabilities which constantly evolve.
 In order to write a winning strategy that
 goes beyond the basic sample presented here,
