@@ -243,14 +243,14 @@ async def update_partially_filled_order(
             "sell": trading_data.sell_indicators.get(order.symbol, None),
         }
     except KeyError:
-        indicators = None  # type: ignore
+        indicators = {}
 
     await save(
         order.symbol,
         int(new_qty),
-        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
+        order.side,
         float(order.filled_avg_price),
-        indicators if indicators else "{}",  # type: ignore
+        indicators,
         order.updated_at,
     )
 
@@ -282,27 +282,24 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
             "sell": trading_data.sell_indicators.get(order.symbol, None),
         }
     except KeyError:
-        indicators = None  # type: ignore
+        indicators = {}
 
     await save(
         order.symbol,
         int(new_qty),
-        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
+        order.side,
         float(order.filled_avg_price),
-        indicators if indicators else "{}",  # type: ignore
+        indicators,
         order.filled_at,
     )
 
     if order.side == "buy":
-        trading_data.buy_indicators[order.symbol] = None  # type: ignore
-    else:
-        trading_data.sell_indicators[order.symbol] = None  # type: ignore
-
-    if order.side == "buy":
+        trading_data.buy_indicators.pop(order.symbol, None)
         await strategy.buy_callback(
             order.symbol, float(order.filled_avg_price), int(new_qty)
         )
     else:
+        trading_data.sell_indicators.pop(order.symbol, None)
         await strategy.sell_callback(
             order.symbol, float(order.filled_avg_price), int(new_qty)
         )
@@ -311,11 +308,8 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy.pop(order.symbol, None)
 
 
-async def handle_trade_update(data: Dict) -> bool:
+async def handle_trade_update_for_order(data: Dict) -> bool:
     symbol = data["symbol"]
-    if trading_data.open_orders.get(symbol) is None:
-        return False
-
     last_order = trading_data.open_orders.get(symbol)[0]  # type: ignore
     if last_order is not None:
         event = data["event"]
@@ -336,9 +330,40 @@ async def handle_trade_update(data: Dict) -> bool:
 
         return True
     else:
-        tlog(f"{data['event']} trade update for {symbol} WITHOUT ORDER")
+        tlog(
+            f"[ERROR][{data['event']} trade update for {symbol} WITHOUT ORDER, should not arrive here"
+        )
 
     return False
+
+
+async def handle_trade_update_wo_order(data: Dict) -> bool:
+    symbol = data["symbol"]
+    event = data["event"]
+    tlog(
+        f"trade update without order for {symbol} data={data} with event {event}"
+    )
+
+    if event == "partial_fill":
+        await update_partially_filled_order(
+            trading_data.last_used_strategy[symbol], Order(data["order"])
+        )
+    elif event == "fill":
+        await update_filled_order(
+            trading_data.last_used_strategy[symbol], Order(data["order"])
+        )
+    elif event in ("canceled", "rejected"):
+        trading_data.partial_fills.pop(symbol, None)
+
+    return True
+
+
+async def handle_trade_update(data: Dict) -> bool:
+    symbol = data["symbol"]
+    if trading_data.open_orders.get(symbol):
+        return await handle_trade_update_for_order(data)
+    else:
+        return await handle_trade_update_wo_order(data)
 
 
 async def handle_data_queue_msg(
