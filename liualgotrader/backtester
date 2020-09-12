@@ -148,6 +148,7 @@ def backtest(
                 for strategy in trading_data.strategies:
                     do, what = await strategy.run(
                         symbol,
+                        True,
                         position,
                         symbol_data[: minute_index + 1],
                         new_now,
@@ -322,9 +323,15 @@ def backtest(
 
 
 if __name__ == "__main__":
-    config.build_label = pygit2.Repository("./").describe(
-        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
-    )
+    try:
+        config.build_label = pygit2.Repository("../").describe(
+            describe_strategy=pygit2.GIT_DESCRIBE_TAGS
+        )
+    except pygit2.GitError:
+        import liualgotrader
+
+        config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
+
     config.filename = os.path.basename(__file__)
     conf_dict = toml.load(config.configuration_filename)
     tlog(f"tradeplan file {config.configuration_filename} loaded")

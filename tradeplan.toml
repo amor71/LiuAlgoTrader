@@ -35,7 +35,7 @@ events = ["second", "minute", "trade", "quote"]
 [strategies]
     # strategy class name, must implement Strategy class
     [strategies.VWAPShort]
-        filename = "/home/amichayoren/trader/vwap_short.py"
+        filename = "/Users/amichayoren/dev/trades/vwap_short.py"
 
         # trading schedules block, trades many have
         # several windows within the same day
@@ -43,7 +43,7 @@ events = ["second", "minute", "trade", "quote"]
             start = 15
             duration = 60
     [strategies.MomentumLongV3]
-        filename = "/home/amichayoren/trader/momentum_long_v3.py"
+        filename = "/Users/amichayoren/dev/trades/momentum_long_v3.py"
 
         # trading schedules block, trades many have
         # several windows within the same day

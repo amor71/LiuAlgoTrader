@@ -475,6 +475,7 @@ async def handle_data_queue_msg(
 
         # Next, check for existing orders for the stock
         existing_order = trading_data.open_orders.get(symbol)
+        existing_order = trading_data.open_orders.get(symbol)
         if existing_order is not None:
             existing_order = existing_order[0]
             try:
