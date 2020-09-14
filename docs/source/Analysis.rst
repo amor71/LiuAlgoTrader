@@ -11,18 +11,16 @@ Analyze your trades
 
 **Complete documentation in release 0.0.36**
 
-LiuAlgoTrader comes equipment with a jupyter notebook
-for analysing recent trades. This section explains how
-to operate and make use of the analysis notebook in order
-to imrpvoe your trading strategies.
+`LiuAlgoTrader` is equipment with jupyter notebooks
+for analysing recent trades, and backtesting sessions.
 
-Analyze *trader* session
-------------------------
+Analyze a *trader* session
+--------------------------
 
 Prerequisites
 *************
 
-1. Make sure that the `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables are properly set and include the authentication data to your account (can be either PAPER or LIVE).
+1. Make sure that `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables are properly set and include the credentials to your account (can be either PAPER or LIVE).
 2. Make sure you know your DSN connection string.
 3. Download the latest version of trading day analysis notebook from here_.
 

@@ -3,7 +3,7 @@
 How to Install & Setup
 ======================
 
-This section describes the sets and processes to install and setup LiuAlgoTrader for first use.
+This section describes the sets and processes to install and setup `LiuAlgoTrader` for first use.
 
 Prerequisite
 ------------
