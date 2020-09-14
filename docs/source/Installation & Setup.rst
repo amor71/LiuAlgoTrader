@@ -159,7 +159,7 @@ best strategy will keep losing money.
 
 Luckily, Alpaca is well integrated with `Polygon.io`_ for free.
 A funded Alpaca account is granted an access to Polygon live data streaming,
-which is mostly accurate. A non-funded account has access only to Polygon
+which is mostly accurate. A non-funded account has access only to Alpaca
 paper-data which is less accurate, but okay-ish to start with.
 
 LiuAlgoTrader also support Finnhub_ as a data-source.

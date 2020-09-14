@@ -12,7 +12,7 @@ analysis notebooks.
 The applications are:
 
 - *trader*
-- *market_minder*
+- *market_miner*
 - *backtester*
 
 
@@ -198,6 +198,8 @@ Running the `backtester` application with a valid batch-id will display input as
 
 *market_miner*
 --------------
+
+The application is used for off-hours data grabbing calculations.
 
 Prerequisites
 *************
