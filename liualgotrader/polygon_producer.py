@@ -180,7 +180,7 @@ async def run(
         queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
-                tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
+                # tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "A"
