@@ -95,7 +95,7 @@ INSERT INTO trending_tickers (symbol, batch_id)
         batch_id != '';
 
 
-BEGIN
+BEGIN;
 alter table new_trades drop constraint "new_trades_qty_check";
 alter table new_trades add check (qty >= 0);
 COMMIT;
