@@ -74,14 +74,9 @@ def show_version(filename: str, version: str) -> None:
     """Display welcome message"""
     print(f"filename:{filename}\ngit version:{version}\n")
 
-
-<<<<<<< HEAD
-def backtest(batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = None) -> None:
-=======
 def backtest(
     batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = None
 ) -> None:
->>>>>>> 0.0.40
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -123,14 +118,7 @@ def backtest(
                 tlog(f"not enough data-points  for {symbol}")
                 return
 
-<<<<<<< HEAD
-            add_daily_vwap(
-                symbol_data, debug=debug_symbols and symbol in debug_symbols
-            )
-=======
             add_daily_vwap(symbol_data, debug=debug_symbols and symbol in debug_symbols)
->>>>>>> 0.0.40
-
             market_data.minute_history[symbol] = symbol_data
             print(
                 f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
@@ -150,29 +138,15 @@ def backtest(
                 and minute_index < symbol_data.index.size - 1
             ):
                 if symbol_data.index[minute_index] != new_now:
-<<<<<<< HEAD
-                    print(
-                        "mismatch!", symbol_data.index[minute_index], new_now
-                    )
-                    print(
-                        symbol_data["close"][
-                            minute_index - 10 : minute_index + 1
-                        ]
-                    )
-=======
                     print("mismatch!", symbol_data.index[minute_index], new_now)
                     print(symbol_data["close"][minute_index - 10 : minute_index + 1])
->>>>>>> 0.0.40
                     raise Exception()
 
                 price = symbol_data["close"][minute_index]
                 for strategy in trading_data.strategies:
                     do, what = await strategy.run(
                         symbol,
-<<<<<<< HEAD
-=======
                         True,
->>>>>>> 0.0.40
                         position,
                         symbol_data[: minute_index + 1],
                         new_now,
@@ -181,16 +155,12 @@ def backtest(
                         backtesting=True,
                     )
                     if do:
-<<<<<<< HEAD
-                        if what["side"] == "buy":
-=======
                         if (
                             what["side"] == "buy"
                             and float(what["qty"]) > 0
                             or what["side"] == "sell"
                             and float(what["qty"]) < 0
                         ):
->>>>>>> 0.0.40
                             position += int(float(what["qty"]))
                             trading_data.last_used_strategy[symbol] = strategy
                             trading_data.buy_time[symbol] = new_now.replace(
@@ -216,15 +186,6 @@ def backtest(
                             trading_data.stop_prices[symbol],
                             trading_data.target_prices[symbol],
                         )
-<<<<<<< HEAD
-                        print(what)
-
-                        if what["side"] == "buy":
-                            await strategy.buy_callback(symbol, price, int(float(what["qty"])))
-                            break
-                        elif what["side"] == "sell":
-                            await strategy.sell_callback(symbol, price, int(float(what["qty"])))
-=======
 
                         if what["side"] == "buy":
                             await strategy.buy_callback(
@@ -235,27 +196,12 @@ def backtest(
                             await strategy.sell_callback(
                                 symbol, price, int(float(what["qty"]))
                             )
->>>>>>> 0.0.40
                             break
                     last_run_id = strategy.algo_run.run_id
 
                 minute_index += 1
                 new_now = symbol_data.index[minute_index]
 
-<<<<<<< HEAD
-            if position > 0:
-                if trading_data.last_used_strategy[symbol].type == StrategyType.DAY_TRADE:
-                    print(f"liquidate {position}")
-                    db_trade = NewTrade(
-                        algo_run_id=last_run_id,  # type: ignore
-                        symbol=symbol,
-                        qty=int(position),
-                        operation="sell",
-                        price=price,
-                        indicators={"liquidate": 1},
-                    )
-                    await db_trade.save(config.db_conn_pool, str(symbol_data.index[minute_index-1]))
-=======
             if position:
                 if (
                     trading_data.last_used_strategy[symbol].type
@@ -273,7 +219,6 @@ def backtest(
                     await db_trade.save(
                         config.db_conn_pool, str(symbol_data.index[minute_index - 1])
                     )
->>>>>>> 0.0.40
 
         symbols = await TrendingTickers.load(batch_id)
         print(f"loaded {len(symbols)}:\n {symbols}")
@@ -291,14 +236,9 @@ def backtest(
             strategy_types = []
             print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             for strategy in conf_dict["strategies"]:
-<<<<<<< HEAD
-                strategy_name = list(strategy.keys())[0]
-                strategy_details = strategy[strategy_name]
-=======
                 print(strategy)
                 strategy_name = strategy
                 strategy_details = conf_dict["strategies"][strategy_name]
->>>>>>> 0.0.40
                 if strategy_name == "MomentumLong":
                     tlog(f"strategy {strategy_name} selected")
                     strategy_types += [(MomentumLong, strategy_details)]
@@ -310,15 +250,8 @@ def backtest(
                             "module.name", strategy_details["filename"]
                         )
                         custom_strategy_module = importlib.util.module_from_spec(spec)
-<<<<<<< HEAD
-                        spec.loader.exec_module(  # type: ignore
-                            custom_strategy_module
-                        )
-                        class_name = list(strategy.keys())[0]
-=======
                         spec.loader.exec_module(custom_strategy_module)  # type: ignore
                         class_name = strategy_name
->>>>>>> 0.0.40
                         custom_strategy = getattr(custom_strategy_module, class_name)
 
                         if not issubclass(custom_strategy, Strategy):
@@ -333,10 +266,7 @@ def backtest(
                         tlog(
                             f"[Error]exception of type {type(e).__name__} with args {e.args}"
                         )
-<<<<<<< HEAD
-=======
                         traceback.print_exc()
->>>>>>> 0.0.40
                         exit(0)
 
             for strategy_tuple in strategy_types:
@@ -344,13 +274,9 @@ def backtest(
                 strategy_details = strategy_tuple[1]
                 config.env = "BACKTEST"
                 tlog(f"initializing {strategy_type.name}")
-<<<<<<< HEAD
-                s = strategy_type(batch_id=uid, ref_run_id=ref_run_id,  **strategy_details)
-=======
                 s = strategy_type(
                     batch_id=uid, ref_run_id=ref_run_id, **strategy_details
                 )
->>>>>>> 0.0.40
                 await s.create()
                 trading_data.strategies.append(s)
 
@@ -368,9 +294,6 @@ def backtest(
         else:
             await backtest_run(
                 start=min(starts),
-<<<<<<< HEAD
-                duration=timedelta(minutes=max([w['duration'] for w in [dict(list(s.values())[0])['schedule'][0] for s in conf_dict['strategies']]])),
-=======
                 duration=timedelta(
                     minutes=max(
                         [
@@ -378,7 +301,6 @@ def backtest(
                         ]
                     )
                 ),
->>>>>>> 0.0.40
                 ref_run_id=run_ids[0],
             )
 
@@ -391,13 +313,7 @@ def backtest(
     except KeyboardInterrupt:
         tlog("backtest() - Caught KeyboardInterrupt")
     except Exception as e:
-<<<<<<< HEAD
-        tlog(
-            f"backtest() - exception of type {type(e).__name__} with args {e.args}"
-        )
-=======
         tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
->>>>>>> 0.0.40
         traceback.print_exc()
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
@@ -405,11 +321,6 @@ def backtest(
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    config.build_label = pygit2.Repository("./").describe(
-        describe_strategy=pygit2.GIT_DESCRIBE_TAGS
-    )
-=======
     try:
         config.build_label = pygit2.Repository("../").describe(
             describe_strategy=pygit2.GIT_DESCRIBE_TAGS
@@ -419,7 +330,6 @@ if __name__ == "__main__":
 
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
->>>>>>> 0.0.40
     config.filename = os.path.basename(__file__)
     conf_dict = toml.load(config.configuration_filename)
     tlog(f"tradeplan file {config.configuration_filename} loaded")

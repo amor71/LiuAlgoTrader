@@ -590,8 +590,9 @@ async def handle_data_queue_msg(
                         tlog(
                             f"executed strategy {s.name} on {symbol} w data {market_data.minute_history[symbol][-10:]}"
                         )
+                        trading_data.last_used_strategy[symbol] = s
                         if what["side"] == "buy":
-                            trading_data.last_used_strategy[symbol] = s
+
                             trading_data.buy_time[symbol] = datetime.now(
                                 tz=timezone("America/New_York")
                             ).replace(second=0, microsecond=0)

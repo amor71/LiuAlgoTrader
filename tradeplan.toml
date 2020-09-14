@@ -1,21 +1,13 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-<<<<<<< HEAD
 bypass_market_schedule = false
-
-# ticket scanners, may have several
-# scanners during the day
-[[scanners]]
-=======
-bypass_market_schedule = true
 
 events = ["second", "minute", "trade", "quote"]
 
 # ticket scanners, may have several
 # scanners during the day
 [scanners]
->>>>>>> 0.0.40
     [scanners.momentum]
         # check documentation for supported providers
         provider = 'polygon'
@@ -37,25 +29,6 @@ events = ["second", "minute", "trade", "quote"]
 
         recurrence = 5
 
-<<<<<<< HEAD
-        # max_symbols = 440
-
-# trading strategies, can have several *strategy* blocks
-[[strategies]]
-    # strategy class name, must implement Strategy class
-    [strategies.MomentumLong]
-        # filename = ""
-
-        # check_patterns = true
-
-        # trading schedules block, trades many have
-        # several windows within the same day
-        [[strategies.MomentumLong.schedule]]
-            start = 15
-            duration = 400
-
-
-=======
         max_symbols = 440
 
 # trading strategies, can have several *strategy* blocks
@@ -68,7 +41,7 @@ events = ["second", "minute", "trade", "quote"]
         # several windows within the same day
         [[strategies.VWAPShort.schedule]]
             start = 15
-            duration = 60
+            duration = 120
     [strategies.MomentumLongV3]
         filename = "/Users/amichayoren/dev/trades/momentum_long_v3.py"
 
@@ -76,8 +49,7 @@ events = ["second", "minute", "trade", "quote"]
         # several windows within the same day
         [[strategies.MomentumLongV3.schedule]]
             start = 15
-            duration = 60
->>>>>>> 0.0.40
+            duration = 120
 
 
 
