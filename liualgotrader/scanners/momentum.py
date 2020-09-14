@@ -37,7 +37,6 @@ class Momentum(Scanner):
         self.today_change_percent = today_change_percent
         self.from_market_open = from_market_open
         self.max_symbols = max_symbols
-
         super().__init__(
             name=self.name,
             recurrence=recurrence,
@@ -49,7 +48,7 @@ class Momentum(Scanner):
         return cls.name
 
     async def _wait_time(self) -> None:
-        if config.market_open:
+        if not config.bypass_market_schedule and config.market_open:
             nyc = timezone("America/New_York")
             since_market_open = (
                 datetime.today().astimezone(nyc) - config.market_open

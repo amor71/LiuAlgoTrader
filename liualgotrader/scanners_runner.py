@@ -57,12 +57,10 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
         secret_key=config.prod_api_secret,
     )
 
-    for scanner in scanners_conf:
-        scanner_name = list(scanner.keys())[0]
+    for scanner_name in scanners_conf:
         if scanner_name == "momentum":
-            scanner_details = scanner[scanner_name]
+            scanner_details = scanners_conf[scanner_name]
             try:
-                print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
                 recurrence = scanner_details.get("recurrence", None)
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
@@ -87,16 +85,15 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 )
                 exit(0)
         else:
-            print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
             tlog(f"custom scanner {scanner_name} selected")
-            scanner_details = scanner[scanner_name]
+            scanner_details = scanners_conf[scanner_name]
             try:
                 spec = importlib.util.spec_from_file_location(
                     "module.name", scanner_details["filename"]
                 )
                 custom_scanner_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(custom_scanner_module)  # type: ignore
-                class_name = list(scanner.keys())[0]
+                class_name = scanner_name
                 custom_scanner = getattr(custom_scanner_module, class_name)
 
                 if not issubclass(custom_scanner, Scanner):
@@ -150,6 +147,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 )
 
     finally:
+        queue.close()
         tlog("scanners_runner.scanners_runner()  done.")
 
 
@@ -213,7 +211,7 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
 
 
 def main(
-    scanners_conf: Dict,
+    conf_dict: Dict,
     market_open: datetime,
     market_close: datetime,
     scanner_queue: mp.Queue,
@@ -221,6 +219,10 @@ def main(
     tlog(f"*** scanners_runner.main() starting w pid {os.getpid()} ***")
     config.market_open = market_open
     config.market_close = market_close
+    config.bypass_market_schedule = conf_dict.get(
+        "bypass_market_schedule", False
+    )
+    scanners_conf = conf_dict["scanners"]
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()

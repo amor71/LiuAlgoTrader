@@ -28,6 +28,8 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.strategies.momentum_long import MomentumLong
 
+shortable: Dict = {}
+
 
 async def end_time(reason: str):
     for s in trading_data.strategies:
@@ -35,6 +37,60 @@ async def end_time(reason: str):
         await s.algo_run.update_end_time(
             pool=config.db_conn_pool, end_reason=reason
         )
+
+
+async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
+
+    asset = None
+    while not asset:
+        try:
+            asset = trading_api.get_asset(symbol)
+        except Exception as e:
+            tlog(f"is_shortable({symbol}) got exception {e}, retrying...")
+            await asyncio.sleep(10)
+
+    return (
+        False
+        if asset.tradable is False
+        or asset.shortable is False
+        or asset.status == "inactive"
+        or asset.easy_to_borrow is False
+        else True
+    )
+
+
+async def liquidator(trading_api: tradeapi) -> None:
+    tlog("liquidator() task starting")
+    try:
+        dt = datetime.today().astimezone(timezone("America/New_York"))
+        to_market_close = (
+            config.market_close - dt
+            if config.market_close > dt
+            else timedelta(hours=24) + (config.market_close - dt)
+        ) - timedelta(minutes=5)
+        await asyncio.sleep(to_market_close.total_seconds())
+
+    except asyncio.CancelledError:
+        tlog("liquidator() cancelled during sleep")
+    except KeyboardInterrupt:
+        tlog("liquidator() - Caught KeyboardInterrupt")
+
+    try:
+        for symbol in trading_data.positions:
+            if (
+                trading_data.positions[symbol] != 0
+                and trading_data.last_used_strategy[symbol].type
+                == StrategyType.DAY_TRADE
+            ):
+                await liquidate(
+                    symbol, int(trading_data.positions[symbol]), trading_api
+                )
+    except asyncio.CancelledError:
+        tlog("liquidator() cancelled")
+    except KeyboardInterrupt:
+        tlog("liquidator() - Caught KeyboardInterrupt")
+
+    tlog("liquidator() task completed")
 
 
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
@@ -93,7 +149,6 @@ async def liquidate(
             f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
         )
         try:
-            trading_data.sell_indicators[symbol] = {"liquidation": 1}
             if symbol_position < 0:
                 o = trading_api.submit_order(
                     symbol=symbol,
@@ -102,9 +157,10 @@ async def liquidate(
                     type="market",
                     time_in_force="day",
                 )
-                op = "buy_short"
-            else:
+                op = "buy"
+                trading_data.buy_indicators[symbol] = {"liquidation": 1}
 
+            else:
                 o = trading_api.submit_order(
                     symbol=symbol,
                     qty=str(symbol_position),
@@ -113,6 +169,7 @@ async def liquidate(
                     time_in_force="day",
                 )
                 op = "sell"
+                trading_data.sell_indicators[symbol] = {"liquidation": 1}
 
             trading_data.open_orders[symbol] = (o, op)
             trading_data.open_order_strategy[
@@ -181,20 +238,19 @@ async def update_partially_filled_order(
     )
 
     try:
-        indicators = (
-            trading_data.buy_indicators[order.symbol]
-            if order.side == "buy"
-            else trading_data.sell_indicators[order.symbol]
-        )
+        indicators = {
+            "buy": trading_data.buy_indicators.get(order.symbol, None),
+            "sell": trading_data.sell_indicators.get(order.symbol, None),
+        }
     except KeyError:
-        indicators = None  # type: ignore
+        indicators = {}
 
     await save(
         order.symbol,
         int(new_qty),
-        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
+        order.side,
         float(order.filled_avg_price),
-        indicators if indicators else "",  # type: ignore
+        indicators,
         order.updated_at,
     )
 
@@ -221,33 +277,29 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.positions[order.symbol] += qty
 
     try:
-        indicators = (
-            trading_data.buy_indicators[order.symbol]
-            if order.side == "buy"
-            else trading_data.sell_indicators[order.symbol]
-        )
+        indicators = {
+            "buy": trading_data.buy_indicators.get(order.symbol, None),
+            "sell": trading_data.sell_indicators.get(order.symbol, None),
+        }
     except KeyError:
-        indicators = None  # type: ignore
+        indicators = {}
 
     await save(
         order.symbol,
         int(new_qty),
-        trading_data.open_orders.get(order.symbol)[1],  # type: ignore
+        order.side,
         float(order.filled_avg_price),
-        indicators if indicators else "",  # type: ignore
+        indicators,
         order.filled_at,
     )
 
     if order.side == "buy":
-        trading_data.buy_indicators[order.symbol] = None  # type: ignore
-    else:
-        trading_data.sell_indicators[order.symbol] = None  # type: ignore
-
-    if order.side == "buy":
+        trading_data.buy_indicators.pop(order.symbol, None)
         await strategy.buy_callback(
             order.symbol, float(order.filled_avg_price), int(new_qty)
         )
     else:
+        trading_data.sell_indicators.pop(order.symbol, None)
         await strategy.sell_callback(
             order.symbol, float(order.filled_avg_price), int(new_qty)
         )
@@ -256,10 +308,8 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     trading_data.open_order_strategy.pop(order.symbol, None)
 
 
-async def handle_trade_update(data: Dict) -> bool:
+async def handle_trade_update_for_order(data: Dict) -> bool:
     symbol = data["symbol"]
-    if trading_data.open_orders.get(symbol) is None:
-        return False
 
     last_order = trading_data.open_orders.get(symbol)[0]  # type: ignore
     if last_order is not None:
@@ -281,15 +331,49 @@ async def handle_trade_update(data: Dict) -> bool:
 
         return True
     else:
-        tlog(f"{data['event']} trade update for {symbol} WITHOUT ORDER")
-
+        tlog(
+            f"[ERROR][{data['event']} trade update for {symbol} WITHOUT ORDER, should not arrive here"
+        )
     return False
 
 
-async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
+async def handle_trade_update_wo_order(data: Dict) -> bool:
+    symbol = data["symbol"]
+    event = data["event"]
+    tlog(
+        f"trade update without order for {symbol} data={data} with event {event}"
+    )
+
+    if event == "partial_fill":
+        await update_partially_filled_order(
+            trading_data.last_used_strategy[symbol], Order(data["order"])
+        )
+    elif event == "fill":
+        await update_filled_order(
+            trading_data.last_used_strategy[symbol], Order(data["order"])
+        )
+    elif event in ("canceled", "rejected"):
+        trading_data.partial_fills.pop(symbol, None)
+
+    return True
+
+
+async def handle_trade_update(data: Dict) -> bool:
+    symbol = data["symbol"]
+    if trading_data.open_orders.get(symbol):
+        return await handle_trade_update_for_order(data)
+    else:
+        return await handle_trade_update_wo_order(data)
+
+
+async def handle_data_queue_msg(
+    data: Dict, trading_api: tradeapi, data_api: tradeapi
+) -> bool:
+    global shortable
+
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
-        _df = trading_api.polygon.historic_agg_v2(
+        _df = data_api.polygon.historic_agg_v2(
             symbol,
             1,
             "minute",
@@ -302,6 +386,9 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
         tlog(
             f"consumer task loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
         )
+        shortable[symbol] = True  # await is_shortable(data_api, symbol)
+    elif not shortable.get(symbol):
+        shortable[symbol] = True  # await is_shortable(data_api, symbol)
 
     if data["EV"] == "T":
         if "conditions" in data and any(
@@ -413,6 +500,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 
         # Next, check for existing orders for the stock
         existing_order = trading_data.open_orders.get(symbol)
+
         if existing_order is not None:
             existing_order = existing_order[0]
             try:
@@ -469,6 +557,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
             for s in trading_data.strategies:
                 do, what = await s.run(
                     symbol,
+                    shortable[symbol],
                     int(symbol_position),
                     market_data.minute_history[symbol],
                     ts,
@@ -518,6 +607,7 @@ async def handle_data_queue_msg(data: Dict, trading_api: tradeapi) -> bool:
 async def queue_consumer(
     queue: Queue,
     trading_api: tradeapi,
+    data_api: tradeapi,
 ) -> None:
     tlog("queue_consumer() starting")
 
@@ -531,7 +621,9 @@ async def queue_consumer(
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
-                    if not await handle_data_queue_msg(data, trading_api):
+                    if not await handle_data_queue_msg(
+                        data, trading_api, data_api
+                    ):
                         while not queue.empty():
                             _ = queue.get()
                         tlog("cleaned queue")
@@ -634,15 +726,19 @@ async def consumer_async_main(
     trading_api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
     )
+    data_api = tradeapi.REST(
+        base_url=config.prod_base_url,
+        key_id=config.prod_api_key_id,
+        secret_key=config.prod_api_secret,
+    )
     nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, trading_api
     )
     strategy_types = []
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-    for strategy in strategies_conf:
-        strategy_name = list(strategy.keys())[0]
-        strategy_details = strategy[strategy_name]
+    for strategy_name in strategies_conf:
+        strategy_details = strategies_conf[strategy_name]
         if strategy_name == "MomentumLong":
             tlog(f"strategy {strategy_name} selected")
             strategy_types += [(MomentumLong, strategy_details)]
@@ -655,7 +751,8 @@ async def consumer_async_main(
                 )
                 custom_strategy_module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(custom_strategy_module)  # type: ignore
-                class_name = list(strategy.keys())[0]
+                class_name = strategy_name
+
                 custom_strategy = getattr(custom_strategy_module, class_name)
 
                 if not issubclass(custom_strategy, Strategy):
@@ -681,17 +778,20 @@ async def consumer_async_main(
 
         trading_data.strategies.append(s)
         if symbols:
-            await load_current_long_positions(trading_api, symbols, s)
+            await load_current_positions(trading_api, symbols, s)
 
     queue_consumer_task = asyncio.create_task(
-        queue_consumer(queue, trading_api)
+        queue_consumer(queue, trading_api, data_api)
     )
+
+    liquidate_task = asyncio.create_task(liquidator(trading_api))
 
     tear_down = asyncio.create_task(
         teardown_task(timezone("America/New_York"), queue_consumer_task)
     )
     await asyncio.gather(
         tear_down,
+        liquidate_task,
         queue_consumer_task,
         return_exceptions=True,
     )
@@ -699,7 +799,7 @@ async def consumer_async_main(
     tlog("consumer_async_main() completed")
 
 
-async def load_current_long_positions(
+async def load_current_positions(
     trading_api: tradeapi, symbols: List[str], strategy: Strategy
 ) -> None:
     for symbol in symbols:
@@ -720,7 +820,7 @@ async def load_current_long_positions(
                     target_price,
                     indicators,
                     timestamp,
-                ) = await NewTrade.load_latest_long(
+                ) = await NewTrade.load_latest(
                     config.db_conn_pool, symbol, strategy.name
                 )
 
@@ -755,7 +855,7 @@ async def load_current_long_positions(
                 pass
             except Exception as e:
                 tlog(
-                    f"load_current_long_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
+                    f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )
 
 

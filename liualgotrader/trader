@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import uuid
+import random
 from datetime import datetime
 from math import ceil
 from typing import List
@@ -70,12 +71,10 @@ def get_trading_windows(tz, api):
 process main
 """
 
-
 def ready_to_start(trading_api: tradeapi) -> bool:
     nyc = timezone("America/New_York")
-    config.market_open, config.market_close = get_trading_windows(
-        nyc, trading_api
-    )
+
+    config.market_open, config.market_close = get_trading_windows(nyc, trading_api)
 
     if config.market_open or config.bypass_market_schedule:
 
@@ -109,8 +108,22 @@ def ready_to_start(trading_api: tradeapi) -> bool:
 
 def calc_num_consumer_processes() -> int:
     num_cpus = os.cpu_count()
-    load_avg = sum(os.getloadavg())/3
-    num_processes = ceil(num_cpus / min(load_avg, 1.0) * config.proc_factor if num_cpus else config.proc_factor / min(load_avg, 1.0))
+
+    load_avg = sum(os.getloadavg()) / 3
+
+    tlog(f"15-min load_avg:{load_avg}, num_cpus:{num_cpus}, proc_factor:{config.proc_factor}")
+    if not load_avg:
+        load_avg = 1.0
+
+    num_processes = max(
+        1,
+        ceil(
+            num_cpus / min(load_avg, 1.0) * config.proc_factor
+            if num_cpus > 0
+            else config.proc_factor / min(load_avg, 1.0)
+        ),
+    )
+
 
     return num_processes
 
@@ -140,13 +153,16 @@ if __name__ == "__main__":
     tlog(
         f"loading configuration file from {os.getcwd()}/{config.configuration_filename}"
     )
-    conf_dict = toml.load(config.configuration_filename)
+    try:
+        conf_dict = toml.load(config.configuration_filename)
+    except FileNotFoundError:
+        tlog(f"[ERROR] could not locate tradeplan file {config.configuration_filename}")
+        sys.exit(0)
+
     print("")
 
     # parse configuration
-    config.bypass_market_schedule = conf_dict.get(
-        "bypass_market_schedule", False
-    )
+    config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
@@ -159,11 +175,8 @@ if __name__ == "__main__":
 
     scanners_conf = conf_dict["scanners"]
     for scanner in scanners_conf:
-        if len(list(scanner.keys())) != 1:
-            tlog(f"invalid scanner configuration {scanner}")
-            exit(0)
-        else:
-            tlog(f"- {list(scanner.keys())[0]} scanner detected")
+        tlog(f"- {scanner} scanner detected")
+
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -176,19 +189,14 @@ if __name__ == "__main__":
         # add open positions
         symbols: List = []
         base_url = (
-            config.prod_base_url
-            if config.env == "PROD"
-            else config.paper_base_url
+            config.prod_base_url if config.env == "PROD" else config.paper_base_url
         )
         api_key_id = (
-            config.prod_api_key_id
-            if config.env == "PROD"
-            else config.paper_api_key_id
+            config.prod_api_key_id if config.env == "PROD" else config.paper_api_key_id
         )
         api_secret = (
-            config.prod_api_secret
-            if config.env == "PROD"
-            else config.paper_api_secret
+            config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
+
         )
         trading_api = tradeapi.REST(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -214,25 +222,17 @@ if __name__ == "__main__":
         # Consumers first
         num_consumer_processes = calc_num_consumer_processes()
         tlog(f"Starting {num_consumer_processes} consumer processes")
-        queues: List[mp.Queue] = [
-            mp.Queue() for i in range(num_consumer_processes)
-        ]
 
+        queues: List[mp.Queue] = [mp.Queue() for i in range(num_consumer_processes)]
         q_id_hash = {}
         symbol_by_queue = {}
-        c = 0
         for symbol in symbols:
-            _index = int(
-                list(minute_history.keys()).index(symbol)
-                / num_consumer_processes
-            )
-
+            _index = random.SystemRandom().randint(0, num_consumer_processes-1)
             q_id_hash[symbol] = _index
             if _index not in symbol_by_queue:
                 symbol_by_queue[_index] = [symbol]
             else:
                 symbol_by_queue[_index].append(symbol)
-            c += 1
 
         consumers = [
             mp.Process(
@@ -254,15 +254,28 @@ if __name__ == "__main__":
         scanner_queue: mp.Queue = mp.Queue()
         producer = mp.Process(
             target=polygon_producer_main,
-            args=(queues, symbols, q_id_hash, config.market_close, scanner_queue, num_consumer_processes),
+            args=(
+                queues,
+                symbols,
+                q_id_hash,
+                config.market_close,
+                conf_dict,
+                scanner_queue,
+                num_consumer_processes,
+            ),
         )
         producer.start()
 
-        print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
         tlog("Starting scanners process")
         scanner = mp.Process(
             target=main,
-            args=(scanners_conf, config.market_open, config.market_close, scanner_queue)
+            args=(
+                conf_dict,
+                config.market_open,
+                config.market_close,
+
+                scanner_queue,
+            ),
         )
         scanner.start()
 
@@ -274,6 +287,7 @@ if __name__ == "__main__":
                 p.join()
         except KeyboardInterrupt:
             producer.terminate()
+            scanner.terminate()
             for p in consumers:
                 p.terminate()
 

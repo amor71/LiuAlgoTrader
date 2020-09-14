@@ -41,7 +41,6 @@ async def scanner_input(
         while True:
             try:
                 symbol = scanner_queue.get(False)
-
                 if symbol and symbol not in symbols:
                     delay_factor = 1
                     new_symbols.append(symbol)
@@ -61,9 +60,9 @@ async def scanner_input(
 
                     for symbol in new_symbols:
                         consumer_queue_index = random.SystemRandom().randint(
-                            0, num_consumer_processes
+                            0, num_consumer_processes - 1
                         )
-                        queue_id_hash[symbol] = consumer_queue_index - 1
+                        queue_id_hash[symbol] = consumer_queue_index
                         symbols.append(symbol)
 
                     tlog(f"added {len(new_symbols)}:{new_symbols}")
@@ -114,6 +113,7 @@ async def trade_run(
             tlog(
                 f"[ERROR]Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     await ws.subscribe(["trade_updates"])
     tlog("trade_run() completed")
@@ -136,57 +136,63 @@ async def run(
         global last_msg_tstamp
         last_msg_tstamp = datetime.now()
 
+        queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 return
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "T"
-                queues[queue_id_hash[event_symbol]].put(
-                    json.dumps(data.__dict__["_raw"])
-                )
+                queue_id = queue_id_hash[event_symbol]
+                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
         except Exception as e:
             tlog(
                 f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            print(queue_id, len(queues))
+            traceback.print_exc()
 
     @data_ws.on(r"Q$")
     async def handle_quote_event(conn, channel, data):
         global last_msg_tstamp
         last_msg_tstamp = datetime.now()
 
+        queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.timestamp) > timedelta(seconds=10):  # type: ignore
                 return
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "Q"
-                queues[queue_id_hash[event_symbol]].put(
-                    json.dumps(data.__dict__["_raw"])
-                )
+                queue_id = queue_id_hash[event_symbol]
+                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
                 f"Exception in handle_quote_event(): exception of type {type(e).__name__} with args {e.args}"
             )
+            print(queue_id, len(queues))
+            traceback.print_exc()
 
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         global last_msg_tstamp
         last_msg_tstamp = datetime.now()
 
+        queue_id: int = -1
         try:
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - data.start) > timedelta(seconds=8):  # type: ignore
-                tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
+                # tlog(f"A$ {data.symbol}: data out of sync {time_diff}")
                 pass
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "A"
-                queues[queue_id_hash[event_symbol]].put(
-                    json.dumps(data.__dict__["_raw"])
-                )
+                queue_id = queue_id_hash[event_symbol]
+                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
                 f"Exception in handle_second_bar(): exception of type {type(e).__name__} with args {e.args}"
             )
+            print(queue_id, len(queues))
+            traceback.print_exc()
 
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
@@ -204,6 +210,7 @@ async def run(
             tlog(
                 f"Exception in handle_minute_bar(): exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
 
     global last_msg_tstamp
     try:
@@ -238,6 +245,8 @@ async def run(
         )
         traceback.print_exc()
     finally:
+        for q in queues:
+            q.close()
         tlog("main Polygon producer task completed ")
 
 
@@ -367,12 +376,33 @@ def polygon_producer_main(
     current_symbols: List[str],
     current_queue_id_hash: Dict[str, int],
     market_close: datetime,
+    conf_dict: Dict,
     scanner_queue: Queue,
     num_consumer_processes: int,
 ) -> None:
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
+
+        events = conf_dict.get("events", None)
+
+        if not events:
+            config.WS_DATA_CHANNELS = ["A", "AM", "T", "Q"]
+        else:
+            config.WS_DATA_CHANNELS = []
+
+            if "second" in events:
+                config.WS_DATA_CHANNELS.append("AM")
+            if "minute" in events:
+                config.WS_DATA_CHANNELS.append("A")
+            if "trade" in events:
+                config.WS_DATA_CHANNELS.append("T")
+            if "quote" in events:
+                config.WS_DATA_CHANNELS.append("Q")
+
+        tlog(
+            f"polygon_producer_main(): listening for events {config.WS_DATA_CHANNELS}"
+        )
         global symbols
         global queue_id_hash
 

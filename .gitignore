@@ -6,6 +6,10 @@
 /wip/
 /legacy/
 /tools/set_keys.bash
+<<<<<<< HEAD
+=======
+/tools/fix_git_email.bash
+>>>>>>> 0.0.40
 /analyis_notebooks/.ipynb_checkpoints/
 /liualgotrader/__pycache__/
 /tests/__pycache__/
