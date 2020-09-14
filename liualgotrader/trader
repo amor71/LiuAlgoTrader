@@ -151,7 +151,12 @@ if __name__ == "__main__":
     tlog(
         f"loading configuration file from {os.getcwd()}/{config.configuration_filename}"
     )
-    conf_dict = toml.load(config.configuration_filename)
+    try:
+        conf_dict = toml.load(config.configuration_filename)
+    except FileNotFoundError:
+        tlog(f"[ERROR] could not locate tradeplan file {config.configuration_filename}")
+        sys.exit(0)
+
     print("")
 
     # parse configuration
