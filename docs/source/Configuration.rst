@@ -100,7 +100,7 @@ them with your own.
 
     # ticket scanners, may have several
     # scanners during the day
-    [[scanners]]
+    [scanners]
         [scanners.momentum]
             # check documentation for supported providers
             provider = 'polygon'
@@ -125,8 +125,7 @@ them with your own.
             # max_symbols = 440
 
     # trading strategies, can have several *strategy* blocks
-    [[strategies]]
-
+    [strategies]
         # strategy class name, must implement Strategy class
         [strategies.MomentumLong]
         # strategy file

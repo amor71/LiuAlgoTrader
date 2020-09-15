@@ -28,14 +28,19 @@ This section describes the steps to install and setup LiuAlgoTrader for first us
 ### Prerequisite
 
 - Paper, and preferable a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
-- Installed [PostgreSQL](https://www.postgresql.org/) database.
+- Installed [PostgreSQL](https://www.postgresql.org/) database (or see *Alternative Installation* below)
 
 ### Installation
-
 
 To install LiuAlgoTrader just type:
 
 `pip install liualgotrader`
+
+**Note** if you're running on Windows, TA-LIB setup might fail, in which case try https://github.com/mrjbq7/ta-lib#troubleshooting, and re-try installing the `liualgotrader` package.
+ 
+#### Alternative Installation 
+
+liualgotrader requires several packages to be properly installed, as well as a PostgrSQL database properly configured. For first time users, it might be easier to install the docker version https://github.com/amor71/trade_deploy .
 
 ### First time run
 
