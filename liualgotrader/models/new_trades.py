@@ -86,10 +86,7 @@ class NewTrade:
                         WHERE 
                             t.algo_run_id=a.algo_run_id AND
                             a.algo_name=$2 AND
-                            symbol=$1 AND (
-                                operation='buy' AND qty > 0 OR 
-                                operation='sell' AND qty < 0
-                            )
+                            symbol=$1 
                         ORDER BY tstamp DESC LIMIT 1
                     """,
                     symbol,

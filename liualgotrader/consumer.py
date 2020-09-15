@@ -809,9 +809,7 @@ async def load_current_positions(
             position = None
 
         if position:
-            tlog(
-                f"loading current position for {symbol} for strategy {strategy.name}"
-            )
+
             try:
                 (
                     prev_run_id,
@@ -827,6 +825,10 @@ async def load_current_positions(
                 if prev_run_id is None:
                     return
 
+                tlog(
+                    f"loading current position for {symbol} for strategy {strategy.name}"
+                )
+
                 trading_data.positions[symbol] = int(position.qty)
                 trading_data.stop_prices[symbol] = stop_price
                 trading_data.target_prices[symbol] = target_price
@@ -835,11 +837,6 @@ async def load_current_positions(
                 ] = trading_data.latest_scalp_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
-                trading_data.symbol_resistance[symbol] = (
-                    indicators["resistances"][0]
-                    if "resistances" in indicators
-                    else None
-                )
                 trading_data.buy_time[symbol] = timestamp.astimezone(
                     tz=timezone("America/New_York")
                 )
