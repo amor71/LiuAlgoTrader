@@ -75,8 +75,10 @@ async def liquidator(trading_api: tradeapi) -> None:
     except KeyboardInterrupt:
         tlog("liquidator() - Caught KeyboardInterrupt")
 
+    tlog("liquidator() -> starting liqudation process")
     try:
         for symbol in trading_data.positions:
+            tlog(f"liquidator() -> checking {symbol}")
             if (
                 trading_data.positions[symbol] != 0
                 and trading_data.last_used_strategy[symbol].type
