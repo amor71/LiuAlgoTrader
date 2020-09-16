@@ -107,6 +107,9 @@ def ready_to_start(trading_api: tradeapi) -> bool:
 
 
 def calc_num_consumer_processes() -> int:
+    if config.fixed_num_cpus > 0:
+        return config.fixed_num_cpus
+
     num_cpus = os.cpu_count()
 
     load_avg = sum(os.getloadavg()) / 3
