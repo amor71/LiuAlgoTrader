@@ -64,7 +64,7 @@ WS_DATA_CHANNELS: List[str]
 
 # performance parameters
 proc_factor: float = float(os.getenv("CPU_FACTOR", "2.0"))
-fixed_num_cpus: int = int(os.getenv("FIX_NUM_CPUS", "0"))
+num_consumers: int = int(os.getenv("NUM_CONSUMERS", "0"))
 
 num_consumer_processes_ratio: int
 # polygon parameters

@@ -67,6 +67,12 @@ application it's recommended to increase the number
 iterative (depending on the complexity of your
 strategies). If the load on the system is too high, it is recommended to lower the number.
 
+It is also possible to by-pass `LiuAlgoTrader`
+calculation of optimal number of processes, and
+use a pre-defined number of consumer processes.
+To do that set the environment variable
+`NUM_CONSUMERS` to another greater than 0.
+
 
 TOML configuration file
 -----------------------
