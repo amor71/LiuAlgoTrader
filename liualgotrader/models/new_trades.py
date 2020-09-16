@@ -103,7 +103,7 @@ class NewTrade:
                         row[5],
                     )
                 else:
-                    tlog(f"no data for strategy {strategy_name}")
+                    tlog(f"{symbol} no data for strategy {strategy_name}")
                     raise ValueError
 
     @classmethod

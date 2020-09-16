@@ -771,6 +771,7 @@ async def consumer_async_main(
                 )
                 exit(0)
 
+    loaded = 0
     for strategy_tuple in strategy_types:
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
@@ -780,7 +781,12 @@ async def consumer_async_main(
 
         trading_data.strategies.append(s)
         if symbols:
-            await load_current_positions(trading_api, symbols, s)
+            loaded += await load_current_positions(trading_api, symbols, s)
+
+    if loaded != len(symbols):
+        tlog(
+            f"[ERROR] Consumer process loaded only {loaded} out of {len(symbols)} open positions. HINT: make sure that your tradeplan.toml file includes all strategues in previous trading session."
+        )
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, trading_api, data_api)
@@ -803,7 +809,8 @@ async def consumer_async_main(
 
 async def load_current_positions(
     trading_api: tradeapi, symbols: List[str], strategy: Strategy
-) -> None:
+) -> int:
+    loaded = 0
     for symbol in symbols:
         try:
             position = trading_api.get_position(symbol)
@@ -825,7 +832,7 @@ async def load_current_positions(
                 )
 
                 if prev_run_id is None:
-                    return
+                    continue
 
                 tlog(
                     f"loading current position for {symbol} for strategy {strategy.name}"
@@ -850,12 +857,16 @@ async def load_current_positions(
                     f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
                 )
 
+                loaded += 1
+
             except ValueError:
                 pass
             except Exception as e:
                 tlog(
                     f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )
+
+    return loaded
 
 
 def consumer_main(
