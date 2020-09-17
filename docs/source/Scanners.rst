@@ -95,7 +95,7 @@ Configuring the custom scanner in the *tradeplan* TOML file is as easy:
 
 .. code-block:: none
 
-    [[scanners]]
+    [scanners]
         [scanners.MyScanner]
             filename = "my_scanner.py"
 
