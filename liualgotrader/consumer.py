@@ -738,7 +738,6 @@ async def consumer_async_main(
         nyc, trading_api
     )
     strategy_types = []
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
         if strategy_name == "MomentumLong":
@@ -765,6 +764,11 @@ async def consumer_async_main(
                 strategy_details.pop("filename", None)
                 strategy_types += [(custom_strategy, strategy_details)]
 
+            except FileNotFoundError as e:
+                tlog(
+                    f"[Error] file not found `{strategy_details['filename']}`"
+                )
+                exit(0)
             except Exception as e:
                 tlog(
                     f"[Error]exception of type {type(e).__name__} with args {e.args}"

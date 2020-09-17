@@ -162,7 +162,6 @@ if __name__ == "__main__":
         tlog(f"[ERROR] could not locate tradeplan file {config.configuration_filename}")
         sys.exit(0)
 
-    print("")
 
     # parse configuration
     config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
@@ -188,7 +187,6 @@ if __name__ == "__main__":
     )
 
     if ready_to_start(data_api):
-        print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
         # add open positions
         symbols: List = []
         base_url = (
@@ -221,7 +219,6 @@ if __name__ == "__main__":
         )
         symbols = list(minute_history.keys())
 
-        print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
         # Consumers first
         num_consumer_processes = calc_num_consumer_processes()
         tlog(f"Starting {num_consumer_processes} consumer processes")
