@@ -1,5 +1,6 @@
 import asyncio
 import importlib.util
+import json
 import multiprocessing as mp
 import os
 from datetime import datetime, timedelta
@@ -24,7 +25,14 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
 
             for symbol in symbols:
                 try:
-                    queue.put(symbol)
+                    queue.put(
+                        json.dumps(
+                            {
+                                "symbol": symbol,
+                                "target_strategy_name": scanner.target_strategy_name,
+                            }
+                        )
+                    )
                     await asyncio.sleep(0)
                 except Exception as e:
                     tlog(
@@ -62,6 +70,9 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
             scanner_details = scanners_conf[scanner_name]
             try:
                 recurrence = scanner_details.get("recurrence", None)
+                target_strategy_name = scanner_details.get(
+                    "target_strategy_name", None
+                )
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
                     data_api=data_api,
@@ -74,6 +85,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     recurrence=timedelta(minutes=recurrence)
                     if recurrence
                     else None,
+                    target_strategy_name=target_strategy_name,
                     max_symbols=scanner_details.get(
                         "max_symbols", config.total_tickers
                     ),
@@ -101,10 +113,13 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                         f"custom scanner must inherit from class {Scanner.__name__}"
                     )
                     exit(0)
-
+                target_strategy_name = scanner_details.get(
+                    "target_strategy_name", None
+                )
                 if "recurrence" not in scanner_details:
                     scanner_object = custom_scanner(
                         recurrence=None,
+                        target_strategy_name=target_strategy_name,
                         data_api=data_api,
                         **scanner_details,
                     )
@@ -112,6 +127,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     recurrence = scanner_details.pop("recurrence")
                     scanner_object = custom_scanner(
                         data_api=data_api,
+                        target_strategy_name=target_strategy_name,
                         **scanner_details,
                         recurrence=timedelta(minutes=recurrence),
                     )

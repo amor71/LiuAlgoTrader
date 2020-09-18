@@ -24,6 +24,7 @@ last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
 data_channels: List = []
 queue_id_hash: Dict[str, int]
+symbol_strategy: Dict = {}
 
 
 async def scanner_input(
@@ -34,16 +35,23 @@ async def scanner_input(
     tlog("scanner_input() task starting ")
     global data_channels
     global queue_id_hash
+    global symbol_strategy
 
     try:
         new_symbols: List = []
+
         delay_factor = 1
         while True:
             try:
-                symbol = scanner_queue.get(False)
-                if symbol and symbol not in symbols:
-                    delay_factor = 1
-                    new_symbols.append(symbol)
+                symbol_details = scanner_queue.get(False)
+                if symbol_details:
+                    symbol_details = json.loads(symbol_details)
+                    if symbol_details["symbol"] not in symbols:
+                        delay_factor = 1
+                        new_symbols.append(symbol_details["symbol"])
+                        symbol_strategy[
+                            symbol_details["symbol"]
+                        ] = symbol_details["target_strategy_name"]
 
             except Empty:
                 if len(new_symbols):
@@ -175,6 +183,7 @@ async def run(
     @data_ws.on(r"A$")
     async def handle_second_bar(conn, channel, data):
         global last_msg_tstamp
+        global symbol_strategy
         last_msg_tstamp = datetime.now()
 
         queue_id: int = -1
@@ -184,6 +193,13 @@ async def run(
                 pass
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "A"
+                if (
+                    event_symbol in symbol_strategy
+                    and symbol_strategy[event_symbol]
+                ):
+                    data.__dict__["_raw"]["symbol_strategy"] = symbol_strategy[
+                        event_symbol
+                    ]
                 queue_id = queue_id_hash[event_symbol]
                 queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
 
@@ -197,11 +213,19 @@ async def run(
     @data_ws.on(r"AM$")
     async def handle_minute_bar(conn, channel, data):
         global last_msg_tstamp
+        global symbol_strategy
         last_msg_tstamp = datetime.now()
 
         try:
             if (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "AM"
+                if (
+                    event_symbol in symbol_strategy
+                    and symbol_strategy[event_symbol]
+                ):
+                    data.__dict__["_raw"]["symbol_strategy"] = symbol_strategy[
+                        event_symbol
+                    ]
                 queues[queue_id_hash[event_symbol]].put(
                     json.dumps(data.__dict__["_raw"])
                 )

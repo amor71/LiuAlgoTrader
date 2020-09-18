@@ -557,6 +557,13 @@ async def handle_data_queue_msg(
         else:
             # run strategies
             for s in trading_data.strategies:
+                if (
+                    "symbol_strategy" in data
+                    and data["symbol_strategy"]
+                    and s.name != data["symbol_strategy"]
+                ):
+                    continue
+
                 do, what = await s.run(
                     symbol,
                     shortable[symbol],

@@ -20,6 +20,7 @@ class Momentum(Scanner):
         self,
         provider: str,
         recurrence: Optional[timedelta],
+        target_strategy_name: Optional[str],
         data_api: tradeapi,
         max_share_price: float,
         min_share_price: float,
@@ -40,6 +41,7 @@ class Momentum(Scanner):
         super().__init__(
             name=self.name,
             recurrence=recurrence,
+            target_strategy_name=target_strategy_name,
             data_api=data_api,
         )
 

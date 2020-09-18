@@ -19,5 +19,7 @@ class StreamingBase:
     async def unsubscribe(self, symbol: str) -> bool:
         pass
 
-    async def close(self,) -> None:
+    async def close(
+        self,
+    ) -> None:
         pass

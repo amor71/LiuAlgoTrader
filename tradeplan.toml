@@ -31,6 +31,8 @@ events = ["second", "minute", "trade", "quote"]
 
         max_symbols = 440
 
+        # target_strategy_name = ""
+
 # trading strategies, can have several *strategy* blocks
 [strategies]
     # strategy class name, must implement Strategy class
