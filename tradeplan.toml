@@ -1,7 +1,7 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-bypass_market_schedule = false
+bypass_market_schedule = false 
 
 events = ["second", "minute", "trade", "quote"]
 
@@ -35,21 +35,21 @@ events = ["second", "minute", "trade", "quote"]
 [strategies]
     # strategy class name, must implement Strategy class
     [strategies.VWAPShort]
-        filename = "/Users/amichayoren/dev/trades/vwap_short.py"
+        filename = "/home/amichayoren/trader/vwap_short.py"
 
         # trading schedules block, trades many have
         # several windows within the same day
         [[strategies.VWAPShort.schedule]]
             start = 15
-            duration = 120
+            duration = 60
     [strategies.MomentumLongV3]
-        filename = "/Users/amichayoren/dev/trades/momentum_long_v3.py"
+        filename = "/home/amichayoren/trader/momentum_long_v3.py"
 
         # trading schedules block, trades many have
         # several windows within the same day
         [[strategies.MomentumLongV3.schedule]]
             start = 15
-            duration = 120
+            duration = 60
 
 
 
