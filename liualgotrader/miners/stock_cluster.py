@@ -105,7 +105,7 @@ class StockCluster(Miner):
                 f"_fetch(): got HTTP exception {e}, for {page}, going to sleep, then retry"
             )
             time.sleep(30)
-            return self._fetch(session, page)
+            return self._fetch(requests.Session(), page)
 
     async def _update_ticker_details(self, ticker_info: Dict) -> None:
         if ticker_info["active"] is False:
@@ -121,6 +121,7 @@ class StockCluster(Miner):
             sector=ticker_info["sector"],
             exchange=ticker_info["exchange"],
         )
+
         if await ticker_data.save(config.db_conn_pool) is False:
             tlog(
                 f"going to wait 30 seconds and retry saving {ticker_info['name']}"
@@ -158,6 +159,6 @@ class StockCluster(Miner):
                 f"_fetch_symbol_details(): got HTTP exception {e} for {ticker.ticker}, going to sleep, then retry"
             )
             time.sleep(30)
-            return self._fetch_symbol_details(session, ticker)
+            return self._fetch_symbol_details(requests.Session(), ticker)
 
         return None

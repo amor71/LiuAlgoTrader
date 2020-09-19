@@ -9,9 +9,10 @@ from typing import Dict, List, Optional
 
 
 from liualgotrader.common import config
-from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.miners.stock_cluster import StockCluster
+from liualgotrader.miners.daily_ohlc import DailyOHLC
 
 
 def motd(filename: str, version: str) -> None:
@@ -23,18 +24,25 @@ def motd(filename: str, version: str) -> None:
     tlog(f"DSN: {config.dsn}")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
 
+
 async def main(conf_dict: Dict):
     task_list: List[Optional[asyncio.tasks]] = []
+
+    await create_db_connection()
     for miner in conf_dict["miners"]:
         if miner == "StockCluster":
             task_list.append(asyncio.create_task(StockCluster().run()))
         elif miner == "DailyOHLC":
-            pass
+            daily = DailyOHLC(
+                days=conf_dict["miners"][miner]["days"],
+                max_stock_price=conf_dict["miners"][miner].get("max_stock_price", None),
+                min_stock_price=conf_dict["miners"][miner].get("min_stock_price", None)
+            )
+            task_list.append(asyncio.create_task(daily.run()))
         else:
             tlog(f"[ERROR] miner {miner} is not supported yet")
 
     await asyncio.gather(*task_list)
-
 
 if __name__ == "__main__":
     """
@@ -54,7 +62,7 @@ if __name__ == "__main__":
 
     # load configuration
     tlog(
-        f"loading configuration file from {os.getcwd()}/{config.configuration_filename}"
+        f"loading configuration file from {os.getcwd()}/{config.miner_configuration_filename}"
     )
     try:
         conf_dict = toml.load(config.miner_configuration_filename)
