@@ -183,7 +183,7 @@ class Momentum(Scanner):
                                 time.sleep(30)
                                 retry = True
                             else:
-                                print(r.status_code, r.text)
+                                tlog(f"[ERROR] {r.status_code}, {r.text}")
 
                     except IndexError:
                         pass

@@ -43,7 +43,7 @@ async def scanner_input(
         delay_factor = 1
         while True:
             try:
-                symbol_details = scanner_queue.get(False)
+                symbol_details = scanner_queue.get(block=False)
                 if symbol_details:
                     symbol_details = json.loads(symbol_details)
                     if symbol_details["symbol"] not in symbols:
@@ -278,6 +278,12 @@ async def teardown_task(
     tz: DstTzInfo, ws: List[StreamConn], tasks: List[asyncio.Task]
 ) -> None:
     tlog("poylgon_producer teardown_task() starting")
+    if not config.market_close:
+        tlog(
+            "we're probably in market schedule by-pass mode, exiting poylgon_producer tear-down task"
+        )
+        return
+
     dt = datetime.today().astimezone(tz)
     to_market_close: timedelta
     try:

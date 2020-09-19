@@ -97,6 +97,13 @@ async def liquidator(trading_api: tradeapi) -> None:
 
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
     tlog(f"consumer-teardown_task() - starting ")
+
+    if not config.market_close:
+        tlog(
+            "we're probably in market schedule by-pass mode, exiting consumer-teardown_task()"
+        )
+        return
+
     to_market_close: timedelta
     try:
         dt = datetime.today().astimezone(tz)

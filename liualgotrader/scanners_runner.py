@@ -20,11 +20,25 @@ scanner_tasks = []
 
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
     try:
+        print("here too", flush=True)
         while True:
+            print("here too 2", scanner.name, flush=True)
             symbols = await scanner.run()
 
+            tlog("back")
+            print("symbols=", symbols, flush=True)
             for symbol in symbols:
                 try:
+                    print(
+                        "scanner going to send:",
+                        json.dumps(
+                            {
+                                "symbol": symbol,
+                                "target_strategy_name": scanner.target_strategy_name,
+                            }
+                        ),
+                        flush=True,
+                    )
                     queue.put(
                         json.dumps(
                             {
@@ -55,7 +69,7 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
             f"scanner_runner() cancelled, closing scanner task {scanner.name}"
         )
     finally:
-        tlog(f"scanner {scanner.name} completed")
+        tlog(f"scanner_runner {scanner.name} completed")
 
 
 async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
@@ -113,13 +127,11 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                         f"custom scanner must inherit from class {Scanner.__name__}"
                     )
                     exit(0)
-                target_strategy_name = scanner_details.get(
-                    "target_strategy_name", None
-                )
+
+                scanner_details.pop("filename")
+                print("target_strategy_name", scanner_details)
                 if "recurrence" not in scanner_details:
                     scanner_object = custom_scanner(
-                        recurrence=None,
-                        target_strategy_name=target_strategy_name,
                         data_api=data_api,
                         **scanner_details,
                     )
@@ -127,13 +139,14 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     recurrence = scanner_details.pop("recurrence")
                     scanner_object = custom_scanner(
                         data_api=data_api,
-                        target_strategy_name=target_strategy_name,
-                        **scanner_details,
                         recurrence=timedelta(minutes=recurrence),
+                        **scanner_details,
                     )
 
             except Exception as e:
-                tlog(f"Error {e}")
+                tlog(
+                    f"[Error] scanners_runner.scanners_runner() for {scanner_name}:{e} "
+                )
 
         scanner_tasks.append(
             asyncio.create_task(scanner_runner(scanner_object, queue))

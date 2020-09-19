@@ -273,7 +273,6 @@ if __name__ == "__main__":
                 conf_dict,
                 config.market_open,
                 config.market_close,
-
                 scanner_queue,
             ),
         )
