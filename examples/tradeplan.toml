@@ -5,7 +5,7 @@ bypass_market_schedule = true
 
 # ticket scanners, may have several
 # scanners during the day
-[[scanners]]
+[scanners]
     [scanners.momentum]
         # check documentation for supported providers
         provider = 'polygon'
@@ -29,8 +29,10 @@ bypass_market_schedule = true
 
         # max_symbols = 440
 
+        # target_strategy_name = "MyStrategy"
+
 # trading strategies, can have several *strategy* blocks
-[[strategies]]
+[strategies]
     # strategy class name, must implement Strategy class
     [strategies.MyStrategy]
         filename = "examples/my_strategy.py"

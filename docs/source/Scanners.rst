@@ -61,34 +61,9 @@ and implementing the *run()* function which returns the selected stock symbols.
 
 Here is an example of *my_scanner.py*:
 
-.. code-block:: python
-
-    """my_scanner.py: custom scanner implementing the Scanner class"""
-    from datetime import timedelta
-    from typing import Optional, List
-
-    import alpaca_trade_api as tradeapi
-
-    from scanners.base import Scanner
-
-
-    class MyScanner(Scanner):
-
-        name = "myCustomScanner"
-
-        def __init__(self, recurrence: Optional[timedelta], data_api: tradeapi, **args):
-            super().__init__(
-                name=self.name,
-                recurrence=recurrence,
-                data_api=data_api,
-            )
-
-        def run(self) -> List[str]:
-            return ["APPL"]
-
-
-
-
+.. literalinclude:: ../../examples/my_scanner.py
+  :language: python
+  :linenos:
 
 
 Configuring the custom scanner in the *tradeplan* TOML file is as easy:

@@ -23,7 +23,7 @@ Contribution section for further details.
 
 ## Quickstart
 
-This section describes the steps to install and setup LiuAlgoTrader for first use.
+Read the below, or use [the docker implementations](https:https://github.com/amor71/trade_deploy). 
 
 ### Prerequisite
 
@@ -54,6 +54,10 @@ installation just type:
 ## Documentation
 
 Is available [here](https://liualgotrader.readthedocs.io/en/latest/).
+
+## Samples
+
+Can we found in the [examples](examples) directory. 
 
 ## Development
 
