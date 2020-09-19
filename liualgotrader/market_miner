@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 
-"""Cluster tickers by industry & sector """
+"""off-hours calculations, and data collections"""
 import asyncio
-import os
-
-
+import os, sys
+import toml
 import pygit2
+from typing import Dict, List, Optional
 
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
-
-
-
 from liualgotrader.miners.stock_cluster import StockCluster
 
 
@@ -27,13 +23,13 @@ def motd(filename: str, version: str) -> None:
     tlog(f"DSN: {config.dsn}")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
 
+async def main(conf_dict: Dict):
+    task_list: List[Optional[asyncio.tasks]] = []
+    for miner in conf_dict["miners"]:
+        if miner == "StockCluster":
+            task_list.append(asyncio.create_task(StockCluster().run()))
 
-def main():
-    try:
-        asyncio.get_event_loop().run_until_complete(create_db_connection())
-        asyncio.get_event_loop().run_until_complete(update_all_tickers_data())
-    except KeyboardInterrupt:
-        tlog("Caught KeyboardInterrupt")
+    await asyncio.gather(*task_list)
 
 
 if __name__ == "__main__":
@@ -52,5 +48,26 @@ if __name__ == "__main__":
     filename = os.path.basename(__file__)
     motd(filename=filename, version=build_label)
 
-    main()
-    tlog("Done.")
+    # load configuration
+    tlog(
+        f"loading configuration file from {os.getcwd()}/{config.configuration_filename}"
+    )
+    try:
+        conf_dict = toml.load(config.miner_configuration_filename)
+    except FileNotFoundError:
+        tlog(f"[ERROR] could not locate market_miner configuration file {config.configuration_filename}")
+        sys.exit(0)
+
+    try:
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        asyncio.run(main(conf_dict))
+    except KeyboardInterrupt:
+        tlog("scanners_runner.main() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"scanners_runner.main() - exception of type {type(e).__name__} with args {e.args}"
+        )
+
+    tlog("*** market_miner completed ***")
+

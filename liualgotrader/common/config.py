@@ -5,6 +5,8 @@ from typing import List
 from asyncpg.pool import Pool
 
 configuration_filename: str = "tradeplan.toml"
+miner_configuration_filename: str = "miner.toml"
+
 
 #
 # Market Schedule
