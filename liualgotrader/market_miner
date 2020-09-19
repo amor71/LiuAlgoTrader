@@ -28,6 +28,10 @@ async def main(conf_dict: Dict):
     for miner in conf_dict["miners"]:
         if miner == "StockCluster":
             task_list.append(asyncio.create_task(StockCluster().run()))
+        elif miner == "DailyOHLC":
+            pass
+        else:
+            tlog(f"[ERROR] miner {miner} is not supported yet")
 
     await asyncio.gather(*task_list)
 

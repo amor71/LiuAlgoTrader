@@ -98,3 +98,17 @@ BEGIN;
 alter table new_trades drop constraint "new_trades_qty_check";
 alter table new_trades add check (qty != 0);
 COMMIT;
+
+CREATE TABLE IF NOT EXISTS stock_ohlc (
+    symbol_id serial PRIMARY KEY,
+    symbol text NOT NULL,
+    symobl_date date NOT NULL,
+    open float NOT NULL,
+    high float NOT NULL,
+    low float NOT NULL,
+    close float NOT NULL,
+    indicators JSONB,
+    create_tstamp timestamp DEFAULT current_timestamp
+);
+CREATE INDEX ON stock_ohlc(symbol);
+CREATE INDEX ON stock_ohlc(symobl_date);
