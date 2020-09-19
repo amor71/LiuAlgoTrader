@@ -73,30 +73,13 @@ async def _update_ticker_details(ticker_info: Dict) -> None:
         exchange=ticker_info["exchange"],
     )
     if await ticker_data.save(config.db_conn_pool) is False:
-<<<<<<< HEAD
-        tlog(
-            f"going to wait 30 seconds and retry saving {ticker_info['name']}"
-        )
-=======
         tlog(f"going to wait 30 seconds and retry saving {ticker_info['name']}")
->>>>>>> 0.0.40
         await asyncio.sleep(30)
         return await _update_ticker_details(ticker_info)
 
 
-<<<<<<< HEAD
-def _fetch_symbol_details(
-    session: requests.Session, ticker: Ticker
-) -> Optional[Dict]:
-    url = (
-        "https://api.polygon.io/"
-        + "v1"
-        + f"/meta/symbols/{ticker.ticker}/company"
-    )
-=======
 def _fetch_symbol_details(session: requests.Session, ticker: Ticker) -> Optional[Dict]:
     url = "https://api.polygon.io/" + "v1" + f"/meta/symbols/{ticker.ticker}/company"
->>>>>>> 0.0.40
 
     try:
         with session.get(
@@ -144,13 +127,10 @@ async def update_all_tickers_data() -> None:
 
             tasks = [
                 loop.run_in_executor(
-<<<<<<< HEAD
-                    executor, _fetch_symbol_details, *(session, ticker),  # type: ignore
-=======
+
                     executor,
                     _fetch_symbol_details,
                     *(session, ticker),  # type: ignore
->>>>>>> 0.0.40
                 )
                 for ticker in tickers
             ]
