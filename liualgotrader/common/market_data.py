@@ -115,12 +115,9 @@ def get_historical_data_from_polygon_by_range(
                     break
 
                 from_date = _df.index[-1] + timedelta(days=1)
-                tlog(f"loaded {len(_df)} agg data points for {symbol}")
-
             tlog(
-                f"total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
+                f"get_historical_data_from_polygon_by_range() - total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
             )
-            tlog(f"{_minute_history[symbol]}")
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")
 
