@@ -80,7 +80,7 @@ class DailyOHLC(Miner):
             )
             await daily_bar.save()
 
-        tlog(f"saved {days} days for {symbol}")
+        tlog(f"saved {len(_minute_data[symbol].index)} days for {symbol}")
 
     @timeit
     async def run(self) -> bool:
@@ -98,7 +98,8 @@ class DailyOHLC(Miner):
                     tlog(f"{symbol} loading {self.days} of OHLC data")
                 await self.load_symbol_data(symbol, self.days)
             else:
-                duration = max(self.days, (date.today() - latest_date).days)
+                latest_date += timedelta(days=1)
+                duration = min(self.days, (date.today() - latest_date).days)
 
                 if self._debug:
                     tlog(f"{symbol} loading {duration} of OHLC data")

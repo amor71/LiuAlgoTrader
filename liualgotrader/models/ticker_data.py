@@ -101,7 +101,6 @@ class StockOhlc:
                     """,
                     symbol,
                 )
-
                 return val
 
     async def save(
