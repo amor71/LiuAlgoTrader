@@ -25,6 +25,7 @@ class DailyOHLC(Miner):
         min_stock_price: Optional[float],
         max_stock_price: Optional[float],
         indicators: Optional[Dict],
+        symbols: Optional[List[str]],
         debug=False,
     ):
         self._num_workers = 20
@@ -32,6 +33,7 @@ class DailyOHLC(Miner):
         self._min_stock_price = min_stock_price
         self._max_stock_price = max_stock_price
         self._indicators = indicators
+        self._symbols = symbols
         self._debug = debug
         self.data_api = tradeapi.REST(
             base_url=config.prod_base_url,
@@ -55,6 +57,14 @@ class DailyOHLC(Miner):
     @property
     def indicators(self) -> Optional[Dict]:
         return self._indicators
+
+    @property
+    def symbols(self) -> Optional[List[str]]:
+        return self._symbols
+
+    @symbols.setter
+    def symbols(self, symbols: Optional[List[str]]) -> None:
+        self._symbols = symbols
 
     @timeit
     async def load_symbol_data(
@@ -84,13 +94,15 @@ class DailyOHLC(Miner):
 
     @timeit
     async def run(self) -> bool:
-        symbols = await TickerData.load_symbols()
 
-        if not symbols:
+        if not self.symbols:
+            self.symbols = await TickerData.load_symbols()
+
+        if not self.symbols:
             return False
 
         # check last date
-        for symbol in symbols:
+        for symbol in self.symbols:
             latest_date = await StockOhlc.get_latest_date(symbol)
 
             if not latest_date:
