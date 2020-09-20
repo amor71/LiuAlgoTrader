@@ -36,7 +36,8 @@ async def main(conf_dict: Dict):
             daily = DailyOHLC(
                 days=conf_dict["miners"][miner]["days"],
                 max_stock_price=conf_dict["miners"][miner].get("max_stock_price", None),
-                min_stock_price=conf_dict["miners"][miner].get("min_stock_price", None)
+                min_stock_price=conf_dict["miners"][miner].get("min_stock_price", None),
+                indicators=conf_dict["miners"][miner].get("indicators", None),
             )
             task_list.append(asyncio.create_task(daily.run()))
         else:

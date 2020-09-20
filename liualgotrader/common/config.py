@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
@@ -64,6 +65,7 @@ market_liquidation_end_time_minutes: int = 15
 #
 WS_DATA_CHANNELS: List[str]
 
+
 # performance parameters
 proc_factor: float = float(os.getenv("CPU_FACTOR", "2.0"))
 num_consumers: int = int(os.getenv("NUM_CONSUMERS", "0"))
@@ -71,3 +73,8 @@ num_consumers: int = int(os.getenv("NUM_CONSUMERS", "0"))
 num_consumer_processes_ratio: int
 # polygon parameters
 polygon_seconds_timeout = 60
+
+
+@dataclass
+class polygon:
+    MAX_DAYS_TO_LOAD: int = 7

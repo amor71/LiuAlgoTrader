@@ -1,9 +1,12 @@
+import json
 from dataclasses import dataclass
-from typing import List
+from datetime import date, datetime
+from typing import Dict, List, Optional
 
 from asyncpg.exceptions import TooManyConnectionsError
 from asyncpg.pool import Pool
 
+from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 
 
@@ -17,6 +20,25 @@ class TickerData:
     industry: str
     sector: str
     exchange: str
+
+    @classmethod
+    async def load_symbols(cls, pool: Pool = None) -> List[str]:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT symbol
+                        FROM ticker_data 
+                    """,
+                )
+
+                if rows:
+                    return [row[0] for row in rows]
+                else:
+                    raise Exception("no data")
 
     async def save(self, pool: Pool) -> bool:
         try:
@@ -48,3 +70,63 @@ class TickerData:
             )
 
         return False
+
+
+@dataclass
+class StockOhlc:
+    symbol: str
+    symbol_date: date
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+    indicators: Dict
+    create_tstamp: Optional[datetime] = None
+
+    @classmethod
+    async def get_latest_date(cls, symbol: str, pool: Pool = None) -> date:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                val = await con.fetchval(
+                    """
+                        SELECT symbol_date
+                        FROM stock_ohlc
+                        WHERE symbol=$1 
+                        ORDER by symbol_date DESC
+                        LIMIT 1
+                    """,
+                    symbol,
+                )
+
+                return val
+
+    async def save(
+        self,
+        pool: Pool = None,
+    ) -> None:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    """
+                        INSERT INTO stock_ohlc (symbol, symbol_date, open, high, low, close, volume, indicators)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        ON CONFLICT (symbol, symbol_date)
+                        DO UPDATE
+                            SET open=$3, high=$4, low=$5, close=$6, volume=$7, indicators=$8, modify_tstamp='now()'
+                    """,
+                    self.symbol,
+                    self.symbol_date,
+                    self.open,
+                    self.high,
+                    self.low,
+                    self.close,
+                    self.volume,
+                    json.dumps(self.indicators),
+                )

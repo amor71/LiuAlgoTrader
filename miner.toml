@@ -2,11 +2,14 @@
 
 [miners]
 
-    [miners.StockCluster]
+    #[miners.StockCluster]
 
     [miners.DailyOHLC]
         # symbol = ['SPY',]
+
         days = 60
         min_share_price = 2.0
         max_share_price = 20.0
+
+        indicators = []
 
