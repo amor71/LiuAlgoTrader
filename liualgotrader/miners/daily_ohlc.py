@@ -1,13 +1,9 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import math
 from datetime import date, timedelta
-from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
-import requests
-from alpaca_trade_api.common import get_polygon_credentials
-from alpaca_trade_api.polygon.entity import Ticker
+from talib import MAMA
 
 from liualgotrader.common import config
 from liualgotrader.common.decorators import timeit
@@ -78,6 +74,20 @@ class DailyOHLC(Miner):
         )
 
         for index, row in _minute_data[symbol].iterrows():
+            indicators: Dict = {}
+            if self.indicators:
+                for indicator in self.indicators:
+                    if indicator == "mama":
+                        mama, fama = MAMA(
+                            _minute_data[symbol]["close"][:index].dropna()
+                        )
+                        indicators["mama"] = (
+                            mama[-1] if not math.isnan(mama[-1]) else None
+                        )
+                        indicators["fama"] = (
+                            fama[-1] if not math.isnan(fama[-1]) else None
+                        )
+
             daily_bar = StockOhlc(
                 symbol=symbol,
                 symbol_date=index,
@@ -86,7 +96,7 @@ class DailyOHLC(Miner):
                 low=row["low"],
                 close=row["close"],
                 volume=int(row["volume"]),
-                indicators={},
+                indicators=indicators,
             )
             await daily_bar.save()
 

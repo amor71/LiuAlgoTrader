@@ -10,5 +10,5 @@
 
         [miners.DailyOHLC.indicators]
             [miners.DailyOHLC.indicators.mama]
-                duration = 57
+
 
