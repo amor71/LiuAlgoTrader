@@ -11,7 +11,7 @@ What's New
 |                  | run in parallel.                        |
 |                  +-----------------------------------------+
 |                  | 2. market_miner application expanded    |
-|                  | to allow customer off-hour calculations |
+|                  | to allow custome off-hour calculations  |
 |                  | including collection of daily OHLC data |
 |                  | and calculating custom indicators.      |
 +------------------+-----------------------------------------+
