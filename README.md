@@ -23,7 +23,7 @@ Contribution section for further details.
 
 ## Quickstart
 
-Read the below, or use [the docker implementations](https:https://github.com/amor71/trade_deploy). 
+Read the below, or use [the docker implementations](https://github.com/amor71/trade_deploy). 
 
 ### Prerequisite
 
