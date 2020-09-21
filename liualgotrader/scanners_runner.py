@@ -11,6 +11,7 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
@@ -206,6 +207,8 @@ async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
 
 
 async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
+    await create_db_connection(str(config.dsn))
+
     main_task = asyncio.create_task(
         scanners_runner(scanners_conf, queue),
         name="main_task",
@@ -232,6 +235,7 @@ def main(
     scanner_queue: mp.Queue,
 ) -> None:
     tlog(f"*** scanners_runner.main() starting w pid {os.getpid()} ***")
+
     config.market_open = market_open
     config.market_close = market_close
     config.bypass_market_schedule = conf_dict.get(
