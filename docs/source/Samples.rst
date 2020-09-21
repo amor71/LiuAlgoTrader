@@ -10,6 +10,7 @@ Mama-Fama Strategy
 The folder_ includes a real-life example of `LiuAlgoTrader` usage.
 
 .. _folder:
+    https://github.com/amor71/LiuAlgoTrader/tree/master/examples/mama-fama
 
 **Step 1**: off-hours calculations
 
