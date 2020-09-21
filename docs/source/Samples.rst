@@ -5,12 +5,16 @@ Samples
 Mama-Fama Strategy
 ==================
 
-The folder includes a real-life example of `LiuAlgoTrader` usage.
+
+
+The folder_ includes a real-life example of `LiuAlgoTrader` usage.
+
+.. _folder:
 
 **Step 1**: off-hours calculations
 
 
-1. Make sure you have a database setup for usage w/ `LiuAlgoTrader`. Details for setting up a docker can be found heere: https://github.com/amor71/trade_deploy run the `market_miner` application,
+1. Make sure you have a database setup for usage w/ `LiuAlgoTrader`. Details for setting up a docker can be found here: https://github.com/amor71/trade_deploy run the `market_miner` application,
 
 2. Ensure all environment variables are properly setup, specifically the database DSN, and the Alpaca API credentials,
 

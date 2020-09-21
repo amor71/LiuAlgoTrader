@@ -1,0 +1,14 @@
+# This is a TOML configuration file for market_miner.py
+
+[miners]
+
+    [miners.StockCluster]
+
+    [miners.DailyOHLC]
+        # symbol = ['SPY',]
+        days = 60
+
+        [miners.DailyOHLC.indicators]
+            [miners.DailyOHLC.indicators.mama]
+
+

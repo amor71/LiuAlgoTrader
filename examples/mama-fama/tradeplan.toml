@@ -1,0 +1,20 @@
+# This is a TOML configuration file.
+
+# if set to true, allow running outside market open hours
+bypass_market_schedule = true
+
+# ticket scanners, may have several
+# scanners during the day
+[scanners]
+    [scanners.MamaFama]
+        filename = "mama_fama_scanner.py"
+        target_strategy_name = "SwingMamaFama"
+
+
+# trading strategies, can have several *strategy* blocks
+[strategies]
+    # strategy class name, must implement Strategy class
+    [strategies.SwingMamaFama]
+        filename = "swing_mama_fama.py"
+
+
