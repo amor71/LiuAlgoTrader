@@ -40,6 +40,7 @@ sessions w/ LiuAlgoTrader.
    Strategies
    Under-the-hood
    Analysis
+   Samples
    How to Contribute
 
 
