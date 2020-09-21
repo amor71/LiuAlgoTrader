@@ -20,25 +20,11 @@ scanner_tasks = []
 
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
     try:
-        print("here too", flush=True)
         while True:
-            print("here too 2", scanner.name, flush=True)
             symbols = await scanner.run()
 
-            tlog("back")
-            print("symbols=", symbols, flush=True)
             for symbol in symbols:
                 try:
-                    print(
-                        "scanner going to send:",
-                        json.dumps(
-                            {
-                                "symbol": symbol,
-                                "target_strategy_name": scanner.target_strategy_name,
-                            }
-                        ),
-                        flush=True,
-                    )
                     queue.put(
                         json.dumps(
                             {

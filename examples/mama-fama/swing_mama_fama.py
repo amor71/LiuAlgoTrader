@@ -23,17 +23,14 @@ class SwingMamaFama(Strategy):
     def __init__(
         self,
         batch_id: str,
-        schedule: List[Dict],
         ref_run_id: int = None,
-        check_patterns: bool = False,
     ):
-        self.check_patterns = check_patterns
         super().__init__(
             name=self.name,
             type=StrategyType.SWING,
             batch_id=batch_id,
             ref_run_id=ref_run_id,
-            schedule=schedule,
+            schedule=[],
         )
 
     async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
