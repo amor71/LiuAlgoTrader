@@ -1,7 +1,10 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-bypass_market_schedule = true
+bypass_market_schedule = false 
+
+events = ["second", "minute", "trade", "quote"]
+
 
 # ticket scanners, may have several
 # scanners during the day
@@ -13,10 +16,15 @@ bypass_market_schedule = true
 # trading strategies, can have several *strategy* blocks
 [strategies]
     # strategy class name, must implement Strategy class
+
     [strategies.MomentumLongV3]
-        filename = "/Users/amichayoren/dev/trades/momentum_long_v3.py"
+        filename = "/home/amichayoren/trader/momentum_long_v3.py"
 
         # check_patterns = true
+
+    [strategies.VWAPShort]
+        filename = "/home/amichayoren/trader/vwap_short.py"
+
 
         # trading schedules block, trades many have
         # several windows within the same day
@@ -24,17 +32,6 @@ bypass_market_schedule = true
             start = 15
             duration = 60
 
-    # strategy class name, must implement Strategy class
-    [strategies.GoldenPair]
-        filename = "/Users/amichayoren/dev/trades/golden_pair.py"
-
-        # check_patterns = true
-
-        # trading schedules block, trades many have
-        # several windows within the same day
-        [[strategies.GoldenPair.schedule]]
-            start = 15
-            duration = 60
 
 
 
