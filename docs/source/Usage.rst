@@ -199,7 +199,21 @@ Running the `backtester` application with a valid batch-id will display input as
 *market_miner*
 --------------
 
-The application is used for off-hours data grabbing calculations.
+While the `trader` application is used for
+real-time calculations, the `market_miner`
+application is intended for off-market, batch
+calculations and data collections.
+
+The `market_miner` application is configured by
+the `miner.toml` configuration file. Quite similarly
+to how the trader application is configured by the
+`tradeplan.toml` application.
+
+An example `miner.toml` file:
+
+.. literalinclude:: ../../miner.toml
+  :language: python
+  :linenos:
 
 Prerequisites
 *************
