@@ -207,7 +207,7 @@ calculations and data collections.
 The `market_miner` application is configured by
 the `miner.toml` configuration file. Quite similarly
 to how the trader application is configured by the
-`tradeplan.toml` application.
+`tradeplan.toml` TOML configuration file.
 
 An example `miner.toml` file:
 
