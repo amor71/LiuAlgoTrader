@@ -32,6 +32,7 @@ sessions w/ LiuAlgoTrader.
    :maxdepth: 2
 
    WIP
+   What's New
    Installation & Setup
    Configuration
    Usage
