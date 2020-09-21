@@ -61,41 +61,16 @@ and implementing the *run()* function which returns the selected stock symbols.
 
 Here is an example of *my_scanner.py*:
 
-.. code-block:: python
-
-    """my_scanner.py: custom scanner implementing the Scanner class"""
-    from datetime import timedelta
-    from typing import Optional, List
-
-    import alpaca_trade_api as tradeapi
-
-    from scanners.base import Scanner
-
-
-    class MyScanner(Scanner):
-
-        name = "myCustomScanner"
-
-        def __init__(self, recurrence: Optional[timedelta], data_api: tradeapi, **args):
-            super().__init__(
-                name=self.name,
-                recurrence=recurrence,
-                data_api=data_api,
-            )
-
-        def run(self) -> List[str]:
-            return ["APPL"]
-
-
-
-
+.. literalinclude:: ../../examples/my_scanner.py
+  :language: python
+  :linenos:
 
 
 Configuring the custom scanner in the *tradeplan* TOML file is as easy:
 
 .. code-block:: none
 
-    [[scanners]]
+    [scanners]
         [scanners.MyScanner]
             filename = "my_scanner.py"
 
@@ -105,3 +80,24 @@ Configuring the custom scanner in the *tradeplan* TOML file is as easy:
 While executing, the **trader** application will look for *my_scanner.py*,
 instantiate the `MyScaner` class, and call it with the arguments defined
 in the `tradeplan` configuration file, while adding the trade-api object.
+
+Sending picks to a specific strategy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Starting from release 0.0.50, it is possible f
+or scanners to direct picked stocks to specific
+strategies. using the configuration parameter
+`target_strategy_name` the scanner can be
+directed which Strategy.name to direct the picks
+for. Unless specified, all running strategies
+will be delivered new picks.
+
+.. code-block:: none
+
+    [scanners]
+        [scanners.MyScanner]
+            filename = "my_scanner.py"
+
+            my_arg1 = 30000
+            my_arg2 = 3.5
+            target_strategy_name = "golden_pair"

@@ -33,7 +33,11 @@ class AlgoRun:
                         self.strategy_name,
                         env if env else config.env,
                         config.build_label,
-                        json.dumps({"DSN": config.dsn,}),
+                        json.dumps(
+                            {
+                                "DSN": config.dsn,
+                            }
+                        ),
                         self.batch_id,
                     )
                 else:
@@ -47,7 +51,11 @@ class AlgoRun:
                         self.strategy_name,
                         env if env else config.env,
                         config.build_label,
-                        json.dumps({"DSN": config.dsn,}),
+                        json.dumps(
+                            {
+                                "DSN": config.dsn,
+                            }
+                        ),
                         self.batch_id,
                         ref_algo_run_id,
                     )
@@ -112,6 +120,13 @@ class AlgoRun:
                 )
 
                 if rows:
-                    rc = [(row[0], row[1], row[3],) for row in rows]
+                    rc = [
+                        (
+                            row[0],
+                            row[1],
+                            row[3],
+                        )
+                        for row in rows
+                    ]
 
         return rc

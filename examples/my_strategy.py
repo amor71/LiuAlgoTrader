@@ -14,11 +14,11 @@ from liualgotrader.common.trading_data import (buy_indicators,
                                                last_used_strategy, open_orders,
                                                sell_indicators, stop_prices,
                                                target_prices)
-from liualgotrader.strategies.base import Strategy
+from liualgotrader.strategies.base import Strategy, StrategyType
 
 #
-# TALIB is available is avaliable as part
-# of liualgotrader distribution
+# TALIB is available is available as part
+# of LiuAlgoTrader distribution
 # documentation can be found here https://www.ta-lib.org/
 # import talib
 # from talib import BBANDS, MACD, RSI
@@ -40,6 +40,7 @@ class MyStrategy(Strategy):
             batch_id=batch_id,
             ref_run_id=ref_run_id,
             schedule=schedule,
+            type=StrategyType.DAY_TRADE,
         )
         self.my_arg1 = my_arg1
         self.my_arg2 = my_arg2
@@ -73,6 +74,7 @@ class MyStrategy(Strategy):
     async def run(
         self,
         symbol: str,
+        shortable: bool,
         position: int,
         minute_history: df,
         now: datetime,
@@ -84,6 +86,7 @@ class MyStrategy(Strategy):
         """
 
         :param symbol: the symbol of the stock,
+        :param shortable: can the stock be sold short,
         :param position: the current held position,
         :param minute_history: DataFrame holding OLHC
                                updated per *second*,
@@ -113,9 +116,7 @@ class MyStrategy(Strategy):
             if debug:
                 tlog(f"15 schedule {lbound}/{ubound}")
             try:
-                high_15m = minute_history[lbound:ubound][  # type: ignore
-                    "high"
-                ].max()
+                high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
                 if debug:
                     tlog(f"{minute_history[lbound:ubound]}")  # type: ignore
             except Exception as e:
@@ -146,7 +147,11 @@ class MyStrategy(Strategy):
                         "limit_price": "4.4",
                     }
                     if not morning_rush
-                    else {"side": "buy", "qty": str(5), "type": "market",},
+                    else {
+                        "side": "buy",
+                        "qty": str(5),
+                        "type": "market",
+                    },
                 )
         if (
             await super().is_sell_time(now)

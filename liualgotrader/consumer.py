@@ -97,6 +97,13 @@ async def liquidator(trading_api: tradeapi) -> None:
 
 async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
     tlog(f"consumer-teardown_task() - starting ")
+
+    if not config.market_close:
+        tlog(
+            "we're probably in market schedule by-pass mode, exiting consumer-teardown_task()"
+        )
+        return
+
     to_market_close: timedelta
     try:
         dt = datetime.today().astimezone(tz)
@@ -557,6 +564,13 @@ async def handle_data_queue_msg(
         else:
             # run strategies
             for s in trading_data.strategies:
+                if (
+                    "symbol_strategy" in data
+                    and data["symbol_strategy"]
+                    and s.name != data["symbol_strategy"]
+                ):
+                    continue
+
                 do, what = await s.run(
                     symbol,
                     shortable[symbol],
@@ -738,7 +752,6 @@ async def consumer_async_main(
         nyc, trading_api
     )
     strategy_types = []
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
         if strategy_name == "MomentumLong":
@@ -765,6 +778,11 @@ async def consumer_async_main(
                 strategy_details.pop("filename", None)
                 strategy_types += [(custom_strategy, strategy_details)]
 
+            except FileNotFoundError as e:
+                tlog(
+                    f"[Error] file not found `{strategy_details['filename']}`"
+                )
+                exit(0)
             except Exception as e:
                 tlog(
                     f"[Error]exception of type {type(e).__name__} with args {e.args}"

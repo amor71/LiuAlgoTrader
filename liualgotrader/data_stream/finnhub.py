@@ -128,9 +128,7 @@ class FinnhubStreaming(StreamingBase):
                                 datetime.now(tz=timezone("America/New_York"))
                                 - start
                             )
-                            if time_diff > timedelta(
-                                seconds=6
-                            ):  # type: ignore
+                            if time_diff > timedelta(seconds=6):  # type: ignore
                                 tlog(f"{symbol}: data out of sync {time_diff}")
                                 continue
                             _func, _q_id = self.stream_map.get(symbol, None)

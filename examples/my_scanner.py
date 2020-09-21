@@ -8,7 +8,6 @@ from liualgotrader.scanners.base import Scanner
 
 
 class MyScanner(Scanner):
-
     name = "myCustomScanner"
 
     def __init__(
@@ -16,8 +15,11 @@ class MyScanner(Scanner):
     ):
         print(args)
         super().__init__(
-            name=self.name, recurrence=recurrence, data_api=data_api,
+            name=self.name,
+            recurrence=recurrence,
+            data_api=data_api,
+            target_strategy_name=None,
         )
 
-    def run(self) -> List[str]:
+    async def run(self) -> List[str]:
         return ["APPL"]
