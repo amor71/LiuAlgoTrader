@@ -1,4 +1,4 @@
-What's new
+What's New
 ----------
 
 
@@ -9,6 +9,7 @@ What's new
 |                  | specific strategy, allowing  several    |
 |                  | scanners, and several strategies to     |
 |                  | run in parallel.                        |
+|                  +-----------------------------------------+
 |                  | 2. market_miner application expanded    |
 |                  | to allow customer off-hour calculations |
 |                  | including collection of daily OHLC data |
