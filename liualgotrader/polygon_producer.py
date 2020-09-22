@@ -18,6 +18,7 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.trending_tickers import TrendingTickers
 
@@ -82,7 +83,7 @@ async def scanner_input(
 
                 new_symbols = []
                 await asyncio.sleep(1 * delay_factor)
-                delay_factor = max(delay_factor + 1, 60)
+                delay_factor = min(delay_factor + 1, 60)
 
             except Exception as e:
                 tlog(
@@ -343,6 +344,8 @@ async def producer_async_main(
     scanner_queue: Queue,
     num_consumer_processes: int,
 ):
+    await create_db_connection(str(config.dsn))
+
     data_ws = tradeapi.StreamConn(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,

@@ -116,7 +116,6 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     exit(0)
 
                 scanner_details.pop("filename")
-                print("target_strategy_name", scanner_details)
                 if "recurrence" not in scanner_details:
                     scanner_object = custom_scanner(
                         data_api=data_api,
