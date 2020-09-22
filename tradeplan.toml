@@ -41,7 +41,9 @@ events = ["second", "minute", "trade", "quote"]
     [strategies.MomentumLongV3]
         filename = "/home/amichayoren/trader/momentum_long_v3.py"
 
-        # check_patterns = true
+        [[strategies.MomentumLongV3.schedule]]
+            start = 15
+            duration = 60
 
     [strategies.VWAPShort]
         filename = "/home/amichayoren/trader/vwap_short.py"
@@ -49,7 +51,7 @@ events = ["second", "minute", "trade", "quote"]
 
         # trading schedules block, trades many have
         # several windows within the same day
-        [[strategies.MomentumLongV3.schedule]]
+        [[strategies.VWAPShort.schedule]]
             start = 15
             duration = 60
 
