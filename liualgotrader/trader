@@ -255,6 +255,7 @@ if __name__ == "__main__":
         producer = mp.Process(
             target=polygon_producer_main,
             args=(
+                uid,
                 queues,
                 symbols,
                 q_id_hash,

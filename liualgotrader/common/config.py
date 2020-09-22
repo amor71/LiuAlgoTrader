@@ -25,6 +25,7 @@ total_tickers = int(os.getenv("LIU_MAX_SYMBOLS", "100"))
 build_label: str
 filename: str
 db_conn_pool: Pool
+batch_id: str
 
 #
 # API keys

@@ -19,6 +19,7 @@ from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.trending_tickers import TrendingTickers
 
 last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
@@ -55,12 +56,15 @@ async def scanner_input(
 
             except Empty:
                 if len(new_symbols):
+                    trending_db = TrendingTickers(config.batch_id)
                     new_channels = []
 
                     for symbol in new_symbols:
                         new_channels += [
                             f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
                         ]
+                        await trending_db.save(symbol)
+
                     await asyncio.sleep(0)
                     data_channels += new_channels
                     await data_ws.subscribe(new_channels)
@@ -402,6 +406,7 @@ async def producer_async_main(
 
 
 def polygon_producer_main(
+    unique_id: str,
     queues: List[Queue],
     current_symbols: List[str],
     current_queue_id_hash: Dict[str, int],
@@ -413,7 +418,7 @@ def polygon_producer_main(
     tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
-
+        config.batch_id = unique_id
         events = conf_dict.get("events", None)
 
         if not events:
