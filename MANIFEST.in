@@ -1,3 +1,0 @@
-include RELEASE-VERSION
-include version.py
-# Anything else you normally use
