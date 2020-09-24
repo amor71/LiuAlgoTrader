@@ -712,9 +712,7 @@ async def consumer_async_main(
 
     try:
         trending_db = TrendingTickers(unique_id)
-        if symbols:
-            for symbol in symbols:
-                await trending_db.save(symbol)
+        await trending_db.save(symbols)
     except Exception as e:
         tlog(
             f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"

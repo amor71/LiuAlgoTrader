@@ -64,7 +64,8 @@ async def scanner_input(
                         new_channels += [
                             f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
                         ]
-                        await trending_db.save(symbol)
+
+                    await trending_db.save(new_symbols)
 
                     await asyncio.sleep(0)
                     data_channels += new_channels

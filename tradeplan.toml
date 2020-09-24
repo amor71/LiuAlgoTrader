@@ -43,7 +43,7 @@ events = ["second", "minute", "trade", "quote"]
 
         [[strategies.MomentumLongV3.schedule]]
             start = 15
-            duration = 180
+            duration = 280
 
     [strategies.VWAPShort]
         filename = "/Users/amichayoren/dev/trades/vwap_short.py"
@@ -53,7 +53,7 @@ events = ["second", "minute", "trade", "quote"]
         # several windows within the same day
         [[strategies.VWAPShort.schedule]]
             start = 15
-            duration = 180
+            duration = 280
 
 
 
