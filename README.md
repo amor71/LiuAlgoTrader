@@ -40,7 +40,7 @@ To install LiuAlgoTrader just type:
  
 #### Alternative Installation 
 
-liualgotrader requires several packages to be properly installed, as well as a PostgrSQL database properly configured. For first time users, it might be easier to install the docker version https://github.com/amor71/trade_deploy .
+LiuAlgoTrader requires several packages to be properly installed, as well as a PostgrSQL database properly configured. For first time users, it might be easier to install the docker version https://github.com/amor71/trade_deploy .
 
 ### First time run
 
