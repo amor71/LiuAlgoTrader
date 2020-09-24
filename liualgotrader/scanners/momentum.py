@@ -101,7 +101,7 @@ class Momentum(Scanner):
                         and ticker.todaysChangePerc
                         >= self.today_change_percent
                         and (
-                            ticker.day["v"] > self.min_share_price
+                            ticker.day["v"] > self.min_volume
                             or config.bypass_market_schedule
                         )
                     )

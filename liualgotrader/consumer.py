@@ -830,8 +830,9 @@ async def load_current_positions(
     for symbol in symbols:
         try:
             position = trading_api.get_position(symbol)
-        except Exception:
-            position = None
+        except Exception as e:
+            tlog(f"failed to load open position for {symbol} w/ {e}")
+            continue
 
         if position:
 
