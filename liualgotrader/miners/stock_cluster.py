@@ -27,9 +27,7 @@ class StockCluster(Miner):
     @num_workers.setter
     def num_workers(self, new_num_workers: int):
         if new_num_workers <= 0 or new_num_workers > 100:
-            raise ValueError(
-                "number of workers must be positive and less than 100"
-            )
+            raise ValueError("number of workers must be positive and less than 100")
 
     @timeit
     async def run(self) -> bool:
@@ -40,9 +38,7 @@ class StockCluster(Miner):
                 count = self._get_count(session)
                 loop = asyncio.get_event_loop()
                 tasks = [
-                    loop.run_in_executor(
-                        executor, self._fetch, *(session, page)
-                    )
+                    loop.run_in_executor(executor, self._fetch, *(session, page))
                     for page in range(1, count // 50 + 1)
                 ]
                 for response in await asyncio.gather(*tasks):
@@ -123,9 +119,7 @@ class StockCluster(Miner):
         )
 
         if await ticker_data.save(config.db_conn_pool) is False:
-            tlog(
-                f"going to wait 30 seconds and retry saving {ticker_info['name']}"
-            )
+            tlog(f"going to wait 30 seconds and retry saving {ticker_info['name']}")
             await asyncio.sleep(30)
             return await self._update_ticker_details(ticker_info)
 
@@ -133,17 +127,13 @@ class StockCluster(Miner):
         self, session: requests.Session, ticker: Ticker
     ) -> Optional[Dict]:
         url = (
-            "https://api.polygon.io/"
-            + "v1"
-            + f"/meta/symbols/{ticker.ticker}/company"
+            "https://api.polygon.io/" + "v1" + f"/meta/symbols/{ticker.ticker}/company"
         )
 
         try:
             with session.get(
                 url,
-                params={
-                    "apiKey": get_polygon_credentials(config.prod_api_key_id)
-                },
+                params={"apiKey": get_polygon_credentials(config.prod_api_key_id)},
             ) as response:
                 if response.status_code == 200:
                     try:

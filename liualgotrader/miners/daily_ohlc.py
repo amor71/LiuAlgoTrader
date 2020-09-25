@@ -7,8 +7,7 @@ from talib import MAMA
 
 from liualgotrader.common import config
 from liualgotrader.common.decorators import timeit
-from liualgotrader.common.market_data import \
-    get_historical_data_from_polygon_by_range
+from liualgotrader.common.market_data import get_historical_data_from_polygon_by_range
 from liualgotrader.common.tlog import tlog
 from liualgotrader.miners.base import Miner
 from liualgotrader.models.ticker_data import StockOhlc, TickerData

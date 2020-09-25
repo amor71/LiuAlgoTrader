@@ -17,9 +17,7 @@ def grouper(iterable):
 
         if (
             not prev
-            or -config.group_margin
-            <= float(item - prev) / prev
-            <= config.group_margin
+            or -config.group_margin <= float(item - prev) / prev <= config.group_margin
         ):
             group.append(item)
         else:
@@ -41,9 +39,7 @@ async def find_resistances(
 
     est = pytz.timezone("America/New_York")
     back_time = ts(datetime.now(est)).to_pydatetime() - timedelta(days=3)
-    back_time_index = minute_history["close"].index.get_loc(
-        back_time, method="nearest"
-    )
+    back_time_index = minute_history["close"].index.get_loc(back_time, method="nearest")
 
     series = (
         minute_history["close"][back_time_index:]

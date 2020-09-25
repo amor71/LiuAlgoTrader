@@ -125,8 +125,7 @@ class FinnhubStreaming(StreamingBase):
                             volume = item["v"]
                             start = pd.Timestamp(item["t"], tz=NY, unit="ms")
                             time_diff = (
-                                datetime.now(tz=timezone("America/New_York"))
-                                - start
+                                datetime.now(tz=timezone("America/New_York")) - start
                             )
                             if time_diff > timedelta(seconds=6):  # type: ignore
                                 tlog(f"{symbol}: data out of sync {time_diff}")
@@ -134,10 +133,7 @@ class FinnhubStreaming(StreamingBase):
                             _func, _q_id = self.stream_map.get(symbol, None)
 
                             minute = start.replace(second=0, microsecond=0)
-                            if (
-                                symbol not in self.ohlc
-                                or self.ohlc[symbol][0] < minute
-                            ):
+                            if symbol not in self.ohlc or self.ohlc[symbol][0] < minute:
                                 self.ohlc[symbol] = [
                                     minute,
                                     price,
@@ -182,9 +178,7 @@ class FinnhubStreaming(StreamingBase):
                         f"{self.consumer_task.get_name()} [ERROR] unknown event-type {event} ({msg})"
                     )
         except websockets.WebSocketException as wse:
-            tlog(
-                f"{self.consumer_task.get_name()} received WebSocketException {wse}"
-            )
+            tlog(f"{self.consumer_task.get_name()} received WebSocketException {wse}")
             await self._reconnect()
         except asyncio.CancelledError:
             tlog(f"{self.consumer_task.get_name()} cancelled")
@@ -196,9 +190,7 @@ class FinnhubStreaming(StreamingBase):
         tlog(f"{self.consumer_task.get_name()} completed")
 
     @classmethod
-    async def handler(
-        cls, symbol: str, when: int, data: List, queue: Queue
-    ) -> None:
+    async def handler(cls, symbol: str, when: int, data: List, queue: Queue) -> None:
         payload = {
             "EV": "A",
             "symbol": symbol,

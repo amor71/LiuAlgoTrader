@@ -98,8 +98,7 @@ def get_historical_data_from_polygon_by_range(
                     timespan,
                     _from=str(from_date),
                     to=str(
-                        from_date
-                        + timedelta(days=1 + config.polygon.MAX_DAYS_TO_LOAD)
+                        from_date + timedelta(days=1 + config.polygon.MAX_DAYS_TO_LOAD)
                     ),
                 ).df
                 _df["vwap"] = 0.0
@@ -180,18 +179,12 @@ def get_historical_data_from_polygon(
 async def calculate_trends(pool: Pool) -> bool:
     # load snapshot
     with requests.Session() as session:
-        url = (
-            "https://api.polygon.io/"
-            + "v2/snapshot/locale/us/markets/stocks/tickers"
-        )
+        url = "https://api.polygon.io/" + "v2/snapshot/locale/us/markets/stocks/tickers"
         with session.get(
             url,
             params={"apiKey": get_polygon_credentials(config.prod_api_key_id)},
         ) as response:
-            if (
-                response.status_code == 200
-                and (r := response.json())["status"] == "OK"
-            ):
+            if response.status_code == 200 and (r := response.json())["status"] == "OK":
                 for ticker in r["tickers"]:
                     trading_data.snapshot[ticker.ticker] = TickerSnapshot(
                         symbol=ticker["ticker"],
@@ -208,9 +201,7 @@ async def calculate_trends(pool: Pool) -> bool:
 
                 sector_tickers = {}
                 for sector in sectors:
-                    sector_tickers[sector] = await get_sector_tickers(
-                        pool, sector
-                    )
+                    sector_tickers[sector] = await get_sector_tickers(pool, sector)
 
                     sector_volume = 0
                     adjusted_sum = 0.0

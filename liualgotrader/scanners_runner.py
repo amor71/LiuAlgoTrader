@@ -52,9 +52,7 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
             else:
                 break
     except asyncio.CancelledError:
-        tlog(
-            f"scanner_runner() cancelled, closing scanner task {scanner.name}"
-        )
+        tlog(f"scanner_runner() cancelled, closing scanner task {scanner.name}")
     finally:
         tlog(f"scanner_runner {scanner.name} completed")
 
@@ -71,9 +69,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
             scanner_details = scanners_conf[scanner_name]
             try:
                 recurrence = scanner_details.get("recurrence", None)
-                target_strategy_name = scanner_details.get(
-                    "target_strategy_name", None
-                )
+                target_strategy_name = scanner_details.get("target_strategy_name", None)
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
                     data_api=data_api,
@@ -83,9 +79,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     min_volume=scanner_details["min_volume"],
                     from_market_open=scanner_details["from_market_open"],
                     today_change_percent=scanner_details["min_gap"],
-                    recurrence=timedelta(minutes=recurrence)
-                    if recurrence
-                    else None,
+                    recurrence=timedelta(minutes=recurrence) if recurrence else None,
                     target_strategy_name=target_strategy_name,
                     max_symbols=scanner_details.get(
                         "max_symbols", config.total_tickers
@@ -110,9 +104,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                 custom_scanner = getattr(custom_scanner_module, class_name)
 
                 if not issubclass(custom_scanner, Scanner):
-                    tlog(
-                        f"custom scanner must inherit from class {Scanner.__name__}"
-                    )
+                    tlog(f"custom scanner must inherit from class {Scanner.__name__}")
                     exit(0)
 
                 scanner_details.pop("filename")
@@ -134,9 +126,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
                     f"[Error] scanners_runner.scanners_runner() for {scanner_name}:{e} "
                 )
 
-        scanner_tasks.append(
-            asyncio.create_task(scanner_runner(scanner_object, queue))
-        )
+        scanner_tasks.append(asyncio.create_task(scanner_runner(scanner_object, queue)))
 
     try:
         await asyncio.gather(
@@ -145,9 +135,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
         )
 
     except asyncio.CancelledError:
-        tlog(
-            "scanners_runner.scanners_runner() cancelled, closing scanner tasks"
-        )
+        tlog("scanners_runner.scanners_runner() cancelled, closing scanner tasks")
 
         for task in scanner_tasks:
             tlog(
@@ -157,9 +145,7 @@ async def scanners_runner(scanners_conf: Dict, queue: mp.Queue) -> None:
             try:
                 await task
             except asyncio.CancelledError:
-                tlog(
-                    "scanners_runner.scanners_runner()  task is cancelled now"
-                )
+                tlog("scanners_runner.scanners_runner()  task is cancelled now")
 
     finally:
         queue.close()
@@ -237,9 +223,7 @@ def main(
 
     config.market_open = market_open
     config.market_close = market_close
-    config.bypass_market_schedule = conf_dict.get(
-        "bypass_market_schedule", False
-    )
+    config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
     scanners_conf = conf_dict["scanners"]
     try:
         if not asyncio.get_event_loop().is_closed():

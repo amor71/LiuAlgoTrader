@@ -8,11 +8,15 @@ from talib import MAMA
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.trading_data import (buy_indicators,
-                                               last_used_strategy,
-                                               latest_cost_basis, open_orders,
-                                               sell_indicators, stop_prices,
-                                               target_prices)
+from liualgotrader.common.trading_data import (
+    buy_indicators,
+    last_used_strategy,
+    latest_cost_basis,
+    open_orders,
+    sell_indicators,
+    stop_prices,
+    target_prices,
+)
 from liualgotrader.strategies.base import Strategy, StrategyType
 
 
@@ -89,9 +93,7 @@ class SwingMamaFama(Strategy):
                             retry -= 1
 
                     if not portfolio_value:
-                        tlog(
-                            "f[{symbol}][{now}[Error] failed to get portfolio_value"
-                        )
+                        tlog("f[{symbol}][{now}[Error] failed to get portfolio_value")
                         return False, {}
                 else:
                     raise Exception(
@@ -99,9 +101,7 @@ class SwingMamaFama(Strategy):
                     )
 
             shares_to_buy = (
-                portfolio_value
-                * config.risk
-                // (data.close - stop_prices[symbol])
+                portfolio_value * config.risk // (data.close - stop_prices[symbol])
             )
             if not shares_to_buy:
                 shares_to_buy = 1

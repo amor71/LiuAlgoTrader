@@ -1,9 +1,7 @@
 from typing import Tuple
 
 
-def gravestone_doji(
-    open: float, high: float, low: float, close: float
-) -> bool:
+def gravestone_doji(open: float, high: float, low: float, close: float) -> bool:
     open = round(open, 2)
     high = round(high, 2)
     low = round(low, 2)
@@ -21,9 +19,7 @@ def gravestone_doji(
     )
 
 
-def four_price_doji(
-    open: float, close: float, high: float, low: float
-) -> bool:
+def four_price_doji(open: float, close: float, high: float, low: float) -> bool:
     open = round(open, 2)
     high = round(high, 2)
     low = round(low, 2)
@@ -84,9 +80,7 @@ def bearish_candle(open: float, high: float, low: float, close: float) -> bool:
     return close < open and body_size >= 0.01
 
 
-def dragonfly_candle(
-    open: float, high: float, low: float, close: float
-) -> bool:
+def dragonfly_candle(open: float, high: float, low: float, close: float) -> bool:
     open = round(open, 2)
     high = round(high, 2)
     low = round(low, 2)

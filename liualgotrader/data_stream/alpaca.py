@@ -47,9 +47,7 @@ class AlpacaStreaming(StreamingBase):
             _greeting = _greeting.decode("utf-8")
         msg = json.loads(_greeting)
         if msg.get("data", {}).get("status") != "authorized":
-            tlog(
-                f"Invalid Alpaca API credentials, Failed to authenticate: {msg}"
-            )
+            tlog(f"Invalid Alpaca API credentials, Failed to authenticate: {msg}")
             raise ValueError(
                 f"Invalid Alpaca API credentials, Failed to authenticate: {msg}"
             )
@@ -140,9 +138,7 @@ class AlpacaStreaming(StreamingBase):
                     try:
                         _func, _q_id = self.stream_map.get(stream[3:], None)
                         if _func:
-                            await _func(
-                                stream, msg["data"], self.queues[_q_id]
-                            )
+                            await _func(stream, msg["data"], self.queues[_q_id])
                         else:
                             tlog(
                                 f"{self.consumer_task.get_name()} received {_msg} to an unknown stream {stream}"
@@ -153,9 +149,7 @@ class AlpacaStreaming(StreamingBase):
                         )
 
         except websockets.WebSocketException as wse:
-            tlog(
-                f"{self.consumer_task.get_name()} received WebSocketException {wse}"
-            )
+            tlog(f"{self.consumer_task.get_name()} received WebSocketException {wse}")
             await self._reconnect()
         except asyncio.CancelledError:
             tlog(f"{self.consumer_task.get_name()} cancelled")
@@ -163,9 +157,7 @@ class AlpacaStreaming(StreamingBase):
         tlog(f"{self.consumer_task.get_name()} completed")
 
     @classmethod
-    async def minutes_handler(
-        cls, symbol: str, data: Dict, queue: Queue
-    ) -> None:
+    async def minutes_handler(cls, symbol: str, data: Dict, queue: Queue) -> None:
         if data["ev"] != "AM":
             tlog(
                 f"AlpacaStreaming.minutes_handler() got invalid event data: {symbol}:{data}"

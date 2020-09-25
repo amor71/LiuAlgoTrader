@@ -56,7 +56,7 @@ class NewTrade:
                     self.operation,
                     self.qty,
                     self.price,
-                    json.dumps(self.indicators if self.indicators else {}) ,
+                    json.dumps(self.indicators if self.indicators else {}),
                     client_buy_time,
                     stop_price,
                     target_price,
@@ -107,9 +107,7 @@ class NewTrade:
                     raise ValueError
 
     @classmethod
-    async def get_run_symbols(
-        cls, run_id: int, pool: Pool = None
-    ) -> List[str]:
+    async def get_run_symbols(cls, run_id: int, pool: Pool = None) -> List[str]:
         rc: List = []
         if not pool:
             pool = config.db_conn_pool

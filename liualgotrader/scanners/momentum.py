@@ -52,9 +52,7 @@ class Momentum(Scanner):
     async def _wait_time(self) -> None:
         if not config.bypass_market_schedule and config.market_open:
             nyc = timezone("America/New_York")
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
+            since_market_open = datetime.today().astimezone(nyc) - config.market_open
 
             if since_market_open.seconds // 60 < self.from_market_open:
                 tlog(f"market open, wait {self.from_market_open} minutes")
@@ -70,12 +68,8 @@ class Momentum(Scanner):
         assets = self.data_api.list_assets()
         tlog(f"loaded list of {len(assets)} trade-able assets from Alpaca")
 
-        trade_able_symbols = [
-            asset.symbol for asset in assets if asset.tradable
-        ]
-        tlog(
-            f"total number of trade-able symbols is {len(trade_able_symbols)}"
-        )
+        trade_able_symbols = [asset.symbol for asset in assets if asset.tradable]
+        tlog(f"total number of trade-able symbols is {len(trade_able_symbols)}")
         return trade_able_symbols
 
     async def run_polygon(self) -> List[str]:
@@ -98,8 +92,7 @@ class Momentum(Scanner):
                         >= self.min_share_price
                         and ticker.prevDay["v"] * ticker.lastTrade["p"]
                         > self.min_last_dv
-                        and ticker.todaysChangePerc
-                        >= self.today_change_percent
+                        and ticker.todaysChangePerc >= self.today_change_percent
                         and (
                             ticker.day["v"] > self.min_volume
                             or config.bypass_market_schedule
@@ -113,9 +106,7 @@ class Momentum(Scanner):
                         reverse=True,
                     )
                     tlog(f"picked {len(ticker_by_volume)} symbols")
-                    return [x.ticker for x in ticker_by_volume][
-                        : self.max_symbols
-                    ]
+                    return [x.ticker for x in ticker_by_volume][: self.max_symbols]
 
                 tlog("did not find gaping stock, retrying")
                 await asyncio.sleep(30)
@@ -170,9 +161,7 @@ class Momentum(Scanner):
                                     and response["v"][1] > self.min_volume
                                 ):
                                     symbols.append(symbol)
-                                    tlog(
-                                        f"collected {len(symbols)}/{self.max_symbols}"
-                                    )
+                                    tlog(f"collected {len(symbols)}/{self.max_symbols}")
                                     if len(symbols) == self.max_symbols:
                                         break
 
@@ -203,6 +192,4 @@ class Momentum(Scanner):
         elif self.provider == "finnhub":
             return await self.run_finnhub()
         else:
-            raise Exception(
-                f"Invalid provider {self.provider} for scanner {self.name}"
-            )
+            raise Exception(f"Invalid provider {self.provider} for scanner {self.name}")

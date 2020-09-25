@@ -10,9 +10,7 @@ from liualgotrader.scanners.base import Scanner
 class MyScanner(Scanner):
     name = "myCustomScanner"
 
-    def __init__(
-        self, recurrence: Optional[timedelta], data_api: tradeapi, **args
-    ):
+    def __init__(self, recurrence: Optional[timedelta], data_api: tradeapi, **args):
         print(args)
         super().__init__(
             name=self.name,

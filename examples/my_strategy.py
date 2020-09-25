@@ -6,14 +6,19 @@ from pandas import DataFrame as df
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+
 #
 # common.trading_data includes global variables, cross strategies that may be
 # helpful
 #
-from liualgotrader.common.trading_data import (buy_indicators,
-                                               last_used_strategy, open_orders,
-                                               sell_indicators, stop_prices,
-                                               target_prices)
+from liualgotrader.common.trading_data import (
+    buy_indicators,
+    last_used_strategy,
+    open_orders,
+    sell_indicators,
+    stop_prices,
+    target_prices,
+)
 from liualgotrader.strategies.base import Strategy, StrategyType
 
 #
@@ -105,9 +110,7 @@ class MyStrategy(Strategy):
         current_second_data = minute_history.iloc[-1]
         tlog(f"{symbol} data: {current_second_data}")
 
-        morning_rush = (
-            True if (now - config.market_open).seconds // 60 < 30 else False
-        )
+        morning_rush = True if (now - config.market_open).seconds // 60 < 30 else False
         if await super().is_buy_time(now) and not position:
             # Check for buy signals
             lbound = config.market_open
@@ -122,10 +125,7 @@ class MyStrategy(Strategy):
             except Exception as e:
                 return False, {}
 
-            if (
-                current_second_data.close > high_15m
-                or config.bypass_market_schedule
-            ):
+            if current_second_data.close > high_15m or config.bypass_market_schedule:
 
                 #
                 # Global, cross strategies passed via the framework

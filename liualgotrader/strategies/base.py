@@ -54,8 +54,7 @@ class Strategy:
             True
             if (
                 any(
-                    (now - config.market_open).seconds // 60
-                    >= schedule["start"]
+                    (now - config.market_open).seconds // 60 >= schedule["start"]
                     for schedule in self.schedule
                 )
                 or (

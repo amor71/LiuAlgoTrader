@@ -9,12 +9,18 @@ from talib import BBANDS, MACD, RSI
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.trading_data import (buy_indicators, buy_time,
-                                               cool_down, last_used_strategy,
-                                               latest_cost_basis,
-                                               latest_scalp_basis, open_orders,
-                                               sell_indicators, stop_prices,
-                                               target_prices)
+from liualgotrader.common.trading_data import (
+    buy_indicators,
+    buy_time,
+    cool_down,
+    last_used_strategy,
+    latest_cost_basis,
+    latest_scalp_basis,
+    open_orders,
+    sell_indicators,
+    stop_prices,
+    target_prices,
+)
 from liualgotrader.fincalcs.support_resistance import find_stop
 from liualgotrader.strategies.base import Strategy, StrategyType
 
@@ -74,9 +80,7 @@ class MomentumLong(Strategy):
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
 
-        morning_rush = (
-            True if (now - config.market_open).seconds // 60 < 30 else False
-        )
+        morning_rush = True if (now - config.market_open).seconds // 60 < 30 else False
 
         if (
             await super().is_buy_time(now)
@@ -96,11 +100,7 @@ class MomentumLong(Strategy):
                 hasattr(config, "bypass_market_schedule")
                 and config.bypass_market_schedule
             ):
-                close = (
-                    minute_history["close"]
-                    .dropna()
-                    .between_time("9:30", "16:00")
-                )
+                close = minute_history["close"].dropna().between_time("9:30", "16:00")
                 close_5m = (
                     minute_history["close"]
                     .dropna()
@@ -117,9 +117,7 @@ class MomentumLong(Strategy):
                 macd_hist = macds[2]
                 macd_trending = macd[-3] < macd[-2] < macd[-1]
                 macd_above_signal = macd[-1] > macd_signal[-1] * 1.1
-                macd_hist_trending = (
-                    macd_hist[-3] < macd_hist[-2] < macd_hist[-1]
-                )
+                macd_hist_trending = macd_hist[-3] < macd_hist[-2] < macd_hist[-1]
 
                 if (
                     macd[-1] > 0
@@ -136,9 +134,7 @@ class MomentumLong(Strategy):
                     macd2 = MACD(close, 40, 60)[0]
                     if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
                         if debug:
-                            tlog(
-                                f"[{self.name}][{now}] slow macd confirmed trend"
-                            )
+                            tlog(f"[{self.name}][{now}] slow macd confirmed trend")
 
                         # check RSI does not indicate overbought
                         rsi = RSI(close, 14)
@@ -169,9 +165,7 @@ class MomentumLong(Strategy):
                             minute_history,
                             now,
                         )
-                        target_price = (
-                            3 * (data.close - stop_price) + data.close
-                        )
+                        target_price = 3 * (data.close - stop_price) + data.close
                         target_prices[symbol] = target_price
                         stop_prices[symbol] = stop_price
 
@@ -248,14 +242,10 @@ class MomentumLong(Strategy):
             and last_used_strategy[symbol].name == self.name
         ):
             if open_orders.get(symbol) is not None:
-                tlog(
-                    f"momentum_long: open order for {symbol} exists, skipping"
-                )
+                tlog(f"momentum_long: open order for {symbol} exists, skipping")
                 return False, {}
 
-            serie = (
-                minute_history["close"].dropna().between_time("9:30", "16:00")
-            )
+            serie = minute_history["close"].dropna().between_time("9:30", "16:00")
 
             if data.vwap:
                 serie[-1] = data.vwap
@@ -273,18 +263,14 @@ class MomentumLong(Strategy):
                 14,
             )
 
-            movement = (
-                data.close - latest_scalp_basis[symbol]
-            ) / latest_scalp_basis[symbol]
+            movement = (data.close - latest_scalp_basis[symbol]) / latest_scalp_basis[
+                symbol
+            ]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
 
-            round_factor = (
-                2 if macd_val >= 0.1 or macd_signal_val >= 0.1 else 3
-            )
-            scalp_threshold = (
-                target_prices[symbol] + latest_scalp_basis[symbol]
-            ) / 2.0
+            round_factor = 2 if macd_val >= 0.1 or macd_signal_val >= 0.1 else 3
+            scalp_threshold = (target_prices[symbol] + latest_scalp_basis[symbol]) / 2.0
 
             macd_below_signal = round(macd_val, round_factor) < round(
                 macd_signal_val, round_factor
@@ -295,8 +281,7 @@ class MomentumLong(Strategy):
                     or movement > 0.02
                 )
                 and macd_below_signal
-                and round(macd[-1], round_factor)
-                < round(macd[-2], round_factor)
+                and round(macd[-1], round_factor) < round(macd[-2], round_factor)
             )
 
             scalp = movement > 0.04 or data.vwap > scalp_threshold
@@ -314,8 +299,7 @@ class MomentumLong(Strategy):
                 below_cost_base
                 and round(macd_val, 2) < 0
                 and rsi[-1] < rsi[-2]
-                and round(macd[-1], round_factor)
-                < round(macd[-2], round_factor)
+                and round(macd[-1], round_factor) < round(macd[-2], round_factor)
                 and data.vwap < 0.95 * data.average
             ):
                 to_sell = True
@@ -328,9 +312,9 @@ class MomentumLong(Strategy):
             elif rsi[-1] >= rsi_limit:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
-                cool_down[symbol] = now.replace(
-                    second=0, microsecond=0
-                ) + timedelta(minutes=5)
+                cool_down[symbol] = now.replace(second=0, microsecond=0) + timedelta(
+                    minutes=5
+                )
             elif bail_out:
                 to_sell = True
                 sell_reasons.append("bail")
@@ -347,9 +331,7 @@ class MomentumLong(Strategy):
                     "sell_macd_signal": macd_signal[-5:].tolist(),
                     "vwap": data.vwap,
                     "avg": data.average,
-                    "reasons": " AND ".join(
-                        [str(elem) for elem in sell_reasons]
-                    ),
+                    "reasons": " AND ".join([str(elem) for elem in sell_reasons]),
                 }
 
                 if not partial_sell:
