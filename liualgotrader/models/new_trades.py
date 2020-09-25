@@ -56,7 +56,7 @@ class NewTrade:
                     self.operation,
                     self.qty,
                     self.price,
-                    json.dumps(self.indicators),
+                    json.dumps(self.indicators if self.indicators else {}) ,
                     client_buy_time,
                     stop_price,
                     target_price,
