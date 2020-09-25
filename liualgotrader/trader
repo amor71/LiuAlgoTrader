@@ -202,15 +202,19 @@ if __name__ == "__main__":
         trading_api = tradeapi.REST(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
-        existing_positions = trading_api.list_positions()
 
-        if len(existing_positions) == 0:
-            tlog("no open positions")
+        if "skip_existing" not in conf_dict or not conf_dict["skip_existing"] :
+            existing_positions = trading_api.list_positions()
+
+            if len(existing_positions) == 0:
+                tlog("no open positions")
+            else:
+                for position in existing_positions:
+                    if position.symbol not in symbols:
+                        symbols.append(position.symbol)
+                        tlog(f"added existing open position in {position.symbol}")
         else:
-            for position in existing_positions:
-                if position.symbol not in symbols:
-                    symbols.append(position.symbol)
-                    tlog(f"added existing open position in {position.symbol}")
+            tlog("skipping existing open positions")
 
         minute_history = get_historical_data_from_polygon(
             api=data_api,
