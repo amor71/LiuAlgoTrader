@@ -5,6 +5,7 @@ from typing import List
 
 from asyncpg.pool import Pool
 
+tradeplan_folder: str = os.getenv("TRADEPLAN_DIR", ".") if len(os.getenv("TRADEPLAN_DIR", ".")) > 0 else "."
 configuration_filename: str = "tradeplan.toml"
 miner_configuration_filename: str = "miner.toml"
 

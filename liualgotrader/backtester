@@ -331,8 +331,18 @@ if __name__ == "__main__":
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     config.filename = os.path.basename(__file__)
+    folder = config.tradeplan_folder if config.tradeplan_folder[-1] == '/' else f"{config.tradeplan_folder}/"
+    fname = f"{folder}{config.configuration_filename}"
+    try:
+        conf_dict = toml.load(fname)
+        tlog(
+            f"loaded configuration file from {fname}"
+        )
+    except FileNotFoundError:
+        tlog(f"[ERROR] could not locate tradeplan file {fname}")
+        sys.exit(0)
     conf_dict = toml.load(config.configuration_filename)
-    tlog(f"tradeplan file {config.configuration_filename} loaded")
+
     if len(sys.argv) == 1:
         show_usage()
         sys.exit(0)
