@@ -710,19 +710,20 @@ async def consumer_async_main(
 ):
     await create_db_connection(str(config.dsn))
 
-    try:
-        trending_db = TrendingTickers(unique_id)
-        await trending_db.save(symbols)
-    except Exception as e:
-        tlog(
-            f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
-        )
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        for line in lines:
-            tlog(f"error: {line}")
-        traceback.print_exception(*exc_info)
-        del exc_info
+    if symbols:
+        try:
+            trending_db = TrendingTickers(unique_id)
+            await trending_db.save(symbols)
+        except Exception as e:
+            tlog(
+                f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
+            )
+            exc_info = sys.exc_info()
+            lines = traceback.format_exception(*exc_info)
+            for line in lines:
+                tlog(f"error: {line}")
+            traceback.print_exception(*exc_info)
+            del exc_info
 
     base_url = (
         config.prod_base_url if config.env == "PROD" else config.paper_base_url
