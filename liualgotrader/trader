@@ -165,6 +165,7 @@ if __name__ == "__main__":
 
     # parse configuration
     config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
+    scanners_only = False if "test_scanners" not in conf_dict or not conf_dict["test_scanners"] else True
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
@@ -223,53 +224,56 @@ if __name__ == "__main__":
         )
         symbols = list(minute_history.keys())
 
-        # Consumers first
-        num_consumer_processes = calc_num_consumer_processes()
-        tlog(f"Starting {num_consumer_processes} consumer processes")
+        if not scanners_only:
+            # Consumers first
+            num_consumer_processes = calc_num_consumer_processes()
+            tlog(f"Starting {num_consumer_processes} consumer processes")
 
-        queues: List[mp.Queue] = [mp.Queue() for i in range(num_consumer_processes)]
-        q_id_hash = {}
-        symbol_by_queue = {}
-        for symbol in symbols:
-            _index = random.SystemRandom().randint(0, num_consumer_processes-1)
-            q_id_hash[symbol] = _index
-            if _index not in symbol_by_queue:
-                symbol_by_queue[_index] = [symbol]
-            else:
-                symbol_by_queue[_index].append(symbol)
+            queues: List[mp.Queue] = [mp.Queue() for i in range(num_consumer_processes)]
+            q_id_hash = {}
+            symbol_by_queue = {}
+            for symbol in symbols:
+                _index = random.SystemRandom().randint(0, num_consumer_processes-1)
+                q_id_hash[symbol] = _index
+                if _index not in symbol_by_queue:
+                    symbol_by_queue[_index] = [symbol]
+                else:
+                    symbol_by_queue[_index].append(symbol)
 
-        consumers = [
-            mp.Process(
-                target=consumer_main,
-                args=(
-                    queues[i],
-                    symbol_by_queue[i] if i in symbol_by_queue else None,
-                    minute_history,
-                    uid,
-                    conf_dict,
-                ),
-            )
-            for i in range(num_consumer_processes)
-        ]
-        for p in consumers:
-            # p.daemon = True
-            p.start()
+            consumers = [
+                mp.Process(
+                    target=consumer_main,
+                    args=(
+                        queues[i],
+                        symbol_by_queue[i] if i in symbol_by_queue else None,
+                        minute_history,
+                        uid,
+                        conf_dict,
+                    ),
+                )
+                for i in range(num_consumer_processes)
+            ]
+            for p in consumers:
+                # p.daemon = True
+                p.start()
 
         scanner_queue: mp.Queue = mp.Queue()
-        producer = mp.Process(
-            target=polygon_producer_main,
-            args=(
-                uid,
-                queues,
-                symbols,
-                q_id_hash,
-                config.market_close,
-                conf_dict,
-                scanner_queue,
-                num_consumer_processes,
-            ),
-        )
-        producer.start()
+
+        if not scanners_only:
+            producer = mp.Process(
+                target=polygon_producer_main,
+                args=(
+                    uid,
+                    queues,
+                    symbols,
+                    q_id_hash,
+                    config.market_close,
+                    conf_dict,
+                    scanner_queue,
+                    num_consumer_processes,
+                ),
+            )
+            producer.start()
 
         tlog("Starting scanners process")
         scanner = mp.Process(
@@ -285,15 +289,22 @@ if __name__ == "__main__":
 
         # wait for completion and hope everyone plays nicely
         try:
-            producer.join()
+            if not scanners_only:
+                producer.join()
             scanner.join()
-            for p in consumers:
-                p.join()
+
+            if not scanners_only:
+                for p in consumers:
+                    p.join()
+
         except KeyboardInterrupt:
-            producer.terminate()
+            if not scanners_only:
+                producer.terminate()
             scanner.terminate()
-            for p in consumers:
-                p.terminate()
+
+            if not scanners_only:
+                for p in consumers:
+                    p.terminate()
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"run {uid} completed")
