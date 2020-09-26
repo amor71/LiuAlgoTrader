@@ -31,7 +31,6 @@ sessions w/ LiuAlgoTrader.
 .. toctree::
    :maxdepth: 2
 
-   WIP
    What's New
    Installation & Setup
    Configuration
