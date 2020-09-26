@@ -15,7 +15,7 @@ What's New
 |                  | **test_scanners = true** to debug       |
 |                  | scanners only (no other process         |
 |                  | would run)                              |
-|                  +-----------------------------------------|
+|                  +-----------------------------------------+
 |                  | TRADEPLAN_DIR added env variable to     |
 |                  | control `tradeplan` location.           |
 +------------------+-----------------------------------------+
