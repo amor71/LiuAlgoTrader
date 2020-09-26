@@ -48,6 +48,8 @@ which is not kept in the repository:
 
     export LIU_MAX_SYMBOLS=440
 
+    export TRADEPLAN_DIR=.
+
 Additional parameters
 *********************
 
@@ -73,6 +75,10 @@ use a pre-defined number of consumer processes.
 To do that set the environment variable
 `NUM_CONSUMERS` to another greater than 0.
 
+`TRADEPLAN_DIR` controls the location
+of the `tradeplan.toml` configuration file.
+It's used by both the `trader` and `backtester`
+applications.
 
 TOML configuration file
 -----------------------
