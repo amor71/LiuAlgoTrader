@@ -24,21 +24,19 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
         while True:
             symbols = await scanner.run()
 
-            for symbol in symbols:
-                try:
-                    queue.put(
-                        json.dumps(
+            if len(symbols):
+                tlog(f"Scanner {scanner.name} picked {len(symbols)} symbols")
+                queue.put(
+                    json.dumps(
+                        [
                             {
                                 "symbol": symbol,
                                 "target_strategy_name": scanner.target_strategy_name,
                             }
-                        )
+                            for symbol in symbols
+                        ]
                     )
-                    await asyncio.sleep(0)
-                except Exception as e:
-                    tlog(
-                        f"[ERROR]Exception in scanner_runner({scanner.name}): exception of type {type(e).__name__} with args {e.args}"
-                    )
+                )
 
             if scanner.recurrence:
                 try:
@@ -51,8 +49,13 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
                     break
             else:
                 break
+
     except asyncio.CancelledError:
         tlog(f"scanner_runner() cancelled, closing scanner task {scanner.name}")
+    except Exception as e:
+        tlog(
+            f"[ERROR]Exception in scanner_runner({scanner.name}): exception of type {type(e).__name__} with args {e.args}"
+        )
     finally:
         tlog(f"scanner_runner {scanner.name} completed")
 
