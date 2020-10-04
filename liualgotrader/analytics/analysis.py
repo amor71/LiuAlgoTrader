@@ -48,7 +48,9 @@ def load_batch_list(day: date) -> pd.DataFrame:
         start_time >= '{day}' AND 
         start_time < '{day + timedelta(days=1)}'
     """
-    return pd.read_sql_query(query, db_conn)
+    df = pd.read_sql_query(query, db_conn)
+    df.set_index("batch_id", inplace=True)
+    return df
 
 
 def load_batch_symbols(batch_id: str) -> pd.DataFrame:
@@ -61,6 +63,7 @@ def load_batch_symbols(batch_id: str) -> pd.DataFrame:
             batch_id = '{batch_id}'
     """
     return pd.read_sql_query(query, db_conn)
+
 
 
 def calc_revenue(symbol: str, trades: pd.DataFrame) -> float:
