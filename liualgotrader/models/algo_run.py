@@ -101,6 +101,37 @@ class AlgoRun:
         return rc
 
     @classmethod
+    async def get_batch_list_by_date(
+        cls,
+        date: datetime.date,
+        pool: Pool = None,
+    ) -> Dict[str, List[str]]:
+        rc: Dict = {}
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT batch_id, algo_run_id, algo_name, algo_env, build_number, start_time
+                        FROM algo_run
+                        ORDER BY start_time DESC
+                        WHERE start_time >= $1 and start_time < $2
+                    """,
+                    date,
+                    date + timedelta(days=1),
+                )
+
+                if rows:
+                    for row in rows:
+                        if row[0] not in rc:
+                            rc[row[0]] = [list(row.values())[1:]]
+                        else:
+                            rc[row[0]].append(list(row.values())[1:])
+
+        return rc
+
+    @classmethod
     async def get_batch_details(
         cls, batch_id: str, pool: Pool = None
     ) -> List[Tuple[int, datetime, str]]:
@@ -111,7 +142,7 @@ class AlgoRun:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT algo_run_id, start_time, parameters, algo_name
+                        SELECT algo_run_id, start_time, end_time, parameters, algo_name
                         FROM algo_run
                         WHERE batch_id = $1
                         ORDER BY start_time DESC
@@ -124,6 +155,7 @@ class AlgoRun:
                         (
                             row[0],
                             row[1],
+                            row[2],
                             row[3],
                         )
                         for row in rows

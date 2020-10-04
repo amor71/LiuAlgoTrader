@@ -38,69 +38,57 @@ async def scanner_input(
     global data_channels
     global queue_id_hash
     global symbol_strategy
+    global symbols
 
-    try:
-        new_symbols: List = []
-
-        delay_factor = 1
-        while True:
-            try:
-                symbol_details = scanner_queue.get(block=False)
-                if symbol_details:
-                    symbol_details = json.loads(symbol_details)
+    while True:
+        try:
+            symbols_details = scanner_queue.get(timeout=1)
+            if symbols_details:
+                symbols_details = json.loads(symbols_details)
+                new_symbols: List = []
+                new_channels: List = []
+                for symbol_details in symbols_details:
                     if symbol_details["symbol"] not in symbols:
-                        delay_factor = 1
                         new_symbols.append(symbol_details["symbol"])
                         symbol_strategy[symbol_details["symbol"]] = symbol_details[
                             "target_strategy_name"
                         ]
-
-            except Empty:
-                if len(new_symbols):
-                    trending_db = TrendingTickers(config.batch_id)
-                    new_channels = []
-
-                    for symbol in new_symbols:
                         new_channels += [
-                            f"{OP}.{symbol}" for OP in config.WS_DATA_CHANNELS
+                            f"{OP}.{symbol_details['symbol']}" for OP in config.WS_DATA_CHANNELS
                         ]
-
-                    await trending_db.save(new_symbols)
-
-                    await asyncio.sleep(0)
-                    data_channels += new_channels
-                    await data_ws.subscribe(new_channels)
-                    await asyncio.sleep(0)
-
-                    for symbol in new_symbols:
                         consumer_queue_index = random.SystemRandom().randint(
                             0, num_consumer_processes - 1
                         )
-                        queue_id_hash[symbol] = consumer_queue_index
-                        symbols.append(symbol)
+                        queue_id_hash[symbol_details["symbol"]] = consumer_queue_index
+
+                if len(new_symbols):
+                    symbols += new_symbols
+                    data_channels += new_channels
+                    await data_ws.subscribe(new_channels)
+
+                    trending_db = TrendingTickers(config.batch_id)
+                    await trending_db.save(new_symbols)
 
                     tlog(f"added {len(new_symbols)}:{new_symbols}")
-                    await asyncio.sleep(0)
+                    await asyncio.sleep(1)
 
-                new_symbols = []
-                await asyncio.sleep(1 * delay_factor)
-                delay_factor = min(delay_factor + 1, 60)
+        except Empty:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            tlog("scanner_input() task task cancelled ")
+            break
+        except Exception as e:
+            tlog(
+                f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
+            )
+            exc_info = sys.exc_info()
+            lines = traceback.format_exception(*exc_info)
+            for line in lines:
+                tlog(f"error: {line}")
+            traceback.print_exception(*exc_info)
+            del exc_info
 
-            except Exception as e:
-                tlog(
-                    f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
-                )
-                exc_info = sys.exc_info()
-                lines = traceback.format_exception(*exc_info)
-                for line in lines:
-                    tlog(f"error: {line}")
-                traceback.print_exception(*exc_info)
-                del exc_info
-
-    except asyncio.CancelledError:
-        tlog("scanner_input task task cancelled ")
-
-    tlog("scanner_input() task completed ")
+    tlog("scanner_input() task completed")
 
 
 async def trade_run(
@@ -265,7 +253,7 @@ async def run(
     finally:
         for q in queues:
             q.close()
-        tlog("main Polygon producer task completed ")
+        tlog("" "main Polygon producer task completed ")
 
 
 async def teardown_task(

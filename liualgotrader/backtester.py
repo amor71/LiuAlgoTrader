@@ -74,9 +74,10 @@ def show_version(filename: str, version: str) -> None:
     """Display welcome message"""
     print(f"filename:{filename}\ngit version:{version}\n")
 
+
 def backtest(
     batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = None
-) -> None:
+) -> str:
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -162,12 +163,13 @@ def backtest(
                             and float(what["qty"]) < 0
                         ):
                             position += int(float(what["qty"]))
-                            trading_data.last_used_strategy[symbol] = strategy
                             trading_data.buy_time[symbol] = new_now.replace(
                                 second=0, microsecond=0
                             )
                         else:
                             position -= int(float(what["qty"]))
+
+                        trading_data.last_used_strategy[symbol] = strategy
 
                         db_trade = NewTrade(
                             algo_run_id=strategy.algo_run.run_id,
@@ -274,6 +276,21 @@ def backtest(
                 strategy_details = strategy_tuple[1]
                 config.env = "BACKTEST"
                 tlog(f"initializing {strategy_type.name}")
+
+                if "schedule" not in strategy_details:
+                    print("duration", duration)
+                    strategy_details["schedule"] = [
+                        {
+                            "start": int(
+                                (
+                                    start - start.replace(hour=13, minute=30)
+                                ).total_seconds()
+                                // 60
+                            ),
+                            "duration": int(duration.total_seconds() // 60),
+                        }
+                    ]
+                    print(strategy_details["schedule"])
                 s = strategy_type(
                     batch_id=uid, ref_run_id=ref_run_id, **strategy_details
                 )
@@ -284,27 +301,25 @@ def backtest(
                 await backtest_symbol(symbol)
 
     @timeit
-    async def backtest_worker():
+    async def backtest_worker() -> None:
         await create_db_connection()
         run_details = await AlgoRun.get_batch_details(batch_id)
-        run_ids, starts, _ = zip(*run_details)
+        run_ids, starts, ends, _ = zip(*run_details)
 
         if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
+            ends = [e for e in ends if e is not None]
             await backtest_run(
                 start=min(starts),
-                duration=timedelta(
-                    minutes=max(
-                        [
-                            w["duration"] for w in [item for sublist in [conf_dict["strategies"][s]["schedule"] for s in conf_dict["strategies"]] for item in sublist]
-                        ]
-                    )
-                ),
+                duration=max(ends) - min(starts)
+                if len(ends) > 0
+                else min(starts).replace(hour=20, minute=0, second=0) - min(starts),
                 ref_run_id=run_ids[0],
             )
 
     try:
+
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()
@@ -318,6 +333,7 @@ def backtest(
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         print(f"new batch-id: {uid}")
+        return uid
 
 
 if __name__ == "__main__":
@@ -331,13 +347,15 @@ if __name__ == "__main__":
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     config.filename = os.path.basename(__file__)
-    folder = config.tradeplan_folder if config.tradeplan_folder[-1] == '/' else f"{config.tradeplan_folder}/"
+    folder = (
+        config.tradeplan_folder
+        if config.tradeplan_folder[-1] == "/"
+        else f"{config.tradeplan_folder}/"
+    )
     fname = f"{folder}{config.configuration_filename}"
     try:
         conf_dict = toml.load(fname)
-        tlog(
-            f"loaded configuration file from {fname}"
-        )
+        tlog(f"loaded configuration file from {fname}")
     except FileNotFoundError:
         tlog(f"[ERROR] could not locate tradeplan file {fname}")
         sys.exit(0)

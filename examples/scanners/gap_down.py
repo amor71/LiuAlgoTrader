@@ -13,8 +13,7 @@ from typing import List, Optional
 
 import alpaca_trade_api as tradeapi
 from liualgotrader.common import config
-from liualgotrader.common.market_data import \
-    get_historical_data_from_polygon_by_range
+from liualgotrader.common.market_data import get_historical_data_from_polygon_by_range
 from liualgotrader.common.tlog import tlog
 from liualgotrader.scanners.base import Scanner
 from pytz import timezone
@@ -41,9 +40,7 @@ class GapDown(Scanner):
     async def _wait_time(self) -> None:
         if not config.bypass_market_schedule and config.market_open:
             nyc = timezone("America/New_York")
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
+            since_market_open = datetime.today().astimezone(nyc) - config.market_open
 
             if since_market_open.seconds // 60 < 10:
                 tlog(f"{self.name} market open, wait {10} minutes")
@@ -66,9 +63,7 @@ class GapDown(Scanner):
             for asset in assets
             if asset.tradable and asset.shortable and asset.easy_to_borrow
         ]
-        tlog(
-            f"total number of trade-able symbols is {len(trade_able_symbols)}"
-        )
+        tlog(f"total number of trade-able symbols is {len(trade_able_symbols)}")
         return trade_able_symbols
 
     async def run(self) -> List[str]:
@@ -91,10 +86,7 @@ class GapDown(Scanner):
                     and ticker.prevDay["v"] * ticker.lastTrade["p"] > 500000.0
                     and ticker.prevDay["l"] > ticker.day["o"]
                     and ticker.todaysChangePerc < 0
-                    and (
-                        ticker.day["v"] > 30000.0
-                        or config.bypass_market_schedule
-                    )
+                    and (ticker.day["v"] > 30000.0 or config.bypass_market_schedule)
                 )
             ]
 
@@ -109,9 +101,7 @@ class GapDown(Scanner):
                 std = {}
                 for symbol in symbols:
                     if symbol in _daiy_data:
-                        std[symbol] = statistics.pstdev(
-                            _daiy_data[symbol]["low"]
-                        )
+                        std[symbol] = statistics.pstdev(_daiy_data[symbol]["low"])
 
                 unsorted = [
                     x
@@ -126,12 +116,8 @@ class GapDown(Scanner):
                         key=lambda ticker: float(ticker.day["v"]),
                         reverse=True,
                     )
-                    r_symbols = [x.ticker for x in ticker_by_volume][
-                        : self.max_symbols
-                    ]
-                    tlog(
-                        f"{self.name} -> picked {len(r_symbols)} symbols {r_symbols}"
-                    )
+                    r_symbols = [x.ticker for x in ticker_by_volume][: self.max_symbols]
+                    tlog(f"{self.name} -> picked {len(r_symbols)} symbols {r_symbols}")
                     return r_symbols
 
             tlog(f"{self.name} -> did not find gaping down stocks, sorry..")
