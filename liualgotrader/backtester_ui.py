@@ -1,7 +1,10 @@
 import streamlit as st
 import asyncio
+import io
 from os import path
 import pygit2
+import toml
+from typing import Dict
 from datetime import date
 from liualgotrader.analytics.analysis import load_batch_list, load_batch_symbols
 from liualgotrader.common import config
@@ -16,10 +19,29 @@ except pygit2.GitError:
 
     config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
-
 st.title("Back-testing a trading session")
 
+# Select date
 day_to_analyze = st.date_input("pick day to analyze", value=date.today())
+
+# Load configuration
+st.set_option('deprecation.showfileUploaderEncoding', False)
+file_buffer: io.StringIO = st.file_uploader(label="select tradeplan file", type=["toml", "TOML"])
+if not file_buffer:
+    st.error("Failed to load file, retry")
+    st.stop()
+
+try:
+    toml_as_stringio = file_buffer.read()
+    tradeplan_conf : Dict = toml.loads(toml_as_stringio)
+    print(tradeplan_conf)
+except Exception as e:
+    st.exception(e)
+    st.stop()
+
+reply_batch = st.button("reply a specific batch")
+reply_day = st.button("reply a day")
+
 try:
     with st.spinner("Loading list of trading sessions"):
         df = load_batch_list(day_to_analyze)
