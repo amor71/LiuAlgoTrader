@@ -54,7 +54,8 @@ async def scanner_input(
                             "target_strategy_name"
                         ]
                         new_channels += [
-                            f"{OP}.{symbol_details['symbol']}" for OP in config.WS_DATA_CHANNELS
+                            f"{OP}.{symbol_details['symbol']}"
+                            for OP in config.WS_DATA_CHANNELS
                         ]
                         consumer_queue_index = random.SystemRandom().randint(
                             0, num_consumer_processes - 1
@@ -64,7 +65,20 @@ async def scanner_input(
                 if len(new_symbols):
                     symbols += new_symbols
                     data_channels += new_channels
-                    await data_ws.subscribe(new_channels)
+
+                    retry = 5
+                    while retry > 0:
+                        try:
+                            await data_ws.subscribe(new_channels)
+                            break
+                        except Exception as e:
+                            tlog(f"[EXCEPTION] {e} below, retrying {retry}")
+                            exc_info = sys.exc_info()
+                            lines = traceback.format_exception(*exc_info)
+                            for line in lines:
+                                tlog(f"error: {line}")
+                            await asyncio.sleep(1)
+                            retry -= 1
 
                     trending_db = TrendingTickers(config.batch_id)
                     await trending_db.save(new_symbols)
