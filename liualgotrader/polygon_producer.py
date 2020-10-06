@@ -54,7 +54,8 @@ async def scanner_input(
                             "target_strategy_name"
                         ]
                         new_channels += [
-                            f"{OP}.{symbol_details['symbol']}" for OP in config.WS_DATA_CHANNELS
+                            f"{OP}.{symbol_details['symbol']}"
+                            for OP in config.WS_DATA_CHANNELS
                         ]
                         consumer_queue_index = random.SystemRandom().randint(
                             0, num_consumer_processes - 1
@@ -78,7 +79,7 @@ async def scanner_input(
                                 tlog(f"error: {line}")
                             await asyncio.sleep(1)
                             retry -= 1
-                        
+
                     trending_db = TrendingTickers(config.batch_id)
                     await trending_db.save(new_symbols)
 

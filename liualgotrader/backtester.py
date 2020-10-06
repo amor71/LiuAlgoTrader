@@ -90,9 +90,18 @@ def backtest(
         start: datetime, duration: timedelta, ref_run_id: int
     ) -> None:
         @timeit
-        async def backtest_symbol(symbol: str) -> None:
+        async def backtest_symbol(symbol: str, scanner_start_time: datetime) -> None:
             est = pytz.timezone("America/New_York")
+            scanner_start_time = pytz.utc.localize(scanner_start_time).astimezone(est)
             start_time = pytz.utc.localize(start).astimezone(est)
+
+            if scanner_start_time > start_time + duration:
+                print(
+                    f"{symbol} picked to late at {scanner_start_time} (start_time, duration)"
+                )
+                return
+
+            start_time = scanner_start_time
             if start_time.second > 0:
                 start_time = start_time.replace(second=0, microsecond=0)
             print(
@@ -298,7 +307,7 @@ def backtest(
                 trading_data.strategies.append(s)
 
             for symbol in symbols:
-                await backtest_symbol(symbol)
+                await backtest_symbol(symbol[0], symbol[1])
 
     @timeit
     async def backtest_worker() -> None:
@@ -309,17 +318,27 @@ def backtest(
         if not len(run_details):
             print(f"can't load data for batch id {batch_id}")
         else:
-            ends = [e for e in ends if e is not None]
             await backtest_run(
                 start=min(starts),
-                duration=max(ends) - min(starts)
-                if len(ends) > 0
-                else min(starts).replace(hour=20, minute=0, second=0) - min(starts),
+                duration=timedelta(
+                    minutes=max(
+                        [
+                            w["duration"]
+                            for w in [
+                                item
+                                for sublist in [
+                                    conf_dict["strategies"][s]["schedule"]
+                                    for s in conf_dict["strategies"]
+                                ]
+                                for item in sublist
+                            ]
+                        ]
+                    )
+                ),
                 ref_run_id=run_ids[0],
             )
 
     try:
-
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
         loop = asyncio.new_event_loop()

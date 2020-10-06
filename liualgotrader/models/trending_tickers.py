@@ -1,5 +1,5 @@
-from typing import Dict, List, Tuple
-
+from typing import List, Tuple
+from datetime import datetime
 from asyncpg.pool import Pool
 
 from liualgotrader.common import config
@@ -30,7 +30,7 @@ class TrendingTickers:
         return self.trending_id
 
     @classmethod
-    async def load(cls, batch_id, pool: Pool = None) -> List[str]:
+    async def load(cls, batch_id, pool: Pool = None) -> List[Tuple[str, datetime]]:
         if not pool:
             pool = config.db_conn_pool
 
@@ -38,7 +38,7 @@ class TrendingTickers:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT symbol
+                        SELECT symbol, create_tstamp
                         FROM trending_tickers 
                         WHERE batch_id=$1
                     """,
@@ -46,6 +46,6 @@ class TrendingTickers:
                 )
 
                 if rows:
-                    return [row[0] for row in rows]
+                    return [(row[0], row[1]) for row in rows]
                 else:
                     raise Exception("no data")
