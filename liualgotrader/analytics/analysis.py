@@ -36,7 +36,9 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
         t.expire_tstamp is null
     ORDER BY symbol, tstamp
     """
-    return pd.read_sql_query(query, db_conn)
+    df = pd.read_sql_query(query, db_conn)
+    df['client_time'] = pd.to_datetime(df['client_time'])
+    return df
 
 
 def load_runs(day: date) -> pd.DataFrame:

@@ -119,7 +119,6 @@ if st.sidebar.checkbox("Show details"):
 
     c = 0
     with st.spinner(text="Loading historical data from Polygon..."):
-
         for batch_id, count in batch.items():
             for run_id in batch[batch_id]:
                 symbols = trades.loc[trades["algo_run_id"] == run_id][

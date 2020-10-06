@@ -119,7 +119,6 @@ elif app == 'analyzer':
         try:
             how_was_my_batch = pd.DataFrame()
             t = load_trades_by_batch_id(bid)
-            t['client_time'] = pd.to_datetime(t['client_time'])
             if shpw_trade_details:
                 st.dataframe(t)
             how_was_my_batch["symbol"] = t.symbol.unique()
