@@ -97,7 +97,7 @@ def backtest(
 
             if scanner_start_time > start_time + duration:
                 print(
-                    f"{symbol} picked to late at {scanner_start_time} (start_time, duration)"
+                    f"{symbol} picked to late at {scanner_start_time} ({start_time}, {duration})"
                 )
                 return
 
