@@ -9,8 +9,8 @@ import traceback
 import uuid
 import toml
 import importlib.util
-from datetime import datetime, timedelta
-from typing import List, Dict
+from datetime import datetime, timedelta, date
+from typing import List, Dict, Optional
 
 import alpaca_trade_api as tradeapi
 import pygit2
@@ -27,6 +27,8 @@ from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.momentum_long import MomentumLong
 from liualgotrader.strategies.base import Strategy, StrategyType
+from liualgotrader.scanners.base import Scanner
+from liualgotrader.scanners.momentum import Momentum
 
 
 def get_batch_list():
@@ -73,6 +75,69 @@ def show_usage():
 def show_version(filename: str, version: str) -> None:
     """Display welcome message"""
     print(f"filename:{filename}\ngit version:{version}\n")
+
+
+async def create_strategies(
+    conf_dict: Dict,
+    duration: timedelta,
+    ref_run_id: Optional[int],
+    uid: str,
+    start: datetime,
+) -> None:
+    strategy_types = []
+    for strategy in conf_dict["strategies"]:
+        print(strategy)
+        strategy_name = strategy
+        strategy_details = conf_dict["strategies"][strategy_name]
+        if strategy_name == "MomentumLong":
+            tlog(f"strategy {strategy_name} selected")
+            strategy_types += [(MomentumLong, strategy_details)]
+        else:
+            tlog(f"custom strategy {strategy_name} selected")
+
+            try:
+                spec = importlib.util.spec_from_file_location(
+                    "module.name", strategy_details["filename"]
+                )
+                custom_strategy_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(custom_strategy_module)  # type: ignore
+                class_name = strategy_name
+                custom_strategy = getattr(custom_strategy_module, class_name)
+
+                if not issubclass(custom_strategy, Strategy):
+                    tlog(
+                        f"custom strartegy must inherit from class {Strategy.__name__}"
+                    )
+                    exit(0)
+                strategy_details.pop("filename", None)
+                strategy_types += [(custom_strategy, strategy_details)]
+
+            except Exception as e:
+                tlog(f"[Error]exception of type {type(e).__name__} with args {e.args}")
+                traceback.print_exc()
+                exit(0)
+
+    for strategy_tuple in strategy_types:
+        strategy_type = strategy_tuple[0]
+        strategy_details = strategy_tuple[1]
+        config.env = "BACKTEST"
+        tlog(f"initializing {strategy_type.name}")
+
+        if "schedule" not in strategy_details:
+            print("duration", duration)
+            strategy_details["schedule"] = [
+                {
+                    "start": int(
+                        (start - start.replace(hour=13, minute=30)).total_seconds()
+                        // 60
+                    ),
+                    "duration": int(duration.total_seconds() // 60),
+                }
+            ]
+            print(strategy_details["schedule"])
+        s = strategy_type(batch_id=uid, ref_run_id=ref_run_id, **strategy_details)
+        await s.create()
+        trading_data.strategies.append(s)
 
 
 def backtest(
@@ -244,67 +309,7 @@ def backtest(
                 hour=16, minute=0, second=0, microsecond=0
             )
             print(f"market_open{config.market_open}")
-            strategy_types = []
-            print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-            for strategy in conf_dict["strategies"]:
-                print(strategy)
-                strategy_name = strategy
-                strategy_details = conf_dict["strategies"][strategy_name]
-                if strategy_name == "MomentumLong":
-                    tlog(f"strategy {strategy_name} selected")
-                    strategy_types += [(MomentumLong, strategy_details)]
-                else:
-                    tlog(f"custom strategy {strategy_name} selected")
-
-                    try:
-                        spec = importlib.util.spec_from_file_location(
-                            "module.name", strategy_details["filename"]
-                        )
-                        custom_strategy_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(custom_strategy_module)  # type: ignore
-                        class_name = strategy_name
-                        custom_strategy = getattr(custom_strategy_module, class_name)
-
-                        if not issubclass(custom_strategy, Strategy):
-                            tlog(
-                                f"custom strartegy must inherit from class {Strategy.__name__}"
-                            )
-                            exit(0)
-                        strategy_details.pop("filename", None)
-                        strategy_types += [(custom_strategy, strategy_details)]
-
-                    except Exception as e:
-                        tlog(
-                            f"[Error]exception of type {type(e).__name__} with args {e.args}"
-                        )
-                        traceback.print_exc()
-                        exit(0)
-
-            for strategy_tuple in strategy_types:
-                strategy_type = strategy_tuple[0]
-                strategy_details = strategy_tuple[1]
-                config.env = "BACKTEST"
-                tlog(f"initializing {strategy_type.name}")
-
-                if "schedule" not in strategy_details:
-                    print("duration", duration)
-                    strategy_details["schedule"] = [
-                        {
-                            "start": int(
-                                (
-                                    start - start.replace(hour=13, minute=30)
-                                ).total_seconds()
-                                // 60
-                            ),
-                            "duration": int(duration.total_seconds() // 60),
-                        }
-                    ]
-                    print(strategy_details["schedule"])
-                s = strategy_type(
-                    batch_id=uid, ref_run_id=ref_run_id, **strategy_details
-                )
-                await s.create()
-                trading_data.strategies.append(s)
+            await create_strategies(conf_dict, duration, ref_run_id, uid, start)
 
             for symbol in symbols:
                 await backtest_symbol(symbol[0], symbol[1])
@@ -348,6 +353,208 @@ def backtest(
         tlog("backtest() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
+        traceback.print_exc()
+    finally:
+        print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+        print(f"new batch-id: {uid}")
+        return uid
+
+
+def backtest_day(day: date, conf_dict: Dict) -> str:
+    uid = str(uuid.uuid4())
+
+    data_api: tradeapi = tradeapi.REST(
+        base_url=config.prod_base_url,
+        key_id=config.prod_api_key_id,
+        secret_key=config.prod_api_secret,
+    )
+
+    async def backtest_worker(day: date) -> None:
+        await create_db_connection()
+        scanners_conf = conf_dict["scanners"]
+
+        scanners: List[Optional[Scanner]] = []
+
+        for scanner_name in scanners_conf:
+            scanner_object: Optional[Scanner] = None
+            if scanner_name == "momentum":
+                scanner_details = scanners_conf[scanner_name]
+                try:
+                    recurrence = scanner_details.get("recurrence", None)
+                    target_strategy_name = scanner_details.get(
+                        "target_strategy_name", None
+                    )
+                    scanner_object = Momentum(
+                        provider=scanner_details["provider"],
+                        data_api=data_api,
+                        min_last_dv=scanner_details["min_last_dv"],
+                        min_share_price=scanner_details["min_share_price"],
+                        max_share_price=scanner_details["max_share_price"],
+                        min_volume=scanner_details["min_volume"],
+                        from_market_open=scanner_details["from_market_open"],
+                        today_change_percent=scanner_details["min_gap"],
+                        recurrence=timedelta(minutes=recurrence)
+                        if recurrence
+                        else None,
+                        target_strategy_name=target_strategy_name,
+                        max_symbols=scanner_details.get(
+                            "max_symbols", config.total_tickers
+                        ),
+                    )
+                    tlog(f"instantiated momentum scanner")
+                except KeyError as e:
+                    tlog(
+                        f"Error {e} in processing of scanner configuration {scanner_details}"
+                    )
+                    exit(0)
+            else:
+                tlog(f"custom scanner {scanner_name} selected")
+                scanner_details = scanners_conf[scanner_name]
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        "module.name", scanner_details["filename"]
+                    )
+                    custom_scanner_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(custom_scanner_module)  # type: ignore
+                    class_name = scanner_name
+                    custom_scanner = getattr(custom_scanner_module, class_name)
+
+                    if not issubclass(custom_scanner, Scanner):
+                        tlog(
+                            f"custom scanner must inherit from class {Scanner.__name__}"
+                        )
+                        exit(0)
+
+                    scanner_details.pop("filename")
+                    if "recurrence" not in scanner_details:
+                        scanner_object = custom_scanner(
+                            data_api=data_api,
+                            **scanner_details,
+                        )
+                    else:
+                        recurrence = scanner_details.pop("recurrence")
+                        scanner_object = custom_scanner(
+                            data_api=data_api,
+                            recurrence=timedelta(minutes=recurrence),
+                            **scanner_details,
+                        )
+
+                except Exception as e:
+                    tlog(
+                        f"[Error] scanners_runner.scanners_runner() for {scanner_name}:{e} "
+                    )
+            if scanner_object:
+                scanners.append(scanner_object)
+
+        day = datetime.combine(day, datetime.min.time())
+        start = day.replace(hour=9, minute=30)
+        end = day.replace(hour=16, minute=0)
+
+        await create_strategies(
+            conf_dict,
+            end - start,
+            None,
+            uid,
+            day.replace(hour=9, minute=30, second=0, microsecond=0),
+        )
+
+        now = start
+        symbols: List = []
+        minute_history = {}
+        portfolio_value: float = 100000.0
+        while now < end:
+            for i in range(0, len(scanners)):
+                if now == start or (
+                    scanners[i].recurrence is not None
+                    and scanners[i].recurrence.total_seconds() > 0
+                    and int((now - start).total_seconds() // 60)
+                    % int(scanners[i].recurrence.total_seconds() // 60)
+                    == 0
+                ):
+                    new_symbols = await scanners[i].run(now)
+                    if new_symbols:
+                        minute_history += (
+                            market_data.get_historical_data_from_poylgon_for_symbols(
+                                data_api, new_symbols, start, start + timedelta(days=1)
+                            )
+                        )
+                        symbols += new_symbols
+
+            for symbol in symbols:
+                for strategy in trading_data.strategies:
+                    minute_index = minute_history[symbol]["close"].index.get_loc(
+                        now, method="nearest"
+                    )
+                    price = minute_history[symbol]["close"][minute_index]
+                    do, what = await strategy.run(
+                        symbol,
+                        True,
+                        int(trading_data.positions[symbol]),
+                        minute_history[symbol][: minute_index + 1],
+                        now,
+                        portfolio_value,
+                        debug=debug_symbols and symbol in debug_symbols,  # type: ignore
+                        backtesting=True,
+                    )
+                    if do:
+                        if (
+                            what["side"] == "buy"
+                            and float(what["qty"]) > 0
+                            or what["side"] == "sell"
+                            and float(what["qty"]) < 0
+                        ):
+                            trading_data.positions[symbol] += int(float(what["qty"]))
+                            trading_data.buy_time[symbol] = now.replace(
+                                second=0, microsecond=0
+                            )
+                        else:
+                            trading_data.positions[symbol] -= int(float(what["qty"]))
+
+                        trading_data.last_used_strategy[symbol] = strategy
+
+                        db_trade = NewTrade(
+                            algo_run_id=strategy.algo_run.run_id,
+                            symbol=symbol,
+                            qty=int(float(what["qty"])),
+                            operation=what["side"],
+                            price=price,
+                            indicators=trading_data.buy_indicators[symbol]
+                            if what["side"] == "buy"
+                            else trading_data.sell_indicators[symbol],
+                        )
+
+                        await db_trade.save(
+                            config.db_conn_pool,
+                            str(now),
+                            trading_data.stop_prices[symbol],
+                            trading_data.target_prices[symbol],
+                        )
+
+                        if what["side"] == "buy":
+                            await strategy.buy_callback(
+                                symbol, price, int(float(what["qty"]))
+                            )
+                            break
+                        elif what["side"] == "sell":
+                            await strategy.sell_callback(
+                                symbol, price, int(float(what["qty"]))
+                            )
+                            break
+
+            now += timedelta(minutes=1)
+
+    try:
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(backtest_worker(day))
+    except KeyboardInterrupt:
+        tlog("backtest_day() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(
+            f"backtest_day() - exception of type {type(e).__name__} with args {e.args}"
+        )
         traceback.print_exc()
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")

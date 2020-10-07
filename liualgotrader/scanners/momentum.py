@@ -29,6 +29,7 @@ class Momentum(Scanner):
         min_volume: float,
         from_market_open: float,
         max_symbols: int = config.total_tickers,
+        data_source: object = None,
     ):
         self.provider = provider
         self.max_share_price = max_share_price
@@ -43,6 +44,7 @@ class Momentum(Scanner):
             recurrence=recurrence,
             target_strategy_name=target_strategy_name,
             data_api=data_api,
+            data_source=data_source,
         )
 
     @classmethod
@@ -184,12 +186,18 @@ class Momentum(Scanner):
         tlog(f"loaded {len(symbols)} from Finnhub")
         return symbols
 
-    async def run(self) -> List[str]:
-        await self._wait_time()
+    async def run(self, back_time: datetime = None) -> List[str]:
+        if not back_time:
+            await self._wait_time()
 
-        if self.provider == "polygon":
-            return await self.run_polygon()
-        elif self.provider == "finnhub":
-            return await self.run_finnhub()
+            if self.provider == "polygon":
+                return await self.run_polygon()
+            elif self.provider == "finnhub":
+                return await self.run_finnhub()
+            else:
+                raise Exception(
+                    f"Invalid provider {self.provider} for scanner {self.name}"
+                )
         else:
-            raise Exception(f"Invalid provider {self.provider} for scanner {self.name}")
+            print(f"Scanner {self.name} -> back_time={back_time}")
+            return []

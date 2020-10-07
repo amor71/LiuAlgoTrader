@@ -3,6 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+
 try:
     db_conn = create_engine(config.dsn)
 except Exception as e:
@@ -37,7 +38,7 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     ORDER BY symbol, tstamp
     """
     df = pd.read_sql_query(query, db_conn)
-    df['client_time'] = pd.to_datetime(df['client_time'])
+    df["client_time"] = pd.to_datetime(df["client_time"])
     return df
 
 

@@ -18,7 +18,7 @@ from liualgotrader.analytics.analysis import (
     load_trades_by_batch_id,
 )
 from liualgotrader.common import config
-from liualgotrader.backtester import backtest
+from liualgotrader.backtester import backtest, backtest_day
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -32,8 +32,8 @@ except pygit2.GitError:
 st.title("Back-testing a trading session")
 
 app = st.sidebar.selectbox("select app", ("back-test", "analyzer"))
-new_bid : str = ""
-if app == 'back-test':
+new_bid: str = ""
+if app == "back-test":
     new_bid = ""
     st.text("Back-testing a past trading day, or a specific batch-id")
     # Select date
@@ -69,8 +69,10 @@ if app == 'back-test':
     )
 
     if selection == "back-test against the whole day":
-        st.error("Not implemented yet")
-        st.stop()
+        with st.spinner(f"back-testing.."):
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            new_bid = backtest_day(day_to_analyze, conf_dict=conf_dict)
+            st.success(f"new batch-id is {new_bid}")
     else:
         try:
             with st.spinner("Loading list of trading sessions"):
@@ -107,7 +109,7 @@ if app == 'back-test':
                     new_bid = backtest(bid, conf_dict=conf_dict)
                     st.success(f"new batch-id is {new_bid}")
 
-elif app == 'analyzer':
+elif app == "analyzer":
     st.text("Analyze a specific batch-id")
 
     shpw_trade_details = st.sidebar.checkbox("show trade details")
@@ -139,7 +141,7 @@ elif app == 'analyzer':
         minute_history = {}
 
         c = 0
-        day_to_analyze = min(t['client_time'].tolist())
+        day_to_analyze = min(t["client_time"].tolist())
         with st.spinner(text="Loading historical data from Polygon..."):
             for symbol in t.symbol.unique().tolist():
                 if symbol not in minute_history:

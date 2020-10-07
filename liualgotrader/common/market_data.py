@@ -83,7 +83,7 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
 
 
 def get_historical_data_from_poylgon_for_symbols(
-        api: tradeapi, symbols: List[str], start_date: date, end_date: date
+    api: tradeapi, symbols: List[str], start_date: date, end_date: date
 ) -> Dict[str, df]:
     minute_history = {}
     for symbol in symbols:
