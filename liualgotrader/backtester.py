@@ -375,6 +375,13 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
 
         scanners: List[Optional[Scanner]] = []
 
+        start_time = datetime.combine(day, datetime.min.time())
+        config.market_open = start_time.replace(
+            hour=9, minute=30, second=0, microsecond=0
+        )
+        config.market_close = start_time.replace(
+            hour=16, minute=0, second=0, microsecond=0
+        )
         for scanner_name in scanners_conf:
             scanner_object: Optional[Scanner] = None
             if scanner_name == "momentum":
@@ -473,11 +480,17 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
                 ):
                     new_symbols = await scanners[i].run(now)
                     if new_symbols:
-                        minute_history += (
-                            market_data.get_historical_data_from_poylgon_for_symbols(
-                                data_api, new_symbols, start, start + timedelta(days=1)
-                            )
-                        )
+                        minute_history = {
+                            **minute_history,
+                            **(
+                                market_data.get_historical_data_from_poylgon_for_symbols(
+                                    data_api,
+                                    new_symbols,
+                                    start - timedelta(days=10),
+                                    start + timedelta(days=1),
+                                )
+                            ),
+                        }
                         symbols += new_symbols
 
             for symbol in symbols:
@@ -486,6 +499,10 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
                         now, method="nearest"
                     )
                     price = minute_history[symbol]["close"][minute_index]
+
+                    if symbol not in trading_data.positions:
+                        trading_data.positions[symbol] = 0
+
                     do, what = await strategy.run(
                         symbol,
                         True,
@@ -493,7 +510,7 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
                         minute_history[symbol][: minute_index + 1],
                         now,
                         portfolio_value,
-                        debug=debug_symbols and symbol in debug_symbols,  # type: ignore
+                        debug=False,  # type: ignore
                         backtesting=True,
                     )
                     if do:
