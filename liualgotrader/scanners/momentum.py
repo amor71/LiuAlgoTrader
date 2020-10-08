@@ -254,8 +254,8 @@ class Momentum(Scanner):
                             c2.high < $3 AND
                             c2.low > $4 AND
                             c2.volume > $5 AND
-                            c2.volume * c2.close > $6 AND
-                            (c2.open / c1.close) > $7
+                            c1.volume * c1.close > $6 AND
+                            (c2.high / c1.close) > $7
                     """,
                     back_time - timedelta(days=1),
                     back_time,
@@ -298,7 +298,8 @@ class Momentum(Scanner):
                     for symbol in trade_able_symbols
                 ]
                 await asyncio.gather(*tasks)
+
                 rows = await self.load_from_db(back_time)
 
-            print(f"Scanner {self.name} -> back_time={back_time} {len(rows)}")
+            print(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
             return rows

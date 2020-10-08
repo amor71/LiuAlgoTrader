@@ -8,6 +8,7 @@ import sys
 import traceback
 import uuid
 import toml
+import pandas as pd
 import importlib.util
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
@@ -375,7 +376,9 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
 
         scanners: List[Optional[Scanner]] = []
 
-        start_time = datetime.combine(day, datetime.min.time())
+
+        est = pytz.timezone("America/New_York")
+        start_time = datetime.combine(day, datetime.min.time()).astimezone(est)
         config.market_open = start_time.replace(
             hour=9, minute=30, second=0, microsecond=0
         )
@@ -453,7 +456,8 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
             if scanner_object:
                 scanners.append(scanner_object)
 
-        day = datetime.combine(day, datetime.min.time())
+        day = datetime.combine(day, datetime.min.time()).astimezone(est)
+
         start = day.replace(hour=9, minute=30)
         end = day.replace(hour=16, minute=0)
 
@@ -465,7 +469,8 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
             day.replace(hour=9, minute=30, second=0, microsecond=0),
         )
 
-        now = start
+        now = pd.Timestamp(start)
+
         symbols: List = []
         minute_history = {}
         portfolio_value: float = 100000.0
@@ -480,18 +485,22 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
                 ):
                     new_symbols = await scanners[i].run(now)
                     if new_symbols:
-                        minute_history = {
-                            **minute_history,
-                            **(
-                                market_data.get_historical_data_from_poylgon_for_symbols(
-                                    data_api,
-                                    new_symbols,
-                                    start - timedelta(days=10),
-                                    start + timedelta(days=1),
-                                )
-                            ),
-                        }
-                        symbols += new_symbols
+                        really_new = [x for x in new_symbols if x not in symbols]
+                        if len(really_new) > 0:
+                            print(f"Loading data for {len(really_new)} symbols: {really_new}")
+                            minute_history = {
+                                **minute_history,
+                                **(
+                                    market_data.get_historical_data_from_poylgon_for_symbols(
+                                        data_api,
+                                        really_new,
+                                        start - timedelta(days=7),
+                                        start + timedelta(days=1),
+                                    )
+                                ),
+                            }
+                            symbols += really_new
+                            print(f"loaded data for {len(really_new)} stocks")
 
             for symbol in symbols:
                 for strategy in trading_data.strategies:
@@ -560,6 +569,29 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
 
             now += timedelta(minutes=1)
 
+        for symbol in trading_data.positions:
+                if (
+                    trading_data.positions[symbol] != 0 and
+                    trading_data.last_used_strategy[symbol].type
+                    == StrategyType.DAY_TRADE
+                ):
+                    position = trading_data.positions[symbol]
+                    minute_index = minute_history[symbol]["close"].index.get_loc(
+                        now, method="nearest"
+                    )
+                    price = minute_history[symbol]["close"][minute_index]
+                    tlog(f"[{end}]{symbol} liquidate {position} at {price}")
+                    db_trade = NewTrade(
+                        algo_run_id= trading_data.last_used_strategy[symbol].algo_run.run_id,  # type: ignore
+                        symbol=symbol,
+                        qty=int(position) if int(position) > 0 else -int(position),
+                        operation="sell" if position > 0 else "buy",
+                        price=price,
+                        indicators={"liquidate": 1},
+                    )
+                    await db_trade.save(
+                        config.db_conn_pool, str(price)
+                    )
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
