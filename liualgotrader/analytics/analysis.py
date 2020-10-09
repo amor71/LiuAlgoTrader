@@ -38,7 +38,11 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     ORDER BY symbol, tstamp
     """
     df = pd.read_sql_query(query, db_conn)
-    df["client_time"] = pd.to_datetime(df["client_time"])
+    try:
+        df["client_time"] = pd.to_datetime(df["client_time"])
+    except Exception:
+        pass
+
     return df
 
 

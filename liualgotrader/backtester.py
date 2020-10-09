@@ -361,6 +361,256 @@ def backtest(
         return uid
 
 
+class BackTestDay():
+
+    def __init__(self, conf_dict: Dict):
+        self.uid = str(uuid.uuid4())
+
+        self.data_api: tradeapi = tradeapi.REST(
+            base_url=config.prod_base_url,
+            key_id=config.prod_api_key_id,
+            secret_key=config.prod_api_secret,
+        )
+
+        self.conf_dict = conf_dict
+        self.minute_history = None
+        self.scanners = None
+
+    async def create(self, day:date) -> str:
+        await create_db_connection()
+        scanners_conf = self.conf_dict["scanners"]
+
+        self.scanners: List[Optional[Scanner]] = []
+
+        est = pytz.timezone("America/New_York")
+        start_time = datetime.combine(day, datetime.min.time()).astimezone(est)
+        day = datetime.combine(day, datetime.min.time()).astimezone(est)
+        self.start = day.replace(hour=9, minute=30)
+        self.end = day.replace(hour=16, minute=0)
+
+        config.market_open = start_time.replace(
+            hour=9, minute=30, second=0, microsecond=0
+        )
+        config.market_close = start_time.replace(
+            hour=16, minute=0, second=0, microsecond=0
+        )
+        for scanner_name in scanners_conf:
+            scanner_object: Optional[Scanner] = None
+            if scanner_name == "momentum":
+                scanner_details = scanners_conf[scanner_name]
+                try:
+                    recurrence = scanner_details.get("recurrence", None)
+                    target_strategy_name = scanner_details.get(
+                        "target_strategy_name", None
+                    )
+                    scanner_object = Momentum(
+                        provider=scanner_details["provider"],
+                        data_api=self.data_api,
+                        min_last_dv=scanner_details["min_last_dv"],
+                        min_share_price=scanner_details["min_share_price"],
+                        max_share_price=scanner_details["max_share_price"],
+                        min_volume=scanner_details["min_volume"],
+                        from_market_open=scanner_details["from_market_open"],
+                        today_change_percent=scanner_details["min_gap"],
+                        recurrence=timedelta(minutes=recurrence)
+                        if recurrence
+                        else None,
+                        target_strategy_name=target_strategy_name,
+                        max_symbols=scanner_details.get(
+                            "max_symbols", config.total_tickers
+                        ),
+                    )
+                    tlog(f"instantiated momentum scanner")
+                except KeyError as e:
+                    tlog(
+                        f"Error {e} in processing of scanner configuration {scanner_details}"
+                    )
+                    exit(0)
+            else:
+                tlog(f"custom scanner {scanner_name} selected")
+                scanner_details = scanners_conf[scanner_name]
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        "module.name", scanner_details["filename"]
+                    )
+                    custom_scanner_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(custom_scanner_module)  # type: ignore
+                    class_name = scanner_name
+                    custom_scanner = getattr(custom_scanner_module, class_name)
+
+                    if not issubclass(custom_scanner, Scanner):
+                        tlog(
+                            f"custom scanner must inherit from class {Scanner.__name__}"
+                        )
+                        exit(0)
+
+                    scanner_details.pop("filename")
+                    if "recurrence" not in scanner_details:
+                        scanner_object = custom_scanner(
+                            data_api=self.data_api,
+                            **scanner_details,
+                        )
+                    else:
+                        recurrence = scanner_details.pop("recurrence")
+                        scanner_object = custom_scanner(
+                            data_api=self.data_api,
+                            recurrence=timedelta(minutes=recurrence),
+                            **scanner_details,
+                        )
+
+                except Exception as e:
+                    tlog(
+                        f"[Error] scanners_runner.scanners_runner() for {scanner_name}:{e} "
+                    )
+            if scanner_object:
+                self.scanners.append(scanner_object)
+
+        await create_strategies(
+            self.conf_dict,
+            self.end - self.start,
+            None,
+            self.uid,
+            day.replace(hour=9, minute=30, second=0, microsecond=0),
+        )
+        self.now = pd.Timestamp(self.start)
+        self.symbols: List = []
+        self.minute_history = {}
+        self.portfolio_value: float = 100000.0
+
+        return self.uid
+
+    async def next_minute(self) -> (bool, List[Optional[str]]):
+        rc_msg = []
+        if self.now < self.end:
+            for i in range(0, len(self.scanners)):
+                if self.now == self.start or (
+                        self.scanners[i].recurrence is not None
+                        and self.scanners[i].recurrence.total_seconds() > 0
+                        and int((self.now - self.start).total_seconds() // 60)
+                        % int(self.scanners[i].recurrence.total_seconds() // 60)
+                        == 0
+                ):
+                    new_symbols = await self.scanners[i].run(self.now)
+                    if new_symbols:
+                        really_new = [x for x in new_symbols if x not in self.symbols]
+                        if len(really_new) > 0:
+                            print(f"Loading data for {len(really_new)} symbols: {really_new}")
+                            rc_msg.append(f"Loaded data for {len(really_new)} symbols: {really_new}")
+                            self.minute_history = {
+                                **self.minute_history,
+                                **(
+                                    market_data.get_historical_data_from_poylgon_for_symbols(
+                                        self.data_api,
+                                        really_new,
+                                        self.start - timedelta(days=7),
+                                        self.start + timedelta(days=1),
+                                    )
+                                ),
+                            }
+                            self.symbols += really_new
+                            print(f"loaded data for {len(really_new)} stocks")
+
+            for symbol in self.symbols:
+                try:
+                    for strategy in trading_data.strategies:
+                        minute_index = self.minute_history[symbol]["close"].index.get_loc(
+                            self.now, method="nearest"
+                        )
+                        price = self.minute_history[symbol]["close"][minute_index]
+
+                        if symbol not in trading_data.positions:
+                            trading_data.positions[symbol] = 0
+
+                        do, what = await strategy.run(
+                            symbol,
+                            True,
+                            int(trading_data.positions[symbol]),
+                            self.minute_history[symbol][: minute_index + 1],
+                            self.now,
+                            self.portfolio_value,
+                            debug=False,  # type: ignore
+                            backtesting=True,
+                        )
+                        if do:
+                            if (
+                                    what["side"] == "buy"
+                                    and float(what["qty"]) > 0
+                                    or what["side"] == "sell"
+                                    and float(what["qty"]) < 0
+                            ):
+                                trading_data.positions[symbol] += int(float(what["qty"]))
+                                trading_data.buy_time[symbol] = self.now.replace(
+                                    second=0, microsecond=0
+                                )
+                            else:
+                                trading_data.positions[symbol] -= int(float(what["qty"]))
+
+                            trading_data.last_used_strategy[symbol] = strategy
+
+                            rc_msg.append(f"[{self.now}][{strategy.name}] {what['side']} {what['qty']} of {symbol} @ {price}")
+                            db_trade = NewTrade(
+                                algo_run_id=strategy.algo_run.run_id,
+                                symbol=symbol,
+                                qty=int(float(what["qty"])),
+                                operation=what["side"],
+                                price=price,
+                                indicators=trading_data.buy_indicators[symbol]
+                                if what["side"] == "buy"
+                                else trading_data.sell_indicators[symbol],
+                            )
+
+                            await db_trade.save(
+                                config.db_conn_pool,
+                                str(self.now.to_pydatetime()),
+                                trading_data.stop_prices[symbol],
+                                trading_data.target_prices[symbol],
+                            )
+
+                            if what["side"] == "buy":
+                                await strategy.buy_callback(
+                                    symbol, price, int(float(what["qty"]))
+                                )
+                                break
+                            elif what["side"] == "sell":
+                                await strategy.sell_callback(
+                                    symbol, price, int(float(what["qty"]))
+                                )
+                                break
+                except Exception as e:
+                    print(f"[Exception] {self.now} {symbol} {e}")
+
+            self.now += timedelta(minutes=1)
+
+            return True, rc_msg
+        else:
+            return False, []
+
+    async def liquidate(self):
+        for symbol in trading_data.positions:
+            if (
+                    trading_data.positions[symbol] != 0 and
+                    trading_data.last_used_strategy[symbol].type
+                    == StrategyType.DAY_TRADE
+            ):
+                position = trading_data.positions[symbol]
+                minute_index = self.minute_history[symbol]["close"].index.get_loc(
+                    self.now, method="nearest"
+                )
+                price = self.minute_history[symbol]["close"][minute_index]
+                tlog(f"[{self.end}]{symbol} liquidate {position} at {price}")
+                db_trade = NewTrade(
+                    algo_run_id=trading_data.last_used_strategy[symbol].algo_run.run_id,  # type: ignore
+                    symbol=symbol,
+                    qty=int(position) if int(position) > 0 else -int(position),
+                    operation="sell" if position > 0 else "buy",
+                    price=price,
+                    indicators={"liquidate": 1},
+                )
+                await db_trade.save(
+                    config.db_conn_pool, str(self.now.to_pydatetime())
+                )
+
+
 def backtest_day(day: date, conf_dict: Dict) -> str:
     uid = str(uuid.uuid4())
 
@@ -375,7 +625,6 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
         scanners_conf = conf_dict["scanners"]
 
         scanners: List[Optional[Scanner]] = []
-
 
         est = pytz.timezone("America/New_York")
         start_time = datetime.combine(day, datetime.min.time()).astimezone(est)

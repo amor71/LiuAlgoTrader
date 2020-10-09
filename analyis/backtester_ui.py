@@ -18,7 +18,7 @@ from liualgotrader.analytics.analysis import (
     load_trades_by_batch_id,
 )
 from liualgotrader.common import config
-from liualgotrader.backtester import backtest, backtest_day
+from liualgotrader.backtester import backtest, backtest_day, BackTestDay
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -29,24 +29,24 @@ except pygit2.GitError:
 
     config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
-st.title("Back-testing a trading session")
+st.title("Liu Algo Trading Framework")
+st.markdown("## **Back-testing & Analysis tools**")
 
 app = st.sidebar.selectbox("select app", ("back-test", "analyzer"))
 new_bid: str = ""
 if app == "back-test":
     new_bid = ""
-    st.text("Back-testing a past trading day, or a specific batch-id")
+    st.text("Back-testing a past trading day, or a specific batch-id.")
     # Select date
-    day_to_analyze = st.date_input("pick day to analyze", value=date.today())
+    day_to_analyze = st.date_input("Pick day to analyze", value=date.today())
 
     # Load configuration
     st.set_option("deprecation.showfileUploaderEncoding", False)
 
     file_buffer: io.StringIO = st.file_uploader(
-        label="select tradeplan file", type=["toml", "TOML"]
+        label="Select tradeplan file", type=["toml", "TOML"]
     )
     if not file_buffer:
-        st.error("Failed to load file, retry")
         st.stop()
 
     try:
@@ -68,11 +68,27 @@ if app == "back-test":
         ),
     )
 
+    async def back_test():
+        backtest = BackTestDay(conf_dict)
+        new_bid = await backtest.create(day_to_analyze)
+        while True:
+            status, msgs = await backtest.next_minute()
+            if not status:
+                break
+            if len(msgs) > 0:
+                for msg in msgs:
+                    st.success(msg)
+
+        await backtest.liquidate()
+        # new_bid = backtest_day(day_to_analyze, conf_dict=conf_dict)
+        st.success(f"new batch-id is {new_bid}")
+
+
     if selection == "back-test against the whole day":
-        with st.spinner(f"back-testing.."):
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            new_bid = backtest_day(day_to_analyze, conf_dict=conf_dict)
-            st.success(f"new batch-id is {new_bid}")
+        with st.spinner(f"back-testing.. patience is a virtue "):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(back_test())
     else:
         try:
             with st.spinner("Loading list of trading sessions"):
@@ -112,7 +128,7 @@ if app == "back-test":
 elif app == "analyzer":
     st.text("Analyze a specific batch-id")
 
-    shpw_trade_details = st.sidebar.checkbox("show trade details")
+    show_trade_details = st.sidebar.checkbox("show trade details")
     bid = st.text_input("Enter batch-id", value=new_bid)
 
     if len(bid) > 0:
@@ -121,7 +137,7 @@ elif app == "analyzer":
         try:
             how_was_my_batch = pd.DataFrame()
             t = load_trades_by_batch_id(bid)
-            if shpw_trade_details:
+            if show_trade_details:
                 st.dataframe(t)
             how_was_my_batch["symbol"] = t.symbol.unique()
             how_was_my_batch["revenues"] = how_was_my_batch["symbol"].apply(
@@ -131,6 +147,7 @@ elif app == "analyzer":
                 lambda x: count_trades(x, t)
             )
             st.dataframe(how_was_my_batch)
+            st.text(f"Revenue: ${round(sum(how_was_my_batch['revenues'].tolist()), 2)}")
         except Exception as e:
             st.error(f"Try picking another batch-id ({e})")
             st.stop()
