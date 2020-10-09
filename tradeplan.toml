@@ -5,6 +5,7 @@ bypass_market_schedule = false
 
 portfolio_value = 25000.0
 risk = 0.001
+market_liquidation_end_time_minutes = 15
 
 # if set, existing positions won't be pull into a run,
 # this configuration is helpful when testing different
