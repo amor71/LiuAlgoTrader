@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from asyncpg.pool import Pool
 
@@ -56,7 +56,7 @@ default_stop = 0.95
 
 # How much of our portfolio to allocate to any one position
 risk = 0.001
-
+portfolio_value: Optional[float] = None
 
 group_margin = 0.02
 

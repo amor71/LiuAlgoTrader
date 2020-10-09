@@ -3,6 +3,8 @@
 # if set to true, allow running outside market open hours
 bypass_market_schedule = false 
 
+portfolio_value = 25000.0
+
 # if set, existing positions won't be pull into a run,
 # this configuration is helpful when testing different
 # scanners & strategies on different dockers, all sharing

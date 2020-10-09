@@ -149,7 +149,7 @@ def backtest(
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,
     )
-    portfolio_value: float = 100000.0
+    portfolio_value: float = 100000.0 if not config.portfolio_value else config.portfolio_value
     uid = str(uuid.uuid4())
 
     async def backtest_run(
@@ -373,6 +373,7 @@ class BackTestDay():
         )
 
         self.conf_dict = conf_dict
+        config.portfolio_value = self.conf_dict.get("portfolio_value", None)
         self.minute_history = None
         self.scanners = None
 
@@ -475,7 +476,7 @@ class BackTestDay():
         self.now = pd.Timestamp(self.start)
         self.symbols: List = []
         self.minute_history = {}
-        self.portfolio_value: float = 100000.0
+        self.portfolio_value: float = 100000.0 if not config.portfolio_value else config.portfolio_value
 
         return self.uid
 
@@ -614,6 +615,8 @@ class BackTestDay():
 def backtest_day(day: date, conf_dict: Dict) -> str:
     uid = str(uuid.uuid4())
 
+    config.portfolio_value = conf_dict.get("portfolio_value", None)
+
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
@@ -722,7 +725,7 @@ def backtest_day(day: date, conf_dict: Dict) -> str:
 
         symbols: List = []
         minute_history = {}
-        portfolio_value: float = 100000.0
+        portfolio_value: float = 100000.0 if not config.portfolio_value else config.portfolio_value
         while now < end:
             for i in range(0, len(scanners)):
                 if now == start or (
@@ -884,7 +887,7 @@ if __name__ == "__main__":
         tlog(f"[ERROR] could not locate tradeplan file {fname}")
         sys.exit(0)
     conf_dict = toml.load(config.configuration_filename)
-
+    config.portfolio_value = conf_dict.get("portfolio_value", None)
     if len(sys.argv) == 1:
         show_usage()
         sys.exit(0)
