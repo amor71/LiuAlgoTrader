@@ -879,6 +879,8 @@ def consumer_main(
 
     config.bypass_market_schedule = conf.get("bypass_market_schedule", False)
     config.portfolio_value = conf.get("portfolio_value", None)
+    if "risk" in conf:
+        config.risk = conf["risk"]
 
     market_data.minute_history = minute_history
     try:

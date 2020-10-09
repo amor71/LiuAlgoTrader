@@ -83,7 +83,6 @@ if app == "back-test":
         # new_bid = backtest_day(day_to_analyze, conf_dict=conf_dict)
         st.success(f"new batch-id is {new_bid}")
 
-
     if selection == "back-test against the whole day":
         with st.spinner(f"back-testing.. patience is a virtue "):
             loop = asyncio.new_event_loop()

@@ -6,6 +6,9 @@ bypass_market_schedule = true
 # set max portfolio_value
 # portfolio_value = 25000.0
 
+# set risk factor per trade
+# risk = 0.001
+
 # ticket scanners, may have several
 # scanners during the day
 [scanners]
