@@ -74,7 +74,7 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
         if samples_location[-1] != '/':
             samples_location += '/'
 
-        base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart'
+        base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/'
         files = ["tradeplan.toml", "vwap_short.py", "momentum_long_v3.py"]
 
         for file in files:

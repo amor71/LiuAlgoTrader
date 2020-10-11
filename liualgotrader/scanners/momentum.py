@@ -195,8 +195,6 @@ class Momentum(Scanner):
 
         await asyncio.sleep(0)
         if _minute_data[symbol].empty:
-            tlog(f"{self.name} no data for {symbol} @ {when}")
-
             daily_bar = StockOhlc(
                 symbol=symbol,
                 symbol_date=when,
@@ -208,9 +206,7 @@ class Momentum(Scanner):
                 indicators={},
             )
             await daily_bar.save()
-            tlog(f"saved empty {symbol}")
         else:
-            tlog(f"{self.name} saving data for {symbol}")
             for index, row in _minute_data[symbol].iterrows():
                 daily_bar = StockOhlc(
                     symbol=symbol,
@@ -223,7 +219,7 @@ class Momentum(Scanner):
                     indicators={},
                 )
                 await daily_bar.save()
-                tlog(f"saved {symbol}")
+                print(f"saved data for {symbol} @ {index}")
 
     async def fetch_symbol_details(
         self, symbol: str, back_time: datetime, session: requests.Session = None
@@ -289,7 +285,7 @@ class Momentum(Scanner):
             if not len(rows):
                 trade_able_symbols = self._get_trade_able_symbols()
                 tlog(
-                    f"{self.name} loading {len(trade_able_symbols)} symbols from Polygon and building cache.."
+                    f"{self.name} scanner => loading {len(trade_able_symbols)} symbols from Polygon and building cache. this may take a while."
                 )
                 tasks = [
                     asyncio.get_event_loop().create_task(
