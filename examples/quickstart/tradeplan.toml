@@ -58,14 +58,14 @@ events = ["second", "minute", "trade", "quote"]
     # strategy class name, must implement Strategy class
 
     [strategies.MomentumLongV3]
-        filename = "/Users/amichayoren/dev/trades/momentum_long_v3.py"
+        filename = "./momentum_long_v3.py"
 
         [[strategies.MomentumLongV3.schedule]]
             start = 15
             duration = 60
 
     [strategies.VWAPShort]
-        filename = "/Users/amichayoren/dev/trades/vwap_short.py"
+        filename = "./vwap_short.py"
 
 
         # trading schedules block, trades many have
