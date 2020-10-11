@@ -882,7 +882,9 @@ def consumer_main(
     if "risk" in conf:
         config.risk = conf["risk"]
     if "market_liquidation_end_time_minutes" in conf:
-        config.market_liquidation_end_time_minutes = conf["market_liquidation_end_time_minutes"]
+        config.market_liquidation_end_time_minutes = conf[
+            "market_liquidation_end_time_minutes"
+        ]
 
     market_data.minute_history = minute_history
     try:

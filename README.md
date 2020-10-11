@@ -28,8 +28,7 @@ Read the below, or use [the docker implementations](https://github.com/amor71/tr
 ### Prerequisite
 
 - Paper, and preferable a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
-- Installed [PostgreSQL](https://www.postgresql.org/) database (or see *Alternative Installation* below)
-
+- Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
 ### Installation
 
 To install LiuAlgoTrader just type:
@@ -38,12 +37,9 @@ To install LiuAlgoTrader just type:
 
 **Note** if you're running on Windows, TA-LIB setup might fail, in which case try https://github.com/mrjbq7/ta-lib#troubleshooting, and re-try installing the `liualgotrader` package.
  
-#### Alternative Installation 
-
-LiuAlgoTrader requires several packages to be properly installed, as well as a PostgrSQL database properly configured. For first time users, it might be easier to install the docker version https://github.com/amor71/trade_deploy .
-
 ### First time run
 
+1. Download 
 LiuAlgoTrader applications require some 
 configuration and setup which are best described 
 in the documentation. However, to confirm your 
