@@ -18,7 +18,7 @@ from liualgotrader.analytics.analysis import (
     load_trades_by_batch_id,
 )
 from liualgotrader.common import config
-from liualgotrader.backtester import backtest, backtest_day, BackTestDay
+from liualgotrader.backtester import backtest, BackTestDay
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -80,7 +80,6 @@ if app == "back-test":
                     st.success(msg)
 
         await backtest.liquidate()
-        # new_bid = backtest_day(day_to_analyze, conf_dict=conf_dict)
         st.success(f"new batch-id is {new_bid}")
 
     if selection == "back-test against the whole day":

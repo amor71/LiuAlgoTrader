@@ -47,7 +47,8 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str):
                 f.write(r.text)
                 f.write("")
     except Exception as e:
-        print(f"Something went wrong {e}, open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
+        print(f"Something went wrong:{e}")
+        print("Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
         exit(0)
 
     print("files loaded successfully.")
@@ -58,7 +59,9 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str):
     print()
     print("check deployment using `\psql -h localhost -p 5400 -U liu`")
 
-def setup_samples(samples_location: str) -> None:
+
+
+def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> None:
     try:
         print()
         print("+--------------------+")
@@ -68,22 +71,32 @@ def setup_samples(samples_location: str) -> None:
         p = pathlib.Path(samples_location)
         if not p.exists():
             p.mkdir()
-        if db_location[-1] != '/':
-            db_location += '/'
+        if samples_location[-1] != '/':
+            samples_location += '/'
 
         base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart'
         files = ["tradeplan.toml", "vwap_short.py", "momentum_long_v3.py"]
 
         for file in files:
-            print(f"Downloading {base_url}{file} to {samples_location}..."
+            print(f"Downloading {base_url}{file} to {samples_location}...")
             r = requests.get(f"{base_url}{file}")
             with open(f"{samples_location}{file}", "w") as f:
                 f.write(r.text)
                 f.write("")
 
+        print()
+        print("creating environment variables script")
+        with open(f"{samples_location}env_vars.sh", "w") as f:
+            f.write(f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
+
+
     except Exception as e:
-        print(f"Something went wrong {e}, open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
+        print(f"Something went wrong:{e}")
+        print("Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
         exit(0)
+
+
+
 
 def quickstart():
     print(f"Welcome to Lig Algo Trading Framework v{config.build_label}!")
@@ -178,9 +191,9 @@ def quickstart():
     samples = True if not len(i) or i.lower in ("y", "yes") else False
     if samples:
         pwd = pathlib.Path().absolute()
-        print(f"Select location for sample files [{pwd}]:")
+        print(f"Select location for sample files [{pwd}/liu_samples]:")
         sample_location = input()
-        sample_location = pwd if not len(sample_location) else sample_location
+        sample_location = f"{pwd}/liu_samples" if not len(sample_location) else sample_location
 
     print()
     print("Ready to go?? Press [ENTER] to start the installation..")
@@ -188,7 +201,23 @@ def quickstart():
     if not already_have_db:
         setup_db(db_location, db_name, user_name, password)
     if samples:
-        setup_samples(sample_location)
+        setup_samples(sample_location, user_name, password, db_name)
+    print("setup completed successfully.")
+    print()
+    print()
+    print("+---------------+")
+    print("| what's next?  |")
+    print("+---------------+")
+    print("Liu Algo Trader is ready to go. Your Alpaca environment vars are in order,")
+    print("you now have postgresql running, and you have downloaded the sample files,")
+    print("from here, you can either run the backtesting UI to get, or read the docs.")
+    print("The full documentation is avaliable here: `https://liualgotrader.rtfd.io`.")
+    print("To run the backtesting for experiance Liu Algo Trading for the first time:")
+    print(f"1. move into the sample directory {sample_location} ('cd {sample_location}'),")
+    print("2. run the env-vars script ('source env_vars.sh'),")
+    print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
+    print()
+    print("Enjoy the ride with Liu Algo Trading Framework.")
 
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
@@ -212,5 +241,6 @@ if __name__ == "__main__":
             print("Oops... exiting gracefully")
     else:
         show_usage()
+
 
     exit(0)
