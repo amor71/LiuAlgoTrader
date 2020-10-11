@@ -46,9 +46,9 @@ finnhub_websocket_limit = 50
 env: str = os.getenv("TRADE", "PAPER")
 dsn: str = os.getenv("DSN", "")
 
-prod_base_url = os.getenv("ALPACA_LIVE_BASEURL")
-prod_api_key_id = os.getenv("ALPACA_LIVE_API_KEY")
-prod_api_secret = os.getenv("ALPACA_LIVE_API_SECRET")
+prod_base_url = os.getenv("ALPACA_LIVE_BASEURL", "https://api.alpaca.markets")
+prod_api_key_id = os.getenv("APCA_API_KEY_ID")
+prod_api_secret = os.getenv("APCA_API_SECRET_KEY")
 
 
 # Stop limit to default to
