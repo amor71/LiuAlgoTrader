@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 
 import asyncio
-import getopt
-import os
 import pprint
 import sys
 import traceback
 import uuid
-import toml
 import pandas as pd
 import importlib.util
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
 
 import alpaca_trade_api as tradeapi
-import pygit2
 import pytz
 from requests.exceptions import HTTPError
 
@@ -624,60 +620,3 @@ class BackTestDay:
                 )
                 await db_trade.save(config.db_conn_pool, str(self.now.to_pydatetime()))
 
-
-if __name__ == "__main__":
-    try:
-        config.build_label = pygit2.Repository("../").describe(
-            describe_strategy=pygit2.GIT_DESCRIBE_TAGS
-        )
-    except pygit2.GitError:
-        import liualgotrader
-
-        config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
-
-    config.filename = os.path.basename(__file__)
-
-    folder = (
-        config.tradeplan_folder
-        if config.tradeplan_folder[-1] == "/"
-        else f"{config.tradeplan_folder}/"
-    )
-    fname = f"{folder}{config.configuration_filename}"
-    try:
-        conf_dict = toml.load(fname)
-        tlog(f"loaded configuration file from {fname}")
-    except FileNotFoundError:
-        tlog(f"[ERROR] could not locate tradeplan file {fname}")
-        sys.exit(0)
-    conf_dict = toml.load(config.configuration_filename)
-    config.portfolio_value = conf_dict.get("portfolio_value", None)
-    if "risk" in conf_dict:
-        config.risk = conf_dict["risk"]
-    if len(sys.argv) == 1:
-        show_usage()
-        sys.exit(0)
-
-    try:
-        opts, args = getopt.getopt(
-            sys.argv[1:], "vb:d:", ["batch-list", "version", "debug-symbol="]
-        )
-        debug_symbols = []
-        for opt, arg in opts:
-            if opt in ("-v", "--version"):
-                show_version(config.filename, config.build_label)
-                break
-            elif opt in ("--batch-list", "-b"):
-                get_batch_list()
-                break
-            elif opt in ("--debug-symbol", "-d"):
-                debug_symbols.append(arg)
-
-        for arg in args:
-            backtest(arg, debug_symbols, conf_dict)
-
-    except getopt.GetoptError as e:
-        print(f"Error parsing options:{e}\n")
-        show_usage()
-        sys.exit(0)
-
-    sys.exit(0)

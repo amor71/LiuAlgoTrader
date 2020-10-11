@@ -112,26 +112,34 @@ def get_historical_data_from_polygon_by_range(
         for symbol in symbols:
             from_date = start_date
             while from_date < date.today():
-                _df = api.polygon.historic_agg_v2(
-                    symbol,
-                    1,
-                    timespan,
-                    _from=str(from_date),
-                    to=str(
-                        from_date + timedelta(days=1 + config.polygon.MAX_DAYS_TO_LOAD)
-                    ),
-                ).df
-                _df["vwap"] = 0.0
-                _df["average"] = 0.0
 
-                _minute_history[symbol] = (
-                    pd.concat([_minute_history[symbol], _df])
-                    if symbol in _minute_history
-                    else _df
-                )
+                retry = 5
+                _df = None
+                while retry > 0:
+                    try:
+                        _df = api.polygon.historic_agg_v2(
+                            symbol,
+                            1,
+                            timespan,
+                            _from=str(from_date),
+                            to=str(
+                                from_date + timedelta(days=1 + config.polygon.MAX_DAYS_TO_LOAD)
+                            ),
+                        ).df
+                        break
+                    except Exception:
+                        retry -= 1
+                        continue
 
-                if not len(_df):
-                    break
+                if _df:
+                    _df["vwap"] = 0.0
+                    _df["average"] = 0.0
+
+                    _minute_history[symbol] = (
+                        pd.concat([_minute_history[symbol], _df])
+                        if symbol in _minute_history
+                        else _df
+                    )
 
                 from_date = _df.index[-1] + timedelta(days=1)
             tlog(
@@ -151,21 +159,31 @@ def get_historical_daily_from_polygon_by_range(
     _minute_history: Dict[str, df] = {}
     try:
         for symbol in symbols:
-            _df = api.polygon.historic_agg_v2(
-                symbol,
-                1,
-                "day",
-                _from=str(start_date),
-                to=str(end_date),
-            ).df
-            _df["vwap"] = 0.0
-            _df["average"] = 0.0
 
-            _minute_history[symbol] = (
-                pd.concat([_minute_history[symbol], _df])
-                if symbol in _minute_history
-                else _df
-            )
+            retry = 5
+            _df = None
+            while retry > 0:
+                try:
+                    _df = api.polygon.historic_agg_v2(
+                        symbol,
+                        1,
+                        "day",
+                        _from=str(start_date),
+                        to=str(end_date),
+                    ).df
+                    break
+                except Exception as e:
+                    retry -= 1
+                    continue
+            if _df:
+                _df["vwap"] = 0.0
+                _df["average"] = 0.0
+
+                _minute_history[symbol] = (
+                    pd.concat([_minute_history[symbol], _df])
+                    if symbol in _minute_history
+                    else _df
+                )
 
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")

@@ -6,7 +6,7 @@ import os, sys
 import toml
 import pygit2
 from typing import Dict, List, Optional
-
+import traceback
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -32,6 +32,8 @@ async def main(conf_dict: Dict):
     for miner in conf_dict["miners"]:
         if miner == "StockCluster":
             task_list.append(asyncio.create_task(StockCluster().run()))
+
+            await asyncio.gather(*task_list)
         elif miner == "DailyOHLC":
             daily = DailyOHLC(
                 days=conf_dict["miners"][miner]["days"],
@@ -41,10 +43,12 @@ async def main(conf_dict: Dict):
                 symbols=conf_dict["miners"][miner].get("symbols", None),
             )
             task_list.append(asyncio.create_task(daily.run()))
+
+            await asyncio.gather(*task_list)
         else:
             tlog(f"[ERROR] miner {miner} is not supported yet")
 
-    await asyncio.gather(*task_list)
+
 
 if __name__ == "__main__":
     """
@@ -77,11 +81,14 @@ if __name__ == "__main__":
             asyncio.get_event_loop().close()
         asyncio.run(main(conf_dict))
     except KeyboardInterrupt:
-        tlog("scanners_runner.main() - Caught KeyboardInterrupt")
+        tlog("market_miner.main() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
-            f"scanners_runner.main() - exception of type {type(e).__name__} with args {e.args}"
+            f"market_miner.main() - exception of type {type(e).__name__} with args {e.args}"
         )
+        exc_info = sys.exc_info()
+        traceback.print_exception(*exc_info)
+        del exc_info
 
     tlog("*** market_miner completed ***")
 
