@@ -6,18 +6,15 @@
 /wip/
 /legacy/
 /tools/set_keys.bash
-<<<<<<< HEAD
-=======
 /tools/fix_git_email.bash
->>>>>>> 0.0.40
-/analyis_notebooks/.ipynb_checkpoints/
+/analyis/.ipynb_checkpoints/
 /liualgotrader/__pycache__/
 /tests/__pycache__/
 /.idea/
 /liualgotrader/scanners/__pycache__/
 /liualgotrader/common/__pycache__/
 /docs/build/
-
+/analyis/notebooks/.ipynb_checkpoints
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

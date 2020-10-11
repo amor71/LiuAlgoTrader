@@ -1,12 +1,8 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
-import numpy as np
 import matplotlib.pyplot as plt
-import psycopg2
 import pytz
 from datetime import date, timedelta, datetime
-from sqlalchemy import create_engine
 import alpaca_trade_api as tradeapi
 import requests
 from liualgotrader.analytics.analysis import load_trades, load_runs
@@ -123,7 +119,6 @@ if st.sidebar.checkbox("Show details"):
 
     c = 0
     with st.spinner(text="Loading historical data from Polygon..."):
-
         for batch_id, count in batch.items():
             for run_id in batch[batch_id]:
                 symbols = trades.loc[trades["algo_run_id"] == run_id][

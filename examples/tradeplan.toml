@@ -3,6 +3,15 @@
 # if set to true, allow running outside market open hours
 bypass_market_schedule = true
 
+# set max portfolio_value
+# portfolio_value = 25000.0
+
+# set risk factor per trade
+# risk = 0.001
+
+# how many minutes, before end of the trading day to enforce liqudation
+# market_liquidation_end_time_minutes = 15
+
 # ticket scanners, may have several
 # scanners during the day
 [scanners]

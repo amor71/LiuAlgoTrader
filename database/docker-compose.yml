@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  postgresql:
+    image: postgres
+    container_name: pg-docker
+    environment:
+      - POSTGRES_USER=liu.py
+      - POSTGRES_PASSWORD=liu.py
+      - POSTGRES_DB=liu.py
+    volumes:
+      - ./liu.py-data:/var/lib/postgresql/data
+      - ./postgres.conf:/etc/postgresql/postgresql.conf
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    ports:
+      - "5400:5432"
+    restart: always

@@ -2,8 +2,12 @@ from datetime import date, timedelta
 import pandas as pd
 from sqlalchemy import create_engine
 from liualgotrader.common import config
+from liualgotrader.common.tlog import tlog
 
-db_conn = create_engine(config.dsn)
+try:
+    db_conn = create_engine(config.dsn)
+except Exception as e:
+    tlog(f"[EXCEPTION] {config.dsn} : {e}")
 
 
 def load_trades(day: date) -> pd.DataFrame:
@@ -20,6 +24,26 @@ def load_trades(day: date) -> pd.DataFrame:
     ORDER BY symbol, tstamp
     """
     return pd.read_sql_query(query, db_conn)
+
+
+def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
+    query = f"""
+    SELECT t.*, a.batch_id 
+    FROM 
+    new_trades as t, algo_run as a
+    WHERE 
+        t.algo_run_id = a.algo_run_id AND 
+        a.batch_id = '{batch_id}' AND
+        t.expire_tstamp is null
+    ORDER BY symbol, tstamp
+    """
+    df = pd.read_sql_query(query, db_conn)
+    try:
+        df["client_time"] = pd.to_datetime(df["client_time"])
+    except Exception:
+        pass
+
+    return df
 
 
 def load_runs(day: date) -> pd.DataFrame:

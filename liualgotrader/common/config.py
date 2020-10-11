@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from asyncpg.pool import Pool
 
@@ -34,7 +34,7 @@ batch_id: str
 # API keys
 #
 # Replace these with your API connection info from the dashboard
-paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
+paper_base_url = os.getenv("ALPACA_PAPER_BASEURL", "https://paper-api.alpaca.markets")
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")
@@ -46,9 +46,9 @@ finnhub_websocket_limit = 50
 env: str = os.getenv("TRADE", "PAPER")
 dsn: str = os.getenv("DSN", "")
 
-prod_base_url = os.getenv("ALPACA_LIVE_BASEURL")
-prod_api_key_id = os.getenv("ALPACA_LIVE_API_KEY")
-prod_api_secret = os.getenv("ALPACA_LIVE_API_SECRET")
+prod_base_url = os.getenv("ALPACA_LIVE_BASEURL", "https://api.alpaca.markets")
+prod_api_key_id = os.getenv("APCA_API_KEY_ID")
+prod_api_secret = os.getenv("APCA_API_SECRET_KEY")
 
 
 # Stop limit to default to
@@ -56,7 +56,7 @@ default_stop = 0.95
 
 # How much of our portfolio to allocate to any one position
 risk = 0.001
-
+portfolio_value: Optional[float] = None
 
 group_margin = 0.02
 

@@ -14,7 +14,9 @@ from pytz import timezone
 from liualgotrader.common import config, trading_data
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
+from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.ticker_snapshot import TickerSnapshot
+from concurrent.futures import ThreadPoolExecutor
 
 volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
@@ -82,6 +84,24 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
     return minute_history
 
 
+def get_historical_data_from_poylgon_for_symbols(
+    api: tradeapi, symbols: List[str], start_date: date, end_date: date
+) -> Dict[str, df]:
+    minute_history = {}
+    for symbol in symbols:
+        if symbol not in minute_history:
+            minute_history[symbol] = api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "minute",
+                _from=start_date,
+                to=end_date,
+            ).df.tz_convert("US/Eastern")
+            add_daily_vwap(minute_history[symbol])
+
+    return minute_history
+
+
 def get_historical_data_from_polygon_by_range(
     api: tradeapi, symbols: List[str], start_date: date, timespan: str
 ) -> Dict[str, df]:
@@ -117,6 +137,36 @@ def get_historical_data_from_polygon_by_range(
             tlog(
                 f"get_historical_data_from_polygon_by_range() - total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
             )
+    except KeyboardInterrupt:
+        tlog("KeyboardInterrupt")
+
+    return _minute_history
+
+
+def get_historical_daily_from_polygon_by_range(
+    api: tradeapi, symbols: List[str], start_date: date, end_date: date
+) -> Dict[str, df]:
+    """get ticker history"""
+
+    _minute_history: Dict[str, df] = {}
+    try:
+        for symbol in symbols:
+            _df = api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "day",
+                _from=str(start_date),
+                to=str(end_date),
+            ).df
+            _df["vwap"] = 0.0
+            _df["average"] = 0.0
+
+            _minute_history[symbol] = (
+                pd.concat([_minute_history[symbol], _df])
+                if symbol in _minute_history
+                else _df
+            )
+
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")
 

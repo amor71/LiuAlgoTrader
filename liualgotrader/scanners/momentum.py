@@ -1,14 +1,16 @@
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List, Optional
-
+from concurrent.futures import ThreadPoolExecutor
 import alpaca_trade_api as tradeapi
 import requests
 from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.ticker_data import StockOhlc
+from liualgotrader.common.market_data import get_historical_daily_from_polygon_by_range
 
 from .base import Scanner
 
@@ -29,6 +31,7 @@ class Momentum(Scanner):
         min_volume: float,
         from_market_open: float,
         max_symbols: int = config.total_tickers,
+        data_source: object = None,
     ):
         self.provider = provider
         self.max_share_price = max_share_price
@@ -43,6 +46,7 @@ class Momentum(Scanner):
             recurrence=recurrence,
             target_strategy_name=target_strategy_name,
             data_api=data_api,
+            data_source=data_source,
         )
 
     @classmethod
@@ -184,12 +188,118 @@ class Momentum(Scanner):
         tlog(f"loaded {len(symbols)} from Finnhub")
         return symbols
 
-    async def run(self) -> List[str]:
-        await self._wait_time()
+    async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
+        _minute_data = get_historical_daily_from_polygon_by_range(
+            self.data_api, [symbol], when, when + timedelta(days=1)
+        )
 
-        if self.provider == "polygon":
-            return await self.run_polygon()
-        elif self.provider == "finnhub":
-            return await self.run_finnhub()
+        await asyncio.sleep(0)
+        if _minute_data[symbol].empty:
+            tlog(f"{self.name} no data for {symbol} @ {when}")
+
+            daily_bar = StockOhlc(
+                symbol=symbol,
+                symbol_date=when,
+                open=0.0,
+                high=0.0,
+                low=0.0,
+                close=0.0,
+                volume=0,
+                indicators={},
+            )
+            await daily_bar.save()
+            tlog(f"saved empty {symbol}")
         else:
-            raise Exception(f"Invalid provider {self.provider} for scanner {self.name}")
+            tlog(f"{self.name} saving data for {symbol}")
+            for index, row in _minute_data[symbol].iterrows():
+                daily_bar = StockOhlc(
+                    symbol=symbol,
+                    symbol_date=index,
+                    open=row["open"],
+                    high=row["high"],
+                    low=row["low"],
+                    close=row["close"],
+                    volume=int(row["volume"]),
+                    indicators={},
+                )
+                await daily_bar.save()
+                tlog(f"saved {symbol}")
+
+    async def fetch_symbol_details(
+        self, symbol: str, back_time: datetime, session: requests.Session = None
+    ):
+        if not await StockOhlc.check_stock_date_exists(symbol, back_time):
+            await self.add_stock_data_for_date(symbol, back_time)
+
+        if not await StockOhlc.check_stock_date_exists(
+            symbol, back_time - timedelta(days=1)
+        ):
+            await self.add_stock_data_for_date(symbol, back_time - timedelta(days=1))
+
+    async def load_from_db(self, back_time: date) -> List[str]:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT
+                            c2.symbol
+                        FROM 
+                            stock_ohlc as c1,
+                            stock_ohlc as c2
+                        WHERE
+                            c1.symbol = c2.symbol AND 
+                            c1.symbol_date = $1 AND
+                            c2.symbol_date = $2 AND
+                            c2.high < $3 AND
+                            c2.low > $4 AND
+                            c2.volume > $5 AND
+                            c1.volume * c1.close > $6 AND
+                            (c2.high / c1.close) > $7
+                    """,
+                    back_time - timedelta(days=1),
+                    back_time,
+                    self.max_share_price,
+                    self.min_share_price,
+                    self.min_volume,
+                    self.min_last_dv,
+                    1.0 + self.today_change_percent / 100.0,
+                )
+
+                if len(rows) > 0:
+                    return [row[0] for row in rows]
+                else:
+                    return []
+
+    async def run(self, back_time: datetime = None) -> List[str]:
+        if not back_time:
+            await self._wait_time()
+
+            if self.provider == "polygon":
+                return await self.run_polygon()
+            elif self.provider == "finnhub":
+                return await self.run_finnhub()
+            else:
+                raise Exception(
+                    f"Invalid provider {self.provider} for scanner {self.name}"
+                )
+        else:
+            rows = await self.load_from_db(back_time)
+
+            if not len(rows):
+                trade_able_symbols = self._get_trade_able_symbols()
+                tlog(
+                    f"{self.name} loading {len(trade_able_symbols)} symbols from Polygon and building cache.."
+                )
+                tasks = [
+                    asyncio.get_event_loop().create_task(
+                        self.fetch_symbol_details(symbol, back_time, None)
+                    )
+                    for symbol in trade_able_symbols
+                ]
+                await asyncio.gather(*tasks)
+
+                rows = await self.load_from_db(back_time)
+
+            print(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
+            return rows

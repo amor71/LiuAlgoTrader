@@ -565,6 +565,7 @@ async def handle_data_queue_msg(
                     market_data.minute_history[symbol],
                     ts,
                     trading_api=trading_api,
+                    portfolio_value=config.portfolio_value,
                 )
 
                 if do:
@@ -877,6 +878,13 @@ def consumer_main(
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     config.bypass_market_schedule = conf.get("bypass_market_schedule", False)
+    config.portfolio_value = conf.get("portfolio_value", None)
+    if "risk" in conf:
+        config.risk = conf["risk"]
+    if "market_liquidation_end_time_minutes" in conf:
+        config.market_liquidation_end_time_minutes = conf[
+            "market_liquidation_end_time_minutes"
+        ]
 
     market_data.minute_history = minute_history
     try:

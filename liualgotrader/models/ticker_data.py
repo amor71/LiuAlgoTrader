@@ -85,6 +85,31 @@ class StockOhlc:
     create_tstamp: Optional[datetime] = None
 
     @classmethod
+    async def check_stock_date_exists(
+        cls, symbol: str, symbol_date: date, pool: Pool = None
+    ) -> bool:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                val = await con.fetchval(
+                    """
+                        SELECT 
+                            COUNT(symbol)
+                        FROM 
+                            stock_ohlc
+                        WHERE 
+                            symbol_date = $1 AND
+                            symbol = $2
+                        LIMIT 1
+                    """,
+                    symbol_date,
+                    symbol,
+                )
+                return val > 0
+
+    @classmethod
     async def get_latest_date(cls, symbol: str, pool: Pool = None) -> date:
         if not pool:
             pool = config.db_conn_pool
@@ -102,6 +127,40 @@ class StockOhlc:
                     symbol,
                 )
                 return val
+
+    @classmethod
+    async def load_by_date(
+        cls, symbol_date: date, pool: Pool = None
+    ) -> Dict[str, object]:
+        if not pool:
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT symbol, symbol_date, open, high, low, close, volume, indicators
+                        FROM stock_ohlc
+                        WHERE symbol_date = $1 
+                    """,
+                    symbol_date,
+                )
+
+                rc = {}
+
+                for x in rows:
+                    rc[x[0]] = StockOhlc(
+                        symbol=x[0],
+                        symbol_date=x[1],
+                        open=x[2],
+                        high=x[3],
+                        low=x[4],
+                        close=x[5],
+                        volume=x[6],
+                        indicators=json.loads(x[7]),
+                    )
+
+                return rc
 
     async def save(
         self,
