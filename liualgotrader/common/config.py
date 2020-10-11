@@ -34,7 +34,7 @@ batch_id: str
 # API keys
 #
 # Replace these with your API connection info from the dashboard
-paper_base_url = os.getenv("ALPACA_PAPER_BASEURL")
+paper_base_url = os.getenv("ALPACA_PAPER_BASEURL", "https://paper-api.alpaca.markets")
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")

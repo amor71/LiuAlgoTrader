@@ -48,6 +48,6 @@ setuptools.setup(
         "liualgotrader/trader",
         "liualgotrader/market_miner",
         "liualgotrader/backtester",
-        "liualgotrader/liu.py",
+        "liualgotrader/liu",
     ],
 )
