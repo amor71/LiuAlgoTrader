@@ -141,7 +141,7 @@ def get_historical_data_from_polygon_by_range(
                         else _df
                     )
 
-                from_date = _df.index[-1] + timedelta(days=1)
+                    from_date = _df.index[-1] + timedelta(days=1)
             tlog(
                 f"get_historical_data_from_polygon_by_range() - total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
             )
