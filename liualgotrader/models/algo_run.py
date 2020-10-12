@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Tuple
 
 from asyncpg.pool import Pool
@@ -103,7 +103,7 @@ class AlgoRun:
     @classmethod
     async def get_batch_list_by_date(
         cls,
-        date: datetime.date,
+        batch_date: date,
         pool: Pool = None,
     ) -> Dict[str, List[str]]:
         rc: Dict = {}
@@ -118,8 +118,8 @@ class AlgoRun:
                         ORDER BY start_time DESC
                         WHERE start_time >= $1 and start_time < $2
                     """,
-                    date,
-                    date + timedelta(days=1),
+                    batch_date,
+                    batch_date + timedelta(days=1),
                 )
 
                 if rows:

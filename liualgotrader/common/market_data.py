@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Dict, List
 
@@ -16,7 +17,6 @@ from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.ticker_snapshot import TickerSnapshot
-from concurrent.futures import ThreadPoolExecutor
 
 volume_today: Dict[str, int] = {}
 minute_history: Dict[str, df] = {}
@@ -112,7 +112,6 @@ def get_historical_data_from_polygon_by_range(
         for symbol in symbols:
             from_date = start_date
             while from_date < date.today():
-
                 retry = 5
                 _df = None
                 while retry > 0:
@@ -123,28 +122,35 @@ def get_historical_data_from_polygon_by_range(
                             timespan,
                             _from=str(from_date),
                             to=str(
-                                from_date + timedelta(days=1 + config.polygon.MAX_DAYS_TO_LOAD)
+                                from_date
+                                + timedelta(
+                                    days=1 + config.polygon.MAX_DAYS_TO_LOAD
+                                )
                             ),
                         ).df
                         break
-                    except Exception:
+
+                    except Exception as e:
+
                         retry -= 1
-                        continue
 
-                if not _df.empty:
-                    _df["vwap"] = 0.0
-                    _df["average"] = 0.0
+                if _df is None or not len(_df):
+                    break
 
-                    _minute_history[symbol] = (
-                        pd.concat([_minute_history[symbol], _df])
-                        if symbol in _minute_history
-                        else _df
-                    )
+                _df["vwap"] = 0.0
+                _df["average"] = 0.0
 
-                    from_date = _df.index[-1] + timedelta(days=1)
-            tlog(
-                f"get_historical_data_from_polygon_by_range() - total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
-            )
+                _minute_history[symbol] = (
+                    pd.concat([_minute_history[symbol], _df])
+                    if symbol in _minute_history
+                    else _df
+                )
+
+                from_date = _df.index[-1] + timedelta(days=1)
+
+                tlog(
+                    f"get_historical_data_from_polygon_by_range() - total loaded {len(_minute_history[symbol].index)} agg data points for {symbol}"
+                )
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")
 
@@ -159,7 +165,6 @@ def get_historical_daily_from_polygon_by_range(
     _minute_history: Dict[str, df] = {}
     try:
         for symbol in symbols:
-
             retry = 5
             _df = None
             while retry > 0:
@@ -171,19 +176,19 @@ def get_historical_daily_from_polygon_by_range(
                         _from=str(start_date),
                         to=str(end_date),
                     ).df
+
+                    _df["vwap"] = 0.0
+                    _df["average"] = 0.0
+
+                    _minute_history[symbol] = (
+                        pd.concat([_minute_history[symbol], _df])
+                        if symbol in _minute_history
+                        else _df
+                    )
                     break
                 except Exception as e:
                     retry -= 1
                     continue
-            if not _df.empty:
-                _df["vwap"] = 0.0
-                _df["average"] = 0.0
-
-                _minute_history[symbol] = (
-                    pd.concat([_minute_history[symbol], _df])
-                    if symbol in _minute_history
-                    else _df
-                )
 
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")
@@ -247,12 +252,18 @@ def get_historical_data_from_polygon(
 async def calculate_trends(pool: Pool) -> bool:
     # load snapshot
     with requests.Session() as session:
-        url = "https://api.polygon.io/" + "v2/snapshot/locale/us/markets/stocks/tickers"
+        url = (
+            "https://api.polygon.io/"
+            + "v2/snapshot/locale/us/markets/stocks/tickers"
+        )
         with session.get(
             url,
             params={"apiKey": get_polygon_credentials(config.prod_api_key_id)},
         ) as response:
-            if response.status_code == 200 and (r := response.json())["status"] == "OK":
+            if (
+                response.status_code == 200
+                and (r := response.json())["status"] == "OK"
+            ):
                 for ticker in r["tickers"]:
                     trading_data.snapshot[ticker.ticker] = TickerSnapshot(
                         symbol=ticker["ticker"],
@@ -269,7 +280,9 @@ async def calculate_trends(pool: Pool) -> bool:
 
                 sector_tickers = {}
                 for sector in sectors:
-                    sector_tickers[sector] = await get_sector_tickers(pool, sector)
+                    sector_tickers[sector] = await get_sector_tickers(
+                        pool, sector
+                    )
 
                     sector_volume = 0
                     adjusted_sum = 0.0

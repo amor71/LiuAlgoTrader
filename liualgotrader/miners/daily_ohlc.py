@@ -7,7 +7,8 @@ from talib import MAMA
 
 from liualgotrader.common import config
 from liualgotrader.common.decorators import timeit
-from liualgotrader.common.market_data import get_historical_data_from_polygon_by_range
+from liualgotrader.common.market_data import \
+    get_historical_data_from_polygon_by_range
 from liualgotrader.common.tlog import tlog
 from liualgotrader.miners.base import Miner
 from liualgotrader.models.ticker_data import StockOhlc, TickerData
@@ -72,34 +73,35 @@ class DailyOHLC(Miner):
             self.data_api, [symbol], start_date, "day"
         )
 
-        for index, row in _minute_data[symbol].iterrows():
-            indicators: Dict = {}
-            if self.indicators:
-                for indicator in self.indicators:
-                    if indicator == "mama":
-                        mama, fama = MAMA(
-                            _minute_data[symbol]["close"][:index].dropna()
-                        )
-                        indicators["mama"] = (
-                            mama[-1] if not math.isnan(mama[-1]) else None
-                        )
-                        indicators["fama"] = (
-                            fama[-1] if not math.isnan(fama[-1]) else None
-                        )
+        if symbol in _minute_data:
+            for index, row in _minute_data[symbol].iterrows():
+                indicators: Dict = {}
+                if self.indicators:
+                    for indicator in self.indicators:
+                        if indicator == "mama":
+                            mama, fama = MAMA(
+                                _minute_data[symbol]["close"][:index].dropna()
+                            )
+                            indicators["mama"] = (
+                                mama[-1] if not math.isnan(mama[-1]) else None
+                            )
+                            indicators["fama"] = (
+                                fama[-1] if not math.isnan(fama[-1]) else None
+                            )
 
-            daily_bar = StockOhlc(
-                symbol=symbol,
-                symbol_date=index,
-                open=row["open"],
-                high=row["high"],
-                low=row["low"],
-                close=row["close"],
-                volume=int(row["volume"]),
-                indicators=indicators,
-            )
-            await daily_bar.save()
+                daily_bar = StockOhlc(
+                    symbol=symbol,
+                    symbol_date=index,
+                    open=row["open"],
+                    high=row["high"],
+                    low=row["low"],
+                    close=row["close"],
+                    volume=int(row["volume"]),
+                    indicators=indicators,
+                )
+                await daily_bar.save()
 
-        tlog(f"saved {len(_minute_data[symbol].index)} days for {symbol}")
+            tlog(f"saved {len(_minute_data[symbol].index)} days for {symbol}")
 
     @timeit
     async def run(self) -> bool:

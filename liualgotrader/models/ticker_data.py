@@ -146,7 +146,7 @@ class StockOhlc:
                     symbol_date,
                 )
 
-                rc = {}
+                rc: Dict[str, object] = {}
 
                 for x in rows:
                     rc[x[0]] = StockOhlc(
