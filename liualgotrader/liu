@@ -4,6 +4,7 @@ import sys
 import pygit2
 import pathlib
 import requests
+import time
 from liualgotrader.common import config
 import os
 
@@ -18,12 +19,14 @@ def show_usage():
     print(f"usgae: liu quickstart")
     print()
 
-def setup_db(db_location: str, db_name : str, user_name : str, password : str):
+def setup_db(db_location: str, db_name : str, user_name : str, password : str, restore_sample_db: bool):
     try:
         print()
         print("+---------------------+")
         print("| setting up database |")
         print("+---------------------+")
+        print()
+
 
         p = pathlib.Path(db_location)
         if not p.exists():
@@ -31,6 +34,7 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str):
         if db_location[-1] != '/':
             db_location += '/'
 
+        print("downloading files..")
         r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose.yml')
         resolved = r.text.replace("{db_name}", db_name).replace("{user_name}", user_name).replace("{password}", password)
 
@@ -40,6 +44,8 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str):
 
         base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/database/'
         files = ["schema.sql", "postgres.conf"]
+        if restore_sample_db:
+            files.append("liu_dump.sql")
 
         for file in files:
             r = requests.get(f"{base_url}{file}")
@@ -52,10 +58,18 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str):
         exit(0)
 
     print("files loaded successfully.")
-    print(f"running docker-compose fromwith in {db_location}:")
+    print(f"running docker-compose from within {db_location}:")
     to_run = f"cd {db_location} && docker-compose up -d"
     print("> ", to_run)
     os.system(to_run)
+
+    if restore_sample_db:
+        print("waiting for database to complete setup. 2 minutes")
+        time.sleep(120)
+        print("restoring sample database")
+        to_run = f"cd {db_location} && docker exec -i pg-docker psql -q -U liu -W liu liu < liu_dump.sql"
+        print("> ", to_run)
+        os.system(to_run)
     print()
     print("check deployment using `\psql -h localhost -p 5400 -U liu`")
 
@@ -171,6 +185,21 @@ def quickstart():
         db_location = input()
         db_location = f"{pwd}/liu_data/" if not len(db_location) else db_location
 
+        print()
+        print("** IMPORTANT NOTE**")
+        print("The installation wizard, aside from installing PostgreSQL in a docker")
+        print("may also download a sample database, with existing data to help you")
+        print("take your first steps with Liu Algo Trading Framework.")
+        print("However, in order to restore the sample data, you need to select")
+        print("the default username ('liu') password ('liu)', and database name ('liu').")
+        print("after you try out the sample, you can delete data and re-run this")
+        print("wizard to install a fresh copy of the database.")
+        print()
+        print("Would you like to download the sample database? [Y]/n")
+        i = input()
+        restore_sample_db = (
+            True if len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes") else False
+        )
         print("Select the database name for keeping track of your trading [liu]:")
         db_name = input()
         db_name = "liu" if not len(db_name) else db_name
@@ -197,9 +226,10 @@ def quickstart():
 
     print()
     print("Ready to go?? Press [ENTER] to start the installation..")
+    input()
 
     if not already_have_db:
-        setup_db(db_location, db_name, user_name, password)
+        setup_db(db_location, db_name, user_name, password, restore_sample_db)
     if samples:
         setup_samples(sample_location, user_name, password, db_name)
     print("setup completed successfully.")
@@ -208,16 +238,27 @@ def quickstart():
     print("+---------------+")
     print("| what's next?  |")
     print("+---------------+")
-    print("Liu Algo Trader is ready to go. Your Alpaca environment vars are in order,")
-    print("you now have postgresql running, and you have downloaded the sample files,")
-    print("from here, you can either run the backtesting UI to get, or read the docs.")
-    print("The full documentation is avaliable here: `https://liualgotrader.rtfd.io`.")
-    print("To run the backtesting for experiance Liu Algo Trading for the first time:")
-    print(f"1. move into the sample directory {sample_location} ('cd {sample_location}'),")
-    print("2. run the env-vars script ('source env_vars.sh'),")
-    print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
     print()
-    print("Enjoy the ride with Liu Algo Trading Framework.")
+    print("Congratulations, Liu Algo Trader is ready to go!")
+    print("From here, you can either run the back-testing UI, or read the docs.")
+    print("The full documentation is available here: `https://liualgotrader.rtfd.io`.")
+    if restore_sample_db:
+        print()
+        print("The restored database includes data for the first week and half of Oct 2020.")
+        print("You may now run a back-testing sessions for these days, as well as ")
+        print("analyze an existing trading session.")
+    print()
+    print("To experience Liu Algo Trading for the first time:")
+    print(f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),")
+    print("2. run the env-vars script ('source env_vars.sh' or equivalent for Windows),")
+    print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
+    if restore_sample_db:
+        print("4. On the app selection select the 'analyzer` app")
+        print("5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>")
+
+    print()
+    print("Thank you for choosing Liu Algo Trading Framework. ")
+    print()
 
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
