@@ -21,6 +21,14 @@ Assistance in development is highly appreciated,
 as well as comments and suggestions. Please check the
 Contribution section for further details.
 
+## See The Framework in Action
+
+LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 
+
+[Watch a $4,000 daily profit](https://youtu.be/rVwFCbHsbIY)  back-testing session using LiuAlgoTrader out-of-the-box strategies.
+
+
+
 ## Quickstart
 
 Read the below, or use [the docker implementations](https://github.com/amor71/trade_deploy). 
@@ -29,31 +37,34 @@ Read the below, or use [the docker implementations](https://github.com/amor71/tr
 
 - Paper, and preferable a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
-### Installation
+### Install & Configure
 
-To install LiuAlgoTrader just type:
+**Step 1**: 
+To install LiuAlgoTrader just type: 
 
 `pip install liualgotrader`
 
-**Note** if you're running on Windows, TA-LIB setup might fail, in which case try https://github.com/mrjbq7/ta-lib#troubleshooting, and re-try installing the `liualgotrader` package.
+*Note* if you're running on Windows, TA-LIB setup might fail, in which case try https://github.com/mrjbq7/ta-lib#troubleshooting, and re-try installing the `liualgotrader` package.
  
-### First time run
+**Step 2**: To configure the frame work type:
 
-1. Download 
-LiuAlgoTrader applications require some 
-configuration and setup which are best described 
-in the documentation. However, to confirm your 
-installation just type:
+`liu quickstart` 
 
-`trader`
+and follow the installation wizard instructions.
+
+### Try the samples
+
+LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experience of the framework. Follow the post-installation instructions, and try to back-test a specific day.   
+
+Additional samples can we found in the [examples](examples) directory. 
 
 ## Documentation
 
 Is available [here](https://liualgotrader.readthedocs.io/en/latest/).
 
-## Samples
 
-Can we found in the [examples](examples) directory. 
+
+
 
 ## Development
 

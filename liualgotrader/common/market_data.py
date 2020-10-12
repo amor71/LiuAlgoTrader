@@ -131,7 +131,7 @@ def get_historical_data_from_polygon_by_range(
                         retry -= 1
                         continue
 
-                if _df:
+                if not _df.empty:
                     _df["vwap"] = 0.0
                     _df["average"] = 0.0
 
@@ -175,7 +175,7 @@ def get_historical_daily_from_polygon_by_range(
                 except Exception as e:
                     retry -= 1
                     continue
-            if _df:
+            if not _df.empty:
                 _df["vwap"] = 0.0
                 _df["average"] = 0.0
 
