@@ -89,7 +89,7 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
             samples_location += '/'
 
         base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/'
-        files = ["tradeplan.toml", "vwap_short.py", "momentum_long_simplified"]
+        files = ["tradeplan.toml", "vwap_short.py", "momentum_long_simplified.py"]
 
         for file in files:
             print(f"Downloading {base_url}{file} to {samples_location}...")
