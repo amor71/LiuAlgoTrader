@@ -91,8 +91,7 @@ class MomentumLongV3(Strategy):
             try:
                 high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
             except Exception as e:
-                # tlog(f"{minute_history[lbound]}")
-                # tlog(f"{minute_history[ubound]}")
+
                 tlog(
                     f"{symbol}[{now}] failed to aggregate {lbound}:{ubound} {minute_history}"
                 )
@@ -108,8 +107,9 @@ class MomentumLongV3(Strategy):
                     .between_time("9:30", "16:00")
                 )
 
-                stock = StockDataFrame.retype(close)
+                stock = StockDataFrame(close)
 
+                print(stock)
                 macd = stock["macd"]
                 macd_signal = stock["macds"]
                 macd_hist = stock["macdh"]
@@ -136,7 +136,7 @@ class MomentumLongV3(Strategy):
                         tlog(f"[{self.name}][{now}] slow macd confirmed trend")
 
                     # check RSI does not indicate overbought
-                    rsi = stock["rsi"]
+                    rsi = stock["rsi_20"]
 
                     if debug:
                         tlog(
@@ -256,14 +256,14 @@ class MomentumLongV3(Strategy):
             if data.vwap:
                 serie[-1] = data.vwap
 
-            stock = StockDataFrame.retype(serie)
+            stock = StockDataFrame(serie)
             stock.MACD_EMA_SHORT = 13
             stock.MACD_EMA_LONG = 21
 
             macd = stock["macd"]
             macd_signal = stock["macds"]
 
-            rsi = stock["rsi"]
+            rsi = stock["rsi_20"]
 
             movement = (
                 data.close - latest_scalp_basis[symbol]

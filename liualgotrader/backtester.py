@@ -134,7 +134,6 @@ async def create_strategies(
                     "duration": int(duration.total_seconds() // 60),
                 }
             ]
-            print(strategy_details["schedule"])
         s = strategy_type(
             batch_id=uid, ref_run_id=ref_run_id, **strategy_details
         )
@@ -623,6 +622,7 @@ class BackTestDay:
                                 break
                 except Exception as e:
                     print(f"[Exception] {self.now} {symbol} {e}")
+                    traceback.print_exc()
 
             self.now += timedelta(minutes=1)
 
