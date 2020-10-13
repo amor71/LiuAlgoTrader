@@ -25,7 +25,6 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
 from liualgotrader.strategies.base import Strategy, StrategyType
-from liualgotrader.strategies.momentum_long import MomentumLong
 
 
 def get_batch_list():
@@ -88,7 +87,7 @@ async def create_strategies(
         strategy_details = conf_dict["strategies"][strategy_name]
         if strategy_name == "MomentumLong":
             tlog(f"strategy {strategy_name} selected")
-            strategy_types += [(MomentumLong, strategy_details)]
+            strategy_types += [(strategy_details)]
         else:
             tlog(f"custom strategy {strategy_name} selected")
 

@@ -5,28 +5,23 @@ from typing import Dict, List, Tuple
 import alpaca_trade_api as tradeapi
 import numpy as np
 from pandas import DataFrame as df
-from talib import BBANDS, MACD, RSI
+from stockstats import StockDataFrame
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.trading_data import (
-    buy_indicators,
-    buy_time,
-    cool_down,
-    last_used_strategy,
-    latest_cost_basis,
-    latest_scalp_basis,
-    open_orders,
-    sell_indicators,
-    stop_prices,
-    target_prices,
-)
+from liualgotrader.common.trading_data import (buy_indicators, buy_time,
+                                               cool_down, last_used_strategy,
+                                               latest_cost_basis,
+                                               latest_scalp_basis, open_orders,
+                                               sell_indicators, stop_prices,
+                                               target_prices)
 from liualgotrader.fincalcs.support_resistance import find_stop
 from liualgotrader.strategies.base import Strategy, StrategyType
 
 
-class MomentumLong(Strategy):
+class MomentumLongV3(Strategy):
     name = "momentum_long"
+    whipsawed: Dict = {}
 
     def __init__(
         self,
@@ -80,11 +75,14 @@ class MomentumLong(Strategy):
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
 
-        morning_rush = True if (now - config.market_open).seconds // 60 < 30 else False
+        morning_rush = (
+            True if (now - config.market_open).seconds // 60 < 30 else False
+        )
 
         if (
             await super().is_buy_time(now)
             and not position
+            and not open_orders.get(symbol, None)
             and not await self.should_cool_down(symbol, now)
         ):
             # Check for buy signals
@@ -93,31 +91,33 @@ class MomentumLong(Strategy):
             try:
                 high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
             except Exception as e:
-                tlog(f"{symbol}[{now}] failed to aggregate {ubound}:{lbound}")
+                # tlog(f"{minute_history[lbound]}")
+                # tlog(f"{minute_history[ubound]}")
+                tlog(
+                    f"{symbol}[{now}] failed to aggregate {lbound}:{ubound} {minute_history}"
+                )
                 return False, {}
 
             if data.close > high_15m or (
                 hasattr(config, "bypass_market_schedule")
                 and config.bypass_market_schedule
             ):
-                close = minute_history["close"].dropna().between_time("9:30", "16:00")
-                close_5m = (
+                close = (
                     minute_history["close"]
                     .dropna()
                     .between_time("9:30", "16:00")
-                    .resample("5min")
-                    .last()
-                ).dropna()
+                )
 
-                macds = MACD(close)
-                # sell_macds = MACD(close, 13, 21)
+                stock = StockDataFrame.retype(close)
 
-                macd = macds[0]
-                macd_signal = macds[1]
-                macd_hist = macds[2]
+                macd = stock["macd"]
+                macd_signal = stock["macds"]
+                macd_hist = stock["macdh"]
                 macd_trending = macd[-3] < macd[-2] < macd[-1]
                 macd_above_signal = macd[-1] > macd_signal[-1] * 1.1
-                macd_hist_trending = macd_hist[-3] < macd_hist[-2] < macd_hist[-1]
+                macd_hist_trending = (
+                    macd_hist[-3] < macd_hist[-2] < macd_hist[-1]
+                )
 
                 if (
                     macd[-1] > 0
@@ -131,107 +131,108 @@ class MomentumLong(Strategy):
                         and data.close > data.open > prev_min.close
                     )
                 ):
-                    macd2 = MACD(close, 40, 60)[0]
-                    if macd2[-1] >= 0 and np.diff(macd2)[-1] >= 0:
-                        if debug:
-                            tlog(f"[{self.name}][{now}] slow macd confirmed trend")
 
-                        # check RSI does not indicate overbought
-                        rsi = RSI(close, 14)
+                    if debug:
+                        tlog(f"[{self.name}][{now}] slow macd confirmed trend")
 
-                        if debug:
-                            tlog(
-                                f"[{self.name}][{now}] {symbol} RSI={round(rsi[-1], 2)}"
-                            )
+                    # check RSI does not indicate overbought
+                    rsi = stock["rsi"]
 
-                        rsi_limit = 75
-                        if rsi[-1] < rsi_limit:
-                            if debug:
-                                tlog(
-                                    f"[{self.name}][{now}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
-                                )
-                        else:
-                            tlog(
-                                f"[{self.name}][{now}] {symbol} RSI over-bought, cool down for 5 min"
-                            )
-                            cool_down[symbol] = now.replace(
-                                second=0, microsecond=0
-                            ) + timedelta(minutes=5)
-
-                            return False, {}
-
-                        stop_price = find_stop(
-                            data.close if not data.vwap else data.vwap,
-                            minute_history,
-                            now,
+                    if debug:
+                        tlog(
+                            f"[{self.name}][{now}] {symbol} RSI={round(rsi[-1], 2)}"
                         )
-                        target_price = 3 * (data.close - stop_price) + data.close
-                        target_prices[symbol] = target_price
-                        stop_prices[symbol] = stop_price
 
-                        if portfolio_value is None:
-                            if trading_api:
+                    rsi_limit = 75
+                    if rsi[-1] < rsi_limit:
+                        if debug:
+                            tlog(
+                                f"[{self.name}][{now}] {symbol} RSI {round(rsi[-1], 2)} <= {rsi_limit}"
+                            )
+                    else:
+                        tlog(
+                            f"[{self.name}][{now}] {symbol} RSI over-bought, cool down for 5 min"
+                        )
+                        cool_down[symbol] = now.replace(
+                            second=0, microsecond=0
+                        ) + timedelta(minutes=5)
 
-                                retry = 3
-                                while retry > 0:
-                                    try:
-                                        portfolio_value = float(
-                                            trading_api.get_account().portfolio_value
-                                        )
-                                        break
-                                    except ConnectionError as e:
-                                        tlog(
-                                            f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
-                                        )
-                                        await asyncio.sleep(0)
-                                        retry -= 1
+                        return False, {}
 
-                                if not portfolio_value:
-                                    tlog(
-                                        "f[{symbol}][{now}[Error] failed to get portfolio_value"
+                    stop_price = find_stop(
+                        data.close if not data.vwap else data.vwap,
+                        minute_history,
+                        now,
+                    )
+                    target_price = 3 * (data.close - stop_price) + data.close
+                    target_prices[symbol] = target_price
+                    stop_prices[symbol] = stop_price
+
+                    if portfolio_value is None:
+                        if trading_api:
+
+                            retry = 3
+                            while retry > 0:
+                                try:
+                                    portfolio_value = float(
+                                        trading_api.get_account().portfolio_value
                                     )
-                                    return False, {}
-                            else:
-                                raise Exception(
-                                    f"{self.name}: both portfolio_value and trading_api can't be None"
+                                    break
+                                except ConnectionError as e:
+                                    tlog(
+                                        f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
+                                    )
+                                    await asyncio.sleep(0)
+                                    retry -= 1
+
+                            if not portfolio_value:
+                                tlog(
+                                    "f[{symbol}][{now}[Error] failed to get portfolio_value"
                                 )
+                                return False, {}
+                        else:
+                            raise Exception(
+                                f"{self.name}: both portfolio_value and trading_api can't be None"
+                            )
 
-                        shares_to_buy = (
-                            portfolio_value
-                            * config.risk
-                            // (data.close - stop_prices[symbol])
+                    shares_to_buy = (
+                        portfolio_value
+                        * config.risk
+                        // (data.close - stop_prices[symbol])
+                    )
+                    if not shares_to_buy:
+                        shares_to_buy = 1
+                    shares_to_buy -= position
+                    if shares_to_buy > 0:
+                        self.whipsawed[symbol] = False
+
+                        buy_price = max(data.close, data.vwap)
+                        tlog(
+                            f"[{self.name}][{now}] Submitting buy for {shares_to_buy} shares of {symbol} at {buy_price} target {target_prices[symbol]} stop {stop_prices[symbol]}"
                         )
-                        if not shares_to_buy:
-                            shares_to_buy = 1
-                        shares_to_buy -= position
-                        if shares_to_buy > 0:
-                            buy_price = max(data.close, data.vwap)
-                            tlog(
-                                f"[{self.name}][{now}] Submitting buy for {shares_to_buy} shares of {symbol} at {buy_price} target {target_prices[symbol]} stop {stop_prices[symbol]}"
-                            )
 
-                            buy_indicators[symbol] = {
-                                "macd": macd[-5:].tolist(),
-                                "macd_signal": macd_signal[-5:].tolist(),
-                                "vwap": data.vwap,
-                                "avg": data.average,
+                        buy_indicators[symbol] = {
+                            "macd": macd[-5:].tolist(),
+                            "macd_signal": macd_signal[-5:].tolist(),
+                            "vwap": data.vwap,
+                            "avg": data.average,
+                        }
+
+                        return (
+                            True,
+                            {
+                                "side": "buy",
+                                "qty": str(shares_to_buy),
+                                "type": "limit",
+                                "limit_price": str(buy_price),
                             }
-
-                            return (
-                                True,
-                                {
-                                    "side": "buy",
-                                    "qty": str(shares_to_buy),
-                                    "type": "limit",
-                                    "limit_price": str(buy_price),
-                                }
-                                if not morning_rush
-                                else {
-                                    "side": "buy",
-                                    "qty": str(shares_to_buy),
-                                    "type": "market",
-                                },
-                            )
+                            if not morning_rush
+                            else {
+                                "side": "buy",
+                                "qty": str(shares_to_buy),
+                                "type": "market",
+                            },
+                        )
             else:
                 if debug:
                     tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
@@ -240,37 +241,42 @@ class MomentumLong(Strategy):
             and position > 0
             and symbol in latest_cost_basis
             and last_used_strategy[symbol].name == self.name
+            and not open_orders.get(symbol)
         ):
-            if open_orders.get(symbol) is not None:
-                tlog(f"momentum_long: open order for {symbol} exists, skipping")
-                return False, {}
+            if (
+                not self.whipsawed.get(symbol, None)
+                and data.close < latest_cost_basis[symbol] * 0.99
+            ):
+                self.whipsawed[symbol] = True
 
-            serie = minute_history["close"].dropna().between_time("9:30", "16:00")
+            serie = (
+                minute_history["close"].dropna().between_time("9:30", "16:00")
+            )
 
             if data.vwap:
                 serie[-1] = data.vwap
 
-            macds = MACD(
-                serie,
-                13,
-                21,
-            )
+            stock = StockDataFrame.retype(serie)
+            stock.MACD_EMA_SHORT = 13
+            stock.MACD_EMA_LONG = 21
 
-            macd = macds[0]
-            macd_signal = macds[1]
-            rsi = RSI(
-                minute_history["close"].dropna().between_time("9:30", "16:00"),
-                14,
-            )
+            macd = stock["macd"]
+            macd_signal = stock["macds"]
 
-            movement = (data.close - latest_scalp_basis[symbol]) / latest_scalp_basis[
-                symbol
-            ]
+            rsi = stock["rsi"]
+
+            movement = (
+                data.close - latest_scalp_basis[symbol]
+            ) / latest_scalp_basis[symbol]
             macd_val = macd[-1]
             macd_signal_val = macd_signal[-1]
 
-            round_factor = 2 if macd_val >= 0.1 or macd_signal_val >= 0.1 else 3
-            scalp_threshold = (target_prices[symbol] + latest_scalp_basis[symbol]) / 2.0
+            round_factor = (
+                2 if macd_val >= 0.1 or macd_signal_val >= 0.1 else 3
+            )
+            scalp_threshold = (
+                target_prices[symbol] + latest_scalp_basis[symbol]
+            ) / 2.0
 
             macd_below_signal = round(macd_val, round_factor) < round(
                 macd_signal_val, round_factor
@@ -281,9 +287,16 @@ class MomentumLong(Strategy):
                     or movement > 0.02
                 )
                 and macd_below_signal
-                and round(macd[-1], round_factor) < round(macd[-2], round_factor)
+                and round(macd[-1], round_factor)
+                < round(macd[-2], round_factor)
             )
-
+            bail_on_whipsawed = (
+                self.whipsawed.get(symbol, False)
+                and data.close > latest_cost_basis[symbol]
+                and macd_below_signal
+                and round(macd[-1], round_factor)
+                < round(macd[-2], round_factor)
+            )
             scalp = movement > 0.04 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
 
@@ -299,7 +312,8 @@ class MomentumLong(Strategy):
                 below_cost_base
                 and round(macd_val, 2) < 0
                 and rsi[-1] < rsi[-2]
-                and round(macd[-1], round_factor) < round(macd[-2], round_factor)
+                and round(macd[-1], round_factor)
+                < round(macd[-2], round_factor)
                 and data.vwap < 0.95 * data.average
             ):
                 to_sell = True
@@ -312,9 +326,9 @@ class MomentumLong(Strategy):
             elif rsi[-1] >= rsi_limit:
                 to_sell = True
                 sell_reasons.append("rsi max, cool-down for 5 minutes")
-                cool_down[symbol] = now.replace(second=0, microsecond=0) + timedelta(
-                    minutes=5
-                )
+                cool_down[symbol] = now.replace(
+                    second=0, microsecond=0
+                ) + timedelta(minutes=5)
             elif bail_out:
                 to_sell = True
                 sell_reasons.append("bail")
@@ -322,6 +336,11 @@ class MomentumLong(Strategy):
                 partial_sell = True
                 to_sell = True
                 sell_reasons.append("scale-out")
+            elif bail_on_whipsawed:
+                to_sell = True
+                partial_sell = False
+                limit_sell = True
+                sell_reasons.append("bail post whipsawed")
 
             if to_sell:
                 sell_indicators[symbol] = {
@@ -331,7 +350,9 @@ class MomentumLong(Strategy):
                     "sell_macd_signal": macd_signal[-5:].tolist(),
                     "vwap": data.vwap,
                     "avg": data.average,
-                    "reasons": " AND ".join([str(elem) for elem in sell_reasons]),
+                    "reasons": " AND ".join(
+                        [str(elem) for elem in sell_reasons]
+                    ),
                 }
 
                 if not partial_sell:

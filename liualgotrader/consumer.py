@@ -21,14 +21,11 @@ from pytz.tzinfo import DstTzInfo
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
-from liualgotrader.fincalcs.data_conditions import (
-    QUOTE_SKIP_CONDITIONS,
-    TRADE_CONDITIONS,
-)
+from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
+                                                    TRADE_CONDITIONS)
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
-from liualgotrader.strategies.momentum_long import MomentumLong
 
 shortable: Dict = {}
 
@@ -36,7 +33,9 @@ shortable: Dict = {}
 async def end_time(reason: str):
     for s in trading_data.strategies:
         tlog(f"updating end time for strategy {s.name}")
-        await s.algo_run.update_end_time(pool=config.db_conn_pool, end_reason=reason)
+        await s.algo_run.update_end_time(
+            pool=config.db_conn_pool, end_reason=reason
+        )
 
 
 async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
@@ -112,7 +111,9 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
             if config.market_close > dt
             else timedelta(hours=24) + (config.market_close - dt)
         )
-        tlog(f"consumer-teardown_task() - waiting for market close: {to_market_close}")
+        tlog(
+            f"consumer-teardown_task() - waiting for market close: {to_market_close}"
+        )
     except Exception as e:
         tlog(
             f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
@@ -179,9 +180,9 @@ async def liquidate(
                 trading_data.sell_indicators[symbol] = {"liquidation": 1}
 
             trading_data.open_orders[symbol] = (o, op)
-            trading_data.open_order_strategy[symbol] = trading_data.last_used_strategy[
+            trading_data.open_order_strategy[
                 symbol
-            ]
+            ] = trading_data.last_used_strategy[symbol]
 
         except Exception as e:
             tlog(f"failed to liquidate {symbol} w exception {e}")
@@ -226,7 +227,9 @@ async def get_order(api: tradeapi, order_id: str) -> Order:
     return api.get_order(order_id)
 
 
-async def update_partially_filled_order(strategy: Strategy, order: Order) -> None:
+async def update_partially_filled_order(
+    strategy: Strategy, order: Order
+) -> None:
     qty = int(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
@@ -345,7 +348,9 @@ async def handle_trade_update_for_order(data: Dict) -> bool:
 async def handle_trade_update_wo_order(data: Dict) -> bool:
     symbol = data["symbol"]
     event = data["event"]
-    tlog(f"trade update without order for {symbol} data={data} with event {event}")
+    tlog(
+        f"trade update without order for {symbol} data={data} with event {event}"
+    )
 
     if event == "partial_fill":
         await update_partially_filled_order(
@@ -446,7 +451,8 @@ async def handle_data_queue_msg(
         k = 2.0 / (100 + 1)
         voi_stack.append(
             round(
-                voi_stack[-1] * (1.0 - k) + k * (bid_delta_volume - ask_delta_volume),
+                voi_stack[-1] * (1.0 - k)
+                + k * (bid_delta_volume - ask_delta_volume),
                 2,
             )
         )
@@ -454,7 +460,9 @@ async def handle_data_queue_msg(
         # tlog(f"{symbol} voi:{trading_data.voi[symbol]}")
 
     elif data["EV"] in ("A", "AM"):
-        original_ts = ts = pd.Timestamp(data["start"], tz="America/New_York", unit="ms")
+        original_ts = ts = pd.Timestamp(
+            data["start"], tz="America/New_York", unit="ms"
+        )
         ts = ts.replace(second=0, microsecond=0)
 
         try:
@@ -490,9 +498,9 @@ async def handle_data_queue_msg(
                 tlog(f"A$ {symbol} too out of sync w {time_diff}")
                 return False
             elif (
-                curr_min := datetime.now(tz=timezone("America/New_York")).replace(
-                    second=0, microsecond=0
-                )
+                curr_min := datetime.now(
+                    tz=timezone("America/New_York")
+                ).replace(second=0, microsecond=0)
             ) > ts:
                 return True
         elif data["EV"] == "AM":
@@ -516,7 +524,10 @@ async def handle_data_queue_msg(
                             trading_data.open_order_strategy[symbol],
                             inflight_order,
                         )
-                    elif inflight_order and inflight_order.status == "partially_filled":
+                    elif (
+                        inflight_order
+                        and inflight_order.status == "partially_filled"
+                    ):
                         tlog(
                             f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"  # type: ignore
                         )
@@ -545,7 +556,8 @@ async def handle_data_queue_msg(
             until_market_close.seconds // 60
             <= config.market_liquidation_end_time_minutes
             and symbol_position != 0
-            and trading_data.last_used_strategy[symbol].type == StrategyType.DAY_TRADE
+            and trading_data.last_used_strategy[symbol].type
+            == StrategyType.DAY_TRADE
         ):
             await liquidate(symbol, int(symbol_position), trading_api)
         else:
@@ -625,7 +637,9 @@ async def queue_consumer(
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
-                    if not await handle_data_queue_msg(data, trading_api, data_api):
+                    if not await handle_data_queue_msg(
+                        data, trading_api, data_api
+                    ):
                         while not queue.empty():
                             _ = queue.get()
                         tlog("cleaned queue")
@@ -711,12 +725,18 @@ async def consumer_async_main(
             traceback.print_exception(*exc_info)
             del exc_info
 
-    base_url = config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    base_url = (
+        config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    )
     api_key_id = (
-        config.prod_api_key_id if config.env == "PROD" else config.paper_api_key_id
+        config.prod_api_key_id
+        if config.env == "PROD"
+        else config.paper_api_key_id
     )
     api_secret = (
-        config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
+        config.prod_api_secret
+        if config.env == "PROD"
+        else config.paper_api_secret
     )
     trading_api = tradeapi.REST(
         base_url=base_url, key_id=api_key_id, secret_key=api_secret
@@ -727,40 +747,40 @@ async def consumer_async_main(
         secret_key=config.prod_api_secret,
     )
     nyc = timezone("America/New_York")
-    config.market_open, config.market_close = get_trading_windows(nyc, trading_api)
+    config.market_open, config.market_close = get_trading_windows(
+        nyc, trading_api
+    )
     strategy_types = []
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
-        if strategy_name == "MomentumLong":
-            tlog(f"strategy {strategy_name} selected")
-            strategy_types += [(MomentumLong, strategy_details)]
-        else:
-            tlog(f"custom strategy {strategy_name} selected")
+        tlog(f"custom strategy {strategy_name} selected")
 
-            try:
-                spec = importlib.util.spec_from_file_location(
-                    "module.name", strategy_details["filename"]
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "module.name", strategy_details["filename"]
+            )
+            custom_strategy_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(custom_strategy_module)  # type: ignore
+            class_name = strategy_name
+
+            custom_strategy = getattr(custom_strategy_module, class_name)
+
+            if not issubclass(custom_strategy, Strategy):
+                tlog(
+                    f"custom strartegy must inherit from class {Strategy.__name__}"
                 )
-                custom_strategy_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(custom_strategy_module)  # type: ignore
-                class_name = strategy_name
-
-                custom_strategy = getattr(custom_strategy_module, class_name)
-
-                if not issubclass(custom_strategy, Strategy):
-                    tlog(
-                        f"custom strartegy must inherit from class {Strategy.__name__}"
-                    )
-                    exit(0)
-                strategy_details.pop("filename", None)
-                strategy_types += [(custom_strategy, strategy_details)]
-
-            except FileNotFoundError as e:
-                tlog(f"[Error] file not found `{strategy_details['filename']}`")
                 exit(0)
-            except Exception as e:
-                tlog(f"[Error]exception of type {type(e).__name__} with args {e.args}")
-                exit(0)
+            strategy_details.pop("filename", None)
+            strategy_types += [(custom_strategy, strategy_details)]
+
+        except FileNotFoundError as e:
+            tlog(f"[Error] file not found `{strategy_details['filename']}`")
+            exit(0)
+        except Exception as e:
+            tlog(
+                f"[Error]exception of type {type(e).__name__} with args {e.args}"
+            )
+            exit(0)
 
     loaded = 0
     for strategy_tuple in strategy_types:
@@ -845,7 +865,9 @@ async def load_current_positions(
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol
                 )
-                tlog(f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}")
+                tlog(
+                    f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
+                )
 
                 loaded += 1
 
@@ -890,7 +912,9 @@ def consumer_main(
     try:
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(consumer_async_main(queue, symbols, unique_id, conf["strategies"]))
+        asyncio.run(
+            consumer_async_main(queue, symbols, unique_id, conf["strategies"])
+        )
         # loop = asyncio.new_event_loop()
         # asyncio.set_event_loop(asyncio.new_event_loop())
         # loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))
