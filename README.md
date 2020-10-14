@@ -29,10 +29,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 [Watch a $4,000 daily profit](https://youtu.be/rVwFCbHsbIY)  back-testing session using LiuAlgoTrader out-of-the-box strategies.
 
 
-
 ## Quickstart
-
-Read the below, or use [the docker implementations](https://github.com/amor71/trade_deploy). 
 
 ### Prerequisite
 
@@ -44,8 +41,6 @@ Read the below, or use [the docker implementations](https://github.com/amor71/tr
 To install LiuAlgoTrader just type: 
 
 `pip install liualgotrader`
-
-*Note* if you're running on Windows, TA-LIB setup might fail, in which case try https://github.com/mrjbq7/ta-lib#troubleshooting, and re-try installing the `liualgotrader` package.
  
 **Step 2**: To configure the frame work type:
 
@@ -64,14 +59,26 @@ Additional samples can we found in the [examples](examples) directory.
 Is available [here](https://liualgotrader.readthedocs.io/en/latest/).
 
 
+## Contributing
 
 
-
-## Development
-
-Would you like to help me complete & evolve LiuAlgoTrader? 
+Would you like to help improve & evolve LiuAlgoTrader? 
 Do you have a suggestion, comment, idea for improvement or 
-a have a wish-list item? Don't be shy and email me at 
-amichay@sgeltd.com
+a have a wish-list item? Please read our
+[Contribution Document](https://github.com/amor71/LiuAlgoTrader/blob/master/CONTRIBUTING.md) or 
+email me at  amichay@sgeltd.com
+
+## Contributors
+
+Special thanks to the below individuals for their comments, reviews and suggestions:
+
+- Shlomi Kushchi [shlomikushchi](https://github.com/shlomikushchi)
+- Venkat Y [vinmestmant](https://github.com/vinmestmant)
+- Chris [crowforc3](https://github.com/crawforc3)
+
+
+
+
+
 
 

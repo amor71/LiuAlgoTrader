@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 import asyncio
+import importlib.util
 import pprint
 import sys
 import traceback
 import uuid
-import pandas as pd
-import importlib.util
-from datetime import datetime, timedelta, date
-from typing import List, Dict, Optional
+from datetime import date, datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
+import pandas as pd
 import pytz
 from requests.exceptions import HTTPError
 
@@ -22,10 +22,9 @@ from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.strategies.momentum_long import MomentumLong
-from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
+from liualgotrader.strategies.base import Strategy, StrategyType
 
 
 def get_batch_list():
@@ -88,7 +87,7 @@ async def create_strategies(
         strategy_details = conf_dict["strategies"][strategy_name]
         if strategy_name == "MomentumLong":
             tlog(f"strategy {strategy_name} selected")
-            strategy_types += [(MomentumLong, strategy_details)]
+            strategy_types += [(strategy_details)]
         else:
             tlog(f"custom strategy {strategy_name} selected")
 
@@ -110,7 +109,9 @@ async def create_strategies(
                 strategy_types += [(custom_strategy, strategy_details)]
 
             except Exception as e:
-                tlog(f"[Error]exception of type {type(e).__name__} with args {e.args}")
+                tlog(
+                    f"[Error]exception of type {type(e).__name__} with args {e.args}"
+                )
                 traceback.print_exc()
                 exit(0)
 
@@ -125,14 +126,17 @@ async def create_strategies(
             strategy_details["schedule"] = [
                 {
                     "start": int(
-                        (start - start.replace(hour=13, minute=30)).total_seconds()
+                        (
+                            start - start.replace(hour=13, minute=30)
+                        ).total_seconds()
                         // 60
                     ),
                     "duration": int(duration.total_seconds() // 60),
                 }
             ]
-            print(strategy_details["schedule"])
-        s = strategy_type(batch_id=uid, ref_run_id=ref_run_id, **strategy_details)
+        s = strategy_type(
+            batch_id=uid, ref_run_id=ref_run_id, **strategy_details
+        )
         await s.create()
         trading_data.strategies.append(s)
 
@@ -154,14 +158,18 @@ def backtest(
         start: datetime, duration: timedelta, ref_run_id: int
     ) -> None:
         @timeit
-        async def backtest_symbol(symbol: str, scanner_start_time: datetime) -> None:
+        async def backtest_symbol(
+            symbol: str, scanner_start_time: datetime
+        ) -> None:
             est = pytz.timezone("America/New_York")
-            scanner_start_time = pytz.utc.localize(scanner_start_time).astimezone(est)
+            scanner_start_time = pytz.utc.localize(
+                scanner_start_time
+            ).astimezone(est)
             start_time = pytz.utc.localize(start).astimezone(est)
 
             if scanner_start_time > start_time + duration:
                 print(
-                    f"{symbol} picked to late at {scanner_start_time} ({start_time}, {duration})"
+                    f"{symbol} picked too late at {scanner_start_time} ({start_time}, {duration})"
                 )
                 return
 
@@ -192,7 +200,9 @@ def backtest(
                 tlog(f"not enough data-points  for {symbol}")
                 return
 
-            add_daily_vwap(symbol_data, debug=debug_symbols and symbol in debug_symbols)
+            add_daily_vwap(
+                symbol_data, debug=debug_symbols and symbol in debug_symbols
+            )
             market_data.minute_history[symbol] = symbol_data
             print(
                 f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
@@ -212,12 +222,22 @@ def backtest(
                 and minute_index < symbol_data.index.size - 1
             ):
                 if symbol_data.index[minute_index] != new_now:
-                    print("mismatch!", symbol_data.index[minute_index], new_now)
-                    print(symbol_data["close"][minute_index - 10 : minute_index + 1])
+                    print(
+                        "mismatch!", symbol_data.index[minute_index], new_now
+                    )
+                    print(
+                        symbol_data["close"][
+                            minute_index - 10 : minute_index + 1
+                        ]
+                    )
                     raise Exception()
 
                 price = symbol_data["close"][minute_index]
                 for strategy in trading_data.strategies:
+                    if debug_symbols and symbol in debug_symbols:
+                        print(
+                            f"Execute strategy {strategy.name} on {symbol} at {new_now}"
+                        )
                     do, what = await strategy.run(
                         symbol,
                         True,
@@ -282,21 +302,26 @@ def backtest(
                     trading_data.last_used_strategy[symbol].type
                     == StrategyType.DAY_TRADE
                 ):
-                    tlog(f"[{new_now}]{symbol} liquidate {position} at {price}")
+                    tlog(
+                        f"[{new_now}]{symbol} liquidate {position} at {price}"
+                    )
                     db_trade = NewTrade(
                         algo_run_id=last_run_id,  # type: ignore
                         symbol=symbol,
-                        qty=int(position) if int(position) > 0 else -int(position),
+                        qty=int(position)
+                        if int(position) > 0
+                        else -int(position),
                         operation="sell" if position > 0 else "buy",
                         price=price,
                         indicators={"liquidate": 1},
                     )
                     await db_trade.save(
-                        config.db_conn_pool, str(symbol_data.index[minute_index - 1])
+                        config.db_conn_pool,
+                        str(symbol_data.index[minute_index - 1]),
                     )
 
         symbols = await TrendingTickers.load(batch_id)
-        print(f"loaded {len(symbols)}:\n {symbols}")
+        print(f"loaded {len(symbols)} symbols")
 
         if len(symbols) > 0:
             est = pytz.timezone("America/New_York")
@@ -308,7 +333,9 @@ def backtest(
                 hour=16, minute=0, second=0, microsecond=0
             )
             print(f"market_open{config.market_open}")
-            await create_strategies(conf_dict, duration, ref_run_id, uid, start)
+            await create_strategies(
+                conf_dict, duration, ref_run_id, uid, start  # type: ignore
+            )
 
             for symbol in symbols:
                 await backtest_symbol(symbol[0], symbol[1])
@@ -331,8 +358,8 @@ def backtest(
                             for w in [
                                 item
                                 for sublist in [
-                                    conf_dict["strategies"][s]["schedule"]
-                                    for s in conf_dict["strategies"]
+                                    conf_dict["strategies"][s]["schedule"]  # type: ignore
+                                    for s in conf_dict["strategies"]  # type: ignore
                                 ]
                                 for item in sublist
                             ]
@@ -351,7 +378,9 @@ def backtest(
     except KeyboardInterrupt:
         tlog("backtest() - Caught KeyboardInterrupt")
     except Exception as e:
-        tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
+        tlog(
+            f"backtest() - exception of type {type(e).__name__} with args {e.args}"
+        )
         traceback.print_exc()
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
@@ -371,14 +400,12 @@ class BackTestDay:
 
         self.conf_dict = conf_dict
         config.portfolio_value = self.conf_dict.get("portfolio_value", None)
-        self.minute_history = None
-        self.scanners = None
+        self.minute_history: Dict[str, pd.DataFrame] = {}
+        self.scanners: List[Scanner] = []
 
     async def create(self, day: date) -> str:
         await create_db_connection()
         scanners_conf = self.conf_dict["scanners"]
-
-        self.scanners: List[Optional[Scanner]] = []
 
         est = pytz.timezone("America/New_York")
         start_time = datetime.combine(day, datetime.min.time()).astimezone(est)
@@ -431,7 +458,9 @@ class BackTestDay:
                     spec = importlib.util.spec_from_file_location(
                         "module.name", scanner_details["filename"]
                     )
-                    custom_scanner_module = importlib.util.module_from_spec(spec)
+                    custom_scanner_module = importlib.util.module_from_spec(
+                        spec
+                    )
                     spec.loader.exec_module(custom_scanner_module)  # type: ignore
                     class_name = scanner_name
                     custom_scanner = getattr(custom_scanner_module, class_name)
@@ -473,7 +502,6 @@ class BackTestDay:
 
         self.now = pd.Timestamp(self.start)
         self.symbols: List = []
-        self.minute_history = {}
         self.portfolio_value: float = (
             100000.0 if not config.portfolio_value else config.portfolio_value
         )
@@ -481,20 +509,22 @@ class BackTestDay:
             config.risk = self.conf_dict["risk"]
         return self.uid
 
-    async def next_minute(self) -> (bool, List[Optional[str]]):
-        rc_msg = []
+    async def next_minute(self) -> Tuple[bool, List[Optional[str]]]:
+        rc_msg: List[Optional[str]] = []
         if self.now < self.end:
             for i in range(0, len(self.scanners)):
                 if self.now == self.start or (
                     self.scanners[i].recurrence is not None
-                    and self.scanners[i].recurrence.total_seconds() > 0
-                    and int((self.now - self.start).total_seconds() // 60)
-                    % int(self.scanners[i].recurrence.total_seconds() // 60)
+                    and self.scanners[i].recurrence.total_seconds() > 0  # type: ignore
+                    and int((self.now - self.start).total_seconds() // 60)  # type: ignore
+                    % int(self.scanners[i].recurrence.total_seconds() // 60)  # type: ignore
                     == 0
                 ):
                     new_symbols = await self.scanners[i].run(self.now)
                     if new_symbols:
-                        really_new = [x for x in new_symbols if x not in self.symbols]
+                        really_new = [
+                            x for x in new_symbols if x not in self.symbols
+                        ]
                         if len(really_new) > 0:
                             print(
                                 f"Loading data for {len(really_new)} symbols: {really_new}"
@@ -519,10 +549,19 @@ class BackTestDay:
             for symbol in self.symbols:
                 try:
                     for strategy in trading_data.strategies:
-                        minute_index = self.minute_history[symbol][
-                            "close"
-                        ].index.get_loc(self.now, method="nearest")
-                        price = self.minute_history[symbol]["close"][minute_index]
+
+                        try:
+                            minute_index = self.minute_history[symbol][
+                                "close"
+                            ].index.get_loc(self.now, method="nearest")
+                        except Exception as e:
+                            print(f"[Exception] {self.now} {symbol} {e}")
+                            print(self.minute_history[symbol]["close"][-100:])
+                            continue
+
+                        price = self.minute_history[symbol]["close"][
+                            minute_index
+                        ]
 
                         if symbol not in trading_data.positions:
                             trading_data.positions[symbol] = 0
@@ -547,9 +586,9 @@ class BackTestDay:
                                 trading_data.positions[symbol] += int(
                                     float(what["qty"])
                                 )
-                                trading_data.buy_time[symbol] = self.now.replace(
-                                    second=0, microsecond=0
-                                )
+                                trading_data.buy_time[
+                                    symbol
+                                ] = self.now.replace(second=0, microsecond=0)
                             else:
                                 trading_data.positions[symbol] -= int(
                                     float(what["qty"])
@@ -590,6 +629,7 @@ class BackTestDay:
                                 break
                 except Exception as e:
                     print(f"[Exception] {self.now} {symbol} {e}")
+                    traceback.print_exc()
 
             self.now += timedelta(minutes=1)
 
@@ -605,9 +645,9 @@ class BackTestDay:
                 == StrategyType.DAY_TRADE
             ):
                 position = trading_data.positions[symbol]
-                minute_index = self.minute_history[symbol]["close"].index.get_loc(
-                    self.now, method="nearest"
-                )
+                minute_index = self.minute_history[symbol][
+                    "close"
+                ].index.get_loc(self.now, method="nearest")
                 price = self.minute_history[symbol]["close"][minute_index]
                 tlog(f"[{self.end}]{symbol} liquidate {position} at {price}")
                 db_trade = NewTrade(
@@ -618,5 +658,6 @@ class BackTestDay:
                     price=price,
                     indicators={"liquidate": 1},
                 )
-                await db_trade.save(config.db_conn_pool, str(self.now.to_pydatetime()))
-
+                await db_trade.save(
+                    config.db_conn_pool, str(self.now.to_pydatetime())
+                )

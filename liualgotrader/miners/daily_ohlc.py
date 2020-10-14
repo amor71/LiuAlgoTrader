@@ -69,6 +69,7 @@ class DailyOHLC(Miner):
         days: int,
     ) -> None:
         start_date = date.today() - timedelta(days=days)
+
         _minute_data = get_historical_data_from_polygon_by_range(
             self.data_api, [symbol], start_date, "day"
         )
@@ -116,6 +117,9 @@ class DailyOHLC(Miner):
         for symbol in self.symbols:
             latest_date = await StockOhlc.get_latest_date(symbol)
 
+            if self._debug:
+                tlog(f"{symbol} latest date: {latest_date}")
+
             if not latest_date:
                 if self._debug:
                     tlog(f"{symbol} loading {self.days} of OHLC data")
@@ -127,9 +131,5 @@ class DailyOHLC(Miner):
                 if self._debug:
                     tlog(f"{symbol} loading {duration} of OHLC data")
                 await self.load_symbol_data(symbol, duration)
-
-            # get OLHC
-
-            # calculate indicator
 
         return True

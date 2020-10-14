@@ -134,7 +134,7 @@ class AlgoRun:
     @classmethod
     async def get_batch_details(
         cls, batch_id: str, pool: Pool = None
-    ) -> List[Tuple[int, datetime, str]]:
+    ) -> List[Tuple[int, datetime, datetime, str]]:
         rc: List = []
         if not pool:
             pool = config.db_conn_pool
