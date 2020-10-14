@@ -1,9 +1,10 @@
 import asyncio
+import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
-import numpy as np
 from pandas import DataFrame as df
 from stockstats import StockDataFrame
 
@@ -109,10 +110,14 @@ class MomentumLongV3(Strategy):
 
                 stock = StockDataFrame(close)
 
-                print(stock)
                 macd = stock["macd"]
                 macd_signal = stock["macds"]
+
+                old_stdout = sys.stdout  # backup current stdout
+                sys.stdout = open(os.devnull, "w")
                 macd_hist = stock["macdh"]
+                sys.stdout = old_stdout  # reset old stdout
+
                 macd_trending = macd[-3] < macd[-2] < macd[-1]
                 macd_above_signal = macd[-1] > macd_signal[-1] * 1.1
                 macd_hist_trending = (
