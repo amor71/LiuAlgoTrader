@@ -549,9 +549,16 @@ class BackTestDay:
             for symbol in self.symbols:
                 try:
                     for strategy in trading_data.strategies:
-                        minute_index = self.minute_history[symbol][
-                            "close"
-                        ].index.get_loc(self.now, method="nearest")
+
+                        try:
+                            minute_index = self.minute_history[symbol][
+                                "close"
+                            ].index.get_loc(self.now, method="nearest")
+                        except Exception as e:
+                            print(f"[Exception] {self.now} {symbol} {e}")
+                            print(self.minute_history[symbol]["close"][-100:])
+                            continue
+
                         price = self.minute_history[symbol]["close"][
                             minute_index
                         ]

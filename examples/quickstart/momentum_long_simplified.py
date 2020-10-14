@@ -108,14 +108,15 @@ class MomentumLongV3(Strategy):
                     .between_time("9:30", "16:00")
                 )
 
+                old_stdout = sys.stdout  # backup current stdout
+                sys.stdout = open(os.devnull, "w")
+
                 stock = StockDataFrame(close)
 
                 macd = stock["macd"]
                 macd_signal = stock["macds"]
-
-                old_stdout = sys.stdout  # backup current stdout
-                sys.stdout = open(os.devnull, "w")
                 macd_hist = stock["macdh"]
+
                 sys.stdout = old_stdout  # reset old stdout
 
                 macd_trending = macd[-3] < macd[-2] < macd[-1]
@@ -261,6 +262,9 @@ class MomentumLongV3(Strategy):
             if data.vwap:
                 serie[-1] = data.vwap
 
+            old_stdout = sys.stdout  # backup current stdout
+            sys.stdout = open(os.devnull, "w")
+
             stock = StockDataFrame(serie)
             stock.MACD_EMA_SHORT = 13
             stock.MACD_EMA_LONG = 21
@@ -269,6 +273,8 @@ class MomentumLongV3(Strategy):
             macd_signal = stock["macds"]
 
             rsi = stock["rsi_20"]
+
+            sys.stdout = old_stdout  # reset old stdout
 
             movement = (
                 data.close - latest_scalp_basis[symbol]
