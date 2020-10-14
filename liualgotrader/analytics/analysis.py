@@ -94,8 +94,8 @@ def load_batch_symbols(batch_id: str) -> pd.DataFrame:
 def calc_batch_revenue(
     symbol: str, trades: pd.DataFrame, batch_id: str
 ) -> float:
-    symbol_df = trades.loc[
-        trades["symbol"] == symbol, trades["batch_id"] == batch_id
+    symbol_df = trades[
+        (trades["symbol"] == symbol) & (trades["batch_id"] == batch_id)
     ]
     rc = 0
     for index, row in symbol_df.iterrows():
