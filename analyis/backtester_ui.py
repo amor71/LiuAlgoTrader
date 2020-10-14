@@ -1,24 +1,23 @@
-import streamlit as st
 import asyncio
 import io
-import pandas as pd
-import alpaca_trade_api as tradeapi
-import requests
-import pygit2
-import toml
-import pytz
-import matplotlib.pyplot as plt
-from typing import Dict
 from datetime import date, timedelta
-from liualgotrader.analytics.analysis import (
-    load_batch_list,
-    load_trades,
-    calc_revenue,
-    count_trades,
-    load_trades_by_batch_id,
-)
+from typing import Any, Dict, Optional
+
+import alpaca_trade_api as tradeapi
+import matplotlib.pyplot as plt
+import pandas as pd
+import pygit2
+import pytz
+import requests
+import streamlit as st
+import toml
+
+from liualgotrader.analytics.analysis import (calc_batch_revenue, calc_revenue,
+                                              count_trades, load_batch_list,
+                                              load_trades,
+                                              load_trades_by_batch_id)
+from liualgotrader.backtester import BackTestDay, backtest
 from liualgotrader.common import config
-from liualgotrader.backtester import backtest, BackTestDay
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -51,7 +50,7 @@ if app == "back-test":
 
     try:
         toml_as_stringio = file_buffer.read()
-        conf_dict: Dict = toml.loads(toml_as_stringio)
+        conf_dict = toml.loads(toml_as_stringio)  # type: ignore
 
         if not conf_dict:
             st.error("Failed to load TOML configuration file, retry")
@@ -77,10 +76,11 @@ if app == "back-test":
                 break
             if len(msgs) > 0:
                 for msg in msgs:
-                    st.success(msg)
+                    if msg:
+                        st.success(msg)
 
         await backtest.liquidate()
-        st.success(f"new batch-id is {new_bid}")
+        st.success(f"new batch-id is {new_bid} -> view in the analyzer app")
 
     if selection == "back-test against the whole day":
         with st.spinner(f"back-testing.. patience is a virtue "):
@@ -107,7 +107,7 @@ if app == "back-test":
                 "symbol"
             ].unique()
             how_was_my_day["revenues"] = how_was_my_day["symbol"].apply(
-                lambda x: calc_revenue(x, trades)
+                lambda x: calc_batch_revenue(x, trades, bid)
             )
             how_was_my_day["count"] = how_was_my_day["symbol"].apply(
                 lambda x: count_trades(x, trades)
@@ -120,8 +120,10 @@ if app == "back-test":
             if st.button("GO!"):
                 with st.spinner(f"back-testing.."):
                     asyncio.set_event_loop(asyncio.new_event_loop())
-                    new_bid = backtest(bid, conf_dict=conf_dict)
-                    st.success(f"new batch-id is {new_bid}")
+                    new_bid = backtest(bid, conf_dict=conf_dict)  # type: ignore
+                    st.success(
+                        f"new batch-id is {new_bid} -> view in the analyzer app"
+                    )
 
 elif app == "analyzer":
     st.text("Analyze a specific batch-id")
@@ -145,7 +147,9 @@ elif app == "analyzer":
                 lambda x: count_trades(x, t)
             )
             st.dataframe(how_was_my_batch)
-            st.text(f"Revenue: ${round(sum(how_was_my_batch['revenues'].tolist()), 2)}")
+            st.text(
+                f"Revenue: ${round(sum(how_was_my_batch['revenues'].tolist()), 2)}"
+            )
         except Exception as e:
             st.error(f"Try picking another batch-id ({e})")
             st.stop()
@@ -191,9 +195,9 @@ elif app == "analyzer":
 
             fig, ax = plt.subplots()
             ax.plot(
-                minute_history[symbol]["close"][start_index:end_index].between_time(
-                    "9:30", "16:00"
-                ),
+                minute_history[symbol]["close"][
+                    start_index:end_index
+                ].between_time("9:30", "16:00"),
                 label=symbol,
             )
             # fig.xticks(rotation=45)
@@ -219,9 +223,11 @@ elif app == "analyzer":
                 if not position[symbol]:
                     try:
                         now = int(row["client_time"])
-                        continue
                     except Exception:
-                        pass
+                        print(
+                            f"[Error] {row} -> can't convert 'client_time' to int"
+                        )
+                        continue
 
                 if position[symbol] >= 0 and row["operation"] == "buy":
                     delta = -row["price"] * row["qty"]
