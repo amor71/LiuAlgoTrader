@@ -1,24 +1,31 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import pytz
-from datetime import date, timedelta, datetime
+from datetime import date, datetime, timedelta
+from typing import Dict
+
 import alpaca_trade_api as tradeapi
+import matplotlib.pyplot as plt
+import pandas as pd
+import pytz
 import requests
-from liualgotrader.analytics.analysis import load_trades, load_runs
+import streamlit as st
+
+from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
+                                              load_runs, load_trades)
 
 st.title("Day-trade Session Analysis")
-st.markdown("#### View and analyze the performance of your day-trading session.")
+st.markdown(
+    "#### View and analyze the performance of your day-trading session."
+)
 
 day_to_analyze = st.date_input("pick day to analyze", value=date.today())
+env = st.sidebar.selectbox("Select environment", ("PAPER", "BACKTEST", "PROD"))
 
 with st.spinner(f"loading {day_to_analyze} data.."):
     # Create DB connection & load data
-    trades = load_trades(day_to_analyze)
+    trades = load_trades(day_to_analyze, env)
     if trades.empty:
         st.stop()
 
-    algo_runs = load_runs(day_to_analyze)
+    algo_runs = load_runs(day_to_analyze, env)
     if algo_runs.empty:
         st.stop()
 
@@ -31,8 +38,9 @@ if st.sidebar.checkbox("Show strategy executions"):
 
 st.markdown("## How was my day?")
 st.write("below is a list of daily sessions, with trades & total revenues.")
-trade_details = {}
-batch = {}
+trade_details: Dict = {}
+
+batch: Dict = {}
 for index, row in trades.iterrows():
     algo_run_id = row["algo_run_id"]
     batch_id = row["batch_id"]
@@ -57,58 +65,43 @@ for index, row in trades.iterrows():
         batch[batch_id].append(algo_run_id)
 
 
-def calc_revenue(symbol):
-    symbol_df = trades.loc[trades["symbol"] == symbol]
-    rc = 0
-    position = 0
-    for index, row in symbol_df.iterrows():
-        if position >= 0 and row["operation"] == "buy":
-            delta = -row["price"] * row["qty"]
-            position += row["qty"]
-        elif position <= 0 and row["operation"] == "sell":
-            delta = row["price"] * row["qty"]
-            position -= row["qty"]
-        elif position > 0 and row["operation"] == "sell":
-            delta = row["price"] * row["qty"]
-            position -= row["qty"]
-        elif position < 0 and row["operation"] == "buy":
-            delta = -row["price"] * row["qty"]
-            position += row["qty"]
-
-        rc += delta
-    return round(rc, 2)
-
-
-def count_trades(symbol):
-    symbol_df = trades.loc[trades["symbol"] == symbol]
-    return len(symbol_df.index)
-
-
-revenues = {}
+revenues: Dict = {}
 how_was_my_day = []
 est = pytz.timezone("America/New_York")
 
 try:
     for batch_id, count in batch.items():
         how_was_my_batch = pd.DataFrame()
-        t = trades.loc[trades["batch_id"] == batch_id]
-        start_time = algo_runs.loc[
-            algo_runs.index == t.algo_run_id.min()
-        ].start_time.min()
-        start_time = pytz.utc.localize(start_time).astimezone(est)
+        t = trades[trades["batch_id"] == batch_id]
+        start_time = algo_runs[algo_runs.batch_id == batch_id].start_time
+        start_time = pytz.utc.localize(start_time.min()).astimezone(est)
         how_was_my_batch["symbol"] = t.symbol.unique()
-        how_was_my_batch["revenues"] = how_was_my_batch["symbol"].apply(calc_revenue)
-        how_was_my_batch["count"] = how_was_my_batch["symbol"].apply(count_trades)
-        how_was_my_day.append((batch_id, how_was_my_batch, start_time))
-except ValueError:
+        how_was_my_batch["revenues"] = how_was_my_batch["symbol"].apply(
+            lambda x: calc_batch_revenue(x, trades, batch_id)
+        )
+        how_was_my_batch["count"] = how_was_my_batch["symbol"].apply(
+            lambda x: count_trades(x, trades, batch_id)
+        )
+        how_was_my_day.append(
+            (
+                batch_id,
+                how_was_my_batch,
+                start_time,
+                algo_runs[algo_runs.batch_id == batch_id].algo_env.tolist()[0],
+            )
+        )
+except ValueError as e:
+    st.exception(e)
     st.error("Try picking another day")
     st.stop()
 how_was_my_day.sort(key=lambda x: x[2])
 
 for element in how_was_my_day:
-    st.markdown(f"### {element[0]}")
+    st.markdown(f"### [{element[3]}] {element[0]}")
     st.write(f"Start time {element[2]}")
-    st.markdown(f"**TOTAL REVENUE** ${round(element[1]['revenues'].sum(), 2)} ")
+    st.markdown(
+        f"**TOTAL REVENUE** ${round(element[1]['revenues'].sum(), 2)} "
+    )
     st.markdown(element[1].to_html(), unsafe_allow_html=True)
 
 if st.sidebar.checkbox("Show details"):
@@ -157,9 +150,9 @@ if st.sidebar.checkbox("Show details"):
 
         fig, ax = plt.subplots()
         ax.plot(
-            minute_history[symbol]["close"][start_index:end_index].between_time(
-                "9:30", "16:00"
-            ),
+            minute_history[symbol]["close"][
+                start_index:end_index
+            ].between_time("9:30", "16:00"),
             label=symbol,
         )
         # fig.xticks(rotation=45)
@@ -182,12 +175,6 @@ if st.sidebar.checkbox("Show details"):
         for index, row in symbol_df.iterrows():
             resistance = None
             support = None
-            if not position[symbol]:
-                try:
-                    now = int(row["client_time"])
-                    continue
-                except Exception:
-                    pass
 
             if position[symbol] >= 0 and row["operation"] == "buy":
                 delta = -row["price"] * row["qty"]
@@ -213,7 +200,9 @@ if st.sidebar.checkbox("Show details"):
             profits.append(round(profit, 2))
             operations.append(row["operation"])
             times.append(
-                pytz.utc.localize(pd.to_datetime(row["tstamp"])).astimezone(est)
+                pytz.utc.localize(pd.to_datetime(row["tstamp"])).astimezone(
+                    est
+                )
             )
             prices.append(row["price"])
             qtys.append(row["qty"])

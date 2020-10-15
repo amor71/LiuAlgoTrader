@@ -12,16 +12,17 @@ except Exception as e:
     tlog(f"[EXCEPTION] {config.dsn} : {e}")
 
 
-def load_trades(day: date) -> pd.DataFrame:
+def load_trades(day: date, env: str) -> pd.DataFrame:
     query = f"""
-    SELECT t.*, a.batch_id 
+    SELECT t.*, a.batch_id
     FROM 
     new_trades as t, algo_run as a
     WHERE 
         t.algo_run_id = a.algo_run_id AND 
         t.tstamp >= '{day}' AND 
         t.tstamp < '{day + timedelta(days=1)}'AND
-        t.expire_tstamp is null
+        t.expire_tstamp is null AND
+        a.algo_env = '{env}'
     ORDER BY symbol, tstamp
     """
     return pd.read_sql_query(query, db_conn)
@@ -49,15 +50,15 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     return df
 
 
-def load_runs(day: date) -> pd.DataFrame:
+def load_runs(day: date, env: str) -> pd.DataFrame:
     query = f"""
      SELECT * 
      FROM 
      algo_run as t
      WHERE 
          start_time >= '{day}' AND 
-         start_time < '{day + timedelta(days=1)}' AND 
-         algo_env = 'PAPER' 
+         start_time < '{day + timedelta(days=1)}' AND
+         algo_env = '{env}'
      ORDER BY start_time
      """
     df = pd.read_sql_query(query, db_conn)
@@ -107,8 +108,10 @@ def calc_batch_revenue(
     return round(rc, 2)
 
 
-def calc_revenue(symbol: str, trades: pd.DataFrame) -> float:
-    symbol_df = trades.loc[trades["symbol"] == symbol]
+def calc_revenue(symbol: str, trades: pd.DataFrame, env) -> float:
+    symbol_df = trades[
+        (trades["symbol"] == symbol) & (trades["algo_env"] == env)
+    ]
     rc = 0
     for index, row in symbol_df.iterrows():
         rc += (
@@ -119,6 +122,8 @@ def calc_revenue(symbol: str, trades: pd.DataFrame) -> float:
     return round(rc, 2)
 
 
-def count_trades(symbol, trades: pd.DataFrame) -> int:
-    symbol_df = trades.loc[trades["symbol"] == symbol]
+def count_trades(symbol, trades: pd.DataFrame, batch_id: str) -> int:
+    symbol_df = trades[
+        (trades["symbol"] == symbol) & (trades["batch_id"] == batch_id)
+    ]
     return len(symbol_df.index)
