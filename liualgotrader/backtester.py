@@ -209,6 +209,7 @@ def backtest(
             )
 
             position: int = 0
+
             minute_index = symbol_data["close"].index.get_loc(
                 start_time, method="nearest"
             )

@@ -50,9 +50,9 @@ async def scanner_input(
                 for symbol_details in symbols_details:
                     if symbol_details["symbol"] not in symbols:
                         new_symbols.append(symbol_details["symbol"])
-                        symbol_strategy[symbol_details["symbol"]] = symbol_details[
-                            "target_strategy_name"
-                        ]
+                        symbol_strategy[
+                            symbol_details["symbol"]
+                        ] = symbol_details["target_strategy_name"]
                         new_channels += [
                             f"{OP}.{symbol_details['symbol']}"
                             for OP in config.WS_DATA_CHANNELS
@@ -60,7 +60,9 @@ async def scanner_input(
                         consumer_queue_index = random.SystemRandom().randint(
                             0, num_consumer_processes - 1
                         )
-                        queue_id_hash[symbol_details["symbol"]] = consumer_queue_index
+                        queue_id_hash[
+                            symbol_details["symbol"]
+                        ] = consumer_queue_index
 
                 if len(new_symbols):
                     symbols += new_symbols
@@ -87,7 +89,7 @@ async def scanner_input(
                     await asyncio.sleep(1)
 
         except Empty:
-            await asyncio.sleep(10)
+            await asyncio.sleep(30)
         except asyncio.CancelledError:
             tlog("scanner_input() task task cancelled ")
             break
@@ -116,12 +118,12 @@ async def trade_run(
     async def handle_trade_update(conn, channel, data):
         global queue_id_hash
         try:
-            tlog(f"TRADE UPDATE! {data.__dict__}")
+            # tlog(f"producer TRADE UPDATE event: {data.__dict__}")
             symbol = data.__dict__["_raw"]["order"]["symbol"]
-            if symbol in queue_id_hash:
+            if qid := queue_id_hash.get(symbol, None):
                 data.__dict__["_raw"]["EV"] = "trade_update"
                 data.__dict__["_raw"]["symbol"] = symbol
-                queues[queue_id_hash[symbol]].put(json.dumps(data.__dict__["_raw"]))
+                queues[qid].put(json.dumps(data.__dict__["_raw"]))
 
         except Exception as e:
             tlog(
@@ -199,7 +201,10 @@ async def run(
                 pass
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "A"
-                if event_symbol in symbol_strategy and symbol_strategy[event_symbol]:
+                if (
+                    event_symbol in symbol_strategy
+                    and symbol_strategy[event_symbol]
+                ):
                     data.__dict__["_raw"]["symbol_strategy"] = symbol_strategy[
                         event_symbol
                     ]
@@ -222,7 +227,10 @@ async def run(
         try:
             if (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "AM"
-                if event_symbol in symbol_strategy and symbol_strategy[event_symbol]:
+                if (
+                    event_symbol in symbol_strategy
+                    and symbol_strategy[event_symbol]
+                ):
                     data.__dict__["_raw"]["symbol_strategy"] = symbol_strategy[
                         event_symbol
                     ]
@@ -245,7 +253,9 @@ async def run(
             if (datetime.now() - last_msg_tstamp) > timedelta(
                 seconds=config.polygon_seconds_timeout
             ):
-                tlog(f"no data activity since {last_msg_tstamp} attempting reconnect")
+                tlog(
+                    f"no data activity since {last_msg_tstamp} attempting reconnect"
+                )
                 await data_ws.close(False)
                 data_ws.data_ws = polygon.StreamConn(config.prod_api_key_id)
                 await data_ws.data_ws.connect()
@@ -254,7 +264,9 @@ async def run(
                 data_ws.register(r"Q$", handle_quote_event)
                 data_ws.register(r"T$", handle_trade_event)
                 await data_ws.subscribe(data_channels)
-                tlog(f"Polygon.io reconnected for {len(data_channels)} channels")
+                tlog(
+                    f"Polygon.io reconnected for {len(data_channels)} channels"
+                )
                 last_msg_tstamp = datetime.now()
             await asyncio.sleep(config.polygon_seconds_timeout / 2)
     except asyncio.CancelledError:
@@ -307,7 +319,9 @@ async def teardown_task(
         tlog("poylgon_producer teardown closing tasks")
 
         for task in tasks:
-            tlog(f"teardown_task(): requesting task {task.get_name()} to cancel")
+            tlog(
+                f"teardown_task(): requesting task {task.get_name()} to cancel"
+            )
             task.cancel()
             try:
                 await task
@@ -350,12 +364,18 @@ async def producer_async_main(
         name="main_task",
     )
 
-    base_url = config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    base_url = (
+        config.prod_base_url if config.env == "PROD" else config.paper_base_url
+    )
     api_key_id = (
-        config.prod_api_key_id if config.env == "PROD" else config.paper_api_key_id
+        config.prod_api_key_id
+        if config.env == "PROD"
+        else config.paper_api_key_id
     )
     api_secret = (
-        config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
+        config.prod_api_secret
+        if config.env == "PROD"
+        else config.paper_api_secret
     )
     trade_ws = tradeapi.StreamConn(
         base_url=base_url,
@@ -421,7 +441,9 @@ def polygon_producer_main(
             if "quote" in events:
                 config.WS_DATA_CHANNELS.append("Q")
 
-        tlog(f"polygon_producer_main(): listening for events {config.WS_DATA_CHANNELS}")
+        tlog(
+            f"polygon_producer_main(): listening for events {config.WS_DATA_CHANNELS}"
+        )
         global symbols
         global queue_id_hash
 
@@ -429,7 +451,9 @@ def polygon_producer_main(
         queue_id_hash = current_queue_id_hash
         if not asyncio.get_event_loop().is_closed():
             asyncio.get_event_loop().close()
-        asyncio.run(producer_async_main(queues, scanner_queue, num_consumer_processes))
+        asyncio.run(
+            producer_async_main(queues, scanner_queue, num_consumer_processes)
+        )
 
     except KeyboardInterrupt:
         tlog("polygon_producer_main() - Caught KeyboardInterrupt")
