@@ -129,7 +129,8 @@ if app == "back-test":
                             "Failed to load TOML configuration file, retry"
                         )
                         st.stop()
-
+                else:
+                    st.stop()
                 with st.spinner(f"back-testing.."):
                     asyncio.set_event_loop(asyncio.new_event_loop())
                     try:
