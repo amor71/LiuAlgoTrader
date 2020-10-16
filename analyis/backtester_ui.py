@@ -1,7 +1,5 @@
 import asyncio
-import io
 from datetime import date, timedelta
-from typing import Any, Dict, Optional
 
 import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
@@ -11,6 +9,7 @@ import pytz
 import requests
 import streamlit as st
 import toml
+from streamlit.uploaded_file_manager import UploadedFile
 
 from liualgotrader.analytics.analysis import (calc_batch_revenue, calc_revenue,
                                               count_trades, load_batch_list,
@@ -32,32 +31,17 @@ st.title("Liu Algo Trading Framework")
 st.markdown("## **Back-testing & Analysis tools**")
 
 app = st.sidebar.selectbox("select app", ("back-test", "analyzer"))
+
 new_bid: str = ""
+
 if app == "back-test":
+    env = st.sidebar.selectbox(
+        "Select environment", ("PAPER", "BACKTEST", "PROD")
+    )
     new_bid = ""
     st.text("Back-testing a past trading day, or a specific batch-id.")
-    # Select date
+
     day_to_analyze = st.date_input("Pick day to analyze", value=date.today())
-
-    # Load configuration
-    st.set_option("deprecation.showfileUploaderEncoding", False)
-
-    file_buffer: io.StringIO = st.file_uploader(
-        label="Select tradeplan file", type=["toml", "TOML"]
-    )
-    if not file_buffer:
-        st.stop()
-
-    try:
-        toml_as_stringio = file_buffer.read()
-        conf_dict = toml.loads(toml_as_stringio)  # type: ignore
-
-        if not conf_dict:
-            st.error("Failed to load TOML configuration file, retry")
-            st.stop()
-    except Exception as e:
-        st.exception(e)
-        st.stop()
 
     selection = st.sidebar.radio(
         "Select back-testing mode",
@@ -68,6 +52,20 @@ if app == "back-test":
     )
 
     async def back_test():
+        uploaded_file: UploadedFile = st.file_uploader(
+            label="Select tradeplan file", type=["toml", "TOML"]
+        )
+        if uploaded_file:
+            byte_str = uploaded_file.read()
+            toml_as_string = byte_str.decode("UTF-8")
+
+            if len(toml_as_string):
+                conf_dict = toml.loads(toml_as_string)  # type: ignore
+
+                if not conf_dict:
+                    st.error("Failed to load TOML configuration file, retry")
+                    st.stop()
+
         backtest = BackTestDay(conf_dict)
         new_bid = await backtest.create(day_to_analyze)
         while True:
@@ -90,7 +88,7 @@ if app == "back-test":
     else:
         try:
             with st.spinner("Loading list of trading sessions"):
-                df = load_batch_list(day_to_analyze)
+                df = load_batch_list(day_to_analyze, env)
             if df.empty:
                 st.error("Select another day")
                 st.stop()
@@ -98,11 +96,10 @@ if app == "back-test":
             st.error("Select another day")
             st.exception(e)
             st.stop()
-
         bid = st.selectbox("select batch to backtest", df["batch_id"].tolist())
         if bid:
             how_was_my_day = pd.DataFrame()
-            trades = load_trades(day_to_analyze)
+            trades = load_trades(day_to_analyze, env)
             how_was_my_day["symbol"] = trades.loc[trades["batch_id"] == bid][
                 "symbol"
             ].unique()
@@ -110,20 +107,42 @@ if app == "back-test":
                 lambda x: calc_batch_revenue(x, trades, bid)
             )
             how_was_my_day["count"] = how_was_my_day["symbol"].apply(
-                lambda x: count_trades(x, trades)
+                lambda x: count_trades(x, trades, env)
             )
             st.text(
                 f"batch_id:{bid}, total revenues=${round(sum(how_was_my_day['revenues']), 2)}"
             )
             st.dataframe(how_was_my_day)
 
-            if st.button("GO!"):
+            uploaded_file: UploadedFile = st.file_uploader(
+                label="Select tradeplan file", type=["toml", "TOML"]
+            )
+            if uploaded_file:
+                byte_str = uploaded_file.read()
+                toml_as_string = byte_str.decode("UTF-8")
+
+                if len(toml_as_string):
+                    conf_dict = toml.loads(toml_as_string)  # type: ignore
+
+                    if not conf_dict:
+                        st.error(
+                            "Failed to load TOML configuration file, retry"
+                        )
+                        st.stop()
+
                 with st.spinner(f"back-testing.."):
                     asyncio.set_event_loop(asyncio.new_event_loop())
-                    new_bid = backtest(bid, conf_dict=conf_dict)  # type: ignore
+                    try:
+                        print(bid)
+                        new_bid = backtest(bid, conf_dict=conf_dict)  # type: ignore
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
+
                     st.success(
                         f"new batch-id is {new_bid} -> view in the analyzer app"
                     )
+
 
 elif app == "analyzer":
     st.text("Analyze a specific batch-id")
@@ -141,10 +160,10 @@ elif app == "analyzer":
                 st.dataframe(t)
             how_was_my_batch["symbol"] = t.symbol.unique()
             how_was_my_batch["revenues"] = how_was_my_batch["symbol"].apply(
-                lambda x: calc_revenue(x, t)
+                lambda x: calc_batch_revenue(x, t, bid)
             )
             how_was_my_batch["count"] = how_was_my_batch["symbol"].apply(
-                lambda x: count_trades(x, t)
+                lambda x: count_trades(x, t, bid)
             )
             st.dataframe(how_was_my_batch)
             st.text(
@@ -220,15 +239,6 @@ elif app == "analyzer":
             for index, row in symbol_df.iterrows():
                 resistance = None
                 support = None
-                if not position[symbol]:
-                    try:
-                        now = int(row["client_time"])
-                    except Exception:
-                        print(
-                            f"[Error] {row} -> can't convert 'client_time' to int"
-                        )
-                        continue
-
                 if position[symbol] >= 0 and row["operation"] == "buy":
                     delta = -row["price"] * row["qty"]
                     position[symbol] += row["qty"]

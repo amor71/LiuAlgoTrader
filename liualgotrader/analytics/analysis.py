@@ -66,7 +66,7 @@ def load_runs(day: date, env: str) -> pd.DataFrame:
     return df
 
 
-def load_batch_list(day: date) -> pd.DataFrame:
+def load_batch_list(day: date, env: str) -> pd.DataFrame:
     query = f"""
         SELECT DISTINCT a.batch_id 
         FROM 
@@ -75,7 +75,8 @@ def load_batch_list(day: date) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             t.tstamp >= '{day}' AND 
             t.tstamp < '{day + timedelta(days=1)}'AND
-            t.expire_tstamp is null
+            t.expire_tstamp is null AND
+            a.algo_env = '{env}'
         """
     return pd.read_sql_query(query, db_conn)
 
