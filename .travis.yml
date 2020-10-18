@@ -18,7 +18,7 @@ install:
 - pip install coverage
 - if [ $WITH_TA_LIBRARY = "yes" ]; then ./tools/build_talib_from_source.bash $DEPS_DIR;
   fi
-- pip install -r liualgotrader/requirements.txt
+- pip install -r liualgotrader/release.txt
 before_script:
 - psql -c 'create database travis_ci_test;' -U postgres
 - psql -d travis_ci_test -U postgres -f database/schema.sql

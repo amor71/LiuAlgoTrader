@@ -6,7 +6,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("liualgotrader/requirements.txt") as f:
+with open("liualgotrader/requirements/release.txt") as f:
     requirements = f.read().splitlines()
 
 
@@ -36,7 +36,7 @@ setuptools.setup(
     url="https://github.com/amor71/LiuAlgoTrader",
     license="MIT",
     install_requires=requirements,
-    data_files=[("liualgotrader", ["liualgotrader/requirements.txt"])],
+    data_files=[("liualgotrader", ["liualgotrader/release.txt"])],
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.8",
