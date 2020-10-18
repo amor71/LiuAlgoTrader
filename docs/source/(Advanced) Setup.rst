@@ -1,7 +1,7 @@
 .. _`How to Install & Setup`:
 
-How to Install & Setup
-======================
+Advanced Setup
+==============
 
 This section describes the sets and processes to
 install and setup `LiuAlgoTrader` for first use. If it relevant mostly if you didn't go through the `Quickstart` wizard or would like to use an existing / cloud-base database.

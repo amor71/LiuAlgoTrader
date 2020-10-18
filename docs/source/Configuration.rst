@@ -82,7 +82,7 @@ applications.
 
 TOML configuration file
 -----------------------
-the **trader** application expects a TOML configuration file.
+the **trader** & **backtester** applications expects a TOML configuration file.
 Press here_ to learn more on the TOML file format.
 
 .. _here: https://toml.io/en/
