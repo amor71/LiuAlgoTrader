@@ -12,7 +12,6 @@
 #
 import os
 import sys
-
 # -- Project information -----------------------------------------------------
 from typing import List
 
@@ -24,7 +23,7 @@ copyright = "2020, amor71"
 author = "amor71"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.50"
+release = "0.0.60"
 
 # -- General configuration ---------------------------------------------------
 
