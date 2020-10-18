@@ -34,7 +34,7 @@ sessions w/ LiuAlgoTrader.
 
    What's New
    Quickstart
-   Installation & Setup
+   (Advanced) Setup
    Configuration
    Usage
    Scanners
