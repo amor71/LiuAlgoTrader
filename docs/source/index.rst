@@ -9,7 +9,7 @@ for effective algorithmic trading. The framework is
 intended to simplify development, testing,
 deployment and evaluating algo trading strategies.
 
-LiuAlgoTrader can run on a Macbook laptop and
+LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server
 and it will optimize for best performance for either.
 
@@ -21,7 +21,7 @@ LiuAlgoTrader is made of the following components:
 
 AND
 
-- **analysis notebooks**: collection of notebooks for analysis of trading sessions, backtesting, as well as various tools for improving trading algos.
+- **streamlit apps** & **analysis notebooks**: collection of visual applications and notebooks for analysis of trading sessions, backtesting, as well as various tools for improving trading algos.
 
 The rest of the documentation explains how to install,
 setup, configure and run trading & analysis

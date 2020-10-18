@@ -7,33 +7,27 @@
 
 ## Introduction
 
-**LiuAlgoTrader** is a Pythonic all-batteries-included framework
+**LiuAlgoTrader** is a scalable, multi-process framework
 for effective algorithmic trading. The framework is
 intended to simplify development, testing,
 deployment and evaluating algo trading strategies.
 
-LiuAlgoTrader can run on a Macbook laptop and 
+LiuAlgoTrader can run on a laptop and 
 *hedge-on-the-go*, or run on a multi-core hosted Linux server 
-and it will optimize for best performance for either. 
-
-LiuAlgoTrader is Work-In-Progress, however it is a fully
-functional and powerful framework that may be used almost out-of-the-box.
-Assistance in development is highly appreciated,
-as well as comments and suggestions. Please check the
-Contribution section for further details.
+and it will automatically optimize for best performance for either. 
 
 ## See The Framework in Action
 
 LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 
 
-[Watch a $4,000 daily profit](https://youtu.be/rVwFCbHsbIY)  back-testing session using LiuAlgoTrader out-of-the-box strategies.
+[Watch a $4,000 Profit](https://youtu.be/rVwFCbHsbIY) using LiuAlgoTrader out-of-the-box tools.
 
 
 ## Quickstart
 
 ### Prerequisite
 
-- Paper, and preferable a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
+- Paper, and a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
 ### Install & Configure
 
@@ -54,13 +48,12 @@ LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experie
 
 Additional samples can we found in the [examples](examples) directory. 
 
-## Documentation
+## What's Next?
 
-Is available [here](https://liualgotrader.readthedocs.io/en/latest/).
+Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) learn how to use LiuAlgoTrader to develop, deploy & testing money making strategies.
 
 
 ## Contributing
-
 
 Would you like to help improve & evolve LiuAlgoTrader? 
 Do you have a suggestion, comment, idea for improvement or 

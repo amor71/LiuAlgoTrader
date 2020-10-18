@@ -25,7 +25,6 @@ To install LiuAlgoTrader just type:
    pip install liualgotrader
 
 
-
 Database Setup
 --------------
 
