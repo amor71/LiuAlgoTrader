@@ -1,8 +1,11 @@
+import asyncio
+import json
 from datetime import date, datetime, timedelta
 from typing import Dict
 
 import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
+import nest_asyncio
 import pandas as pd
 import pytz
 import requests
@@ -10,6 +13,7 @@ import streamlit as st
 
 from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
                                               load_runs, load_trades)
+from liualgotrader.common import database
 
 st.title("Day-trade Session Analysis")
 st.markdown(
@@ -18,6 +22,12 @@ st.markdown(
 
 day_to_analyze = st.date_input("pick day to analyze", value=date.today())
 env = st.sidebar.selectbox("Select environment", ("PAPER", "BACKTEST", "PROD"))
+
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+nest_asyncio.apply()
+
+loop.run_until_complete(database.create_db_connection())
 
 with st.spinner(f"loading {day_to_analyze} data.."):
     # Create DB connection & load data
@@ -206,15 +216,18 @@ if st.sidebar.checkbox("Show details"):
             )
             prices.append(row["price"])
             qtys.append(row["qty"])
-            indicators.append(row["indicators"])
+            indicator = json.loads(row.indicators)
+            indicators.append(indicator)
             target_price.append(row["target_price"])
             stop_price.append(row["stop_price"])
             daily_change.append(
-                f"{round(100.0 * (row['price'] - open_price) / open_price, 2)}%"
+                f"{round(100.0 * (float(row['price']) - open_price) / open_price, 2)}%"
             )
             precent_vwap.append(
-                f"{round(100.0 * (row['indicators']['avg'] - open_price) / open_price, 2)}%"
-                if "avg" in row["indicators"]
+                f"{round(100.0 * (indicator['buy']['avg'] - open_price) / open_price, 2)}%"
+                if "buy" in indicator
+                and indicator["buy"]
+                and "avg" in indicator["buy"]
                 else ""
             )
 
