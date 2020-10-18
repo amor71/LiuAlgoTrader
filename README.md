@@ -16,7 +16,7 @@ LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server 
 and it will automatically optimize for best performance for either. 
 
-## See The Framework in Action
+## See LiuAlgoTrader in Action
 
 LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 
 
@@ -27,7 +27,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 
 ### Prerequisite
 
-- Paper, and a funded Live account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
+- Paper, and a funded account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
 ### Install & Configure
 
@@ -40,7 +40,10 @@ To install LiuAlgoTrader just type:
 
 `liu quickstart` 
 
-and follow the installation wizard instructions.
+and follow the installation wizard instructions. The wizard will walk you
+through the configuration of environment variables, setup of a local 
+dockerized PostgreSQL and pre-populate with test data. 
+ 
 
 ### Try the samples
 
@@ -50,7 +53,7 @@ Additional samples can we found in the [examples](examples) directory.
 
 ## What's Next?
 
-Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) learn how to use LiuAlgoTrader to develop, deploy & testing money making strategies.
+Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) and learn how to use LiuAlgoTrader to develop, deploy & testing money making strategies.
 
 
 ## Contributing

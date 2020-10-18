@@ -4,10 +4,11 @@ A scalable algorithmic trading framework built on top Alpaca Markets' APIs
 Overview
 ^^^^^^^^
 
-`LiuAlgoTrader` is a Pythonic all-batteries-included framework
+**LiuAlgoTrader** is a scalable, multi-process framework
 for effective algorithmic trading. The framework is
 intended to simplify development, testing,
 deployment and evaluating algo trading strategies.
+
 
 LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server
@@ -32,7 +33,8 @@ sessions w/ LiuAlgoTrader.
    :maxdepth: 2
 
    What's New
-   Installation & Setup
+   Quickstart
+   (Advanced) Setup
    Configuration
    Usage
    Scanners
