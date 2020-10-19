@@ -12,5 +12,5 @@ websockets==8.1
 matplotlib==3.3.2
 tabulate==0.8.7
 streamlit==0.69.2
-stockstats
+stockstats==0.3.2
 nest_asyncio
