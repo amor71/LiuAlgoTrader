@@ -1,5 +1,29 @@
-How to Contribute
-=================
-Would you like to help me complete & evolve `LiuAlgoTrader`?
-Do you have a suggestion, comment, idea for improvement or
-a have wish-list items? Don't be shy and email me at amichay@sgeltd.com
+Contributing
+============
+Would you like to help improve & evolve LiuAlgoTrader? 
+Do you have a suggestion, comment, idea for improvement or 
+a have a wish-list item? Please read our
+Contribution Document_ or email me at amichay@sgeltd.com.
+
+.. _Document: https://github.com/amor71/LiuAlgoTrader/blob/master/CONTRIBUTING.md
+
+
+Contributors
+------------
+
+Special thanks to the below individuals for their comments, reviews and suggestions:
+
+- Shlomi Kushchi shlomikushchi_
+
+.. _shlomikushchi: https://github.com/shlomikushchi
+
+- Venkat Y vinmestmant_
+
+.. _vinmestmant: https://github.com/vinmestmant
+
+- Chris crowforc3_
+
+.. _crowforc3: https://github.com/crawforc3
+
+
+
