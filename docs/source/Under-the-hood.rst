@@ -4,10 +4,9 @@
 Under the hood
 ==============
 
-This section explain the inner working of LiuAlgoTrader. It may be used to developer who wish
+This section explain the inner working of LiuAlgoTrader. It may be used by developers wishing
 query LiuAlgoTrader database directly, developers of strategies, optimize the application
-for their specific setup, or contributing to
-the on-going development of LiuAlgoTrader.
+for their specific setup, or contributing to the on-going development of LiuAlgoTrader.
 
 Hands-free framework
 --------------------
@@ -16,12 +15,10 @@ LiuAlgoTrader is designed to allow trading of as many stocks
 with as many events as possible given limited hardware
 capabilities.
 
-It is designed to be communications hands-free framework
+It is designed to be hands-free framework
 for strategy developers, elevating the need to worry about
-communication disconnects or understanding of low level
-considerations specifically in a language like Python which
-is not high throughput in nature.
-
+communication disconnects or understanding low level
+considerations.
 
 Understanding the multiprocessing approach
 ------------------------------------------
@@ -39,6 +36,13 @@ design pattern, where a single process interacts with the
 data provider, and several consumer processes are handling
 the algorithmic decision making and make API calls to initiate
 trades.
+
+The below diagram explains high-level components and design
+
+.. image:: /images/liu-hld.png
+    :width: 1000
+    :align: left
+    :alt: liu archtecture
 
 Implementation details
 **********************

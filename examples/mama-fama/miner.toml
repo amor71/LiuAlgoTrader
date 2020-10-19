@@ -8,7 +8,7 @@
 
         # to follow specific symbols
         # symbol = ['SPY',]
-    
+
         days = 60
 
         [miners.DailyOHLC.indicators]
