@@ -1,52 +1,48 @@
-.. _`Understanding what's under the hood`:
-
-
-Under the hood
+Architecture
 ==============
 
-This section explain the inner working of LiuAlgoTrader. It may be used to developer who wish
-query LiuAlgoTrader database directly, developers of strategies, optimize the application
-for their specific setup, or contributing to
-the on-going development of LiuAlgoTrader.
+This section explains the inner workings of LiuAlgoTrader. The target audience
+are developers looking to develop new strategies, query the database etc.
 
 Hands-free framework
 --------------------
 
-LiuAlgoTrader is designed to allow trading of as many stocks
-with as many events as possible given limited hardware
-capabilities.
+LiuAlgoTrader is designed to be a (near) high throughput & scalable framework, that optimizes the underlying hardware.
 
-It is designed to be communications hands-free framework
+It is designed to be hands-free framework
 for strategy developers, elevating the need to worry about
-communication disconnects or understanding of low level
-considerations specifically in a language like Python which
-is not high throughput in nature.
+communication disconnects or understanding low level
+considerations.
 
 
-Understanding the multiprocessing approach
-------------------------------------------
-
-Why multi-processing?
-*********************
+High Level Architecture
+-----------------------
 
 Polygon.io and the other real-time stock data
 providers are using WebSockets_ to send data. In most cases
 data providers become impatient when posted data is not
 collected by the intended recipient on a timely manner.
 
-LiuAlgoTrader implements a producer-consumer
-design pattern, where a single process interacts with the
+LiuAlgoTrader implements a **producer-consumer
+design pattern**, where a single (or more) processes interacts with the
 data provider, and several consumer processes are handling
 the algorithmic decision making and make API calls to initiate
 trades.
 
+The below diagram visualizes the high-level flows & system components
+
+.. image:: /images/liu-hld.png
+    :width: 1000
+    :align: left
+    :alt: liu architecture
+
 Implementation details
 **********************
 
-LiuAlgoTrader is implemented using Python 3.8.x `multi-process
+LiuAlgoTrader is implemented using `multi-process
 infrastructure`_, and each process uses `asyncio` for
-inter-process lightweight threading. This architecture
-provides high throughput which maximizes the hardware
+inter-process lightweight threading (The framework works w/ 3.8 and above).
+This architecture provides high throughput which maximizes the hardware
 capabilities.
 
 A *link* between the producer a consumer is maintained over
@@ -99,6 +95,8 @@ When you see such a message repetitively, it may mean that either:
 Understanding the project structure
 -----------------------------------
 
+**NOTE** the project structure may change periodically, please check GitHut for the most accurate structure.
+
 Understanding the project structure is the first step in
 uncovering the tools available to the custom strategy
 developer. Below is the project
@@ -109,9 +107,14 @@ files for a future developer.
 
     ├── AUTHORS
     ├── LICENCE
-    ├── analysis_notebooks
-    │   ├── portfolio_performance_analysis.ipynb
-    │   └── backtest_performance_analysis.ipynb
+    ├── CONTRIBUTING.md
+    ├── CODE_OF_CONDUCT.md
+    ├── analysis
+    │   ├── backtester_ui.py
+    │   ├── day_trade_ui.py
+    |   └── notebooks
+    │       ├── portfolio_performance_analysis.ipynb
+    │       └── backtest_performance_analysis.ipynb
     ├── liualgotrader
     │   ├── common
     |   |   ├── config.py
@@ -128,6 +131,10 @@ files for a future developer.
     │   ├── models
     |   |    ├── algo_run.py
     |   |    └── new_trades.py
+    │   ├── miners
+    |   |    ├── base.py
+    |   |    ├── stock_cluster.py
+    |   |    └── daily_ohlc.py
     │   ├── scanners
     |   |    ├── base.py
     |   |    └── momentum.py
@@ -186,6 +193,9 @@ The main database tables are:
 +-------------------+-----------------------------------------------+
 | Name              | Description                                   |
 +-------------------+-----------------------------------------------+
+| stock_ohlc        | Daily OHLC "cache" for purposes for           |
+|                   | back-testing.                                 |
++-------------------+-----------------------------------------------+
 | trending_tickers  | Tracks picked stocks, per `batch_id`.         |
 |                   | including time-stamp.                         |
 +-------------------+-----------------------------------------------+
@@ -198,6 +208,20 @@ The main database tables are:
 |                   | executed strategy.                            |
 +-------------------+-----------------------------------------------+
 
+`stock_ohlc` table
+^^^^^^^^^^^^^^^^^^
+- symbol
+- symbol_date
+- open
+- high
+- low
+- close
+- volume
+- indicators JSONB,
+
+The table holds daily OHLC values, per stock, including indicators that
+we collected and calculated using the `data_miner` application.
+
 `algo_run` table
 ^^^^^^^^^^^^^^^^
 
@@ -207,7 +231,7 @@ represents an executed strategy, per process, per `batch_id`.
 
 The table tracks a collection of information that helps to
 reconstruct the trading day and analysis it post-analysis and
-backtesting:
+back-testing:
 
 - `batch_id`
 - start and end time-stamps. If an end-date is missing, it means execution was stopped during the trading day.
