@@ -1,7 +1,4 @@
-.. _`Understanding what's under the hood`:
-
-
-Under the hood
+Architecture
 ==============
 
 This section explain the inner working of LiuAlgoTrader. It may be used by developers wishing
