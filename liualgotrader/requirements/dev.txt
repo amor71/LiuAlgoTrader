@@ -23,7 +23,7 @@ nb-clean==1.6.0
 matplotlib==3.3.2
 tabulate==0.8.7
 sphinx==3.2.1
-sphinx-autodoc-typehints==1.11.0
+sphinx-autodoc-typehints==1.11.1
 setuptools==50.3.0
 wheel==0.35.1
 twine==3.2.0
