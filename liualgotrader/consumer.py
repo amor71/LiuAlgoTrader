@@ -570,15 +570,26 @@ async def handle_data_queue_msg(
                 ):
                     continue
 
-                do, what = await s.run(
-                    symbol,
-                    shortable[symbol],
-                    int(symbol_position),
-                    market_data.minute_history[symbol],
-                    ts,
-                    trading_api=trading_api,
-                    portfolio_value=config.portfolio_value,
-                )
+                try:
+                    do, what = await s.run(
+                        symbol,
+                        shortable[symbol],
+                        int(symbol_position),
+                        market_data.minute_history[symbol],
+                        ts,
+                        trading_api=trading_api,
+                        portfolio_value=config.portfolio_value,
+                    )
+                except Exception as e:
+                    tlog(
+                        f"[EXCEPTION] strategy {s.name} for symbol {symbol} -> {e}"
+                    )
+                    exc_info = sys.exc_info()
+                    lines = traceback.format_exception(*exc_info)
+                    for line in lines:
+                        tlog(f"{line}")
+                    del exc_info
+                    continue
 
                 if do:
                     try:
