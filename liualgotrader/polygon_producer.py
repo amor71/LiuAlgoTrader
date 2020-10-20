@@ -210,7 +210,7 @@ async def run(
                     ]
                 queue_id = queue_id_hash[event_symbol]
                 queues[queue_id].put(
-                    json.dumps(data.__dict__["_raw"]), timeout=1
+                    json.dumps(data.__dict__["_raw"]), timeout=2
                 )
         except Full as f:
             tlog(
@@ -244,8 +244,9 @@ async def run(
                     ]
                 queue_id = queue_id_hash[event_symbol]
                 queues[queue_id].put(
-                    json.dumps(data.__dict__["_raw"], timeout=1)
+                    json.dumps(data.__dict__["_raw"]), timeout=2
                 )
+
         except Full as f:
             tlog(
                 f"[EXCEPTION] queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
