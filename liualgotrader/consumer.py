@@ -28,6 +28,7 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 
 shortable: Dict = {}
+symbol_data_error: Dict = {}
 
 
 async def end_time(reason: str):
@@ -378,6 +379,7 @@ async def handle_data_queue_msg(
     data: Dict, trading_api: tradeapi, data_api: tradeapi
 ) -> bool:
     global shortable
+    global symbol_data_error
 
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
@@ -589,6 +591,26 @@ async def handle_data_queue_msg(
                     for line in lines:
                         tlog(f"{line}")
                     del exc_info
+
+                    if symbol not in symbol_data_error:
+                        tlog(f"attempting reload of data for symbol {symbol}")
+
+                        _df = data_api.polygon.historic_agg_v2(
+                            symbol,
+                            1,
+                            "minute",
+                            _from=str(date.today() - timedelta(days=10)),
+                            to=str(date.today() + timedelta(days=1)),
+                        ).df
+                        _df["vwap"] = 0.0
+                        _df["average"] = 0.0
+                        market_data.minute_history[symbol] = _df
+                        tlog(
+                            f"consumer task re-loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
+                        )
+
+                        symbol_data_error[symbol] = True
+
                     continue
 
                 if do:
