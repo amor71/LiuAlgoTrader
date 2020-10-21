@@ -159,7 +159,15 @@ async def run(
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "T"
                 queue_id = queue_id_hash[event_symbol]
-                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
+                queues[queue_id].put(
+                    json.dumps(data.__dict__["_raw"]), timeout=1
+                )
+        except Full as f:
+            tlog(
+                f"[EXCEPTION] handle_trade_event():queue {queue_id} is FULL:{f}, sleep for 2 seconds and re-try."
+            )
+            await asyncio.sleep(2)
+            await handle_trade_event(conn, channel, data)
         except Exception as e:
             tlog(
                 f"Exception in handle_trade_event(): exception of type {type(e).__name__} with args {e.args}"
@@ -179,7 +187,16 @@ async def run(
             elif (event_symbol := data.__dict__["_raw"]["symbol"]) in queue_id_hash:  # type: ignore
                 data.__dict__["_raw"]["EV"] = "Q"
                 queue_id = queue_id_hash[event_symbol]
-                queues[queue_id].put(json.dumps(data.__dict__["_raw"]))
+                queues[queue_id].put(
+                    json.dumps(data.__dict__["_raw"]), timeout=1
+                )
+
+        except Full as f:
+            tlog(
+                f"[EXCEPTION] handle_quote_event():queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
+            )
+            await asyncio.sleep(2)
+            await handle_quote_event(conn, channel, data)
 
         except Exception as e:
             tlog(
@@ -210,11 +227,11 @@ async def run(
                     ]
                 queue_id = queue_id_hash[event_symbol]
                 queues[queue_id].put(
-                    json.dumps(data.__dict__["_raw"]), timeout=2
+                    json.dumps(data.__dict__["_raw"]), timeout=1
                 )
         except Full as f:
             tlog(
-                f"[EXCEPTION] queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                f"[EXCEPTION] handle_second_bar(): queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
             )
             await asyncio.sleep(2)
             await handle_second_bar(conn, channel, data)
@@ -244,15 +261,15 @@ async def run(
                     ]
                 queue_id = queue_id_hash[event_symbol]
                 queues[queue_id].put(
-                    json.dumps(data.__dict__["_raw"]), timeout=2
+                    json.dumps(data.__dict__["_raw"]), timeout=1
                 )
 
         except Full as f:
             tlog(
-                f"[EXCEPTION] queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                f"[EXCEPTION] handle_minute_bar(): queue {queue_id} is FULL:{f}, sleeping for 2 seconds and re-trying."
             )
             await asyncio.sleep(2)
-            await handle_second_bar(conn, channel, data)
+            await handle_minute_bar(conn, channel, data)
 
         except Exception as e:
             tlog(

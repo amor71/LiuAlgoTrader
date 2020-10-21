@@ -4,6 +4,7 @@ Architecture
 This section explains the inner workings of LiuAlgoTrader. The target audience
 are developers looking to develop new strategies, query the database etc.
 
+
 Hands-free framework
 --------------------
 
@@ -31,10 +32,12 @@ trades.
 
 The below diagram visualizes the high-level flows & system components
 
+
 .. image:: /images/liu-hld.png
     :width: 1000
     :align: left
     :alt: liu architecture
+
 
 Implementation details
 **********************
