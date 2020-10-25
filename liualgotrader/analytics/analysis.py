@@ -66,7 +66,7 @@ def load_runs(day: date, env: str) -> pd.DataFrame:
 
 def load_batch_list(day: date, env: str) -> pd.DataFrame:
     query = f"""
-        SELECT DISTINCT a.batch_id 
+        SELECT DISTINCT a.batch_id, a.start_time
         FROM 
         new_trades as t, algo_run as a
         WHERE 

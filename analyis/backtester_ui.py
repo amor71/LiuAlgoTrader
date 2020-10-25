@@ -39,6 +39,7 @@ st.markdown("## **Back-testing & Analysis tools**")
 app = st.sidebar.selectbox("select app", ("back-test", "analyzer"))
 
 new_bid: str = ""
+est = pytz.timezone("America/New_York")
 
 if app == "back-test":
     env = st.sidebar.selectbox(
@@ -106,10 +107,14 @@ if app == "back-test":
             st.error("Select another day")
             st.exception(e)
             st.stop()
-        bid = st.selectbox("select batch to backtest", df["batch_id"].tolist())
+        bid = st.selectbox(
+            "select batch to backtest", df["batch_id"].unique().tolist()
+        )
         if bid:
             how_was_my_day = pd.DataFrame()
             trades = load_trades(day_to_analyze, env)
+            start_time = df[df.batch_id == bid].start_time
+            start_time = pytz.utc.localize(start_time.min()).astimezone(est)
             how_was_my_day["symbol"] = trades.loc[trades["batch_id"] == bid][
                 "symbol"
             ].unique()
@@ -120,7 +125,7 @@ if app == "back-test":
                 lambda x: count_trades(x, trades, env)
             )
             st.text(
-                f"batch_id:{bid}, total revenues=${round(sum(how_was_my_day['revenues']), 2)}"
+                f"batch_id:{bid}\nstart time:{start_time }\nrevenue=${round(sum(how_was_my_day['revenues']), 2)}"
             )
             st.dataframe(how_was_my_day)
 
@@ -167,6 +172,11 @@ elif app == "analyzer":
         try:
             how_was_my_batch = pd.DataFrame()
             t = load_trades_by_batch_id(bid)
+
+            if not len(t["client_time"].tolist()):
+                st.info("No trades, $0 revenue")
+                st.stop()
+
             if show_trade_details:
                 st.dataframe(t)
             how_was_my_batch["symbol"] = t.symbol.unique()
@@ -190,6 +200,7 @@ elif app == "analyzer":
         minute_history = {}
 
         c = 0
+
         day_to_analyze = min(t["client_time"].tolist())
         with st.spinner(text="Loading historical data from Polygon..."):
             for symbol in t.symbol.unique().tolist():
