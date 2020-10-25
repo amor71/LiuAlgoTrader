@@ -182,37 +182,46 @@ def backtest(
             if debug_symbols and symbol in debug_symbols:
                 print("--> using DEBUG mode")
 
-            # load historical data
-            try:
-                symbol_data = data_api.polygon.historic_agg_v2(
-                    symbol,
-                    1,
-                    "minute",
-                    _from=str(start_time - timedelta(days=8)),
-                    to=str(start_time + timedelta(days=1)),
-                    limit=10000,
-                ).df
-            except HTTPError as e:
-                tlog(f"Received HTTP error {e} for {symbol}")
-                return
+            re_try = 3
 
-            if len(symbol_data) < 100:
-                tlog(f"not enough data-points  for {symbol}")
-                return
+            while re_try > 0:
+                # load historical data
+                try:
+                    symbol_data = data_api.polygon.historic_agg_v2(
+                        symbol,
+                        1,
+                        "minute",
+                        _from=str(start_time - timedelta(days=8)),
+                        to=str(start_time + timedelta(days=1)),
+                        limit=10000,
+                    ).df
+                except HTTPError as e:
+                    tlog(f"Received HTTP error {e} for {symbol}")
+                    return
 
-            add_daily_vwap(
-                symbol_data, debug=debug_symbols and symbol in debug_symbols
-            )
-            market_data.minute_history[symbol] = symbol_data
-            print(
-                f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
-            )
+                if len(symbol_data) < 100:
+                    tlog(f"not enough data-points  for {symbol}")
+                    return
 
-            position: int = 0
+                add_daily_vwap(
+                    symbol_data,
+                    debug=debug_symbols and symbol in debug_symbols,
+                )
+                market_data.minute_history[symbol] = symbol_data
+                print(
+                    f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
+                )
 
-            minute_index = symbol_data["close"].index.get_loc(
-                start_time, method="nearest"
-            )
+                position: int = 0
+                try:
+                    minute_index = symbol_data["close"].index.get_loc(
+                        start_time, method="nearest"
+                    )
+                    break
+                except ValueError as e:
+                    print(f"[EXCEPTION] {e} - trying to reload-data. ")
+                    re_try -= 1
+
             new_now = symbol_data.index[minute_index]
             print(f"start time with data {new_now}")
             price = 0.0
