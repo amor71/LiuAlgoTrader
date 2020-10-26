@@ -13,4 +13,4 @@ matplotlib==3.3.2
 tabulate==0.8.7
 streamlit==0.69.2
 stockstats==0.3.2
-nest_asyncio==1.4.1
+nest_asyncio==1.4.2
