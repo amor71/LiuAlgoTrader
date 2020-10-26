@@ -10,10 +10,12 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
+import nest_asyncio
 import pandas as pd
 import pytz
 from requests.exceptions import HTTPError
 
+from liualgotrader.analytics.analysis import load_trades_by_batch_id
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
@@ -171,9 +173,11 @@ def backtest(
             symbol: str, scanner_start_time: datetime
         ) -> None:
             est = pytz.timezone("America/New_York")
-            scanner_start_time = pytz.utc.localize(
-                scanner_start_time
-            ).astimezone(est)
+            scanner_start_time = (
+                pytz.utc.localize(scanner_start_time).astimezone(est)
+                if scanner_start_time.tzinfo is None
+                else scanner_start_time
+            )
             start_time = pytz.utc.localize(start).astimezone(est)
 
             if scanner_start_time > start_time + duration:
@@ -339,10 +343,27 @@ def backtest(
                         str(symbol_data.index[minute_index - 1]),
                     )
 
-        symbols = await TrendingTickers.load(batch_id)
-        print(f"loaded {len(symbols)} symbols")
+        if not strict:
+            symbols_and_start_time = await TrendingTickers.load(batch_id)
 
-        if len(symbols) > 0:
+            num_symbols = len(symbols_and_start_time)
+        else:
+            print("strict mode selected, loading symbols from trades")
+            nest_asyncio.apply()
+            _df = load_trades_by_batch_id(batch_id)
+            symbols = _df.symbol.unique().tolist()
+            num_symbols = len(symbols)
+            est = pytz.timezone("America/New_York")
+            start_time = pytz.utc.localize(_df.start_time.min()).astimezone(
+                est
+            )
+            symbols_and_start_time = list(
+                zip(symbols, [start_time for x in range(num_symbols)])
+            )
+
+        print(f"loaded {len(symbols_and_start_time)} symbols")
+
+        if num_symbols > 0:
             est = pytz.timezone("America/New_York")
             start_time = pytz.utc.localize(start).astimezone(est)
             config.market_open = start_time.replace(
@@ -356,8 +377,10 @@ def backtest(
                 conf_dict, duration, ref_run_id, uid, start  # type: ignore
             )
 
-            for symbol in symbols:
-                await backtest_symbol(symbol[0], symbol[1])
+            for symbol_and_start_time in symbols_and_start_time:
+                await backtest_symbol(
+                    symbol_and_start_time[0], symbol_and_start_time[1]
+                )
 
     @timeit
     async def backtest_worker() -> None:

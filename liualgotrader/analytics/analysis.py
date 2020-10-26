@@ -27,7 +27,7 @@ def load_trades(day: date, env: str) -> pd.DataFrame:
 def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
-            t.*, a.batch_id
+            t.*, a.batch_id, a.start_time
         FROM 
             new_trades as t, algo_run as a
         WHERE 
@@ -76,6 +76,20 @@ def load_batch_list(day: date, env: str) -> pd.DataFrame:
             t.expire_tstamp is null AND
             a.algo_env = '{env}'
         """
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(fetch_as_dataframe(query))
+
+
+def load_traded_symbols(batch_id: str) -> pd.DataFrame:
+    query = f"""
+        SELECT 
+            DISTINCT t.symbol
+        FROM 
+            new_trades as t, algo_run as a
+        WHERE 
+            t.algo_run_id = a.algo_run_id AND 
+            a.batch_id = '{batch_id}'
+    """
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(fetch_as_dataframe(query))
 
