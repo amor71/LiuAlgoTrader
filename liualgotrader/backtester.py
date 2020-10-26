@@ -57,7 +57,10 @@ starting
 
 def show_usage():
     print(
-        f"usage: {sys.argv[0]} -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL\n"
+        f"usage: {sys.argv[0]} -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL <batch-id>\n"
+    )
+    print(
+        "back-test a trading session, using tradeplan.toml in current directory, given a batch-id (UDID).\n\noptions:\n"
     )
     print("-v, --version\t\tDetailed version details")
     print(
@@ -65,6 +68,9 @@ def show_usage():
     )
     print(
         "--debug-symbol\tWrite verbose debug information for symbol SYMBOL during back-testing"
+    )
+    print(
+        "--strict\tRun back-test session only on same symbols traded in the original batch"
     )
 
 
@@ -142,7 +148,10 @@ async def create_strategies(
 
 
 def backtest(
-    batch_id: str, debug_symbols: List[str] = None, conf_dict: Dict = None
+    batch_id: str,
+    debug_symbols: List[str] = None,
+    conf_dict: Dict = None,
+    strict: bool = False,
 ) -> str:
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,

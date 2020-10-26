@@ -41,6 +41,10 @@ if __name__ == "__main__":
 
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
+    if len(sys.argv) == 1:
+        backtester.show_usage()
+        sys.exit(0)
+
     config.filename = os.path.basename(__file__)
 
     folder = (
@@ -59,13 +63,11 @@ if __name__ == "__main__":
     config.portfolio_value = conf_dict.get("portfolio_value", None)
     if "risk" in conf_dict:
         config.risk = conf_dict["risk"]
-    if len(sys.argv) == 1:
-        backtester.show_usage()
-        sys.exit(0)
 
     try:
+        strict = False
         opts, args = getopt.getopt(
-            sys.argv[1:], "vb:d:", ["batch-list", "version", "debug-symbol="]
+            sys.argv[1:], "vb:d:s", ["batch-list", "version", "debug-symbol=", "strict"]
         )
         debug_symbols = []
         for opt, arg in opts:
@@ -77,9 +79,11 @@ if __name__ == "__main__":
                 break
             elif opt in ("--debug-symbol", "-d"):
                 debug_symbols.append(arg)
+            elif opt in ("--strict", "-s"):
+                strict = True
 
         for arg in args:
-            backtester.backtest(arg, debug_symbols, conf_dict)
+            backtester.backtest(arg, debug_symbols, conf_dict, strict)
 
     except getopt.GetoptError as e:
         print(f"Error parsing options:{e}\n")
