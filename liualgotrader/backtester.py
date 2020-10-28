@@ -231,7 +231,7 @@ def backtest(
                         start_time, method="nearest"
                     )
                     break
-                except ValueError as e:
+                except (Exception, ValueError) as e:
                     print(f"[EXCEPTION] {e} - trying to reload-data. ")
                     re_try -= 1
 
