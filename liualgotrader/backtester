@@ -67,14 +67,11 @@ if __name__ == "__main__":
     try:
         strict = False
         opts, args = getopt.getopt(
-            sys.argv[1:], "vb:d:s", ["batch-list", "version", "debug-symbol=", "strict"]
+            sys.argv[1:], "b:d:s", ["batch-list", "debug-symbol=", "strict"]
         )
         debug_symbols = []
         for opt, arg in opts:
-            if opt in ("-v", "--version"):
-                backtester.show_version(config.filename, config.build_label)
-                break
-            elif opt in ("--batch-list", "-b"):
+            if opt in ("--batch-list", "-b"):
                 backtester.get_batch_list()
                 break
             elif opt in ("--debug-symbol", "-d"):

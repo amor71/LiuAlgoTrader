@@ -75,7 +75,7 @@ class AlgoRun:
     @classmethod
     async def get_batches(
         cls, pool: Pool = None, nax_batches: int = 30
-    ) -> Dict[str, List[str]]:
+    ) -> List:
         rc: Dict = {}
         if not pool:
             pool = config.db_conn_pool
@@ -83,22 +83,19 @@ class AlgoRun:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT batch_id, algo_run_id, algo_name, algo_env, build_number, start_time
+                        SELECT build_number, batch_id, algo_name, algo_env, date_trunc('minute', min(start_time)) as start
                         FROM algo_run
-                        ORDER BY start_time DESC
+                        GROUP BY batch_id, algo_name, algo_env, build_number
+                        ORDER BY start DESC
                         LIMIT $1
                     """,
                     nax_batches,
                 )
 
                 if rows:
-                    for row in rows:
-                        if row[0] not in rc:
-                            rc[row[0]] = [list(row.values())[1:]]
-                        else:
-                            rc[row[0]].append(list(row.values())[1:])
+                    return [list(map(str, row.values())) for row in rows]
 
-        return rc
+        return []
 
     @classmethod
     async def get_batch_list_by_date(

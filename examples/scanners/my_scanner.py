@@ -1,5 +1,5 @@
 """my_scanner.py: custom scanner implementing the Scanner class"""
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import List, Optional
 
 import alpaca_trade_api as tradeapi
@@ -19,5 +19,5 @@ class MyScanner(Scanner):
             target_strategy_name=None,
         )
 
-    async def run(self) -> List[str]:
+    async def run(self, back_time: datetime = None) -> List[str]:
         return ["APPL"]

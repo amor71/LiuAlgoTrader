@@ -14,6 +14,7 @@ import nest_asyncio
 import pandas as pd
 import pytz
 from requests.exceptions import HTTPError
+from tabulate import tabulate
 
 from liualgotrader.analytics.analysis import load_trades_by_batch_id
 from liualgotrader.common import config, market_data, trading_data
@@ -34,8 +35,12 @@ def get_batch_list():
     async def get_batch_list_worker():
         await create_db_connection()
         data = await AlgoRun.get_batches()
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(data)
+        print(
+            tabulate(
+                data,
+                headers=["build", "batch_id", "strategy", "env", "start time"],
+            )
+        )
 
     try:
         if not asyncio.get_event_loop().is_closed():
@@ -59,12 +64,17 @@ starting
 
 def show_usage():
     print(
-        f"usage: {sys.argv[0]} -d SYMBOL -v --batch-list --version --debug-symbol SYMBOL <batch-id>\n"
+        f"usage: {sys.argv[0]} --batch-list OR --strict --debug-symbol SYMBOL <batch-id>\n"
     )
-    print(
-        "back-test a trading session, using tradeplan.toml in current directory, given a batch-id (UDID).\n\noptions:\n"
-    )
-    print("-v, --version\t\tDetailed version details")
+    msg = """
+    'backter' application re-runs a past trading session, with new or modified
+     strategies specified in tradeplan.toml. 'backter' application looks for 
+     tradeplan.toml in current directory. The 'backter' application expects a 
+     batch-id (UDID) as input. Using the --batch-list option you 
+     can see a list of recent sessions to choose from. 
+    """
+    print(msg)
+    print("options:")
     print(
         "--batch-list\tDisplay list of trading sessions, list limited to last 30 days"
     )

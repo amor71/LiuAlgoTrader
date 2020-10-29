@@ -66,7 +66,7 @@ class GapDown(Scanner):
         tlog(f"total number of trade-able symbols is {len(trade_able_symbols)}")
         return trade_able_symbols
 
-    async def run(self) -> List[str]:
+    async def run(self, back_time: datetime = None) -> List[str]:
         tlog(f"{self.name}: run(): started")
         await self._wait_time()
 

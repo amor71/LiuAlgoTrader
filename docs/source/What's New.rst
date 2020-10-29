@@ -4,7 +4,7 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
-| 0.0.60           | Adding setup wizard (`liu quickstart`)       |
+| 0.0.67           | Adding setup wizard (`liu quickstart`)       |
 |                  | as well as reducing dependencies on          |
 |                  | external libraries to simplify install       |
 |                  | process for Windows users.                   |
@@ -20,6 +20,8 @@ What's New
 |                  | portfolio_value = 100000.00                  |
 |                  | risk = 0.001                                 |
 |                  | market_liquidation_end_time_minutes = 15     |
+|                  +----------------------------------------------+
+|                  | Improved documentation                       |
 +------------------+----------------------------------------------+
 | 0.0.55           | Fixes to build process                       |
 |                  +----------------------------------------------+

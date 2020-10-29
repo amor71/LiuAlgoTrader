@@ -61,7 +61,7 @@ and implementing the *run()* function which returns the selected stock symbols.
 
 Here is an example of *my_scanner.py*:
 
-.. literalinclude:: ../../examples/my_scanner.py
+.. literalinclude:: ../../examples/scanners/my_scanner.py
   :language: python
   :linenos:
 
@@ -80,6 +80,22 @@ Configuring the custom scanner in the *tradeplan* TOML file is as easy:
 While executing, the **trader** application will look for *my_scanner.py*,
 instantiate the `MyScaner` class, and call it with the arguments defined
 in the `tradeplan` configuration file, while adding the trade-api object.
+
+Scanners in back-test application
+*********************************
+
+The scanners `run()` function receives a datetime
+parameter **back_time**. The parameter is used when
+called from the backtester when the
+"`back-test against the whole day`" option is used.
+
+Scanners are expected to support this mode by querying
+past data from the data (if such exists).
+Sample_ implementation can be found
+
+.. _Sample:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/scanners/momentum.py#L270
+
 
 Sending picks to a specific strategy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
