@@ -1,7 +1,7 @@
 .. _`How to Configure`:
 
-How to Configure
-================
+Configuration
+=============
 
 There are two parts to configuration the **trader**
 application: OS level environment variables,
@@ -21,34 +21,9 @@ as well as support dockerized executions.
 Below is an example of a configuration variables script,
 which is not kept in the repository:
 
-.. code-block:: bash
-
-    #!/bin/bash
-    set -e
-
-    # used for paper-trading accounts
-    export ALPACA_PAPER_BASEURL=
-    export ALPACA_PAPER_API_KEY=
-    export ALPACA_PAPER_API_SECRET=
-
-    # used for data-feeds, and live trading
-    export ALPACA_LIVE_BASEURL=
-    export ALPACA_LIVE_API_KEY=
-    export ALPACA_LIVE_API_SECRET=
-
-    # database connectivity
-    export DSN="postgresql://momentum@localhost/tradedb"
-
-    # used by Analysis notebooks
-    export APCA_API_KEY_ID=
-    export APCA_API_SECRET_KEY=
-
-    export FINNHUB_API_KEY=
-    export FINNHUB_BASE_URL=
-
-    export LIU_MAX_SYMBOLS=440
-
-    export TRADEPLAN_DIR=.
+.. literalinclude:: ../../examples/env_vars.sh
+  :language: bash
+  :linenos:
 
 Additional parameters
 *********************

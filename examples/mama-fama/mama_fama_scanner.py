@@ -1,5 +1,5 @@
 """follow the mama/fama indicator"""
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import List, Optional
 
 import alpaca_trade_api as tradeapi
@@ -24,7 +24,7 @@ class MamaFama(Scanner):
             data_api=data_api,
         )
 
-    async def run(self) -> List[str]:
+    async def run(self, back_time: datetime = None) -> List[str]:
         pool = config.db_conn_pool
 
         async with pool.acquire() as con:

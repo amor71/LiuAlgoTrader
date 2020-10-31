@@ -75,7 +75,7 @@ class NewTrade:
 
     @classmethod
     async def load_latest(
-        cls, pool: Pool, symbol: str, strategy_name: str
+        cls, pool: Pool, symbol: str, strategy_name: str, env: str
     ) -> Tuple[int, float, float, float, Dict, datetime]:
         async with pool.acquire() as con:
             async with con.transaction():
@@ -86,11 +86,13 @@ class NewTrade:
                         WHERE 
                             t.algo_run_id=a.algo_run_id AND
                             a.algo_name=$2 AND
-                            symbol=$1 
+                            symbol=$1 AND
+                            env=$3
                         ORDER BY tstamp DESC LIMIT 1
                     """,
                     symbol,
                     strategy_name,
+                    env,
                 )
 
                 if row:
@@ -107,7 +109,9 @@ class NewTrade:
                     raise ValueError
 
     @classmethod
-    async def get_run_symbols(cls, run_id: int, pool: Pool = None) -> List[str]:
+    async def get_run_symbols(
+        cls, run_id: int, pool: Pool = None
+    ) -> List[str]:
         rc: List = []
         if not pool:
             pool = config.db_conn_pool

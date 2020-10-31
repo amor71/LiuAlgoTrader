@@ -825,7 +825,12 @@ async def consumer_async_main(
 
         trading_data.strategies.append(s)
         if symbols:
-            loaded += await load_current_positions(trading_api, symbols, s)
+            loaded += await load_current_positions(
+                trading_api=trading_api,
+                symbols=symbols,
+                strategy=s,
+                env=config.env,
+            )
 
     if symbols and loaded != len(symbols):
         tlog(
@@ -852,7 +857,7 @@ async def consumer_async_main(
 
 
 async def load_current_positions(
-    trading_api: tradeapi, symbols: List[str], strategy: Strategy
+    trading_api: tradeapi, symbols: List[str], strategy: Strategy, env: str
 ) -> int:
     loaded = 0
     for symbol in symbols:
@@ -873,7 +878,10 @@ async def load_current_positions(
                     indicators,
                     timestamp,
                 ) = await NewTrade.load_latest(
-                    config.db_conn_pool, symbol, strategy.name
+                    config.db_conn_pool,
+                    symbol=symbol,
+                    strategy_name=strategy.name,
+                    env=env,
                 )
 
                 if prev_run_id is None:
@@ -948,10 +956,6 @@ def consumer_main(
         asyncio.run(
             consumer_async_main(queue, symbols, unique_id, conf["strategies"])
         )
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(asyncio.new_event_loop())
-        # loop.run_until_complete(consumer_async_main(queue, symbols, unique_id))
-        # loop.run_forever()
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
 

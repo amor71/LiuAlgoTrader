@@ -30,3 +30,5 @@ twine==3.2.0
 streamlit==0.69.2
 stockstats==0.3.2
 nest_asyncio==1.4.2
+nbqa
+pre-commit

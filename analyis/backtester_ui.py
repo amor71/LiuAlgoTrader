@@ -215,7 +215,6 @@ elif app == "analyzer":
                     c += 1
         st.success(f"LOADED {c} symbols' data!")
 
-        position = {}
         for symbol in minute_history:
             symbol_df = t.loc[t["symbol"] == symbol]
             start_date = symbol_df["client_time"].min().to_pydatetime()
@@ -257,24 +256,20 @@ elif app == "analyzer":
             stop_price = []
             daily_change = []
             precent_vwap = []
-            position[symbol] = 0
             for index, row in symbol_df.iterrows():
                 resistance = None
                 support = None
-                if position[symbol] >= 0 and row["operation"] == "buy":
-                    delta = -row["price"] * row["qty"]
-                    position[symbol] += row["qty"]
-                elif position[symbol] <= 0 and row["operation"] == "sell":
-                    delta = row["price"] * row["qty"]
-                    position[symbol] -= row["qty"]
-                elif position[symbol] > 0 and row["operation"] == "sell":
-                    delta = row["price"] * row["qty"]
-                    position[symbol] -= row["qty"]
-                elif position[symbol] < 0 and row["operation"] == "buy":
-                    delta = -row["price"] * row["qty"]
-                    position[symbol] += row["qty"]
-
+                delta = (
+                    row["price"]
+                    * row["qty"]
+                    * (
+                        1
+                        if row["operation"] == "sell" and row["qty"] > 0
+                        else -1
+                    )
+                )
                 profit += delta
+
                 ax.scatter(
                     row["client_time"].to_pydatetime(),
                     row["price"],
