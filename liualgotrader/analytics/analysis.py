@@ -3,9 +3,12 @@ from datetime import date, timedelta
 from typing import Dict
 
 import pandas as pd
+from pytz import timezone
 
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
+
+est = timezone("America/New_York")
 
 
 def portfolio_return(env: str, start_date: date) -> pd.DataFrame:
@@ -15,17 +18,25 @@ def portfolio_return(env: str, start_date: date) -> pd.DataFrame:
     table: Dict = {}
 
     for index, row in df.iterrows():
-        d = pd.to_datetime(row["client_time"]).date()
+        d = pd.Timestamp(pd.to_datetime(row["client_time"]).date(), tz=est)
         if d not in table:
             table[d] = {}
+            table[d]["revenue"] = 0.0
+            table[d]["invested"] = 0.0
+
         strat = row["algo_name"]
         if not strat in table[d]:
             table[d][strat] = 0.0
-        table[d][strat] += (
+
+        delta = (
             (1.0 if row["operation"] == "sell" and row["qty"] > 0 else -1.0)
             * float(row["price"])
             * row["qty"]
         )
+        table[d][strat] += delta
+        table[d]["revenue"] += delta
+        if row["operation"] == "buy":
+            table[d]["invested"] += row["qty"] * float(row["price"])
 
     return pd.DataFrame.from_dict(table, orient="index").sort_index()
 
