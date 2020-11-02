@@ -1,6 +1,6 @@
 import asyncio
 from datetime import date, timedelta
-from typing import Dict
+from typing import Dict, Tuple
 
 import pandas as pd
 from pytz import timezone
@@ -11,23 +11,29 @@ from liualgotrader.common.tlog import tlog
 est = timezone("America/New_York")
 
 
-def portfolio_return(env: str, start_date: date) -> pd.DataFrame:
+def portfolio_return(
+    env: str, start_date: date
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df = load_trades_for_period(env, start_date, date.today())
 
     # day X strategy = total return
     table: Dict = {}
-
+    invested_table: Dict = {}
+    percentages_table: Dict = {}
     for index, row in df.iterrows():
         d = pd.Timestamp(pd.to_datetime(row["client_time"]).date(), tz=est)
         if d not in table:
             table[d] = {}
+            invested_table[d] = {}
+            percentages_table[d] = {}
             table[d]["revenue"] = 0.0
-            table[d]["invested"] = 0.0
+            invested_table[d]["invested"] = 0.0
 
         strat = row["algo_name"]
         if not strat in table[d]:
             table[d][strat] = 0.0
-
+            invested_table[d][strat] = 0.0
+            percentages_table[d][strat] = 0.0
         delta = (
             (1.0 if row["operation"] == "sell" and row["qty"] > 0 else -1.0)
             * float(row["price"])
@@ -36,9 +42,24 @@ def portfolio_return(env: str, start_date: date) -> pd.DataFrame:
         table[d][strat] += delta
         table[d]["revenue"] += delta
         if row["operation"] == "buy":
-            table[d]["invested"] += row["qty"] * float(row["price"])
+            invested_table[d][strat] += row["qty"] * float(row["price"])
+            invested_table[d]["invested"] += row["qty"] * float(row["price"])
+        percentages_table[d][strat] = (
+            (100.0 * table[d][strat] / invested_table[d][strat])
+            if invested_table[d][strat] != 0
+            else 0.0
+        )
+        percentages_table[d]["revenue"] = (
+            (100.0 * table[d]["revenue"] / invested_table[d]["invested"])
+            if invested_table[d][strat] != 0
+            else 0.0
+        )
 
-    return pd.DataFrame.from_dict(table, orient="index").sort_index()
+    return (
+        pd.DataFrame.from_dict(table, orient="index").sort_index(),
+        pd.DataFrame.from_dict(invested_table, orient="index").sort_index(),
+        pd.DataFrame.from_dict(percentages_table, orient="index").sort_index(),
+    )
 
 
 def load_trades_for_period(
