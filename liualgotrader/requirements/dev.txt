@@ -32,4 +32,4 @@ stockstats==0.3.2
 nest_asyncio==1.4.1
 nbqa
 pre-commit
-
+empyrical
