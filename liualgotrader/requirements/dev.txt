@@ -31,4 +31,4 @@ streamlit==0.70.0
 stockstats==0.3.2
 nest_asyncio==1.4.2
 nbqa==0.3.6
-pre-commit
+pre-commit==2.8.2
