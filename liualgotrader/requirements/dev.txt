@@ -33,4 +33,5 @@ nest_asyncio==1.4.2
 nbqa
 pre-commit
 empyrical
+sklearn
 
