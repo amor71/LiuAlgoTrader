@@ -1,36 +1,64 @@
-.. _`How to analyze your trades`:
+Liu Analysis Tool-box
+=====================
 
-Analyze your trades
-===================
+`LiuAlgoTrader` is equipment with jupyter notebooks_
+for analysing portfolio, trader, and back-testing sessions.
 
+.. _notebooks:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/portfolio_performance_analysis.ipynb
 
 .. # define a hard line break for HTML
 .. |br| raw:: html
 
    <br />
 
-**Complete documentation in release 0.0.36**
+prerequisites
+-------------
 
-`LiuAlgoTrader` is equipment with jupyter notebooks
-for analysing recent trades, and backtesting sessions.
+1. Both `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables should be properly set and include the credentials to Alpaca Markets account (can be either PAPER or LIVE),
+2. Environment variable `DSN` holds valid DB connection string,
+
+
+Portfolio Analysis
+------------------
+
+The returns_ analysis notebook provide basic means to analyze your portfolio performance over time.
+
+.. _returns:
+    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks
+
+The top of the notebook looks like:
+
+.. image:: /images/returns_notebook_1.png
+    :width: 1000
+    :align: left
+    :alt: liu returns analysis
+
+The cell holds the two configurable parameters:
+
+1. `env`: the portfolio environment to analyze. Values can be PAPER, PROD, or BACKTEST
+2. `start_date`: a string representing the initial date from when to run the analysis.
+
+Once executed, the notebook is made of 3 parts:
+
+1. **Revenue & Percentage per strategy**: analysis of revenues over time per strategy, and for the entire portfolio. Graphs are shown in two columns, the left column shows the $ value, while the right column shows the daily percentage changes.
+
+.. image:: /images/returns_notebook_2.png
+    :width: 1000
+    :align: left
+    :alt: liu returns analysis
+
+2. **Accumulative Revenue & Draw-down**: accumulative revenue per strategy, including daily draw-down graph (volatility).
+
+.. image:: /images/returns_notebook_3.png
+    :width: 1000
+    :align: left
+    :alt: liu returns analysis
+
+3. **Strategy performance distribution**: analysis of portfolio distribution, showing summary of mean, std as well as skew and kurtosis (3rd and 4th moments), and histograms.
 
 Analyze a *trader* session
 --------------------------
-
-
-Prerequisites
-*************
-
-1. Make sure that `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables are properly set and include the credentials to your account (can be either PAPER or LIVE).
-2. Make sure you know your DSN connection string.
-3. Download the latest version of trading day analysis notebook from here_.
-
-.. _here:
-    https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/portfolio_performance_analysis.ipynb
-
-
-Usage
-*****
 
 When the notebook opens up you should see a screen similar to:
 
