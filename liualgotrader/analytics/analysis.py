@@ -121,14 +121,14 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     return df
 
 
-def load_runs(day: date, env: str) -> pd.DataFrame:
+def load_runs(day: date, env: str, end_date: date = None) -> pd.DataFrame:
     query = f"""
      SELECT * 
      FROM 
      algo_run as t
      WHERE 
          start_time >= '{day}' AND 
-         start_time < '{day + timedelta(days=1)}' AND
+         start_time < '{day + timedelta(days=1) if not end_date else end_date}' AND
          algo_env = '{env}'
      ORDER BY start_time
      """
