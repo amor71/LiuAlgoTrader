@@ -101,7 +101,7 @@ def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
 def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
-            t.*, a.batch_id, a.start_time
+            t.*, a.batch_id, a.start_time, a.algo_name
         FROM 
             new_trades as t, algo_run as a
         WHERE 

@@ -19,13 +19,13 @@ prerequisites
 2. Environment variable `DSN` holds valid DB connection string,
 
 
-Portfolio Analysis
-------------------
+Tear Sheet
+----------
 
-The returns_ analysis notebook provide basic means to analyze your portfolio performance over time.
+The `tear sheet`_ analysis notebook provide basic means to analyze your portfolio performance over time.
 
-.. _returns:
-    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks
+.. _tear sheet:
+    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks/tead_sheet.ipynb
 
 The top of the notebook looks like:
 

@@ -4,6 +4,9 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.69           | added analytical notebooks incl.             |
+|                  | tear_sheet, deep_analysis                    |
++------------------+----------------------------------------------+
 | 0.0.67           | Adding setup wizard (`liu quickstart`)       |
 |                  | as well as reducing dependencies on          |
 |                  | external libraries to simplify install       |
