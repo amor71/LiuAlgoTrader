@@ -25,7 +25,7 @@ Tear Sheet
 The `tear sheet`_ analysis notebook provide basic means to analyze your portfolio performance over time.
 
 .. _tear sheet:
-    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks/tead_sheet.ipynb
+    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks/tear_sheet.ipynb
 
 The top of the notebook looks like:
 
