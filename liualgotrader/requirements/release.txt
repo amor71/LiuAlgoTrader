@@ -6,7 +6,7 @@ numpy==1.19.4
 alpaca-trade-api==0.49.1
 google-cloud-logging==1.15.1
 asyncpg==0.21.0
-pygit2==1.3.0
+pygit2==1.4.0
 google-cloud-error-reporting==1.0.0
 websockets==8.1
 matplotlib==3.3.2
