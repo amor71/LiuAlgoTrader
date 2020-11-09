@@ -32,5 +32,5 @@ stockstats==0.3.2
 nest_asyncio==1.4.2
 nbqa==0.4.0
 pre-commit==2.8.2
-empyrical
+empyrical==0.5.5
 sklearn
