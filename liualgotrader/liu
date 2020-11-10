@@ -49,7 +49,7 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str, r
 
         for file in files:
             r = requests.get(f"{base_url}{file}")
-            with open(f"{db_location}{file}", "w") as f:
+            with open(f"{db_location}{file}", "w", encoding="utf-8") as f:
                 f.write(r.text)
                 f.write("")
     except Exception as e:
