@@ -35,7 +35,10 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str, r
             db_location += '/'
 
         print("downloading files..")
-        r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose.yml')
+        if os.name == "nt":
+            r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose-windows.yml')
+        else:
+            r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose.yml')
         resolved = r.text.replace("{db_name}", db_name).replace("{user_name}", user_name).replace("{password}", password)
 
         with open(f"{db_location}docker-compose.yml", "w") as f:
@@ -100,8 +103,13 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
 
         print()
         print("creating environment variables script")
-        with open(f"{samples_location}env_vars.sh", "w") as f:
-            f.write(f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
+
+        if os.name == "nt":
+            with open(f"{samples_location}env_vars.bat", "w") as f:
+                f.write(f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
+        else:
+            with open(f"{samples_location}env_vars.sh", "w") as f:
+                f.write(f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
 
 
     except Exception as e:
@@ -250,7 +258,10 @@ def quickstart():
     print()
     print("To experience Liu Algo Trading for the first time:")
     print(f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),")
-    print("2. run the env-vars script ('source env_vars.sh' or equivalent for Windows),")
+    if os.name == "nt":
+        print("2. run the env-vars script ('env_vars.bat'),")
+    else:
+        print("2. run the env-vars script ('source env_vars.sh'),")
     print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
     if restore_sample_db:
         print("4. On the app selection select the 'analyzer` app")
