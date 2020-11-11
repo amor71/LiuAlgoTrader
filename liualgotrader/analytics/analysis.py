@@ -14,7 +14,9 @@ est = timezone("America/New_York")
 def portfolio_return(
     env: str, start_date: date
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    df = load_trades_for_period(env, start_date, date.today())
+    df = load_trades_for_period(
+        env, start_date, date.today() + timedelta(days=1)
+    )
 
     # day X strategy = total return
     table: Dict = {}
