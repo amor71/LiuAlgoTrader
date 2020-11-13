@@ -226,6 +226,7 @@ def quickstart():
     print("Would you like to download & view samples? [Y]/n:")
     i = input()
     samples = True if not len(i) or i.lower in ("y", "yes") else False
+    sample_location = None
     if samples:
         pwd = pathlib.Path().absolute()
         print(f"Select location for sample files [{pwd}/liu_samples]:")
@@ -256,16 +257,18 @@ def quickstart():
         print("You may now run a back-testing sessions for these days, as well as ")
         print("analyze an existing trading session.")
     print()
-    print("To experience Liu Algo Trading for the first time:")
-    print(f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),")
-    if os.name == "nt":
-        print("2. run the env-vars script ('env_vars.bat'),")
-    else:
-        print("2. run the env-vars script ('source env_vars.sh'),")
-    print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
-    if restore_sample_db:
-        print("4. On the app selection select the 'analyzer` app")
-        print("5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>")
+
+    if sample_location:
+        print("To experience Liu Algo Trading for the first time:")
+        print(f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),")
+        if os.name == "nt":
+            print("2. run the env-vars script ('env_vars.bat'),")
+        else:
+            print("2. run the env-vars script ('source env_vars.sh'),")
+        print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
+        if restore_sample_db:
+            print("4. On the app selection select the 'analyzer` app")
+            print("5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>")
 
     print()
     print("Thank you for choosing Liu Algo Trading Framework. ")
