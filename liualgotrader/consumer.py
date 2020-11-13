@@ -583,16 +583,21 @@ async def handle_data_queue_msg(
                         portfolio_value=config.portfolio_value,
                     )
                 except Exception as e:
-                    tlog(
-                        f"[EXCEPTION] strategy {s.name} for symbol {symbol} -> {e}"
-                    )
-                    exc_info = sys.exc_info()
-                    lines = traceback.format_exception(*exc_info)
-                    for line in lines:
-                        tlog(f"{line}")
-                    del exc_info
+                    # exc_info = sys.exc_info()
+                    # lines = traceback.format_exception(*exc_info)
+                    # for line in lines:
+                    #    tlog(f"{line}")
+                    # del exc_info
 
-                    if symbol not in symbol_data_error:
+                    symbol_data_error[symbol] = (
+                        0
+                        if symbol not in symbol_data_error
+                        else symbol_data_error[symbol] + 1
+                    )
+                    tlog(
+                        f"[EXCEPTION] strategy {s.name} for symbol {symbol} -> {e} [{symbol_data_error[symbol]}]"
+                    )
+                    if symbol_data_error[symbol] < 5:
                         tlog(f"attempting reload of data for symbol {symbol}")
 
                         _df = data_api.polygon.historic_agg_v2(
@@ -608,9 +613,6 @@ async def handle_data_queue_msg(
                         tlog(
                             f"consumer task re-loaded {len(market_data.minute_history[symbol].index)} 1-min candles for {symbol}"
                         )
-
-                        symbol_data_error[symbol] = True
-
                     continue
 
                 if do:
