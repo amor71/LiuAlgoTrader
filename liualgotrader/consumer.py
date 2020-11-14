@@ -67,7 +67,7 @@ async def liquidator(trading_api: tradeapi) -> None:
             config.market_close - dt
             if config.market_close > dt
             else timedelta(hours=24) + (config.market_close - dt)
-        ) - timedelta(minutes=5)
+        ) - timedelta(minutes=8)
         await asyncio.sleep(to_market_close.total_seconds())
 
     except asyncio.CancelledError:
