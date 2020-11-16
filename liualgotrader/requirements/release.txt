@@ -9,7 +9,7 @@ asyncpg==0.21.0
 pygit2==1.4.0
 google-cloud-error-reporting==1.0.0
 websockets==8.1
-matplotlib==3.3.2
+matplotlib==3.3.3
 tabulate==0.8.7
 streamlit==0.70.0
 stockstats==0.3.2
