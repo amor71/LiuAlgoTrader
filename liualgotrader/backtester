@@ -67,20 +67,44 @@ if __name__ == "__main__":
     try:
         strict = False
         opts, args = getopt.getopt(
-            sys.argv[1:], "b:d:s", ["batch-list", "debug-symbol=", "strict"]
+            sys.argv[1:],
+            "b:d:s",
+            ["batch-list", "debug=", "strict", "symbol=", "duration="],
         )
         debug_symbols = []
+        symbols = None
+        duration: int = None
         for opt, arg in opts:
             if opt in ("--batch-list", "-b"):
                 backtester.get_batch_list()
                 break
-            elif opt in ("--debug-symbol", "-d"):
+            elif opt in ("--debug", "-d"):
                 debug_symbols.append(arg)
             elif opt in ("--strict", "-s"):
                 strict = True
+            elif opt in ("--symbol"):
+                if not symbols:
+                    symbols = [arg]
+                else:
+                    symbols.append(arg)
+            elif opt in ("--duration"):
+                try:
+                    duration = int(arg)
+                except ValueError:
+                    print(
+                        f"Error, duration parameters must be positive and not {duration}"
+                    )
+                    sys.exit(0)
+                if duration <= 0:
+                    print(
+                        f"Error, duration parameters must be positive and not {duration}"
+                    )
+                    sys.exit(0)
 
         for arg in args:
-            backtester.backtest(arg, debug_symbols, conf_dict, strict)
+            backtester.backtest(
+                arg, debug_symbols, conf_dict, strict, symbols, duration
+            )
 
     except getopt.GetoptError as e:
         print(f"Error parsing options:{e}\n")

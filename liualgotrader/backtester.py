@@ -64,7 +64,7 @@ starting
 
 def show_usage():
     print(
-        f"usage: {sys.argv[0]} --batch-list OR --strict --debug-symbol SYMBOL <batch-id>\n"
+        f"usage: {sys.argv[0]} --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>\n"
     )
     msg = """
     'backter' application re-runs a past trading session, with new or modified
@@ -78,8 +78,12 @@ def show_usage():
     print(
         "--batch-list\tDisplay list of trading sessions, list limited to last 30 days"
     )
+    print("--symbol\tRun on specific SYMBOL, bypass batch-id scanners")
     print(
-        "--debug-symbol\tWrite verbose debug information for symbol SYMBOL during back-testing"
+        "--duration\tRun back-test for number of <minutes>, bypass batch-id run duration"
+    )
+    print(
+        "--debug\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
     print(
         "--strict\tRun back-test session only on same symbols traded in the original batch"
@@ -97,6 +101,7 @@ async def create_strategies(
     ref_run_id: Optional[int],
     uid: str,
     start: datetime,
+    bypass_strategy_duration: bool = False,
 ) -> None:
     strategy_types = []
     for strategy in conf_dict["strategies"]:
@@ -140,7 +145,7 @@ async def create_strategies(
         tlog(f"initializing {strategy_type.name}")
 
         if "schedule" not in strategy_details:
-            print("duration", duration)
+            print("duration:", duration)
             strategy_details["schedule"] = [
                 {
                     "start": int(
@@ -152,6 +157,10 @@ async def create_strategies(
                     "duration": int(duration.total_seconds() // 60),
                 }
             ]
+        if bypass_strategy_duration:
+            for schedule in strategy_details["schedule"]:
+                schedule["duration"] = duration.total_seconds() // 60
+
         s = strategy_type(
             batch_id=uid, ref_run_id=ref_run_id, **strategy_details
         )
@@ -159,11 +168,187 @@ async def create_strategies(
         trading_data.strategies.append(s)
 
 
+@timeit
+async def backtest_symbol(
+    data_api: tradeapi,
+    portfolio_value: float,
+    symbol: str,
+    start: datetime,
+    duration: timedelta,
+    scanner_start_time: datetime,
+    debug_symbol: bool = False,
+) -> None:
+    est = pytz.timezone("America/New_York")
+    scanner_start_time = (
+        pytz.utc.localize(scanner_start_time).astimezone(est)
+        if scanner_start_time.tzinfo is None
+        else scanner_start_time
+    )
+    start_time = pytz.utc.localize(start).astimezone(est)
+
+    if scanner_start_time > start_time + duration:
+        print(
+            f"{symbol} picked too late at {scanner_start_time} ({start_time}, {duration})"
+        )
+        return
+
+    start_time = scanner_start_time
+    if start_time.second > 0:
+        start_time = start_time.replace(second=0, microsecond=0)
+    print(
+        f"--> back-testing {symbol} from {str(start_time)} duration {duration}"
+    )
+    if debug_symbol:
+        print("--> using DEBUG mode")
+
+    re_try = 3
+
+    while re_try > 0:
+        # load historical data
+        try:
+            symbol_data = data_api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "minute",
+                _from=str(start_time - timedelta(days=8)),
+                to=str(start_time + timedelta(days=1)),
+                limit=10000,
+            ).df
+        except HTTPError as e:
+            tlog(f"Received HTTP error {e} for {symbol}")
+            return
+
+        if len(symbol_data) < 100:
+            tlog(f"not enough data-points  for {symbol}")
+            return
+
+        add_daily_vwap(
+            symbol_data,
+            debug=debug_symbol,
+        )
+        market_data.minute_history[symbol] = symbol_data
+        print(
+            f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
+        )
+        try:
+            minute_index = symbol_data["close"].index.get_loc(
+                start_time, method="nearest"
+            )
+            break
+        except (Exception, ValueError) as e:
+            print(f"[EXCEPTION] {e} - trying to reload-data. ")
+            re_try -= 1
+
+    if re_try <= 0:
+        return
+
+    position: int = 0
+    new_now = symbol_data.index[minute_index]
+    print(f"start time with data {new_now}")
+    price = 0.0
+    last_run_id = None
+    # start_time + duration
+    while (
+        new_now < config.market_close
+        and minute_index < symbol_data.index.size - 1
+    ):
+        if symbol_data.index[minute_index] != new_now:
+            print("mismatch!", symbol_data.index[minute_index], new_now)
+            print(symbol_data["close"][minute_index - 10 : minute_index + 1])
+            raise Exception()
+
+        price = symbol_data["close"][minute_index]
+        for strategy in trading_data.strategies:
+            if debug_symbol:
+                print(
+                    f"Execute strategy {strategy.name} on {symbol} at {new_now}"
+                )
+            do, what = await strategy.run(
+                symbol,
+                True,
+                position,
+                symbol_data[: minute_index + 1],
+                new_now,
+                portfolio_value,
+                debug=debug_symbol,  # type: ignore
+                backtesting=True,
+            )
+            if do:
+                if (
+                    what["side"] == "buy"
+                    and float(what["qty"]) > 0
+                    or what["side"] == "sell"
+                    and float(what["qty"]) < 0
+                ):
+                    position += int(float(what["qty"]))
+                    trading_data.buy_time[symbol] = new_now.replace(
+                        second=0, microsecond=0
+                    )
+                else:
+                    position -= int(float(what["qty"]))
+
+                trading_data.last_used_strategy[symbol] = strategy
+
+                db_trade = NewTrade(
+                    algo_run_id=strategy.algo_run.run_id,
+                    symbol=symbol,
+                    qty=int(float(what["qty"])),
+                    operation=what["side"],
+                    price=price,
+                    indicators=trading_data.buy_indicators[symbol]
+                    if what["side"] == "buy"
+                    else trading_data.sell_indicators[symbol],
+                )
+
+                await db_trade.save(
+                    config.db_conn_pool,
+                    str(new_now),
+                    trading_data.stop_prices[symbol],
+                    trading_data.target_prices[symbol],
+                )
+
+                if what["side"] == "buy":
+                    await strategy.buy_callback(
+                        symbol, price, int(float(what["qty"]))
+                    )
+                    break
+                elif what["side"] == "sell":
+                    await strategy.sell_callback(
+                        symbol, price, int(float(what["qty"]))
+                    )
+                    break
+            last_run_id = strategy.algo_run.run_id
+
+        minute_index += 1
+        new_now = symbol_data.index[minute_index]
+
+    if position:
+        if (
+            trading_data.last_used_strategy[symbol].type
+            == StrategyType.DAY_TRADE
+        ):
+            tlog(f"[{new_now}]{symbol} liquidate {position} at {price}")
+            db_trade = NewTrade(
+                algo_run_id=last_run_id,  # type: ignore
+                symbol=symbol,
+                qty=int(position) if int(position) > 0 else -int(position),
+                operation="sell" if position > 0 else "buy",
+                price=price,
+                indicators={"liquidate": 1},
+            )
+            await db_trade.save(
+                config.db_conn_pool,
+                str(symbol_data.index[minute_index - 1]),
+            )
+
+
 def backtest(
     batch_id: str,
-    debug_symbols: List[str] = None,
-    conf_dict: Dict = None,
+    conf_dict: Dict,
+    debug_symbols: List[str],
     strict: bool = False,
+    specific_symbols: List[str] = None,
+    bypass_duration: int = None,
 ) -> str:
     data_api: tradeapi = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -176,184 +361,17 @@ def backtest(
     uid = str(uuid.uuid4())
 
     async def backtest_run(
-        start: datetime, duration: timedelta, ref_run_id: int
+        start: datetime,
+        duration: timedelta,
+        ref_run_id: int,
+        specific_symbols: List[str] = None,
     ) -> None:
-        @timeit
-        async def backtest_symbol(
-            symbol: str, scanner_start_time: datetime
-        ) -> None:
-            est = pytz.timezone("America/New_York")
-            scanner_start_time = (
-                pytz.utc.localize(scanner_start_time).astimezone(est)
-                if scanner_start_time.tzinfo is None
-                else scanner_start_time
-            )
-            start_time = pytz.utc.localize(start).astimezone(est)
-
-            if scanner_start_time > start_time + duration:
-                print(
-                    f"{symbol} picked too late at {scanner_start_time} ({start_time}, {duration})"
-                )
-                return
-
-            start_time = scanner_start_time
-            if start_time.second > 0:
-                start_time = start_time.replace(second=0, microsecond=0)
-            print(
-                f"--> back-testing {symbol} from {str(start_time)} duration {duration}"
-            )
-            if debug_symbols and symbol in debug_symbols:
-                print("--> using DEBUG mode")
-
-            re_try = 3
-
-            while re_try > 0:
-                # load historical data
-                try:
-                    symbol_data = data_api.polygon.historic_agg_v2(
-                        symbol,
-                        1,
-                        "minute",
-                        _from=str(start_time - timedelta(days=8)),
-                        to=str(start_time + timedelta(days=1)),
-                        limit=10000,
-                    ).df
-                except HTTPError as e:
-                    tlog(f"Received HTTP error {e} for {symbol}")
-                    return
-
-                if len(symbol_data) < 100:
-                    tlog(f"not enough data-points  for {symbol}")
-                    return
-
-                add_daily_vwap(
-                    symbol_data,
-                    debug=debug_symbols and symbol in debug_symbols,
-                )
-                market_data.minute_history[symbol] = symbol_data
-                print(
-                    f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
-                )
-
-                position: int = 0
-                try:
-                    minute_index = symbol_data["close"].index.get_loc(
-                        start_time, method="nearest"
-                    )
-                    break
-                except (Exception, ValueError) as e:
-                    print(f"[EXCEPTION] {e} - trying to reload-data. ")
-                    re_try -= 1
-
-            new_now = symbol_data.index[minute_index]
-            print(f"start time with data {new_now}")
-            price = 0.0
-            last_run_id = None
-            # start_time + duration
-            while (
-                new_now < config.market_close
-                and minute_index < symbol_data.index.size - 1
-            ):
-                if symbol_data.index[minute_index] != new_now:
-                    print(
-                        "mismatch!", symbol_data.index[minute_index], new_now
-                    )
-                    print(
-                        symbol_data["close"][
-                            minute_index - 10 : minute_index + 1
-                        ]
-                    )
-                    raise Exception()
-
-                price = symbol_data["close"][minute_index]
-                for strategy in trading_data.strategies:
-                    if debug_symbols and symbol in debug_symbols:
-                        print(
-                            f"Execute strategy {strategy.name} on {symbol} at {new_now}"
-                        )
-                    do, what = await strategy.run(
-                        symbol,
-                        True,
-                        position,
-                        symbol_data[: minute_index + 1],
-                        new_now,
-                        portfolio_value,
-                        debug=debug_symbols and symbol in debug_symbols,  # type: ignore
-                        backtesting=True,
-                    )
-                    if do:
-                        if (
-                            what["side"] == "buy"
-                            and float(what["qty"]) > 0
-                            or what["side"] == "sell"
-                            and float(what["qty"]) < 0
-                        ):
-                            position += int(float(what["qty"]))
-                            trading_data.buy_time[symbol] = new_now.replace(
-                                second=0, microsecond=0
-                            )
-                        else:
-                            position -= int(float(what["qty"]))
-
-                        trading_data.last_used_strategy[symbol] = strategy
-
-                        db_trade = NewTrade(
-                            algo_run_id=strategy.algo_run.run_id,
-                            symbol=symbol,
-                            qty=int(float(what["qty"])),
-                            operation=what["side"],
-                            price=price,
-                            indicators=trading_data.buy_indicators[symbol]
-                            if what["side"] == "buy"
-                            else trading_data.sell_indicators[symbol],
-                        )
-
-                        await db_trade.save(
-                            config.db_conn_pool,
-                            str(new_now),
-                            trading_data.stop_prices[symbol],
-                            trading_data.target_prices[symbol],
-                        )
-
-                        if what["side"] == "buy":
-                            await strategy.buy_callback(
-                                symbol, price, int(float(what["qty"]))
-                            )
-                            break
-                        elif what["side"] == "sell":
-                            await strategy.sell_callback(
-                                symbol, price, int(float(what["qty"]))
-                            )
-                            break
-                    last_run_id = strategy.algo_run.run_id
-
-                minute_index += 1
-                new_now = symbol_data.index[minute_index]
-
-            if position:
-                if (
-                    trading_data.last_used_strategy[symbol].type
-                    == StrategyType.DAY_TRADE
-                ):
-                    tlog(
-                        f"[{new_now}]{symbol} liquidate {position} at {price}"
-                    )
-                    db_trade = NewTrade(
-                        algo_run_id=last_run_id,  # type: ignore
-                        symbol=symbol,
-                        qty=int(position)
-                        if int(position) > 0
-                        else -int(position),
-                        operation="sell" if position > 0 else "buy",
-                        price=price,
-                        indicators={"liquidate": 1},
-                    )
-                    await db_trade.save(
-                        config.db_conn_pool,
-                        str(symbol_data.index[minute_index - 1]),
-                    )
-
-        if not strict:
+        if specific_symbols:
+            symbols_and_start_time: List = []
+            for symbol in specific_symbols:
+                symbols_and_start_time.append((symbol, start))
+            num_symbols = len(specific_symbols)
+        elif not strict:
             symbols_and_start_time = await TrendingTickers.load(batch_id)
 
             num_symbols = len(symbols_and_start_time)
@@ -382,14 +400,26 @@ def backtest(
             config.market_close = start_time.replace(
                 hour=16, minute=0, second=0, microsecond=0
             )
-            print(f"market_open{config.market_open}")
+            print(f"market_open {config.market_open}")
             await create_strategies(
-                conf_dict, duration, ref_run_id, uid, start  # type: ignore
+                conf_dict,
+                duration,
+                ref_run_id,
+                uid,
+                start,
+                bypass_duration is not None,
             )
 
             for symbol_and_start_time in symbols_and_start_time:
+                symbol = symbol_and_start_time[0]
                 await backtest_symbol(
-                    symbol_and_start_time[0], symbol_and_start_time[1]
+                    data_api=data_api,
+                    portfolio_value=portfolio_value,
+                    symbol=symbol,
+                    start=start,
+                    duration=duration,
+                    scanner_start_time=symbol_and_start_time[1],
+                    debug_symbol=True if symbol in debug_symbols else False,
                 )
 
     @timeit
@@ -417,8 +447,11 @@ def backtest(
                             ]
                         ]
                     )
+                    if not bypass_duration
+                    else bypass_duration
                 ),
                 ref_run_id=run_ids[0],
+                specific_symbols=specific_symbols,
             )
 
     try:
