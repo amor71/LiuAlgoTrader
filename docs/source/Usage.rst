@@ -157,9 +157,15 @@ To run the `backtester` application type:
 
     backtester
 
-Displays a high-level description of the tool,
-and it's different parameters. If you had run a `trader`
-session  (or have used `liu quickstart` wizard) the
+Displays a high-level description of the tool, and it's different parameters:
+
+.. image:: /images/backtester1.png
+    :width: 800
+    :align: left
+    :alt: *backtester* usage
+
+
+If you had run a `trader` session  (or have used `liu quickstart` wizard) the
 database should should hold at least one batch-id.
 
 To get a list of previous trading sessions, run:
@@ -201,6 +207,38 @@ Below is a sample output of a running `backtester` application:
 3. When the `backtester` application starts, it lists all the stocks picked by the scanners during the trading session.
 4. `backtester` re-runs each session, by loading per-minute candles for the stock trading session (up to one week back). This reply simulates per-minute trading, vs. per-second trading during `trader` execution (though, the `trader` application can also be configured to execute strategies per minute and not per secord).
 5.  `backtester` supports a debug mode, per symbol. The debug flag is passed to the implementation for `Strategy.run()`, allowing more verbose logging during backtesting.
+
+Understanding command-line parameters
+*************************************
+
+
++----------------+-------------------------------------------------------+
+| Parameter Name | Description                                           |
++----------------+-------------------------------------------------------+
+| symbol         | Normally, the `backtester` application loads          |
+|                | symbols from a previously executed batch, the symbol  |
+|                | parameter changes this behavior by selecting a        |
+|                | specific symbol to back-test during the batch         |
+|                | timeframe (even if the stock was not picked by        |
+|                | a scanner during `trader` session). It is possible    |
+|                | to include several --symbol parameters in a single    |
+|                | `backtester` application execution.                   |
++----------------+-------------------------------------------------------+
+| strict         | This option, limits the back-tested symbol to         |
+|                | symbol that were actually traded during a session.    |
+|                | The option is helpful to speed up back-test run       |
+|                | during initial strategy development or improvement    |
+|                | session.                                              |
++----------------+-------------------------------------------------------+
+| duration       | The option over-rides the initial duration specified  |
+|                | in the back-tested `tradeplan`. The option is less    |
+|                | relevant for tradeplans with multiple trade windows.  |
++----------------+-------------------------------------------------------+
+| debug          | When a sybmol is select for debug, then the debug     |
+|                | flag will be passed as True for the strategy          |
+|                | `run()` function. Based on the strategy implementation|
+|                | additional logging may be provided.                   |
++----------------+-------------------------------------------------------+
 
 
 Browser-base tool

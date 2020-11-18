@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
         for arg in args:
             backtester.backtest(
-                arg, debug_symbols, conf_dict, strict, symbols, duration
+                arg, conf_dict, debug_symbols, strict, symbols, duration
             )
 
     except getopt.GetoptError as e:
