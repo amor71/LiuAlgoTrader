@@ -150,7 +150,7 @@ if app == "back-test":
                     asyncio.set_event_loop(asyncio.new_event_loop())
                     try:
                         print(bid)
-                        new_bid = backtest(bid, conf_dict=conf_dict)  # type: ignore
+                        new_bid = backtest(bid, conf_dict=conf_dict, debug_symbols=[])  # type: ignore
                     except Exception as e:
                         st.exception(e)
                         st.stop()
