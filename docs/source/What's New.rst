@@ -4,6 +4,10 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.74           | 1. adding `symbol` and `duration` parameters |
+|                  |    to `backtester`, updated documentation,   |
+|                  | 2. clean-ups to back-testing notebook.       |
++------------------+----------------------------------------------+
 | 0.0.72           | 1. Windows deployment fixes,                 |
 |                  | 2. Fixes & improvements to analysis tools    |
 +------------------+----------------------------------------------+
