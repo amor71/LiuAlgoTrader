@@ -153,7 +153,7 @@ async def liquidate(
     trading_api: tradeapi,
 ) -> None:
 
-    if symbol_position:
+    if symbol_position and symbol not in trading_data.open_orders:
         tlog(
             f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
         )
