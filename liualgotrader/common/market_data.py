@@ -1,7 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -155,6 +155,33 @@ def get_historical_data_from_polygon_by_range(
         tlog("KeyboardInterrupt")
 
     return _minute_history
+
+
+def get_symbol_data(
+    api: tradeapi, symbol: str, start_date: date, end_date: date
+) -> Optional[df]:
+
+    retry = 5
+    df = None
+    while retry > 0:
+        try:
+            df = api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "minute",
+                _from=str(start_date),
+                to=str(end_date),
+            ).df
+
+            df["vwap"] = 0.0
+            df["average"] = 0.0
+
+            break
+        except Exception as e:
+            retry -= 1
+            continue
+
+    return df
 
 
 def get_historical_daily_from_polygon_by_range(
