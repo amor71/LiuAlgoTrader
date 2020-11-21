@@ -7,14 +7,14 @@
 /legacy/
 /tools/set_keys.bash
 /tools/fix_git_email.bash
-/analyis/.ipynb_checkpoints/
+/analysis/.ipynb_checkpoints/
 /liualgotrader/__pycache__/
 /tests/__pycache__/
 /.idea/
 /liualgotrader/scanners/__pycache__/
 /liualgotrader/common/__pycache__/
 /docs/build/
-/analyis/notebooks/.ipynb_checkpoints
+/analysis/notebooks/.ipynb_checkpoints
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
