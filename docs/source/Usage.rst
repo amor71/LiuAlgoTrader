@@ -253,7 +253,7 @@ To run the tool type:
 
 .. code-block:: bash
 
-    streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py
+    streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py
 
 Once the browser opens, it would look like:
 

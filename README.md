@@ -51,6 +51,13 @@ LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experie
 
 Additional samples can we found in the [examples](examples) directory. 
 
+## Analysis & Analytics
+
+The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as `streamlit` applications for analysis for both trading and back-testing sessions. To name a few of the visual analytical tools:
+* tear-sheet analysis,
+* anchored-vwaps, 
+* indicators & distributions
+
 ## What's Next?
 
 Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) and learn how to use LiuAlgoTrader to develop, deploy & testing money making strategies.
