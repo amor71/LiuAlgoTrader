@@ -4,6 +4,9 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.76           | adding `anchored-vwap` calculation, and      |
+|                  | notebook w/ advanced visuals.                |
++------------------+----------------------------------------------+
 | 0.0.74           | 1. adding `symbol` and `duration` parameters |
 |                  |    to `backtester`, updated documentation,   |
 |                  | 2. clean-ups to back-testing notebook.       |

@@ -265,7 +265,7 @@ def quickstart():
             print("2. run the env-vars script ('env_vars.bat'),")
         else:
             print("2. run the env-vars script ('source env_vars.sh'),")
-        print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py`")
+        print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py`")
         if restore_sample_db:
             print("4. On the app selection select the 'analyzer` app")
             print("5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>")

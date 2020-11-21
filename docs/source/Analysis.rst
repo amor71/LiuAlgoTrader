@@ -5,7 +5,7 @@ Liu Analysis Tool-box
 for analysing portfolio, trader, and back-testing sessions.
 
 .. _notebooks:
-    https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/portfolio_performance_analysis.ipynb
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/portfolio_performance_analysis.ipynb
 
 .. # define a hard line break for HTML
 .. |br| raw:: html
@@ -18,14 +18,52 @@ prerequisites
 1. Both `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` environment variables should be properly set and include the credentials to Alpaca Markets account (can be either PAPER or LIVE),
 2. Environment variable `DSN` holds valid DB connection string,
 
+Anchored-VWAP Notebook
+----------------------
 
-Tear Sheet
-----------
+The `anchored vwap`_ analysis notebook calculates and visualizes anchored vwaps on top of an interactive stock candlestick diagram, with volume .
+
+.. _anchored vwap:
+    https://github.com/amor71/LiuAlgoTrader/tree/master/analysis/notebooks/anchored-vwap-lab.ipynb
+
+prerequisites
+*************
+if you do not have `pyplot` installed:
+
+.. code-block:: bash
+
+   pip install pyplot
+
+running the notebook
+********************
+
+once loaded, the top of the notebook looks like:
+
+
+.. image:: /images/anchored-1.png
+    :width: 1000
+    :align: left
+    :alt: anchored vwap top of notebook
+
+
+The list `anchored_vwaps_start` holds start timestamps for anchored VWAPs, per `symbol` between the `start_date` and `end_date`.
+
+Once executed, the output generated includes an interactive candlestick diagram including the selected anchored VWAPs:
+
+.. image:: /images/anchored-2.png
+    :width: 1000
+    :align: left
+    :alt: anchored vwaps example
+
+
+
+Tear Sheet Notebook
+-------------------
 
 The `tear sheet`_ analysis notebook provide basic means to analyze your portfolio performance over time.
 
 .. _tear sheet:
-    https://github.com/amor71/LiuAlgoTrader/tree/master/analyis/notebooks/tear_sheet.ipynb
+    https://github.com/amor71/LiuAlgoTrader/tree/master/analysis/notebooks/tear_sheet.ipynb
 
 The top of the notebook looks like:
 
@@ -137,7 +175,7 @@ Prerequisites
 3. Download the latest version of backtester analysis notebook_.
 
 .. _notebook :
-    https://github.com/amor71/LiuAlgoTrader/blob/master/analyis_notebooks/backtest_performance_analysis.ipynb
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/backtest_performance_analysis.ipynb
 
 Usage
 *****

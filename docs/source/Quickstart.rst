@@ -50,7 +50,7 @@ if you follow the installation till the end, the wizard will direct you how to r
 
 .. code-block:: bash
 
-    streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analyis/backtester_ui.py
+    streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py
 
 Once executed, your screen should look like this:
 
@@ -63,8 +63,8 @@ Once executed, your screen should look like this:
 Select the `Analyzer` app on the upper-right drop-down and enter
 '2398380c-5146-4b58-843a-a50c458c8071' as a pre-loaded batch-id.
 
-Voila!
-^^^^^^
+`Voila!`
+^^^^^^^^
 You should be now seeing a pre-loaded session from your local database.
 You're all set now.
 
