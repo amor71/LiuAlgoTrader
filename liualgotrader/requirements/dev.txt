@@ -35,4 +35,4 @@ pre-commit==2.9.0
 empyrical==0.5.5
 sklearn==0.0
 plotly==4.13.0
-hypothesis
+hypothesis==5.41.3
