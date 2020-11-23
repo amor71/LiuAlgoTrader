@@ -4,7 +4,7 @@
 [![Python 3](https://pyup.io/repos/github/amor71/LiuAlgoTrader/python-3-shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
 [![Updates](https://pyup.io/repos/github/amor71/LiuAlgoTrader/shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
 [![Documentation Status](https://readthedocs.org/projects/liualgotrader/badge/?version=latest)](https://liualgotrader.readthedocs.io/en/latest/?badge=latest)
-
+[![Tested with Hypothesis](https://img.shields.io/badge/hypothesis-tested-brightgreen.svg)](https://hypothesis.readthedocs.io/)
 ## Introduction
 
 **LiuAlgoTrader** is a scalable, multi-process framework
