@@ -14,6 +14,8 @@ class ResampleRangeType(Enum):
 def resample(
     ohlc: pd.DataFrame, resample_range: ResampleRangeType
 ) -> pd.DataFrame:
+    if ohlc.empty:
+        return ohlc
     if resample_range == resample_range.min_1:
         return ohlc
     elif resample_range == resample_range.min_2:
@@ -29,12 +31,11 @@ def resample(
             f"range type {resample_range} is not implemented"
         )
 
-    close = ohlc.close.dropna().resample(resample_str).last()
+    close = ohlc.close.resample(resample_str).last()
     open = ohlc.open.resample(resample_str).first()
     high = ohlc.high.resample(resample_str).max()
     low = ohlc.low.resample(resample_str).min()
     volume = ohlc.volume.resample(resample_str).sum()
-    volume = volume[volume != 0]
 
     return pd.concat(
         [
