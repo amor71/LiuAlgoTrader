@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
 import pytz
 from pandas import DataFrame as df
 from pandas import Timestamp as ts
@@ -100,7 +101,6 @@ def find_supports(
                     )
                 ) :
             ]
-            .dropna()
             .resample("5min")
             .min()
         )
@@ -159,3 +159,26 @@ def find_stop(
     if len(low_index) > 0:
         return series[low_index[-1]]  # - max(0.05, current_value * 0.02)
     return None  # current_value * config.default_stop
+
+
+def get_local_maxima(
+    series: pd.Series,
+    debug=False,
+) -> pd.Series:
+    """calculate local maximal point"""
+    if series.empty:
+        return pd.Series([], dtype=np.float64)
+
+    series = series.resample("5min").max()
+    diff = np.diff(series.values)
+    high_index = np.where((diff[:-1] >= 0) & (diff[1:] <= 0))[0] + 1
+
+    return (
+        pd.Series(
+            index=[series.index[i] for i in high_index],
+            data=[series[i] for i in high_index],
+            dtype=np.float64,
+        )
+        if len(high_index) > 0
+        else pd.Series([], dtype=np.float64)
+    )
