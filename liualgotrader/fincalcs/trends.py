@@ -15,11 +15,11 @@ est = pytz.timezone("US/Eastern")
 
 class SeriesTrendType(Enum):
     UNKNOWN = 0
-    SHARP_UP = 1
-    UP = 2
+    SHARP_DOWN = 1
+    DOWN = 5
     FLAT = 10
-    DOWN = 20
-    SHARP_DOWN = 21
+    UP = 15
+    SHARP_UP = 20
 
 
 def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
