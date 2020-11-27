@@ -22,6 +22,13 @@ class SeriesTrendType(Enum):
     SHARP_UP = 20
 
 
+class VolatilityClassificationType(Enum):
+    UNKNOWN = 0
+    LOW = 1
+    MEDIUM = 5
+    HIGH = 10
+
+
 def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
     if len(series) < 4:
         return 0, SeriesTrendType.UNKNOWN
@@ -30,7 +37,7 @@ def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
     try:
         np.seterr(all="raise")
         slope, _, _, _, _ = linregress(range(length), series[-length:])
-        slope = round(slope, 2)
+        slope = round(slope, 3)
     except FloatingPointError:
         return math.inf, SeriesTrendType.UNKNOWN
 

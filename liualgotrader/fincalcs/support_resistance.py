@@ -9,7 +9,6 @@ from pandas import DataFrame as df
 from pandas import Timestamp as ts
 
 from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
 
 est = pytz.timezone("US/Eastern")
 
@@ -73,13 +72,6 @@ async def find_resistances(
             [series[i] for i in high_index if series[i] >= current_value]
         )
         if len(local_maximas) > 0:
-            if debug:
-                tlog("find_resistances()")
-                tlog(f"{minute_history}")
-                tlog(f"{minute_history['close'][-1]}, {series}")
-            # tlog(
-            #    f"[{strategy_name}] find_resistances({symbol})={local_maximas}"
-            # )
             return local_maximas
 
     return None
