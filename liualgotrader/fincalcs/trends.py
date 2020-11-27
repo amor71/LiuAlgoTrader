@@ -7,9 +7,6 @@ import pandas as pd
 import pytz
 from scipy.stats import linregress
 
-from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
-
 est = pytz.timezone("US/Eastern")
 
 
