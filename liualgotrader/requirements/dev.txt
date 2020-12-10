@@ -14,7 +14,6 @@ therapist==2.1.0
 jupyter==1.0.0
 asyncpg==0.21.0
 pygit2==1.4.0
-google-cloud-error-reporting==1.0.0
 pytest==6.1.2
 pytest-asyncio==0.14.0
 pytest-cov==2.10.1
