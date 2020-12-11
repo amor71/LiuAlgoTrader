@@ -66,6 +66,16 @@ session, the trades done at the earlier session will be
 simplify trade session analysis. See the Analysis section
 for more information.
 
+Off-hours
+*********
+Once the day-trading ends, and all processes (scanners, consumers and producer) are done, off-hour tasks will run.
+
+Currently supported tasks include:
+
+* `gain_loss` : Populating gain_loss DB table is aggregated results per symbol, per algo_run_id.
+
+
+
 Usage
 *****
 
