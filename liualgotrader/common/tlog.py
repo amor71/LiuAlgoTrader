@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 
 from google.cloud import logging
@@ -12,10 +13,15 @@ except Exception:
 
 
 def tlog(msg: str) -> None:
+    try:
+        calling_fn = f"[{sys._getframe(1).f_code.co_name}()]"
+    except Exception:
+        calling_fn = ""
+
     if logger:
         try:
-            logger.log_text(f"[{config.env}][{os.getpid()}] {msg}")
+            logger.log_text(f"[{config.env}]{calling_fn}[{os.getpid()}] {msg}")
         except Exception as e:
             print(f"[Error] exception when trying to log to Stackdriver {e}")
             pass
-    print(f"[{os.getpid()}]{datetime.now()}:{msg}", flush=True)
+    print(f"{calling_fn}[{os.getpid()}]{datetime.now()}:{msg}", flush=True)

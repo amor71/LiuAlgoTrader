@@ -121,20 +121,14 @@ CREATE TABLE IF NOT EXISTS gain_loss (
     gain_loss_id serial PRIMARY KEY,
     symbol text NOT NULL,
     algo_run_id integer NOT NULL REFERENCES algo_run(algo_run_id),
-    start_tstamp timestamp NOT NULL,
-    ref_trade_ids integer[] NOT NULL,
     gain_precentage decimal (5, 2) NOT NULL,
     gain_value decimal (8, 2) NOT NULL,
     tstamp timestamp DEFAULT current_timestamp,
-    UNIQUE(symbol, algo_run_id, start_tstamp)
+    UNIQUE(symbol, algo_run_id)
 );
-COMMENT ON COLUMN gain_loss.ref_trade_ids IS 'references new_trades(trade_id)';
 
 CREATE INDEX ON gain_loss(symbol, algo_run_id);
 CREATE INDEX ON algo_run(start_time);
 CREATE INDEX ON new_trades(tstamp);
 
 ALTER TABLE new_trades ALTER COLUMN algo_run_id SET NOT NULL;
-
-
-

@@ -100,7 +100,7 @@ def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
     return loop.run_until_complete(fetch_as_dataframe(query))
 
 
-def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
+async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
             t.*, a.batch_id, a.start_time, a.algo_name
@@ -112,15 +112,19 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
             t.expire_tstamp is null 
         ORDER BY symbol, tstamp
     """
-    loop = asyncio.get_event_loop()
-    df: pd.DataFrame = loop.run_until_complete(fetch_as_dataframe(query))
+    df: pd.DataFrame = await fetch_as_dataframe(query)
     try:
         df["client_time"] = pd.to_datetime(df["client_time"])
     except Exception:
         tlog(
-            f"[Error] load_trades_by_batch_id({batch_id}) can't convert 'client_time' column to datetime"
+            f"[Error] aload_trades_by_batch_id({batch_id}) can't convert 'client_time' column to datetime"
         )
     return df
+
+
+def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(aload_trades_by_batch_id(batch_id))
 
 
 def load_runs(day: date, env: str, end_date: date = None) -> pd.DataFrame:
