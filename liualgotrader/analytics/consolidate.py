@@ -7,6 +7,7 @@ from liualgotrader.analytics.analysis import aload_trades_by_batch_id
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.gain_loss import GainLoss
 
 
 @timeit
@@ -67,4 +68,4 @@ async def trades(batch_id: str) -> None:
             100.0 * gain_loss["gain_value"] / gain_loss["org_price"], 2
         )
 
-    print(gain_loss)
+    await GainLoss.save(gain_loss)
