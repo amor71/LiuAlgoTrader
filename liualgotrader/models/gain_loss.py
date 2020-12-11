@@ -1,6 +1,9 @@
+from datetime import date
+
 from pandas import DataFrame
 
 from liualgotrader.common import config
+from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
 
 
@@ -26,3 +29,17 @@ class GainLoss:
                         )
                 except Exception as e:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
+
+    @classmethod
+    async def load(cls, env: str, start_date: date) -> DataFrame:
+        q = """
+            SELECT symbol, algo_name, algo_env, start_time, gain_precentage, gain_value
+            FROM gain_loss as g, algo_run as a
+            WHERE 
+                g.algo_run_id = a.algo_run_id AND
+                algo_env = $1 AND
+                start_time >= $2
+            ORDER BY symbol, algo_name, start_time
+            """
+
+        return await fetch_as_dataframe(q, env, start_date)
