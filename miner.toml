@@ -3,11 +3,13 @@
 
     #[miners.StockCluster]
 
-    [miners.DailyOHLC]
+
+    #[miners.DailyOHLC]
         # symbol = ['SPY',]
-        days = 14
+        #days = 14
 
-        min_share_price = 2.0
-        max_share_price = 20.0
+        #min_share_price = 2.0
+        #max_share_price = 20.0
 
-
+    [miners.gainloss]
+        days = 45

@@ -8,6 +8,8 @@ What's New
 |                  | 2. Added off-hour task, at the end of the    |
 |                  |    trading day which populates `gain_loss`   |
 |                  |    with P&L data per strategy, per symbol.   |
+|                  | 3. Added `Gainloss` market_miner, and        |
+|                  |    ease future extension w/ additional miners|
 +------------------+----------------------------------------------+
 | 0.0.76           | adding `anchored-vwap` calculation, and      |
 |                  | notebook w/ advanced visuals.                |

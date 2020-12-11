@@ -1,0 +1,23 @@
+# This is a TOML configuration file for market_miner.py
+[miners]
+
+    #
+    # grab industry-sector and other details for symbol
+    #
+    [miners.StockCluster]
+
+    #
+    # Store daily OHLC data
+    #
+    [miners.DailyOHLC]
+        #symbol = ['SPY',]
+        days = 14
+
+        min_share_price = 2.0
+        max_share_price = 20.0
+
+    #
+    # Calculate P&L
+    #
+    [miners.gainloss]
+        days = 45
