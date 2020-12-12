@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS gain_loss (
     gain_loss_id serial PRIMARY KEY,
     symbol text NOT NULL,
     algo_run_id integer NOT NULL REFERENCES algo_run(algo_run_id),
-    gain_precentage decimal (5, 2) NOT NULL,
+    gain_percentage decimal (5, 2) NOT NULL,
     gain_value decimal (8, 2) NOT NULL,
     tstamp timestamp DEFAULT current_timestamp,
     UNIQUE(symbol, algo_run_id)
@@ -132,3 +132,19 @@ CREATE INDEX ON algo_run(start_time);
 CREATE INDEX ON new_trades(tstamp);
 
 ALTER TABLE new_trades ALTER COLUMN algo_run_id SET NOT NULL;
+
+CREATE TABLE IF NOT EXISTS trade_analysis (
+    trade_analysis_id serial PRIMARY KEY,
+    symbol text NOT NULL,
+    algo_run_id integer NOT NULL REFERENCES algo_run(algo_run_id),
+    start_tstamp timestamp with time zone NOT NULL,
+    end_tstamp timestamp with time zone NOT NULL,
+    gain_percentage decimal (5, 2) NOT NULL,
+    gain_value decimal (8, 2) NOT NULL,
+    r_units decimal(4,2) NOT NULL,
+    tstamp timestamp with time zone DEFAULT current_timestamp,
+    UNIQUE(symbol, algo_run_id, start_tstamp)
+);
+
+
+
