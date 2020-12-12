@@ -70,9 +70,13 @@ async def trades(batch_id: str) -> None:
                     "org_price": float(row.price * row.qty),
                     "start_time": Timestamp(row.client_time),
                     "qty": float(row.qty),
-                    "r_units": float(row.price - row.stop_price),
+                    "r_units": float(row.price - row.stop_price)
+                    if row.stop_price is not None
+                    else 0,
                     "initial_price": float(row.price),
-                    "stop_price": float(row.stop_price),
+                    "stop_price": float(row.stop_price)
+                    if row.stop_price is not None
+                    else None,
                     "status": "open",
                     "sold_price": None,
                 },
@@ -111,23 +115,35 @@ async def trades(batch_id: str) -> None:
                     & (trade_analysis.algo_run_id == row.algo_run_id)
                     & (trade_analysis.status == "open"),
                     "r_units",
-                ] = round(
-                    (
-                        float(row.price)
-                        - trade_analysis.loc[
+                ] = (
+                    round(
+                        (
+                            float(row.price)
+                            - trade_analysis.loc[
+                                (trade_analysis.symbol == row.symbol)
+                                & (
+                                    trade_analysis.algo_run_id
+                                    == row.algo_run_id
+                                )
+                                & (trade_analysis.status == "open"),
+                                "initial_price",
+                            ]
+                        )
+                        / trade_analysis.loc[
                             (trade_analysis.symbol == row.symbol)
                             & (trade_analysis.algo_run_id == row.algo_run_id)
                             & (trade_analysis.status == "open"),
-                            "initial_price",
-                        ]
+                            "r_units",
+                        ],
+                        2,
                     )
-                    / trade_analysis.loc[
+                    if trade_analysis.loc[
                         (trade_analysis.symbol == row.symbol)
                         & (trade_analysis.algo_run_id == row.algo_run_id)
-                        & (trade_analysis.status == "open"),
-                        "r_units",
-                    ],
-                    2,
+                        & (trade_analysis.status == "open")
+                        & (trade_analysis.r_units == 0.0)
+                    ].empty
+                    else None
                 )
                 trade_analysis.loc[
                     (trade_analysis.symbol == row.symbol)
@@ -172,4 +188,13 @@ async def trades(batch_id: str) -> None:
         )
 
     await GainLoss.save(gain_loss)
-    await TradeAnalysis.save(trade_analysis)
+    await TradeAnalysis.save(
+        trade_analysis.loc[trade_analysis.status == "close"]
+    )
+
+    if len(trade_analysis) != len(
+        trade_analysis.loc[trade_analysis.status == "close"]
+    ):
+        tlog(
+            f"{batch_id} has {len(trade_analysis) -  len(trade_analysis.loc[trade_analysis.status == 'close'])} skipped open trades."
+        )

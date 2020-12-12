@@ -70,3 +70,17 @@ class TradeAnalysis:
                         )
                 except Exception as e:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
+
+    @classmethod
+    async def load(cls, env: str, start_date: date) -> DataFrame:
+        q = """
+            SELECT symbol, algo_name, algo_env, r_units, gain_percentage, gain_value, t.start_tstamp, t.end_tstamp
+            FROM trade_analysis as t, algo_run as a
+            WHERE 
+                t.algo_run_id = a.algo_run_id AND
+                algo_env = $1 AND
+                start_time >= $2
+            ORDER BY symbol, algo_name, start_time
+            """
+
+        return await fetch_as_dataframe(q, env, start_date)

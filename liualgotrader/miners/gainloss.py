@@ -1,3 +1,5 @@
+import sys
+import traceback
 from datetime import date, timedelta
 from typing import Dict
 
@@ -15,6 +17,7 @@ class Gainloss(Miner):
     ):
         try:
             self.days = int(data["days"])
+            self.debug = debug
         except Exception:
             raise ValueError(
                 "[ERROR] Miner must receive positive `days` parameter"
@@ -28,6 +31,13 @@ class Gainloss(Miner):
         tlog(f"Miner {self.name} will consolidate {len(data)} batches")
         for index, row in data.iterrows():
             tlog(f"{int(index)+1}/{len(data)}")
-            await consolidate.trades(row.batch_id)
+            try:
+                await consolidate.trades(row.batch_id)
+            except Exception as e:
+                tlog(f"[ERROR] aborted w/ exception {e}")
+                exc_info = sys.exc_info()
+                traceback.print_exception(*exc_info)
+                del exc_info
+                raise
 
         return True

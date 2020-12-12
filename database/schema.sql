@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS trade_analysis (
     end_tstamp timestamp with time zone NOT NULL,
     gain_percentage decimal (5, 2) NOT NULL,
     gain_value decimal (8, 2) NOT NULL,
-    r_units decimal(4,2) NOT NULL,
+    r_units decimal(4,2),
     tstamp timestamp with time zone DEFAULT current_timestamp,
     UNIQUE(symbol, algo_run_id, start_tstamp)
 );

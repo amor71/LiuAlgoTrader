@@ -72,7 +72,7 @@ Once the day-trading ends, and all processes (scanners, consumers and producer) 
 
 Currently supported tasks include:
 
-* `gain_loss` : Populating gain_loss DB table is aggregated results per symbol, per algo_run_id.
+* `gain_loss` : Populating `gain_loss` and `trade_analysis` DB tables with aggregated results per symbol, per algo_run_id.
 
 
 

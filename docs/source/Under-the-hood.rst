@@ -136,10 +136,12 @@ files for a future developer.
     |   |    └── vwap.py
     │   ├── models
     |   |    ├── algo_run.py
+    |   |    ├── gain_loss.py
     |   |    └── new_trades.py
     │   ├── miners
     |   |    ├── base.py
     |   |    ├── stock_cluster.py
+    |   |    ├── gainloss.py
     |   |    └── daily_ohlc.py
     │   ├── scanners
     |   |    ├── base.py
@@ -214,6 +216,10 @@ The main database tables are:
 |                   | executed strategy.                            |
 +-------------------+-----------------------------------------------+
 | gain_loss         | Tracking per symbol, per algo_run, the        |
+|                   | profit & loss, measured as percentage and     |
+|                   | as absolute value                             |
++-------------------+-----------------------------------------------+
+| trade_analysis    | Tracking per per trade, the r_units,          |
 |                   | profit & loss, measured as percentage and     |
 |                   | as absolute value                             |
 +-------------------+-----------------------------------------------+
