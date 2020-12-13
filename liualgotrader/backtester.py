@@ -262,16 +262,24 @@ async def backtest_symbol(
                 print(
                     f"Execute strategy {strategy.name} on {symbol} at {new_now}"
                 )
-            do, what = await strategy.run(
-                symbol,
-                True,
-                position,
-                symbol_data[: minute_index + 1],
-                new_now,
-                portfolio_value,
-                debug=debug_symbol,  # type: ignore
-                backtesting=True,
-            )
+
+            try:
+                do, what = await strategy.run(
+                    symbol,
+                    True,
+                    position,
+                    symbol_data[: minute_index + 1],
+                    new_now,
+                    portfolio_value,
+                    debug=debug_symbol,  # type: ignore
+                    backtesting=True,
+                )
+            except Exception as e:
+                tlog(
+                    f"[ERROR] exception {e} on symbol {symbol} @ {strategy.name}"
+                )
+                continue
+
             if do:
                 if (
                     what["side"] == "buy"
