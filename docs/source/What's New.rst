@@ -4,6 +4,16 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.80           | 1. Added `gain_loss` and `trade_analysis`    |
+|                  |    DB tables,                                |
+|                  | 2. Added off-hour task, at the end of the    |
+|                  |    trading day which populates `gain_loss`   |
+|                  |    and `trade_analysis with P&L data per     |
+|                  |    strategy, per symbol or per trade,        |
+|                  |    including `r_units` calculations,         |
+|                  | 3. Added `Gainloss` market_miner, and        |
+|                  |    ease future extension w/ additional miners|
++------------------+----------------------------------------------+
 | 0.0.76           | adding `anchored-vwap` calculation, and      |
 |                  | notebook w/ advanced visuals.                |
 +------------------+----------------------------------------------+

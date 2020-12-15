@@ -7,10 +7,11 @@ import toml
 import pygit2
 from typing import Dict, List, Optional
 import traceback
-
+import importlib
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.miners.base import Miner
 from liualgotrader.miners.stock_cluster import StockCluster
 from liualgotrader.miners.daily_ohlc import DailyOHLC
 
@@ -46,7 +47,22 @@ async def main(conf_dict: Dict):
 
             await asyncio.gather(*task_list)
         else:
-            tlog(f"[ERROR] miner {miner} is not supported yet")
+            try:
+                module = importlib.import_module(f"liualgotrader.miners.{miner}")
+                class_name = f"{miner[0].upper()}{miner[1:]}"
+                miner_class = getattr(module, class_name)
+
+                if not issubclass(miner_class, Miner):
+                    tlog(f"Miner must inherit from class {Miner.__name__}")
+                    exit(0)
+
+                miner = miner_class(conf_dict["miners"][miner])
+                task_list.append(asyncio.create_task(miner.run()))
+
+                await asyncio.gather(*task_list)
+            except Exception as e:
+                tlog(f"[ERROR] miner {miner} is not supported yet {e}")
+
 
 
 

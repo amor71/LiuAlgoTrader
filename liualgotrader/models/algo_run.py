@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Tuple
 
 from asyncpg.pool import Pool
+from pandas import DataFrame
 
 from liualgotrader.common import config
 
@@ -73,8 +74,31 @@ class AlgoRun:
                 )
 
     @classmethod
+    async def get_batch_ids(
+        cls, pool: Pool = None, start_date: date = date(2019, 1, 1)
+    ) -> DataFrame:
+        rc: Dict = {}
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT DISTINCT batch_id
+                        FROM algo_run
+                        WHERE start_time > $1
+                        GROUP BY batch_id
+                    """,
+                    start_date,
+                )
+                return DataFrame(data=rows, columns=["batch_id"])
+
+    @classmethod
     async def get_batches(
-        cls, pool: Pool = None, nax_batches: int = 30
+        cls,
+        pool: Pool = None,
+        nax_batches: int = 30,
+        start_date: date = date(2019, 1, 1),
     ) -> List:
         rc: Dict = {}
         if not pool:
@@ -85,11 +109,13 @@ class AlgoRun:
                     """
                         SELECT build_number, batch_id, algo_name, algo_env, date_trunc('minute', min(start_time)) as start
                         FROM algo_run
+                        WHERE start_time > $2
                         GROUP BY batch_id, algo_name, algo_env, build_number
                         ORDER BY start DESC
                         LIMIT $1
                     """,
                     nax_batches,
+                    start_date,
                 )
 
                 if rows:

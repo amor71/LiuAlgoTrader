@@ -124,6 +124,9 @@ files for a future developer.
     |   |   ├── market_data.py
     |   |   ├── tlog.py
     |   |   └── trading_data.py
+    │   ├─── analytics
+    |   |    ├── analysis.py
+    |   |    └── consolidate.py
     │   ├─── data_stream
     |   |    ├── alpaca.py
     |   |    └── streaming_base.py
@@ -133,10 +136,12 @@ files for a future developer.
     |   |    └── vwap.py
     │   ├── models
     |   |    ├── algo_run.py
+    |   |    ├── gain_loss.py
     |   |    └── new_trades.py
     │   ├── miners
     |   |    ├── base.py
     |   |    ├── stock_cluster.py
+    |   |    ├── gainloss.py
     |   |    └── daily_ohlc.py
     │   ├── scanners
     |   |    ├── base.py
@@ -209,6 +214,14 @@ The main database tables are:
 |                   | was executed, per `algo_run`, including       |
 |                   | whatever reasoning is persisted by the        |
 |                   | executed strategy.                            |
++-------------------+-----------------------------------------------+
+| gain_loss         | Tracking per symbol, per algo_run, the        |
+|                   | profit & loss, measured as percentage and     |
+|                   | as absolute value                             |
++-------------------+-----------------------------------------------+
+| trade_analysis    | Tracking per per trade, the r_units,          |
+|                   | profit & loss, measured as percentage and     |
+|                   | as absolute value                             |
 +-------------------+-----------------------------------------------+
 
 `stock_ohlc` table

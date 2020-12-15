@@ -9,10 +9,9 @@
 
 ## Introduction
 
-**LiuAlgoTrader** is a scalable, multi-process framework
-for effective algorithmic trading. The framework is
-intended to simplify development, testing,
-deployment and evaluating algo trading strategies.
+**LiuAlgoTrader** is a scalable, multi-process ML-ready framework
+for effective algorithmic trading. The framework simplify development, testing,
+deployment, analysis and training algo trading strategies. The framework **automatically analyzes** trading sessions, and the analysis may be used to train predictive models.  
 
 LiuAlgoTrader can run on a laptop and 
 *hedge-on-the-go*, or run on a multi-core hosted Linux server 
@@ -31,6 +30,8 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 
 - Paper, and a funded account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
+
+(the prerequisties are for the `quickstart` wizard, not the framework)
 ### Install & Configure
 
 **Step 1**: 
@@ -57,7 +58,8 @@ Additional samples can we found in the [examples](examples) directory.
 
 The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as `streamlit` applications for analysis for both trading and back-testing sessions. To name a few of the visual analytical tools:
 * tear-sheet analysis,
-* anchored-vwaps, 
+* gain&loss analysis,
+* anchored-VWAPs, 
 * indicators & distributions
 
 ## What's Next?

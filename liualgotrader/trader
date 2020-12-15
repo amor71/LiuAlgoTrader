@@ -10,6 +10,7 @@ import sys
 import time
 import uuid
 import random
+import asyncio
 from datetime import datetime
 from math import ceil
 from typing import List
@@ -25,7 +26,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.consumer import consumer_main
 from liualgotrader.polygon_producer import polygon_producer_main
 from liualgotrader.scanners_runner import main
-
+from liualgotrader.analytics import consolidate
 
 def motd(filename: str, version: str, unique_id: str) -> None:
     """Display welcome message"""
@@ -65,6 +66,10 @@ def get_trading_windows(tz, api):
         microsecond=0,
     )
     return market_open, market_close
+
+
+async def off_hours(batch_id) -> None:
+    await consolidate.trades(batch_id)
 
 
 """
@@ -311,4 +316,13 @@ if __name__ == "__main__":
 
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"run {uid} completed")
+    tlog("Executing off-hours calculations")
+    if not asyncio.get_event_loop().is_closed():
+        asyncio.get_event_loop().close()
+    asyncio.run(
+        off_hours(uid)
+    )
+
+    tlog("Off-hours calculations completed")
+    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     sys.exit(0)

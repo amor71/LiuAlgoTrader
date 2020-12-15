@@ -66,6 +66,16 @@ session, the trades done at the earlier session will be
 simplify trade session analysis. See the Analysis section
 for more information.
 
+Off-hours
+*********
+Once the day-trading ends, and all processes (scanners, consumers and producer) are done, off-hour tasks will run.
+
+Currently supported tasks include:
+
+* `gain_loss` : Populating `gain_loss` and `trade_analysis` DB tables with aggregated results per symbol, per algo_run_id.
+
+
+
 Usage
 *****
 
@@ -289,19 +299,19 @@ to how the trader application is configured by the
 
 An example `miner.toml` file:
 
-.. literalinclude:: ../../miner.toml
+.. literalinclude:: ../../examples/miner.toml
   :language: python
   :linenos:
 
 miners
 ******
 
-Currently two miner are supported:
+Currently supported miners:
 
 
 - `StockCluster` : the miner read all trade-able stocks, and stores in the `ticker_data` table the industry/segment and similar stocks details. This data can later be used in real-time to compare how a certain stock is doing against an industry/segment or similar stocks index.
 - `DailyOHLC` : the miner collect Daily OHLC data for trade-able stocks, and stores the details in the `stock_ohlc` table. The miner gets number of days configuration parameters while ensure that at least that number of data data exists. Additionally, the miner can calculate specific indicators which can be used later during real-time calculations.
-
+- `gainloss`: populate `gainloss` table w/ per batch aggregated P&L details.
 
 **Note**
 
