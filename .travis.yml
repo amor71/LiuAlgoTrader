@@ -16,6 +16,8 @@ cache:
 install:
 - pip install --upgrade pip wheel
 - pip install coverage
+- pip install pytest-asyncio
+- pip install pytest-timeout
 - if [ $WITH_TA_LIBRARY = "yes" ]; then ./tools/build_talib_from_source.bash $DEPS_DIR;
   fi
 - pip install -r liualgotrader/requirements/release.txt
@@ -23,7 +25,7 @@ before_script:
 - psql -c 'create database travis_ci_test;' -U postgres
 - psql -d travis_ci_test -U postgres -f database/schema.sql
 script:
-- coverage run -m pytest
+- coverage run -m pytest -m "not devtest"
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 deploy:
