@@ -67,7 +67,7 @@ async def liquidator(trading_api: tradeapi) -> None:
             config.market_close - dt
             if config.market_close > dt
             else timedelta(hours=24) + (config.market_close - dt)
-        ) - timedelta(minutes=8)
+        ) - timedelta(minutes=15)
         await asyncio.sleep(to_market_close.total_seconds())
 
     except asyncio.CancelledError:
@@ -496,7 +496,7 @@ async def handle_data_queue_msg(
         market_data.volume_today[symbol] = data["totalvolume"]
 
         if data["EV"] == "A":
-            if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=8):  # type: ignore
+            if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=10):  # type: ignore
                 tlog(f"A$ {symbol} too out of sync w {time_diff}")
                 return False
             elif (
