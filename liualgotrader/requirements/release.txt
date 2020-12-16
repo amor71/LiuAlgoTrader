@@ -1,7 +1,7 @@
 iso8601==0.1.13
 requests==2.25.0
 deprecated==1.2.10
-urllib3==1.25.11
+urllib3==1.26.2
 numpy==1.19.4
 alpaca-trade-api==0.51.0
 google-cloud-logging==2.0.1
@@ -14,3 +14,4 @@ streamlit==0.72.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.4.3
+hypothesis==5.43.3
