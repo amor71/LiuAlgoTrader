@@ -11,6 +11,8 @@ class GainLoss:
     @classmethod
     async def save(cls, df: DataFrame):
         pool = config.db_conn_pool
+        if not pool:
+            raise Exception("Database connection pool unavailable")
 
         async with pool.acquire() as con:
             for _, row in df.iterrows():
@@ -49,6 +51,8 @@ class TradeAnalysis:
     @classmethod
     async def save(cls, df: DataFrame):
         pool = config.db_conn_pool
+        if not pool:
+            raise Exception("Database connection pool unavailable")
 
         async with pool.acquire() as con:
             for _, row in df.iterrows():
@@ -56,8 +60,8 @@ class TradeAnalysis:
                     async with con.transaction():
                         _ = await con.fetchval(
                             """
-                                INSERT INTO trade_analysis (symbol, algo_run_id, gain_percentage, gain_value, r_units, start_tstamp, end_tstamp)
-                                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                INSERT INTO trade_analysis (symbol, algo_run_id, gain_percentage, gain_value, r_units, start_tstamp, end_tstamp, scanned_time)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                                 RETURNING trade_analysis_id
                             """,
                             row.symbol,
@@ -67,6 +71,7 @@ class TradeAnalysis:
                             row.r_units,
                             row.start_time.to_pydatetime(),
                             row.end_time.to_pydatetime(),
+                            row.scanned_time.to_pydatetime(),
                         )
                 except Exception as e:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
@@ -74,7 +79,7 @@ class TradeAnalysis:
     @classmethod
     async def load(cls, env: str, start_date: date) -> DataFrame:
         q = """
-            SELECT symbol, algo_name, algo_env, r_units, gain_percentage, gain_value, t.start_tstamp, t.end_tstamp
+            SELECT symbol, algo_name, algo_env, batch_id, r_units, gain_percentage, gain_value, t.start_tstamp as start_time, t.end_tstamp as end_time, t.scanned_time
             FROM trade_analysis as t, algo_run as a
             WHERE 
                 t.algo_run_id = a.algo_run_id AND
@@ -83,4 +88,6 @@ class TradeAnalysis:
             ORDER BY symbol, algo_name, start_time
             """
 
-        return await fetch_as_dataframe(q, env, start_date)
+        df = await fetch_as_dataframe(q, env, start_date)
+        df["hold"] = df.end_time - df.start_time
+        return df

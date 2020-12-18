@@ -1,12 +1,15 @@
 import asyncio
 
 from pandas import DataFrame, Timestamp
+from pytz import timezone
 
 from liualgotrader.analytics.analysis import aload_trades_by_batch_id
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.gain_loss import GainLoss, TradeAnalysis
+
+utc = timezone("UTC")
 
 
 @timeit
@@ -46,6 +49,9 @@ async def trades(batch_id: str) -> None:
             "initial_price",
             "stop_price",
             "org_price",
+            "scanned_time",
+            "start_time",
+            "end_time",
             "qty",
             "status",
         ]
@@ -69,6 +75,7 @@ async def trades(batch_id: str) -> None:
                     "gain_value": delta,
                     "org_price": float(row.price * row.qty),
                     "start_time": Timestamp(row.client_time),
+                    "scanned_time": Timestamp(row.scanned_time, tz=utc),
                     "qty": float(row.qty),
                     "r_units": float(row.price - row.stop_price)
                     if row.stop_price is not None

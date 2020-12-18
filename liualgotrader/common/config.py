@@ -6,7 +6,9 @@ from typing import List, Optional
 from asyncpg.pool import Pool
 
 tradeplan_folder: str = (
-    os.getenv("TRADEPLAN_DIR", ".") if len(os.getenv("TRADEPLAN_DIR", ".")) > 0 else "."
+    os.getenv("TRADEPLAN_DIR", ".")
+    if len(os.getenv("TRADEPLAN_DIR", ".")) > 0
+    else "."
 )
 configuration_filename: str = "tradeplan.toml"
 miner_configuration_filename: str = "miner.toml"
@@ -27,14 +29,16 @@ total_tickers = int(os.getenv("LIU_MAX_SYMBOLS", "100"))
 #
 build_label: str
 filename: str
-db_conn_pool: Pool
+db_conn_pool: Optional[Pool] = None
 batch_id: str
 
 #
 # API keys
 #
 # Replace these with your API connection info from the dashboard
-paper_base_url = os.getenv("ALPACA_PAPER_BASEURL", "https://paper-api.alpaca.markets")
+paper_base_url = os.getenv(
+    "ALPACA_PAPER_BASEURL", "https://paper-api.alpaca.markets"
+)
 paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
 paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")
