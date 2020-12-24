@@ -184,6 +184,16 @@ def get_symbol_data(
     return df
 
 
+def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
+    return api.polygon.historic_agg_v2(
+        symbol,
+        1,
+        "day",
+        _from=str(date.today() - timedelta(days=days)),
+        to=str(date.today()),
+    ).df
+
+
 def get_historical_daily_from_polygon_by_range(
     api: tradeapi, symbols: List[str], start_date: date, end_date: date
 ) -> Dict[str, df]:
@@ -404,3 +414,17 @@ async def get_market_industries(pool: Pool) -> List[str]:
             )
 
             return [record[0] for record in records if record[0]]
+
+
+async def index_tickers(index: str) -> List[str]:
+    if index == "SP500":
+        table = pd.read_html(
+            "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        )
+        df = table[0]
+        df.to_csv("S&P500-Info.csv")
+        df.to_csv("S&P500-Symbols.csv", columns=["Symbol"])
+
+        return df.Symbol.tolist()
+
+    raise NotImplementedError(f"index {index} not supported yet")

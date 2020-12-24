@@ -55,14 +55,21 @@ async def main(conf_dict: Dict):
                 if not issubclass(miner_class, Miner):
                     tlog(f"Miner must inherit from class {Miner.__name__}")
                     exit(0)
-
-                miner = miner_class(conf_dict["miners"][miner])
-                task_list.append(asyncio.create_task(miner.run()))
-
-                await asyncio.gather(*task_list)
             except Exception as e:
                 tlog(f"[ERROR] miner {miner} is not supported yet {e}")
+            else:
+                try:
+                    debug = conf_dict["miners"][miner].get('debug', False)
+                    miner = miner_class(debug=debug, data=conf_dict["miners"][miner])
+                    task_list.append(asyncio.create_task(miner.run()))
 
+                    await asyncio.gather(*task_list)
+                except Exception as e:
+                    tlog(f"[ERROR] aborted w/ exception {e}")
+                    exc_info = sys.exc_info()
+                    traceback.print_exception(*exc_info)
+                    del exc_info
+                    raise
 
 
 
