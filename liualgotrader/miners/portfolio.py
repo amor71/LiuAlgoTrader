@@ -45,18 +45,28 @@ class Portfolio(Miner):
                 "load_data() received an empty list of symbols to load. aborting"
             )
 
+        i = 1
         for symbol in symbols:
             if self.debug:
-                tlog(f"loading {self.rank_days} days for symbol {symbol}")
-            _df = daily_bars(
-                api=self.data_api, symbol=symbol, days=self.rank_days
-            )
-            print(_df)
-            self.data_bars[symbol] = _df
-            if self.debug:
                 tlog(
-                    f"loaded data: {self.data_bars[symbol][:10]} {self.data_bars[symbol][-10:]}"
+                    f"loading {self.rank_days} days for symbol {symbol} ({i}/{len(symbols)}"
                 )
+            self.data_bars[symbol] = daily_bars(
+                api=self.data_api,
+                symbol=symbol,
+                days=int(self.rank_days * 7 / 5),
+            )
+            if self.debug:
+                tlog(f"loaded {len(self.data_bars[symbol])} data-points")
+            i += 1
+
+    async def calc_momentum(self) -> None:
+        if not len(self.data_bars):
+            raise Exception("calc_momentum() can't run without data. aborting")
+
+        for symbol, d in self.data_bars.items():
+            d["delta"] = df.close.diff().shift(-1)
+            print(d)
 
     async def run(self) -> bool:
         symbols = await index_tickers(self.index)
@@ -66,9 +76,9 @@ class Portfolio(Miner):
 
         await self.load_data(symbols)
 
-        return True
-
         await self.calc_momentum()
+
+        return True
 
         await self.apply_filters()
 

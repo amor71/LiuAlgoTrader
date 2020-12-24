@@ -185,13 +185,22 @@ def get_symbol_data(
 
 
 def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
-    return api.polygon.historic_agg_v2(
-        symbol,
-        1,
-        "day",
-        _from=str(date.today() - timedelta(days=days)),
-        to=str(date.today()),
-    ).df
+    retry = 10
+
+    while retry:
+        try:
+            return api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "day",
+                _from=str(date.today() - timedelta(days=days)),
+                to=str(date.today()),
+            ).df
+        except Exception as e:
+            if retry:
+                retry -= 1
+            else:
+                raise
 
 
 def get_historical_daily_from_polygon_by_range(
