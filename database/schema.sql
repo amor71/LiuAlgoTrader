@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS portfolio (
     portfolio_entry_id serial PRIMARY KEY,
     portfolio_id text NOT NULL,
     symbol text NOT NULL,
-    rank decimal (8, 6) NOT NULL,
+    rank decimal (14, 10) NOT NULL,
     qty int NOT NULL,
     tstamp timestamp with time zone DEFAULT current_timestamp,
     UNIQUE(portfolio_entry_id, symbol)
