@@ -1,5 +1,4 @@
-import sys
-import traceback
+import uuid
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -11,6 +10,7 @@ from liualgotrader.common import config
 from liualgotrader.common.market_data import daily_bars, index_tickers
 from liualgotrader.common.tlog import tlog
 from liualgotrader.miners.base import Miner
+from liualgotrader.models.portfolio import Portfolio as DBPortfolio
 
 
 class Portfolio(Miner):
@@ -123,11 +123,11 @@ class Portfolio(Miner):
 
             # filter stocks moving > 15% in last 90 days
             high = self.data_bars[row.symbol].close[-90:].max()
-            low = self.data_bars[row.symbol].close[-90].min()
+            low = self.data_bars[row.symbol].close[-90:].min()
             if not removed and high / low > 1.15:
                 if self.debug:
                     tlog(
-                        f"{row.symbol} REMOVED on movement ({high},{low})> 15% in last 90 days"
+                        f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 15% in last 90 days"
                     )
                     d = d.drop(index=i)
                     removed = True
@@ -139,16 +139,22 @@ class Portfolio(Miner):
             indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
             indicator_calculator.ATR_SMMA = 20
             atr = indicator_calculator["atr"][-1]
-            shares = self.portfolio_size * self.risk_factor / atr
+            qty = int(self.portfolio_size * self.risk_factor // atr)
             self.portfolio.loc[
                 self.portfolio.symbol == row.symbol, "ATR"
             ] = atr
             self.portfolio.loc[
-                self.portfolio.symbol == row.symbol, "shares"
-            ] = shares
+                self.portfolio.symbol == row.symbol, "qty"
+            ] = qty
             self.portfolio.loc[self.portfolio.symbol == row.symbol, "est"] = (
-                shares * self.data_bars[row.symbol].close[-1]
+                qty * self.data_bars[row.symbol].close[-1]
             )
+        self.portfolio = self.portfolio.loc[self.portfolio.qty > 0]
+
+    async def save_portfolio(self) -> str:
+        portfolio_id = str(uuid.uuid4())
+        await DBPortfolio.save(id=portfolio_id, df=self.portfolio)
+        return portfolio_id
 
     async def run(self) -> bool:
         symbols = await index_tickers(self.index)
@@ -169,8 +175,10 @@ class Portfolio(Miner):
             tlog(
                 f"total to invest = {min(self.portfolio_size, self.portfolio.est.sum())}"
             )
-        return True
 
-        await self.save_portfolio()
+        portfolio_id = await self.save_portfolio()
+        print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+        tlog(f"PORTFOLIO_ID {portfolio_id}")
+        print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
 
         return True
