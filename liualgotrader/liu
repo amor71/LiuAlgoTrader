@@ -179,7 +179,7 @@ def quickstart():
 
     if already_have_db:
         print(
-            "Follow the instructions at 'https://liualgotrader.readthedocs.io/en/latest/Installation%20&%20Setup.html#database-setup' to complete your database setup."
+            "Follow the instructions at 'https://liualgotrader.readthedocs.io/en/latest/(Advanced)%20Setup.html#database-setup' to complete your database setup."
         )
     else:
         pwd = pathlib.Path().absolute()
