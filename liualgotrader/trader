@@ -28,6 +28,7 @@ from liualgotrader.polygon_producer import polygon_producer_main
 from liualgotrader.scanners_runner import main
 from liualgotrader.analytics import consolidate
 
+
 def motd(filename: str, version: str, unique_id: str) -> None:
     """Display welcome message"""
 
@@ -76,6 +77,7 @@ async def off_hours(batch_id) -> None:
 process main
 """
 
+
 def ready_to_start(trading_api: tradeapi) -> bool:
     nyc = timezone("America/New_York")
 
@@ -119,7 +121,9 @@ def calc_num_consumer_processes() -> int:
 
     load_avg = sum(os.getloadavg()) / 3
 
-    tlog(f"15-min load_avg:{load_avg}, num_cpus:{num_cpus}, proc_factor:{config.proc_factor}")
+    tlog(
+        f"15-min load_avg:{load_avg}, num_cpus:{num_cpus}, proc_factor:{config.proc_factor}"
+    )
     if not load_avg:
         load_avg = 1.0
 
@@ -131,7 +135,6 @@ def calc_num_consumer_processes() -> int:
             else config.proc_factor / min(load_avg, 1.0)
         ),
     )
-
 
     return num_processes
 
@@ -158,22 +161,27 @@ if __name__ == "__main__":
     motd(filename=config.filename, version=config.build_label, unique_id=uid)
 
     # load configuration
-    folder = config.tradeplan_folder if config.tradeplan_folder[-1] == '/' else f"{config.tradeplan_folder}/"
+    folder = (
+        config.tradeplan_folder
+        if config.tradeplan_folder[-1] == "/"
+        else f"{config.tradeplan_folder}/"
+    )
     fname = f"{folder}{config.configuration_filename}"
     try:
 
         conf_dict = toml.load(fname)
-        tlog(
-            f"loaded configuration file from {fname}"
-        )
+        tlog(f"loaded configuration file from {fname}")
     except FileNotFoundError:
         tlog(f"[ERROR] could not locate tradeplan file {fname}")
         sys.exit(0)
 
-
     # parse configuration
     config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
-    scanners_only = False if "test_scanners" not in conf_dict or not conf_dict["test_scanners"] else True
+    scanners_only = (
+        False
+        if "test_scanners" not in conf_dict or not conf_dict["test_scanners"]
+        else True
+    )
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
@@ -187,7 +195,6 @@ if __name__ == "__main__":
     scanners_conf = conf_dict["scanners"]
     for scanner in scanners_conf:
         tlog(f"- {scanner} scanner detected")
-
 
     data_api = tradeapi.REST(
         base_url=config.prod_base_url,
@@ -206,13 +213,12 @@ if __name__ == "__main__":
         )
         api_secret = (
             config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
-
         )
         trading_api = tradeapi.REST(
             base_url=base_url, key_id=api_key_id, secret_key=api_secret
         )
 
-        if "skip_existing" not in conf_dict or not conf_dict["skip_existing"] :
+        if "skip_existing" not in conf_dict or not conf_dict["skip_existing"]:
             existing_positions = trading_api.list_positions()
 
             if len(existing_positions) == 0:
@@ -241,7 +247,7 @@ if __name__ == "__main__":
             q_id_hash = {}
             symbol_by_queue = {}
             for symbol in symbols:
-                _index = random.SystemRandom().randint(0, num_consumer_processes-1)
+                _index = random.SystemRandom().randint(0, num_consumer_processes - 1)
                 q_id_hash[symbol] = _index
                 if _index not in symbol_by_queue:
                     symbol_by_queue[_index] = [symbol]
@@ -319,10 +325,8 @@ if __name__ == "__main__":
     tlog("Executing off-hours calculations")
     if not asyncio.get_event_loop().is_closed():
         asyncio.get_event_loop().close()
-    asyncio.run(
-        off_hours(uid)
-    )
-
+    asyncio.run(off_hours(uid))
     tlog("Off-hours calculations completed")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+
     sys.exit(0)

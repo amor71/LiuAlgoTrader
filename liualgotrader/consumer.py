@@ -788,8 +788,10 @@ async def consumer_async_main(
     strategy_types = []
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
-        tlog(f"custom strategy {strategy_name} selected")
+        tlog(f"strategy {strategy_name} selected")
 
+        if strategy_details.get("off_hours", False):
+            tlog(f"{strategy_name} if off-hours, skipping during market hours")
         try:
             spec = importlib.util.spec_from_file_location(
                 "module.name", strategy_details["filename"]
@@ -801,9 +803,7 @@ async def consumer_async_main(
             custom_strategy = getattr(custom_strategy_module, class_name)
 
             if not issubclass(custom_strategy, Strategy):
-                tlog(
-                    f"custom strartegy must inherit from class {Strategy.__name__}"
-                )
+                tlog(f"strategy must inherit from class {Strategy.__name__}")
                 exit(0)
             strategy_details.pop("filename", None)
             strategy_types += [(custom_strategy, strategy_details)]
