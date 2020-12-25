@@ -1,5 +1,5 @@
+import io
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -431,9 +431,21 @@ async def index_tickers(index: str) -> List[str]:
             "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         )
         df = table[0]
-        df.to_csv("S&P500-Info.csv")
-        df.to_csv("S&P500-Symbols.csv", columns=["Symbol"])
 
         return df.Symbol.tolist()
+
+    raise NotImplementedError(f"index {index} not supported yet")
+
+
+async def index_history(index: str, days: int) -> df:
+    if index == "SP500":
+        start = (
+            date.today() - timedelta(days=int(days * 7 / 5) + 20)
+        ).strftime("%s")
+        end = date.today().strftime("%s")
+
+        url = f"https://query1.finance.yahoo.com/v7/finance/download/%5EGSPC?period1={start}&period2={end}&interval=1d&events=history&includeAdjustedClose=true"
+        s = requests.get(url).content
+        return pd.read_csv(io.StringIO(s.decode("utf-8")))
 
     raise NotImplementedError(f"index {index} not supported yet")
