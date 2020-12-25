@@ -425,15 +425,12 @@ async def get_market_industries(pool: Pool) -> List[str]:
             return [record[0] for record in records if record[0]]
 
 
-async def index_tickers(index: str) -> List[str]:
+async def index_data(index: str) -> df:
     if index == "SP500":
         table = pd.read_html(
             "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         )
-        df = table[0]
-
-        return df.Symbol.tolist()
-
+        return table[0]
     raise NotImplementedError(f"index {index} not supported yet")
 
 

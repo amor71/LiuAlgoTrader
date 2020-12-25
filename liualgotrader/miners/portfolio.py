@@ -7,7 +7,7 @@ from scipy.stats import linregress
 from stockstats import StockDataFrame
 
 from liualgotrader.common import config
-from liualgotrader.common.market_data import daily_bars, index_tickers
+from liualgotrader.common.market_data import daily_bars, index_data
 from liualgotrader.common.tlog import tlog
 from liualgotrader.miners.base import Miner
 from liualgotrader.models.portfolio import Portfolio as DBPortfolio
@@ -157,7 +157,7 @@ class Portfolio(Miner):
         return portfolio_id
 
     async def run(self) -> bool:
-        symbols = await index_tickers(self.index)
+        symbols = (await index_data(self.index)).Symbol.tolist()
 
         if self.debug:
             tlog(f"Index {self.index} symbols: {symbols}")
