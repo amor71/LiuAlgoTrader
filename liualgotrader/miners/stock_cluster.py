@@ -79,6 +79,7 @@ class StockCluster(Miner):
                 "perpage": 1,
             },
         ) as response:
+            response.raise_for_status()
             return response.json()["count"]
 
     def _fetch(self, session: requests.Session, page: int) -> List[Ticker]:
