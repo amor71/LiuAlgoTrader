@@ -179,8 +179,9 @@ def quickstart():
 
     if already_have_db:
         print(
-            "Follow the instructions at 'https://liualgotrader.readthedocs.io/en/latest/Installation%20&%20Setup.html#database-setup' to complete your database setup."
+            "Follow the instructions at 'https://liualgotrader.readthedocs.io/en/latest/(Advanced)%20Setup.html#database-setup' to complete your database setup."
         )
+        restore_sample_db = False
     else:
         pwd = pathlib.Path().absolute()
         print("Liu Algo Trading Framework uses `docker-compose` to run a local database.")
