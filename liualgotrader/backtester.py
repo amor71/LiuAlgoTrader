@@ -82,7 +82,7 @@ def show_usage():
         "--duration\tRun back-test for number of <minutes>, bypass batch-id run duration"
     )
     print(
-        "--debug\tWrite verbose debug information for symbol SYMBOL during back-testing"
+        "--debug\t\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
     print(
         "--strict\tRun back-test session only on same symbols traded in the original batch"

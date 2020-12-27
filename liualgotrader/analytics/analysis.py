@@ -1,5 +1,6 @@
 import asyncio
 from datetime import date, timedelta
+from math import fabs
 from typing import Dict, Tuple
 
 import pandas as pd
@@ -9,6 +10,35 @@ from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
 
 est = timezone("America/New_York")
+
+
+async def strategy_return_for_qty_one(
+    strategy: str, env: str, start_date: date
+) -> float:
+    df = await aload_trades_for_period(
+        env, start_date, date.today() + timedelta(days=1)
+    )
+    df = df.loc[df.algo_name == strategy]
+    gains = 0.0
+
+    qty = 0
+    max_qty = 0
+    trade_gains = 0.0
+    for index, row in df.iterrows():
+        delta_qty = (
+            1.0 if row["operation"] == "sell" and row["qty"] > 0 else -1.0
+        ) * (row["qty"])
+        qty += delta_qty
+        max_qty += delta_qty if delta_qty > 0 else 0
+        delta = delta_qty * float(row["price"])
+        trade_gains += delta
+
+        if not qty:
+            gains += trade_gains / max_qty
+            max_qty = 0
+            trade_gains = 0.0
+
+    return gains
 
 
 def portfolio_return(
@@ -64,7 +94,7 @@ def portfolio_return(
     )
 
 
-def load_trades_for_period(
+async def aload_trades_for_period(
     env: str, from_date: date, to_date: date
 ) -> pd.DataFrame:
     query = f"""
@@ -79,8 +109,16 @@ def load_trades_for_period(
         a.algo_env = '{env}'
     ORDER BY symbol, tstamp
     """
+    return await fetch_as_dataframe(query)
+
+
+def load_trades_for_period(
+    env: str, from_date: date, to_date: date
+) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return loop.run_until_complete(
+        aload_trades_for_period(env, from_date, to_date)
+    )
 
 
 def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
@@ -103,11 +141,13 @@ def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
 async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
-            t.*, a.batch_id, a.start_time, a.algo_name
+            t.*, a.batch_id, a.start_time, a.algo_name, r.create_tstamp as scanned_time
         FROM 
-            new_trades as t, algo_run as a
+            new_trades as t, algo_run as a, trending_tickers as r
         WHERE 
             t.algo_run_id = a.algo_run_id AND 
+            r.batch_id = a.batch_id AND
+            r.symbol = t.symbol AND
             a.batch_id = '{batch_id}' AND
             t.expire_tstamp is null 
         ORDER BY symbol, tstamp

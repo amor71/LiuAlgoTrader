@@ -26,6 +26,9 @@ class TickerData:
         if not pool:
             pool = config.db_conn_pool
 
+        if not pool:
+            raise Exception("invalid connection pool")
+
         async with pool.acquire() as con:
             async with con.transaction():
                 rows = await con.fetch(
@@ -41,6 +44,8 @@ class TickerData:
                     raise Exception("no data")
 
     async def save(self, pool: Pool) -> bool:
+        if not pool:
+            raise Exception("invalid connection pool")
         try:
             async with pool.acquire() as con:
                 async with con.transaction():
@@ -91,6 +96,8 @@ class StockOhlc:
         if not pool:
             pool = config.db_conn_pool
 
+        if not pool:
+            raise Exception("invalid connection pool")
         async with pool.acquire() as con:
             async with con.transaction():
                 val = await con.fetchval(
@@ -114,6 +121,8 @@ class StockOhlc:
         if not pool:
             pool = config.db_conn_pool
 
+        if not pool:
+            raise Exception("invalid connection pool")
         async with pool.acquire() as con:
             async with con.transaction():
                 val = await con.fetchval(
@@ -134,7 +143,8 @@ class StockOhlc:
     ) -> Dict[str, object]:
         if not pool:
             pool = config.db_conn_pool
-
+        if not pool:
+            raise Exception("invalid connection pool")
         async with pool.acquire() as con:
             async with con.transaction():
                 rows = await con.fetch(
@@ -168,7 +178,8 @@ class StockOhlc:
     ) -> None:
         if not pool:
             pool = config.db_conn_pool
-
+        if not pool:
+            raise Exception("invalid connection pool")
         async with pool.acquire() as con:
             async with con.transaction():
                 await con.execute(

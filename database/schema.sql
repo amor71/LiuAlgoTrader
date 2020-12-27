@@ -146,5 +146,12 @@ CREATE TABLE IF NOT EXISTS trade_analysis (
     UNIQUE(symbol, algo_run_id, start_tstamp)
 );
 
+ALTER TABLE
+    trade_analysis
+ADD COLUMN
+    scanned_time timestamp with time zone
+    NOT NULL
+    DEFAULT current_timestamp;
+
 
 
