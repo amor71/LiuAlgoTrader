@@ -29,6 +29,7 @@ from liualgotrader.strategies.base import Strategy, StrategyType
 
 shortable: Dict = {}
 symbol_data_error: Dict = {}
+rejects: Dict[str, List[str]] = {}
 
 
 async def end_time(reason: str):
@@ -380,6 +381,7 @@ async def handle_data_queue_msg(
 ) -> bool:
     global shortable
     global symbol_data_error
+    global rejects
 
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
@@ -572,6 +574,9 @@ async def handle_data_queue_msg(
                 ):
                     continue
 
+                if s.name in rejects and symbol in rejects[s.name]:
+                    continue
+
                 try:
                     do, what = await s.run(
                         symbol,
@@ -651,7 +656,12 @@ async def handle_data_queue_msg(
                         tlog(
                             f"Exception APIError with {e} from {what}, checking if order filled"
                         )
-
+                else:
+                    if what.get("reject", False):
+                        if s.name not in rejects:
+                            rejects[s.name] = [symbol]
+                        else:
+                            rejects[s.name].append(symbol)
     return True
 
 

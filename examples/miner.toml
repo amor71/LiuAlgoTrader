@@ -10,6 +10,7 @@
     # Store daily OHLC data
     #
     [miners.DailyOHLC]
+        filename = "<select-path>/daily_ohlc.py"
         #symbol = ['SPY',]
         days = 14
 
@@ -21,3 +22,16 @@
     #
     [miners.gainloss]
         days = 45
+
+    #
+    # Calculate Momentum Portfolio
+    #
+    [miners.portfolio]
+        filename = "<select-path>/portfolio.py"
+        portfolio_size = 2000
+        debug = true
+        index = 'SP500'
+        rank_days = 90
+        atr_days = 20
+        risk_factor = 0.002
+        indicators = ['SMA100']

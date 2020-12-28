@@ -5,7 +5,7 @@
     [miners.StockCluster]
 
     [miners.DailyOHLC]
-
+        filename = "<select-path>/daily_ohlc.py"
         # to follow specific symbols
         # symbol = ['SPY',]
 

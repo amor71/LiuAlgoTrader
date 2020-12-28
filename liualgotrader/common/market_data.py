@@ -446,3 +446,22 @@ async def index_history(index: str, days: int) -> df:
         return pd.read_csv(io.StringIO(s.decode("utf-8")))
 
     raise NotImplementedError(f"index {index} not supported yet")
+
+
+def latest_stock_price(data_api: tradeapi, symbol: str) -> float:
+    """Load latest stock price for symbol"""
+
+    vals = data_api.polygon.historic_agg_v2(
+        symbol,
+        1,
+        "minute",
+        _from=str(date.today() - timedelta(days=5)),
+        to=str(date.today()),
+    ).df.close.tolist()
+
+    if not len(vals):
+        raise Exception(
+            f"Cant load {symbol} details for {str(date.today()-timedelta(days=5))} till {str(date.today())}"
+        )
+
+    return vals[-1]

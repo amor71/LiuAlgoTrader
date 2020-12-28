@@ -1,10 +1,22 @@
-Samples
--------
+Examples
+========
+
+
+Momentum Swing Trading
+----------------------
+Inspired by Andrew Clenow's Book `Stocks On The Move`_ :
+
+.. _`Stocks On The Move`:
+    https://www.followingthetrend.com/stocks-on-the-move/
+
+* A Custom miner to calculate Stock Momentum portfolio,
+* A Sample miner.toml file showing how to use the portfolio,
+* Portfolio Analysis notebook for viewing miner portfolio calculation results.
+
 
 
 Mama-Fama Strategy
-==================
-
+------------------
 
 
 The folder_ includes a real-life example of `LiuAlgoTrader` usage.

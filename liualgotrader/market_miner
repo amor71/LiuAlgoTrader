@@ -13,7 +13,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.miners.base import Miner
 from liualgotrader.miners.stock_cluster import StockCluster
-from liualgotrader.miners.daily_ohlc import DailyOHLC
+from examples.miners.daily_ohlc import DailyOHLC
 
 
 def motd(filename: str, version: str) -> None:
@@ -48,7 +48,14 @@ async def main(conf_dict: Dict):
             await asyncio.gather(*task_list)
         else:
             try:
-                module = importlib.import_module(f"liualgotrader.miners.{miner}")
+                if 'filename' in conf_dict["miners"][miner]:
+                    spec = importlib.util.spec_from_file_location(
+                        "module.name", conf_dict["miners"][miner]["filename"]
+                    )
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)  # type: ignore
+                else:
+                    module = importlib.import_module(f"liualgotrader.miners.{miner}")
                 class_name = f"{miner[0].upper()}{miner[1:]}"
                 miner_class = getattr(module, class_name)
 
@@ -56,7 +63,7 @@ async def main(conf_dict: Dict):
                     tlog(f"Miner must inherit from class {Miner.__name__}")
                     exit(0)
             except Exception as e:
-                tlog(f"[ERROR] miner {miner} is not supported yet {e}")
+                tlog(f"[ERROR] miner {miner} resulted in exception:`{e}`")
             else:
                 try:
                     debug = conf_dict["miners"][miner].get('debug', False)
