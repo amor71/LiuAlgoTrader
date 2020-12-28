@@ -14,4 +14,4 @@ streamlit==0.73.1
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.4.3
-hypothesis==5.43.3
+hypothesis==5.43.4
