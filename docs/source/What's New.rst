@@ -18,6 +18,9 @@ What's New
 |                  | 7. Add notebook and function for calculating |
 |                  |    strategy p-value,                         |
 |                  | 8. Added documentation for changes.          |
+|                  | 9. Strategy may `reject` stock, so that it   |
+|                  |    will not be presented with that stock     |
+|                  |    again during the trading session.         |
 +------------------+----------------------------------------------+
 | 0.0.80           | 1. Added `gain_loss` and `trade_analysis`    |
 |                  |    DB tables,                                |

@@ -62,7 +62,7 @@ Press here_ to learn more on the TOML file format.
 
 .. _here: https://toml.io/en/
 
-by default the trader application will be looking for
+By default the trader application will be looking for
 a configuration file with the name *tradeplan.toml*.
 The configuration file, as it's name implies,
 defines the trade-plan for the trader execution:

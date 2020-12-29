@@ -3,6 +3,19 @@
 Strategies
 ==========
 
+The core reason for using `LiuAlgoTrader` is to develop strategies that
+can take real-time decisions on stock input streams.
+
+
+
+
+
+
+
+
+
+
+
 `LiuAlgoTrader` comes equipped with a **momentum** strategy,
 which is based on `MACD signals`_ enforced with RSI_ and LOB imbalance signals.
 

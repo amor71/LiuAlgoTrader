@@ -3,13 +3,13 @@
 Advanced Setup
 ==============
 
-This section describes the sets and processes to
-install and setup `LiuAlgoTrader` for first use. If it relevant mostly if you didn't go through the `Quickstart` wizard or would like to use an existing / cloud-base database.
+This section describes the steps to
+install and setup `LiuAlgoTrader` for first time use on a pre-existing PostgreSQL database installation. The section is mostly relevant for users that did not go through the `Quickstart` wizard.
 
 Prerequisite
 ------------
 - Paper, and preferable a funded Live account with `Alpaca Markets`_
-- Installed PostgreSQL_ database.
+- An Installed and configured PostgreSQL_ database.
 
 .. _Alpaca Markets: https://alpaca.markets/docs/about-us/
 .. _PostgreSQL: https://www.postgresql.org/
@@ -18,7 +18,7 @@ Prerequisite
 Installation
 ------------
 
-To install LiuAlgoTrader just type:
+To install LiuAlgoTrader type:
 
 .. code-block:: bash
 
@@ -53,14 +53,17 @@ To `learn more`_ on how to select your connection string.
 Database Schema script
 **********************
 
-The following SQL script may be used to create the required database schema to LiuAlgoTrader needs:
+The following SQL script creates the required database schema:
 
 .. literalinclude:: ../../database/schema.sql
   :language: SQL
   :linenos:
 
-the latest schema file can be found in the `database` folder in LiuAlgoTrader distribution , it is recommended to always use the latest DB schema file,
-which is backward compatible and executing the scripts will automatically
+
+**NOTE**:
+When updating from a predecessor version of `LiuAlgoTrader`, it is recommended to re-run the database script.
+the latest schema file can be found in the `database` folder in LiuAlgoTrader distribution.
+The script is backward compatible and executing the scripts will automatically
 migrate the data to the latest version.
 
 Data Providers
@@ -88,7 +91,7 @@ the trading servers close to the brokerage servers to best
 execution times.
 
 While you may run LiuAlgoTrader on your home desktop or
-laptop, having a hosted service, even a lean one could
+laptop, having a hosted server, even a lean one could
 help the consistency of your trades.
 
 The steps for basic hosting on Google Cloud Platform:
@@ -115,7 +118,7 @@ If you're developing remotely, make sure to install the
 tunnel to your database from your local machine.
 
 You're now ready to run LiuAlgoTrader in the cloud.
-Your total monthly bill should be around $50/month while
+Your total monthly bill should be around $70/month while
 consuming the logging services.
 
 
