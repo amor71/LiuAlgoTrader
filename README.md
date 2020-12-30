@@ -82,6 +82,9 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 - Shlomi Kushchi [shlomikushchi](https://github.com/shlomikushchi)
 - Venkat Y [vinmestmant](https://github.com/vinmestmant)
 - Chris [crowforc3](https://github.com/crawforc3)
+- [TheSnoozer](https://github.com/TheSnoozer)
+
+
 
 
 
