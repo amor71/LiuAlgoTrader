@@ -8,6 +8,15 @@ When the `trader` application starts, it reads the `tradeplan.toml` file, looks 
 
 Some configuration parameters are generic to all scanners, and some may be specific for your own scanner.
 
+No Liability Disclaimer
+-----------------------
+Any example, or sample is provided for training purposes only.
+You may choose to use it, modify it or completely
+disregard it - `LiuAlgoTrader` and its authors bare
+no responsibility to any possible loses from using
+a scanner, strategy, miner, or any other part of `LiuAlgoTrader` (on the other hand, they also won't
+share your profits, if there are any).
+
 Developing a Scanner
 --------------------
 
@@ -29,7 +38,7 @@ Creating a scanner involves:
 The `__init__()` function
 *************************
 
-A boiler-plate implementation for the `__init__()` function:
+A Generic implementation for the `__init__()` function:
 
 .. code-block:: python
 
@@ -42,22 +51,6 @@ A boiler-plate implementation for the `__init__()` function:
             target_strategy_name=None,
         )
 
-
-the `recurrence` and `data_api` are passed by the framework, while `args` is a dictionary that holds whatever parameters declared in the `tradeplan.toml` file.
-
-`recurrence` is a default parameter, that if exists, specifies the frequency in minutes for calling in `run()` function. For example, having the below line in your scanner configuration
-
-.. code-block:: bash
-
-    recurrence = 5
-
-will instruct the framework to call you `run()` function every 5 minutes.
-
-**NOTES**:
-
-1. Each Scanner should have its own unique name,
-2. Scanners start executing once the market is open,
-3. While the recurrence parameter indicates the frequency of running the scanner, the scanner may have a custom parameter to select the number of times scanner should run. The framework is flexible, and provides developers with basic build-blocks to write any scanner of choice.
 
 The run() function
 ******************
