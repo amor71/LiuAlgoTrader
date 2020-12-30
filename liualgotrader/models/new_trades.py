@@ -87,7 +87,7 @@ class NewTrade:
                             t.algo_run_id=a.algo_run_id AND
                             a.algo_name=$2 AND
                             symbol=$1 AND
-                            env=$3
+                            algo_env=$3
                         ORDER BY tstamp DESC LIMIT 1
                     """,
                     symbol,
