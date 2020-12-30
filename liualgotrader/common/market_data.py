@@ -1,5 +1,5 @@
+import io
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -182,6 +182,25 @@ def get_symbol_data(
             continue
 
     return df
+
+
+def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
+    retry = 10
+
+    while retry:
+        try:
+            return api.polygon.historic_agg_v2(
+                symbol,
+                1,
+                "day",
+                _from=str(date.today() - timedelta(days=days)),
+                to=str(date.today()),
+            ).df
+        except Exception as e:
+            if retry:
+                retry -= 1
+            else:
+                raise
 
 
 def get_historical_daily_from_polygon_by_range(
@@ -404,3 +423,45 @@ async def get_market_industries(pool: Pool) -> List[str]:
             )
 
             return [record[0] for record in records if record[0]]
+
+
+async def index_data(index: str) -> df:
+    if index == "SP500":
+        table = pd.read_html(
+            "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        )
+        return table[0]
+    raise NotImplementedError(f"index {index} not supported yet")
+
+
+async def index_history(index: str, days: int) -> df:
+    if index == "SP500":
+        start = (
+            date.today() - timedelta(days=int(days * 7 / 5) + 20)
+        ).strftime("%s")
+        end = date.today().strftime("%s")
+
+        url = f"https://query1.finance.yahoo.com/v7/finance/download/%5EGSPC?period1={start}&period2={end}&interval=1d&events=history&includeAdjustedClose=true"
+        s = requests.get(url).content
+        return pd.read_csv(io.StringIO(s.decode("utf-8")))
+
+    raise NotImplementedError(f"index {index} not supported yet")
+
+
+def latest_stock_price(data_api: tradeapi, symbol: str) -> float:
+    """Load latest stock price for symbol"""
+
+    vals = data_api.polygon.historic_agg_v2(
+        symbol,
+        1,
+        "minute",
+        _from=str(date.today() - timedelta(days=5)),
+        to=str(date.today()),
+    ).df.close.tolist()
+
+    if not len(vals):
+        raise Exception(
+            f"Cant load {symbol} details for {str(date.today()-timedelta(days=5))} till {str(date.today())}"
+        )
+
+    return vals[-1]

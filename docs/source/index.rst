@@ -9,16 +9,15 @@ for effective algorithmic trading. The framework is
 intended to simplify development, testing,
 deployment and evaluating algo trading strategies.
 
-
 LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server
-and it will optimize for best performance for either.
+and it will optimize for best performance for either. The framework runs on Linux, Mac OS or, Windows.
 
 LiuAlgoTrader is made of the following components:
 
 - **trader**: the main application for trading,
 - **backtester**: re-running past trading sessions,
-- **market_miner**: application for collecting segments data,
+- **market_miner**: application for collecting market data and run market off-hours calculations,
 
 AND
 
@@ -35,13 +34,13 @@ sessions w/ LiuAlgoTrader.
    What's New
    Quickstart
    (Advanced) Setup
+   Concepts
    Configuration
-   Usage
    Scanners
    Strategies
-   Under-the-hood
+   Usage
    Analysis
-   Samples
+   Examples
    How to Contribute
 
 

@@ -4,6 +4,24 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.85           | 1. Added `portfolio` DB table, and           |
+|                  |    model support,                            |
+|                  | 2. Enhance `market_miner`, to support        |
+|                  |    external miners (like scanners, and       |
+|                  |    strategies),                              |
+|                  | 3. Move `daily_ohlc` miner to examples and   |
+|                  |    add documentation,                        |
+|                  | 4. Add example miner for momentum strategy,  |
+|                  | 5. Add notebook & market_data function for   |
+|                  |    for SP500 data-collection, and trend,     |
+|                  | 6. Add notebook for SP500 portfolio analysis,|
+|                  | 7. Add notebook and function for calculating |
+|                  |    strategy p-value,                         |
+|                  | 8. Added documentation for changes.          |
+|                  | 9. Strategy may `reject` stock, so that it   |
+|                  |    will not be presented with that stock     |
+|                  |    again during the trading session.         |
++------------------+----------------------------------------------+
 | 0.0.80           | 1. Added `gain_loss` and `trade_analysis`    |
 |                  |    DB tables,                                |
 |                  | 2. Added off-hour task, at the end of the    |

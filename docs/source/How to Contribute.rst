@@ -25,5 +25,9 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 
 .. _crowforc3: https://github.com/crawforc3
 
+- TheSnoozer_
+
+.. _TheSnoozer: https://github.com/TheSnoozer
+
 
 

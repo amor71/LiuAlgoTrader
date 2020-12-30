@@ -29,6 +29,7 @@ from liualgotrader.strategies.base import Strategy, StrategyType
 
 shortable: Dict = {}
 symbol_data_error: Dict = {}
+rejects: Dict[str, List[str]] = {}
 
 
 async def end_time(reason: str):
@@ -380,6 +381,7 @@ async def handle_data_queue_msg(
 ) -> bool:
     global shortable
     global symbol_data_error
+    global rejects
 
     symbol = data["symbol"]
     if symbol not in market_data.minute_history:
@@ -572,6 +574,9 @@ async def handle_data_queue_msg(
                 ):
                     continue
 
+                if s.name in rejects and symbol in rejects[s.name]:
+                    continue
+
                 try:
                     do, what = await s.run(
                         symbol,
@@ -651,7 +656,12 @@ async def handle_data_queue_msg(
                         tlog(
                             f"Exception APIError with {e} from {what}, checking if order filled"
                         )
-
+                else:
+                    if what.get("reject", False):
+                        if s.name not in rejects:
+                            rejects[s.name] = [symbol]
+                        else:
+                            rejects[s.name].append(symbol)
     return True
 
 
@@ -788,8 +798,10 @@ async def consumer_async_main(
     strategy_types = []
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
-        tlog(f"custom strategy {strategy_name} selected")
+        tlog(f"strategy {strategy_name} selected")
 
+        if strategy_details.get("off_hours", False):
+            tlog(f"{strategy_name} if off-hours, skipping during market hours")
         try:
             spec = importlib.util.spec_from_file_location(
                 "module.name", strategy_details["filename"]
@@ -801,9 +813,7 @@ async def consumer_async_main(
             custom_strategy = getattr(custom_strategy_module, class_name)
 
             if not issubclass(custom_strategy, Strategy):
-                tlog(
-                    f"custom strartegy must inherit from class {Strategy.__name__}"
-                )
+                tlog(f"strategy must inherit from class {Strategy.__name__}")
                 exit(0)
             strategy_details.pop("filename", None)
             strategy_types += [(custom_strategy, strategy_details)]

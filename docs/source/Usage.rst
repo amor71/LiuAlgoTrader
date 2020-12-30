@@ -310,7 +310,6 @@ Currently supported miners:
 
 
 - `StockCluster` : the miner read all trade-able stocks, and stores in the `ticker_data` table the industry/segment and similar stocks details. This data can later be used in real-time to compare how a certain stock is doing against an industry/segment or similar stocks index.
-- `DailyOHLC` : the miner collect Daily OHLC data for trade-able stocks, and stores the details in the `stock_ohlc` table. The miner gets number of days configuration parameters while ensure that at least that number of data data exists. Additionally, the miner can calculate specific indicators which can be used later during real-time calculations.
 - `gainloss`: populate `gainloss` table w/ per batch aggregated P&L details.
 
 **Note**

@@ -1,14 +1,29 @@
-Architecture
-==============
+Concepts
+========
 
-This section explains the inner workings of LiuAlgoTrader. The target audience
-are developers looking to develop new strategies, query the database etc.
+This section explains the concepts and architecture of `LiuAlgoTrader` framework.
 
+Building Blocks
+---------------
+The framework executes two type of components in parallel: Scanners and Strategies.
+
+* Scanners, or stock screeners as they are called by some platforms, a run periodically by the framework to search the stock universe for stocks that adhere to criteria of choice. Users can easily create and deploy scanners, with only few lines of Python code. Scanners notify the framework when it's time to `subscribe` for a specific stock events. Events may be per second or per minute price changes, quotes or trades.
+* Strategies receive stock event updates, for stocks selected by the scanners. Strategies analyse the stock movement, and use a wide range of indicators to decide if it's time to buy or sell an equity. A Strategy may act on a single stock movement, or on movement in a collection of stocks. A Strategy may also elect to `reject` a stock, leading to `unsubscribe` from further events. The framework support both long and short buying to equities. The framework is designed to allow hundreds of concurrent stocks being constantly acted upon by numerous strategies to make up a portfolio. Scanner may decide to address stock events only to a specific strategy, or to all running strategies.
+
+Usage Fundamentals
+------------------
+
+The framework exposes three `base classes` for scanners, strategy and miner. The first two are for basic trading activities, while miners can we used for more advanced off-market calculations.
+The framework comes equiped with a generic scanner, though it is recommended to be used as a reference point only.
+
+When using the framework, you will likely create a Python file with your scanners, each inheriting from the Scanner base-class, and one or more Python files for strategies that inherit from the Strategy base-class. Once you get your building blocks in place, you use the `tradeplan.toml` file to instruct the framework which scanners & strategies to instantiate, and the select the configuration parameters that will be passed for each.
+
+All your trading actions are stored to a database, and all trades are automatically analyzed at the end of the trading session. You can then use a multitude of notebooks for further analyze and improve the performance on your algo trading strategies.
 
 Hands-free framework
 --------------------
 
-LiuAlgoTrader is designed to be a (near) high throughput & scalable framework, that optimizes the underlying hardware.
+`LiuAlgoTrader` is designed to be a (near) high throughput & scalable framework, that optimizes the underlying hardware.
 
 It is designed to be hands-free framework
 for strategy developers, elevating the need to worry about
@@ -49,7 +64,7 @@ This architecture provides high throughput which maximizes the hardware
 capabilities.
 
 A *link* between the producer a consumer is maintained over
-a Python multi-processing Queue (vs. a pipe for future extensions). Each consumer has a designated cross-process Queue and a
+a Python multi-processing Queue. Each consumer has a designated cross-process Queue and a
 pre-defined list of stocks that the process is tracking.
 The producer's role is to receive updates over the WebSocket,
 post them into the relevant consumer's Queue, and return to
@@ -275,8 +290,8 @@ The table tracks:
 Additional tables
 *****************
 
-ticker_data
-^^^^^^^^^^^
+`ticker_data`
+^^^^^^^^^^^^^
 
 The ticker_data table keeps basic data on traded stocks
 which include the symbol name, company name & description
@@ -287,3 +302,15 @@ to periodically mine fresh data.
 
 The industry & sector data is informative for creating
 a per sector / industry trend.
+
+`gain_loss`
+^^^^^^^^^^^
+The table holds the percentage and value gained per stock, per strategy for a batch_id. The table is populate at the end of a trading session, or using `market_miner`.
+
+`trade_analysis`
+^^^^^^^^^^^^^^^^
+The table holds gain & less, per trade in percentage, value, as well as `r units`. The table is populated at the end of a trading session, or using `market_miner`. The table is used for performance analysis of a trading session.
+
+`portfolio`
+^^^^^^^^^^^
+Holds a calculated portfolio, that may be calculated during off-market hours and used by a strategy as a reference.

@@ -1,4 +1,5 @@
 """Base Class for Strategies"""
+import importlib
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Tuple
@@ -7,6 +8,7 @@ import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
+from liualgotrader.common.tlog import tlog
 from liualgotrader.models.algo_run import AlgoRun
 
 
@@ -54,7 +56,8 @@ class Strategy:
             True
             if (
                 any(
-                    (now - config.market_open).seconds // 60 >= schedule["start"]
+                    (now - config.market_open).seconds // 60
+                    >= schedule["start"]
                     for schedule in self.schedule
                 )
                 or (
@@ -87,3 +90,34 @@ class Strategy:
 
     async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
         pass
+
+    @classmethod
+    async def get_strategy(
+        cls, batch_id: str, strategy_name: str, strategy_details: Dict
+    ):
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "module.name", strategy_details["filename"]
+            )
+            custom_strategy_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(custom_strategy_module)  # type: ignore
+            class_name = strategy_name
+
+            custom_strategy = getattr(custom_strategy_module, class_name)
+
+            if not issubclass(custom_strategy, Strategy):
+                tlog(f"strategy must inherit from class {Strategy.__name__}")
+                exit(0)
+            strategy_details.pop("filename", None)
+            s = custom_strategy(batch_id=batch_id, **strategy_details)
+            await s.create()
+        except FileNotFoundError as e:
+            tlog(f"[Error] file not found `{strategy_details['filename']}`")
+            exit(0)
+        except Exception as e:
+            tlog(
+                f"[Error]exception of type {type(e).__name__} with args {e.args}"
+            )
+            exit(0)
+        else:
+            return s
