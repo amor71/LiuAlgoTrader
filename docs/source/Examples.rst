@@ -11,6 +11,32 @@ a scanner, strategy, miner, or any other part of `LiuAlgoTrader` (on the other h
 share your profits, if there are any).
 
 
+Momentum Swing Trading
+----------------------
+Inspired by Andrew Clenow's Book `Stocks On The Move`_ :
+
+.. _`Stocks On The Move`:
+    https://www.followingthetrend.com/stocks-on-the-move/
+
+* A miner_ calculating Stock Momentum portfolio (base be used for rebalancing portfolio, and position size),
+* A miner.toml configuration_ file, to be used with the framework `market_miner` calculating a portfolio based on the momentum strategy,
+* Portfolio Analysis notebook_ for viewing miner portfolio calculation results,
+* SP500_ analysis notebook.
+
+.. _miner:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/examples/swing_momentum/portfolio.py
+
+.. _configuration:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/examples/swing_momentum/miner.toml
+
+.. _notebook:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/momentum_portfolio.ipynb
+
+.. _SP500:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/indices.ipynb
+
+
+
 Generic Strategy Example
 ------------------------
 
@@ -19,20 +45,6 @@ This example (also presented in Strategies section) presents a generic Strategy 
 .. literalinclude:: ../../examples/skeleton-strategy/my_strategy.py
   :language: python
   :linenos:
-
-
-
-Momentum Swing Trading
-----------------------
-Inspired by Andrew Clenow's Book `Stocks On The Move`_ :
-
-.. _`Stocks On The Move`:
-    https://www.followingthetrend.com/stocks-on-the-move/
-
-* A Custom miner to calculate Stock Momentum portfolio,
-* A Sample miner.toml file showing how to use the portfolio,
-* Portfolio Analysis notebook for viewing miner portfolio calculation results.
-
 
 
 Mama-Fama Strategy

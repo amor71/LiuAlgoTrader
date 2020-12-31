@@ -1,0 +1,12 @@
+# This is a TOML configuration file for market_miner.py
+[miners]
+    [miners.portfolio]
+        filename = "examples/swing-momentum/portfolio.py"
+        portfolio_size = 2000
+        debug = true
+        index = 'SP500'
+        rank_days = 90
+        atr_days = 20
+        risk_factor = 0.002
+        indicators = ['SMA100']
+
