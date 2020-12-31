@@ -458,7 +458,10 @@ def polygon_producer_main(
     try:
         config.market_close = market_close
         config.batch_id = unique_id
-        events = conf_dict.get("events", None)
+
+        events = None
+        if "scanners" in conf_dict:
+            events = conf_dict["scanners"].get("events", None)
 
         if not events:
             config.WS_DATA_CHANNELS = ["A", "AM", "T", "Q"]

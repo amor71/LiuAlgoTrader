@@ -15,6 +15,8 @@ bypass_market_schedule = true
 # ticket scanners, may have several
 # scanners during the day
 [scanners]
+    events = ["second", "minute", "trade", "quote"]
+
     [scanners.momentum]
         # check documentation for supported providers
         provider = 'polygon'

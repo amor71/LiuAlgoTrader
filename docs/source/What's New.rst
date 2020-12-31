@@ -4,6 +4,9 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.0.88           | 1. `events` declaration moved into           |
+|                  |    'scanners' section in the tradeplan.toml  |
++------------------+----------------------------------------------+
 | 0.0.85           | 1. Added `portfolio` DB table, and           |
 |                  |    model support,                            |
 |                  | 2. Enhance `market_miner`, to support        |
