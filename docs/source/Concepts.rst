@@ -133,6 +133,9 @@ files for a future developer.
     |   └── notebooks
     │       ├── portfolio_performance_analysis.ipynb
     │       └── backtest_performance_analysis.ipynb
+    |       └── ...
+    ├── design
+    |      └── various design & concepts documents
     ├── liualgotrader
     │   ├── common
     |   |   ├── config.py

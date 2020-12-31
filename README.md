@@ -66,6 +66,10 @@ The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as
 
 Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) and learn how to use LiuAlgoTrader to develop, deploy & testing money making strategies.
 
+## Watch the Evolution
+
+`LiuAlgoTrader` is an ever evolving platform, to glimps the concepts, thoughts and ideas 
+visit the [design](https://github.com/amor71/LiuAlgoTrader/tree/master/design) folder and feel free to comment. 
 
 ## Contributing
 
