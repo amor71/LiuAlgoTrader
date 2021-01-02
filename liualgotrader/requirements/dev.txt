@@ -35,3 +35,4 @@ empyrical==0.5.5
 sklearn==0.0
 plotly==4.14.1
 hypothesis==5.43.3
+torch
