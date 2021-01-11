@@ -54,6 +54,13 @@ LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experie
 
 Additional samples can we found in the [examples](examples) directory. 
 
+## Machine Learning 
+
+These features are still work in process:
+
+* [Design & Planning](https://github.com/amor71/LiuAlgoTrader/blob/master/design/ml-concepts.ipynb),
+* [LSTM sample](https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/LSTM.ipynb)  
+  
 ## Analysis & Analytics
 
 The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as `streamlit` applications for analysis for both trading and back-testing sessions. To name a few of the visual analytical tools:
@@ -68,7 +75,7 @@ Read the [documentation](https://liualgotrader.readthedocs.io/en/latest/) and le
 
 ## Watch the Evolution
 
-`LiuAlgoTrader` is an ever evolving platform, to glimps the concepts, thoughts and ideas 
+`LiuAlgoTrader` is an ever evolving platform, to glimpse the concepts, thoughts and ideas 
 visit the [design](https://github.com/amor71/LiuAlgoTrader/tree/master/design) folder and feel free to comment. 
 
 ## Contributing
