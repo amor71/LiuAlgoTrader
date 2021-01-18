@@ -33,7 +33,7 @@ nbqa==0.5.6
 pre-commit==2.9.3
 empyrical==0.5.5
 sklearn==0.0
-plotly==4.14.1
+plotly==4.14.3
 hypothesis==5.43.3
 torch
 fastai
