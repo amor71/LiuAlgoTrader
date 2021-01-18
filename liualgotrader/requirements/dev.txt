@@ -16,7 +16,7 @@ asyncpg==0.21.0
 pygit2==1.4.0
 pytest==6.2.1
 pytest-asyncio==0.14.0
-pytest-cov==2.10.1
+pytest-cov==2.11.0
 websockets==8.1
 nb-clean==2.0.2
 matplotlib==3.3.3
