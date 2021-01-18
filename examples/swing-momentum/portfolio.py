@@ -5,6 +5,7 @@ import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 from scipy.stats import linregress
 from stockstats import StockDataFrame
+from tabulate import tabulate
 
 from liualgotrader.common import config
 from liualgotrader.common.market_data import daily_bars, index_data
@@ -122,7 +123,9 @@ class Portfolio(Miner):
                         removed = True
 
             # filter stocks moving > 15% in last 90 days
-            high = self.data_bars[row.symbol].close[-90:].max()
+            high = self.data_bars[row.symbol].close[
+                -1
+            ]  # self.data_bars[row.symbol].close[-90:].max()
             low = self.data_bars[row.symbol].close[-90:].min()
             if not removed and high / low > 1.15:
                 if self.debug:
@@ -135,9 +138,11 @@ class Portfolio(Miner):
         self.portfolio = d
 
     async def calc_balance(self) -> None:
+        print("BEFORE ATR:")
+        print(f"\n{tabulate(self.portfolio, headers='keys', tablefmt='psql')}")
         for i, row in self.portfolio.iterrows():
             indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
-            indicator_calculator.ATR_SMMA = 20
+            indicator_calculator.ATR_SMMA = self.atr_days
             atr = indicator_calculator["atr"][-1]
             qty = int(self.portfolio_size * self.risk_factor // atr)
             self.portfolio.loc[
@@ -156,6 +161,14 @@ class Portfolio(Miner):
         await DBPortfolio.save(id=portfolio_id, df=self.portfolio)
         return portfolio_id
 
+    async def execute_portfolio(self) -> None:
+        self.portfolio["accumulative"] = self.portfolio.est.cumsum()
+
+        if self.debug:
+            print(
+                f"FINAL:\n{tabulate(self.portfolio, headers='keys', tablefmt='psql')}"
+            )
+
     async def run(self) -> bool:
         symbols = (await index_data(self.index)).Symbol.tolist()
 
@@ -170,13 +183,10 @@ class Portfolio(Miner):
 
         await self.calc_balance()
 
-        if self.debug:
-            tlog(f"{self.portfolio}")
-            tlog(
-                f"total to invest = {min(self.portfolio_size, self.portfolio.est.sum())}"
-            )
-
         portfolio_id = await self.save_portfolio()
+
+        await self.execute_portfolio()
+
         print(
             "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
         )
