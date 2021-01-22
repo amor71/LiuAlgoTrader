@@ -198,13 +198,19 @@ def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
             ).df
 
             if _df.empty:
+                tlog(
+                    f"empty dataset received for {symbol} daily bars, resting and retrying."
+                )
                 time.sleep(30)
                 retry -= 1
                 continue
 
         except Exception as e:
             if retry:
-                time.sleep(15)
+                tlog(
+                    f"[EXCEPTION] {e} during loading {symbol} daily bars, resting and retrying."
+                )
+                time.sleep(30)
                 retry -= 1
             else:
                 raise
