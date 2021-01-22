@@ -17,19 +17,15 @@ from liualgotrader.models.ticker_data import StockOhlc, TickerData
 class DailyOHLC(Miner):
     def __init__(
         self,
-        days: int,
-        min_stock_price: Optional[float],
-        max_stock_price: Optional[float],
-        indicators: Optional[Dict],
-        symbols: Optional[List[str]],
+        data: Dict,
         debug=False,
     ):
         self._num_workers = 20
-        self._days = days
-        self._min_stock_price = min_stock_price
-        self._max_stock_price = max_stock_price
-        self._indicators = indicators
-        self._symbols = symbols
+        self._days = int(data["days"])
+        self._min_stock_price = float(data["min_price"])
+        self._max_stock_price = float(data["max_price"])
+        self._indicators = data.get("indicators", None)
+        self._symbols = data.get("symbols", None)
         self._debug = debug
         self.data_api = tradeapi.REST(
             base_url=config.prod_base_url,
