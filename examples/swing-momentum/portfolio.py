@@ -64,7 +64,9 @@ class Portfolio(Miner):
                 days=int(200 * 7 / 5),
             )
             if self.debug:
-                tlog(f"loaded {len(self.data_bars[symbol])} data-points")
+                tlog(
+                    f"loaded {len(self.data_bars[symbol]) if self.data_bars[symbol] else 0} data-points"
+                )
             i += 1
 
     async def calc_momentum(self) -> None:

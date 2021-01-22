@@ -198,6 +198,7 @@ def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
             ).df
         except Exception as e:
             if retry:
+                time.sleep(15)
                 retry -= 1
             else:
                 raise
