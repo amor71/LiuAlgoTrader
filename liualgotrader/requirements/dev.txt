@@ -25,7 +25,7 @@ sphinx==3.4.3
 sphinx-autodoc-typehints==1.11.1
 setuptools==52.0.0
 wheel==0.36.2
-twine==3.2.0
+twine==3.3.0
 streamlit==0.72.0
 stockstats==0.3.2
 nest_asyncio==1.4.3
