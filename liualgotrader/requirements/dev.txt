@@ -36,4 +36,4 @@ sklearn==0.0
 plotly==4.14.3
 hypothesis==6.0.3
 torch==1.7.1
-fastai
+fastai==2.2.5
