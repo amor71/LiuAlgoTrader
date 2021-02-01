@@ -13,5 +13,5 @@ tabulate==0.8.7
 streamlit==0.75.0
 stockstats==0.3.2
 empyrical==0.5.5
-nest_asyncio==1.4.3
+nest_asyncio==1.5.1
 hypothesis==5.43.3
