@@ -28,7 +28,7 @@ wheel==0.36.2
 twine==3.3.0
 streamlit==0.75.0
 stockstats==0.3.2
-nest_asyncio==1.4.3
+nest_asyncio==1.5.1
 nbqa==0.5.5
 pre-commit==2.9.3
 empyrical==0.5.5
