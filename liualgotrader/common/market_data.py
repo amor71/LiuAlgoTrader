@@ -189,18 +189,35 @@ def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
 
     while retry:
         try:
-            return api.polygon.historic_agg_v2(
+            _df = api.polygon.historic_agg_v2(
                 symbol,
                 1,
                 "day",
                 _from=str(date.today() - timedelta(days=days)),
                 to=str(date.today()),
             ).df
+
+            if _df.empty:
+                tlog(
+                    f"empty dataset received for {symbol} daily bars, resting and retrying."
+                )
+                time.sleep(30)
+                retry -= 1
+                continue
+
         except Exception as e:
             if retry:
+                tlog(
+                    f"[EXCEPTION] {e} during loading {symbol} daily bars, resting and retrying."
+                )
+                time.sleep(30)
                 retry -= 1
             else:
                 raise
+        else:
+            return _df
+
+    raise Exception(f"Failed to load data for {symbol}")
 
 
 def get_historical_daily_from_polygon_by_range(

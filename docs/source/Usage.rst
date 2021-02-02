@@ -79,7 +79,7 @@ Currently supported tasks include:
 Usage
 *****
 
-To run the market_miner app type:
+To run the trader app type:
 
 .. code-block:: bash
 
@@ -312,10 +312,14 @@ Currently supported miners:
 - `StockCluster` : the miner read all trade-able stocks, and stores in the `ticker_data` table the industry/segment and similar stocks details. This data can later be used in real-time to compare how a certain stock is doing against an industry/segment or similar stocks index.
 - `gainloss`: populate `gainloss` table w/ per batch aggregated P&L details.
 
-**Note**
+**Notes**
 
-the `market_miner` app should be executed in
-off-hours, and once run it will refresh existing data, or load data since last run.
+1. The `market_miner` app should be executed in off-hours, and once run it will refresh existing data, or load data since last run,
+2. Additional miners can be found in the examples_ folder (and should be downloaded separately),
+
+.. _examples:
+    https://github.com/amor71/LiuAlgoTrader/tree/master/examples
+
 
 Prerequisites
 *************

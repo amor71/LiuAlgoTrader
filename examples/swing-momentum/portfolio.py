@@ -64,7 +64,12 @@ class Portfolio(Miner):
                 days=int(200 * 7 / 5),
             )
             if self.debug:
-                tlog(f"loaded {len(self.data_bars[symbol])} data-points")
+                try:
+                    p_points = len(self.data_bars[symbol])
+                except TypeError:
+                    p_points = 0
+
+                tlog(f"loaded {p_points} data-points")
             i += 1
 
     async def calc_momentum(self) -> None:

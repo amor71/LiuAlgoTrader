@@ -13,7 +13,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.miners.base import Miner
 from liualgotrader.miners.stock_cluster import StockCluster
-from examples.miners.daily_ohlc import DailyOHLC
+
 
 
 def motd(filename: str, version: str) -> None:
@@ -33,17 +33,6 @@ async def main(conf_dict: Dict):
     for miner in conf_dict["miners"]:
         if miner == "StockCluster":
             task_list.append(asyncio.create_task(StockCluster().run()))
-
-            await asyncio.gather(*task_list)
-        elif miner == "DailyOHLC":
-            daily = DailyOHLC(
-                days=conf_dict["miners"][miner]["days"],
-                max_stock_price=conf_dict["miners"][miner].get("max_stock_price", None),
-                min_stock_price=conf_dict["miners"][miner].get("min_stock_price", None),
-                indicators=conf_dict["miners"][miner].get("indicators", None),
-                symbols=conf_dict["miners"][miner].get("symbols", None),
-            )
-            task_list.append(asyncio.create_task(daily.run()))
 
             await asyncio.gather(*task_list)
         else:

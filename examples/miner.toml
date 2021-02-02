@@ -10,8 +10,8 @@
     # Store daily OHLC data
     #
     [miners.DailyOHLC]
-        filename = "<select-path>/daily_ohlc.py"
-        #symbol = ['SPY',]
+        filename = "<select-path>/examples/miners/daily_ohlc.py"
+        #symbols = ['SPY',]
         days = 14
 
         min_share_price = 2.0
