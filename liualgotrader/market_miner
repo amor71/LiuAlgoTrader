@@ -53,6 +53,9 @@ async def main(conf_dict: Dict):
                     exit(0)
             except Exception as e:
                 tlog(f"[ERROR] miner {miner} resulted in exception:`{e}`")
+                exc_info = sys.exc_info()
+                traceback.print_exception(*exc_info)
+                del exc_info
             else:
                 try:
                     debug = conf_dict["miners"][miner].get('debug', False)
@@ -66,7 +69,6 @@ async def main(conf_dict: Dict):
                     traceback.print_exception(*exc_info)
                     del exc_info
                     raise
-
 
 
 if __name__ == "__main__":

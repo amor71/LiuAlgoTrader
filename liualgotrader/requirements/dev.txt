@@ -1,3 +1,4 @@
+pandas=1.2.1
 iso8601==0.1.14
 requests==2.25.1
 deprecated==1.2.11
