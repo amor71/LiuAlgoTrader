@@ -12,16 +12,16 @@ import pandas as pd
 import importlib.util
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
-
-import alpaca_trade_api as tradeapi
 import pygit2
 import pytz
 from requests.exceptions import HTTPError
+import parsedatetime.parsedatetime as pdt
 
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.data_loader import TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
@@ -30,6 +30,32 @@ from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
 from liualgotrader import backtester
+from liualgotrader import enhanced_backtest
+
+
+def dateFromString(s: str) -> date:
+    c = pdt.Calendar()
+    result, what = c.parse(s)
+
+    dt = None
+
+    # what was returned (see http://code-bear.com/code/parsedatetime/docs/)
+    # 0 = failed to parse
+    # 1 = date (with current time, as a struct_time)
+    # 2 = time (with current date, as a struct_time)
+    # 3 = datetime
+    if what in (1, 2):
+        # result is struct_time
+        dt = datetime(*result[:6]).date()
+    elif what == 3:
+        # result is a datetime
+        dt = result.date()
+
+    if dt is None:
+        raise ValueError("Don't understand date '" + s + "'")
+
+    return dt
+
 
 if __name__ == "__main__":
     try:
@@ -64,50 +90,87 @@ if __name__ == "__main__":
     if "risk" in conf_dict:
         config.risk = conf_dict["risk"]
 
-    try:
-        strict = False
-        opts, args = getopt.getopt(
-            sys.argv[1:],
-            "b:d:s",
-            ["batch-list", "debug=", "strict", "symbol=", "duration="],
-        )
-        debug_symbols = []
-        symbols = None
-        duration: int = None
-        for opt, arg in opts:
-            if opt in ("--batch-list", "-b"):
-                backtester.get_batch_list()
-                break
-            elif opt in ("--debug", "-d"):
-                debug_symbols.append(arg)
-            elif opt in ("--strict", "-s"):
-                strict = True
-            elif opt in ("--symbol"):
-                if not symbols:
-                    symbols = [arg]
-                else:
-                    symbols.append(arg)
-            elif opt in ("--duration"):
-                try:
-                    duration = int(arg)
-                except ValueError:
-                    print(
-                        f"Error, duration parameters must be positive and not {duration}"
-                    )
-                    sys.exit(0)
-                if duration <= 0:
-                    print(
-                        f"Error, duration parameters must be positive and not {duration}"
-                    )
-                    sys.exit(0)
-
-        for arg in args:
-            backtester.backtest(
-                arg, conf_dict, debug_symbols, strict, symbols, duration
+    if sys.argv[1] == "batch":
+        try:
+            strict = False
+            opts, args = getopt.getopt(
+                sys.argv[2:],
+                "b:d:s",
+                ["batch-list", "debug=", "strict", "symbol=", "duration="],
             )
+            debug_symbols = []
+            symbols = None
+            duration: int = None
+            for opt, arg in opts:
+                if opt in ("--batch-list", "-b"):
+                    backtester.get_batch_list()
+                    break
+                elif opt in ("--debug", "-d"):
+                    debug_symbols.append(arg)
+                elif opt in ("--strict", "-s"):
+                    strict = True
+                elif opt in ("--symbol"):
+                    if not symbols:
+                        symbols = [arg]
+                    else:
+                        symbols.append(arg)
+                elif opt in ("--duration"):
+                    try:
+                        duration = int(arg)
+                    except ValueError:
+                        print(
+                            f"Error, duration parameters must be positive and not {duration}"
+                        )
+                        sys.exit(0)
+                    if duration <= 0:
+                        print(
+                            f"Error, duration parameters must be positive and not {duration}"
+                        )
+                        sys.exit(0)
 
-    except getopt.GetoptError as e:
-        print(f"Error parsing options:{e}\n")
+            for arg in args:
+                backtester.backtest(
+                    arg, conf_dict, debug_symbols, strict, symbols, duration
+                )
+        except getopt.GetoptError as e:
+            print(f"Error parsing options:{e}\n")
+            backtester.show_usage()
+            sys.exit(0)
+    elif sys.argv[1] == "from":
+        from_date = dateFromString(sys.argv[2])
+
+        try:
+            to_date = date.today()
+            scale = "DAILY"
+            opts, args = getopt.getopt(
+                sys.argv[3:],
+                shortopts=[],
+                longopts=[
+                    "to=",
+                    "scale=",
+                ],
+            )
+            for opt, arg in opts:
+                if opt in ("--to"):
+                    to_date = dateFromString(arg)
+                elif opt in ("--scale"):
+                    if arg in ("DAILY", "MINUTE"):
+                        scale = TimeScale[arg]
+                    else:
+                        print(
+                            f"ERROR: wrong `scale` parameter {arg} passed: not implemented yet"
+                        )
+                        sys.exit(0)
+        except getopt.GetoptError as e:
+            print(f"Error parsing options:{e}\n")
+            backtester.show_usage()
+            sys.exit(0)
+
+        enhanced_backtest.backtest(
+            from_date=from_date, to_date=to_date, scale=scale, config=conf_dict
+        )
+    else:
+        print(f"Error parsing {sys.argv[1:]}\n")
         backtester.show_usage()
         sys.exit(0)
 

@@ -12,7 +12,7 @@ from pandas import DataFrame as df
 from pandas import Timestamp
 from pytz import timezone
 
-from liualgotrader.common import config, trading_data
+from liualgotrader.common import config
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.fincalcs.vwap import add_daily_vwap
@@ -158,7 +158,11 @@ def get_historical_data_from_polygon_by_range(
 
 
 def get_symbol_data(
-    api: tradeapi, symbol: str, start_date: date, end_date: date
+    api: tradeapi,
+    symbol: str,
+    start_date: date,
+    end_date: date,
+    scale="minute",
 ) -> Optional[df]:
 
     retry = 5
@@ -168,16 +172,14 @@ def get_symbol_data(
             df = api.polygon.historic_agg_v2(
                 symbol,
                 1,
-                "minute",
+                scale,
                 _from=str(start_date),
                 to=str(end_date),
             ).df
-
-            df["vwap"] = 0.0
             df["average"] = 0.0
-
             break
-        except Exception as e:
+        except Exception:
+            time.sleep(15)
             retry -= 1
             continue
 
@@ -309,82 +311,6 @@ def get_historical_data_from_polygon(
 
     tlog(f"Total number of symbols for trading {len(symbols)}")
     return minute_history
-
-
-@timeit
-async def calculate_trends(pool: Pool) -> bool:
-    # load snapshot
-    with requests.Session() as session:
-        url = (
-            "https://api.polygon.io/"
-            + "v2/snapshot/locale/us/markets/stocks/tickers"
-        )
-        with session.get(
-            url,
-            params={"apiKey": get_polygon_credentials(config.prod_api_key_id)},
-        ) as response:
-            if (
-                response.status_code == 200
-                and (r := response.json())["status"] == "OK"
-            ):
-                for ticker in r["tickers"]:
-                    trading_data.snapshot[ticker.ticker] = TickerSnapshot(
-                        symbol=ticker["ticker"],
-                        volume=ticker["day"]["volume"],
-                        today_change=ticker["todaysChangePerc"],
-                    )
-
-                if not trading_data.snapshot:
-                    tlog("calculate_trends(): market snapshot not available")
-                    return False
-
-                # calculate sector trends
-                sectors = await get_market_industries(pool)
-
-                sector_tickers = {}
-                for sector in sectors:
-                    sector_tickers[sector] = await get_sector_tickers(
-                        pool, sector
-                    )
-
-                    sector_volume = 0
-                    adjusted_sum = 0.0
-                    for symbol in sector_tickers[sector]:
-                        sector_volume += trading_data.snapshot[symbol].volume
-                        adjusted_sum += (
-                            trading_data.snapshot[symbol].volume
-                            * trading_data.snapshot[symbol].today_change
-                        )
-
-                    trading_data.sector_trend[sector] = round(
-                        adjusted_sum / sector_volume, 2
-                    )
-
-                # calculate industry
-                industries = await get_market_industries(pool)
-
-                industry_tickers = {}
-                for industry in industries:
-                    industry_tickers[industry] = await get_industry_tickers(
-                        pool, industry
-                    )
-
-                    industry_volume = 0
-                    adjusted_sum = 0.0
-                    for symbol in industry_tickers[sector]:
-                        industry_volume += trading_data.snapshot[symbol].volume
-                        adjusted_sum += (
-                            trading_data.snapshot[symbol].volume
-                            * trading_data.snapshot[symbol].today_change
-                        )
-
-                    trading_data.industry_trend[industry] = round(
-                        adjusted_sum / industry_volume, 2
-                    )
-
-                return True
-
-    return False
 
 
 async def get_sector_tickers(pool: Pool, sector: str) -> List[str]:
