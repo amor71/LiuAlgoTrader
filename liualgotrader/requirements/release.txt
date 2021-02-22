@@ -9,7 +9,7 @@ asyncpg==0.22.0
 pygit2==1.4.0
 websockets==8.1
 matplotlib==3.3.4
-tabulate==0.8.7
+tabulate==0.8.8
 streamlit==0.76.0
 stockstats==0.3.2
 empyrical==0.5.5
