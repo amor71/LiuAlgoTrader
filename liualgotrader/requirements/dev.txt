@@ -38,3 +38,4 @@ hypothesis==6.1.1
 torch==1.7.1
 fastai==2.2.5
 parsedatetime
+scipy=1.6.1
