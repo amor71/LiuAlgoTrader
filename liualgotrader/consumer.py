@@ -579,11 +579,11 @@ async def handle_data_queue_msg(
 
                 try:
                     do, what = await s.run(
-                        symbol,
-                        shortable[symbol],
-                        int(symbol_position),
-                        market_data.minute_history[symbol],
-                        ts,
+                        symbol=symbol,
+                        shortable=shortable[symbol],
+                        position=int(symbol_position),
+                        minute_history=market_data.minute_history[symbol],
+                        now=original_ts,
                         trading_api=trading_api,
                         portfolio_value=config.portfolio_value,
                     )
@@ -602,6 +602,7 @@ async def handle_data_queue_msg(
                     tlog(
                         f"[EXCEPTION] strategy {s.name} for symbol {symbol} -> {e} [{symbol_data_error[symbol]}]"
                     )
+                    traceback.print_exc()
                     if symbol_data_error[symbol] < 5:
                         tlog(f"attempting reload of data for symbol {symbol}")
 
@@ -737,12 +738,14 @@ def get_trading_windows(tz, api):
         minute=calendar.open.minute,
         second=0,
         microsecond=0,
+        tzinfo=timezone("America/New_York"),
     )
     market_close = today.replace(
         hour=calendar.close.hour,
         minute=calendar.close.minute,
         second=0,
         microsecond=0,
+        tzinfo=timezone("America/New_York"),
     )
     return market_open, market_close
 
@@ -825,14 +828,15 @@ async def consumer_async_main(
             tlog(
                 f"[Error]exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
             exit(0)
 
     loaded = 0
     for strategy_tuple in strategy_types:
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
-        tlog(f"initializing {strategy_type.name}")
-        s = strategy_type(batch_id=unique_id, **strategy_details)
+        tlog(f"initializing {type(strategy_type).__name__}")
+        s = strategy_type(batch_id=unique_id, dl=None, **strategy_details)
         await s.create()
 
         trading_data.strategies.append(s)

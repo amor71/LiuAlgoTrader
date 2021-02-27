@@ -1,13 +1,16 @@
 """Base Class for Strategies"""
 import importlib
+import traceback
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.algo_run import AlgoRun
 
@@ -17,7 +20,7 @@ class StrategyType(Enum):
     SWING = 2
 
 
-class Strategy:
+class Strategy(metaclass=ABCMeta):
     def __init__(
         self,
         name: str,
@@ -25,25 +28,31 @@ class Strategy:
         batch_id: str,
         schedule: List[Dict],
         ref_run_id: int = None,
+        dl: DataLoader = None,
     ):
         self.name = name
         self.type = type
         self.ref_run_id = ref_run_id
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
         self.schedule = schedule
+        self.dl = dl
+
+    def __repr__(self):
+        return self.name
 
     async def create(self):
         await self.algo_run.save(
             pool=config.db_conn_pool, ref_algo_run_id=self.ref_run_id
         )
 
+    @abstractmethod
     async def run(
         self,
         symbol: str,
         shortable: bool,
         position: int,
-        minute_history: df,
         now: datetime,
+        minute_history: df = None,
         portfolio_value: float = None,
         trading_api: tradeapi = None,
         debug: bool = False,
@@ -93,13 +102,18 @@ class Strategy:
 
     @classmethod
     async def get_strategy(
-        cls, batch_id: str, strategy_name: str, strategy_details: Dict
+        cls,
+        batch_id: str,
+        strategy_name: str,
+        strategy_details: Dict,
+        dl: DataLoader = None,
+        ref_run_id: Optional[int] = None,
     ):
         try:
-            spec = importlib.util.spec_from_file_location(
+            spec = importlib.util.spec_from_file_location(  # type: ignore
                 "module.name", strategy_details["filename"]
             )
-            custom_strategy_module = importlib.util.module_from_spec(spec)
+            custom_strategy_module = importlib.util.module_from_spec(spec)  # type: ignore
             spec.loader.exec_module(custom_strategy_module)  # type: ignore
             class_name = strategy_name
 
@@ -109,7 +123,12 @@ class Strategy:
                 tlog(f"strategy must inherit from class {Strategy.__name__}")
                 exit(0)
             strategy_details.pop("filename", None)
-            s = custom_strategy(batch_id=batch_id, **strategy_details)
+            s = custom_strategy(
+                batch_id=batch_id,
+                ref_run_id=ref_run_id,
+                dl=dl,
+                **strategy_details,
+            )
             await s.create()
         except FileNotFoundError as e:
             tlog(f"[Error] file not found `{strategy_details['filename']}`")
@@ -118,6 +137,7 @@ class Strategy:
             tlog(
                 f"[Error]exception of type {type(e).__name__} with args {e.args}"
             )
+            traceback.print_exc()
             exit(0)
         else:
             return s

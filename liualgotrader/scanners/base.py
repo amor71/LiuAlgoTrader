@@ -1,8 +1,12 @@
+import importlib
+import traceback
 from abc import ABCMeta, abstractmethod
-from datetime import timedelta, datetime
-from typing import List, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
+
+from liualgotrader.common.tlog import tlog
 
 
 class Scanner(metaclass=ABCMeta):
@@ -20,6 +24,9 @@ class Scanner(metaclass=ABCMeta):
         self.data_api = data_api
         self.data_source = data_source
 
+    def __repr__(self):
+        return self.name
+
     @abstractmethod
     async def run(self, back_time: datetime = None) -> List[str]:
         return []
@@ -27,3 +34,51 @@ class Scanner(metaclass=ABCMeta):
     @classmethod
     def get_supported_scanners(cls):
         return ["momentum"]
+
+    @classmethod
+    async def get_scanner(
+        cls,
+        data_api: tradeapi,
+        scanner_name: str,
+        scanner_details: Dict,
+    ):
+        try:
+            spec = importlib.util.spec_from_file_location(  # type: ignore
+                "module.name", scanner_details["filename"]
+            )
+            custom_scanner_module = importlib.util.module_from_spec(spec)  # type: ignore
+            spec.loader.exec_module(custom_scanner_module)
+            class_name = scanner_name
+            custom_scanner = getattr(custom_scanner_module, class_name)
+
+            if not issubclass(custom_scanner, Scanner):
+                tlog(
+                    f"custom scanner must inherit from class {Scanner.__name__}"
+                )
+                exit(0)
+
+            scanner_details.pop("filename")
+            if "recurrence" not in scanner_details:
+                scanner_object = custom_scanner(
+                    data_api=data_api,
+                    **scanner_details,
+                )
+            else:
+                recurrence = scanner_details.pop("recurrence")
+                scanner_object = custom_scanner(
+                    data_api=data_api,
+                    recurrence=timedelta(minutes=recurrence),
+                    **scanner_details,
+                )
+        except FileNotFoundError as e:
+            tlog(f"[Error] file not found `{scanner_details['filename']}`")
+            exit(0)
+        except Exception as e:
+            tlog(
+                f"[Error]exception of type {type(e).__name__} with args {e.args}"
+            )
+            traceback.print_exc()
+            exit(0)
+
+        else:
+            return scanner_object

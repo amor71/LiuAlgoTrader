@@ -37,3 +37,5 @@ plotly==4.14.3
 hypothesis==6.3.0
 torch==1.7.1
 fastai==2.2.7
+parsedatetime
+scipy=1.6.1
