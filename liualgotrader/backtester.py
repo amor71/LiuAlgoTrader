@@ -63,14 +63,14 @@ starting
 
 def show_usage():
     print(
-        f"usage: {sys.argv[0]} --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>\n"
+        f"usage:\n{sys.argv[0]} batch --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>",
+        "\nOR"
+        f"\n{sys.argv[0]} from <start_date> [--to=<end_date> DEFAULT is today] [--scale=DAILY(DEFAULT)|MINUTE|SECOND]",
     )
     msg = """
-    'backter' application re-runs a past trading session, with new or modified
-     strategies specified in tradeplan.toml. 'backter' application looks for 
-     tradeplan.toml in current directory. The 'backter' application expects a 
-     batch-id (UDID) as input. Using the --batch-list option you 
-     can see a list of recent sessions to choose from. 
+    'backter' application re-runs a past trading session, or test strategies on past data. 
+    Re-run past sessions to test modified strategies or back-test new strategies on past data before running  
+    on paper, or live accounts. To learn more, read LiuAlgoTrader online documentation.
     """
     print(msg)
     print("options:")
@@ -82,11 +82,15 @@ def show_usage():
         "--duration\tRun back-test for number of <minutes>, bypass batch-id run duration"
     )
     print(
-        "--debug\tWrite verbose debug information for symbol SYMBOL during back-testing"
+        "--debug\t\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
     print(
         "--strict\tRun back-test session only on same symbols traded in the original batch"
     )
+    print(
+        "--to\t\tdate string in the format YYYY-MM-DD, if not provided current day is selected"
+    )
+    print("--scale\t\ttime-scale for loading past data for back-test-ing")
 
 
 def show_version(filename: str, version: str) -> None:
