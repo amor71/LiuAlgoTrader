@@ -15,5 +15,5 @@ stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
 hypothesis==6.3.4
-parsedatetime
+parsedatetime==2.6
 scipy==1.6.1
