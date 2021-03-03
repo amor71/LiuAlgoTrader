@@ -29,35 +29,9 @@ async def create_scanners(
     for scanner_name in scanners_conf:
         tlog(f"scanner {scanner_name} selected")
         if scanner_name == "momentum":
-            scanner_details = scanners_conf[scanner_name]
-            try:
-                recurrence = scanner_details.get("recurrence", None)
-                target_strategy_name = scanner_details.get(
-                    "target_strategy_name", None
-                )
-                scanner_object = Momentum(
-                    provider=scanner_details["provider"],
-                    data_loader=data_loader,
-                    min_last_dv=scanner_details["min_last_dv"],
-                    min_share_price=scanner_details["min_share_price"],
-                    max_share_price=scanner_details["max_share_price"],
-                    min_volume=scanner_details["min_volume"],
-                    from_market_open=scanner_details["from_market_open"],
-                    today_change_percent=scanner_details["min_gap"],
-                    recurrence=timedelta(minutes=recurrence)
-                    if recurrence
-                    else None,
-                    target_strategy_name=target_strategy_name,
-                    max_symbols=scanner_details.get(
-                        "max_symbols", config.total_tickers
-                    ),
-                )
-                tlog(f"instantiated momentum scanner")
-            except KeyError as e:
-                tlog(
-                    f"Error {e} in processing of scanner configuration {scanner_details}"
-                )
-                exit(0)
+            tlog(
+                "momentum scanner can not be supported in backtest on time-frame. skipping"
+            )
         else:
             scanners.append(
                 await Scanner.get_scanner(
@@ -84,7 +58,7 @@ async def create_strategies(
                 batch_id=uid,
                 strategy_name=strategy_name,
                 strategy_details=strategy_details,
-                dl=dl,
+                data_loader=dl,
             )
         )
 
@@ -139,7 +113,7 @@ async def do_strategy_result(
 
     trading_data.last_used_strategy[symbol] = strategy
 
-    price = strategy.dl[symbol].close[now]  # type: ignore
+    price = strategy.data_loader[symbol].close[now]  # type: ignore
     db_trade = NewTrade(
         algo_run_id=strategy.algo_run.run_id,
         symbol=symbol,
@@ -168,10 +142,16 @@ async def do_strategy_result(
         await strategy.sell_callback(symbol, price, int(float(what["qty"])))
 
 
-async def do_strategy(now: datetime, strategy: Strategy, symbols: List[str]):
+async def do_strategy(
+    data_loader: DataLoader,
+    now: datetime,
+    strategy: Strategy,
+    symbols: List[str],
+):
     global portfolio_value
     for symbol in symbols:
         try:
+            _ = data_loader[symbol][now - timedelta(days=30) : now]  # type: ignore
             do, what = await strategy.run(
                 symbol=symbol,
                 shortable=True,
@@ -179,6 +159,7 @@ async def do_strategy(now: datetime, strategy: Strategy, symbols: List[str]):
                 now=now,
                 portfolio_value=portfolio_value,
                 backtesting=True,
+                minute_history=data_loader[symbol].symbol_data[:now],  # type: ignore
             )
 
             if do:
@@ -230,6 +211,7 @@ async def backtest_main(
         config.market_open = day_start
         config.market_close = day_end
         current_time = day_start
+        data_loader = DataLoader()
         while current_time < day_end:
             symbols = await do_scanners(current_time, scanners, symbols)
 
@@ -239,7 +221,9 @@ async def backtest_main(
                         set(symbols.get(strategy.name, []))
                     )
                 )
-                await do_strategy(current_time, strategy, strategy_symbols)
+                await do_strategy(
+                    data_loader, current_time, strategy, strategy_symbols
+                )
 
             current_time += timedelta(seconds=scale.value)
 

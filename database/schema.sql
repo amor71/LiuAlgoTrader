@@ -159,3 +159,5 @@ CREATE TABLE IF NOT EXISTS portfolio (
 );
 CREATE INDEX ON portfolio(portfolio_id);
 CREATE INDEX ON portfolio(symbol);
+
+alter table new_trades drop constraint "new_trades_qty_check";

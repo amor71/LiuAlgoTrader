@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from datetime import date
-from typing import Awaitable, List
+from typing import Awaitable, Dict, List
 
 import pandas as pd
 
@@ -13,7 +13,7 @@ class DataAPI(metaclass=ABCMeta):
         self.ws_msgs_handler = ws_messges_handler
 
     @abstractmethod
-    async def get_symbol_data(
+    def get_symbol_data(
         self,
         symbol: str,
         start: date,
@@ -23,15 +23,5 @@ class DataAPI(metaclass=ABCMeta):
         return pd.DataFrame()
 
     @abstractmethod
-    async def connect(self) -> bool:
-        return False
-
-    @abstractmethod
-    async def subscribe(
-        self, symbols: List[str], events: List[WSEventType]
-    ) -> bool:
-        return False
-
-    @abstractmethod
-    async def unsubscribe(self, symbols: List[str]) -> bool:
-        return True
+    def get_symbols(self) -> List[Dict]:
+        return []

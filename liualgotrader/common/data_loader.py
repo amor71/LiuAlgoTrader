@@ -11,15 +11,13 @@ from pytz import timezone
 
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
-from liualgotrader.data_stream.base import DataAPI
-from liualgotrader.data_stream.data_factory import data_loader_factory
+from liualgotrader.data.data_base import DataAPI
+from liualgotrader.data.data_factory import data_loader_factory
 
 nyc = timezone("America/New_York")
 
 
 class SymbolData:
-    symbol_data = pd.DataFrame()
-
     class _Column:
         def __init__(self, data_api: DataAPI, name: str, data: object):
             self.name = name
@@ -32,7 +30,7 @@ class SymbolData:
         def __getitem__(self, key):
             try:
                 if type(key) == slice:
-                    if not key.start:
+                    if not key.start and not len(self.data.symbol_data):
                         raise ValueError(f"[:{key.stop}] is not a valid slice")
                     if not key.stop:
                         key = slice(key.start, -1)
@@ -124,14 +122,12 @@ class SymbolData:
                         key.stop, method="ffill"
                     )
 
-                    # print(key.start, start_index, key.stop, stop_index)
                     return self.data.symbol_data.iloc[
                         start_index : stop_index + 1
                     ][self.name]
                 else:
                     if type(key) == str:
                         key = nyc.localize(date_parser(key))
-                        print(key)
                     elif type(key) == int:
                         if not len(self.data.symbol_data):
                             if self.data.scale == TimeScale.minute:
@@ -188,9 +184,12 @@ class SymbolData:
         self.symbol = symbol
         self.scale = scale
         self.columns: Dict[str, self._Column] = {}  # type: ignore
+        self.symbol_data = pd.DataFrame()
 
     def __getattr__(self, attr) -> _Column:
-        if attr not in self.columns:
+        if attr[0:3] == "loc" or attr[0:4] == "iloc":
+            return self.symbol_data.__getattr__(attr)
+        elif attr not in self.columns:
             self.columns[attr] = self._Column(self.data_api, attr, self)
         return self.columns[attr]
 
@@ -268,7 +267,6 @@ class SymbolData:
                         + timedelta(days=1),
                     )
 
-                print(f"key={key}")
                 if (
                     not len(self.symbol_data)
                     or key.stop > self.symbol_data.index[-1]
@@ -299,14 +297,18 @@ class SymbolData:
                         key.stop, method="nearest"
                     )
 
-                print(start_index, stop_index)
                 return self.symbol_data.iloc[start_index : stop_index + 1]
             else:
+                if type(key) == str:
+                    key = nyc.localize(date_parser(key))
                 if (
                     not len(self.symbol_data)
                     or key > self.symbol_data.index[-1]
                 ):
                     self.fetch_data_timestamp(key)
+
+                if type(key) == int:
+                    return self.symbol_data.iloc[key]
 
                 return self.symbol_data.iloc[
                     self.symbol_data.index.get_loc(key, method="ffill")
@@ -322,15 +324,34 @@ class SymbolData:
                     days=6 if self.scale == TimeScale.minute else 500
                 )
                 _end = timestamp.to_pydatetime() + timedelta(days=1)
+            elif type(timestamp) == int:
+                if not len(self.symbol_data):
+                    if self.scale == TimeScale.minute:
+                        _end = datetime.now(tz=nyc).replace(
+                            second=0, microsecond=0
+                        ) + timedelta(minutes=1 + timestamp)
+                    elif self.scale == TimeScale.day:
+                        _end = datetime.now(tz=nyc).replace(
+                            second=0, microsecond=0
+                        ) + timedelta(days=1 + timestamp)
+                else:
+                    if self.scale == TimeScale.minute:
+                        _end = self.symbol_data.index[-1] + timedelta(
+                            minutes=1 + timestamp
+                        )
+                    elif self.scale == TimeScale.day:
+                        _end = self.symbol_data.index[-1] + timedelta(
+                            days=1 + timestamp
+                        )
+                _start = _end - timedelta(
+                    days=6 if self.scale == TimeScale.minute else 500
+                )
             else:
                 _start = timestamp - timedelta(
                     days=6 if self.scale == TimeScale.minute else 500
                 )
                 _end = timestamp + timedelta(days=1)
 
-            print(
-                f"loading between {_start.date() if type(_start) != date else _start} to {_end.date() if type(_end) != date else _end}"
-            )
             _df = self.data_api.get_symbol_data(
                 self.symbol,
                 start=_start.date() if type(_start) != date else _start,

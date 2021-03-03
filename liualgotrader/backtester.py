@@ -28,6 +28,7 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
 from liualgotrader.strategies.base import Strategy, StrategyType
+from liualgotrader.trading.alpaca import AlpacaTrader
 
 
 def get_batch_list():
@@ -105,6 +106,7 @@ async def create_strategies(
     ref_run_id: Optional[int],
     uid: str,
     start: datetime,
+    data_loader: DataLoader,
     bypass_strategy_duration: bool = False,
 ) -> None:
     strategy_types = []
@@ -166,7 +168,10 @@ async def create_strategies(
                 schedule["duration"] = duration.total_seconds() // 60
 
         s = strategy_type(
-            batch_id=uid, ref_run_id=ref_run_id, **strategy_details
+            batch_id=uid,
+            ref_run_id=ref_run_id,
+            data_loader=data_loader,
+            **strategy_details,
         )
         await s.create()
         trading_data.strategies.append(s)
@@ -212,7 +217,9 @@ async def backtest_symbol(
         symbol_data,
         debug=debug_symbol,
     )
-    print(f"loaded {len(symbol_data)} agg data points")
+    print(
+        f"loaded {len(symbol_data)} agg data points({start_time}-{start_time + duration})"
+    )
 
     minute_index = symbol_data["close"].index.get_loc(
         start_time, method="nearest"
@@ -256,6 +263,7 @@ async def backtest_symbol(
                     backtesting=True,
                 )
             except Exception as e:
+                traceback.print_exc()
                 tlog(
                     f"[ERROR] exception {e} on symbol {symbol} @ {strategy.name}"
                 )
@@ -397,6 +405,7 @@ def backtest(
                 ref_run_id,
                 uid,
                 start,
+                DataLoader(),
                 bypass_duration is not None,
             )
 
@@ -500,6 +509,7 @@ class BackTestDay:
                     scanner_object = Momentum(
                         provider=scanner_details["provider"],
                         data_loader=self.data_loader,
+                        trading_api=AlpacaTrader(),
                         min_last_dv=scanner_details["min_last_dv"],
                         min_share_price=scanner_details["min_share_price"],
                         max_share_price=scanner_details["max_share_price"],
@@ -567,6 +577,7 @@ class BackTestDay:
             None,
             self.uid,
             day.replace(hour=9, minute=30, second=0, microsecond=0),
+            DataLoader(),
         )
 
         self.now = pd.Timestamp(self.start)

@@ -1,10 +1,10 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class DataConnectorType(Enum):
     polygon = 1
     alpaca = 2
-    finhub = 3
+    # finhub = 3
 
 
 class TimeScale(Enum):
@@ -13,7 +13,13 @@ class TimeScale(Enum):
 
 
 class WSEventType(Enum):
-    TRADE = 1
-    QUOTE = 2
-    MIN_AGG = 3
-    SEC_AGG = 4
+    TRADE = auto()
+    QUOTE = auto()
+    MIN_AGG = auto()
+    SEC_AGG = auto()
+
+
+class WSConnectState(Enum):
+    NOT_CONNECTED = auto()
+    CONNECTED = auto()
+    AUTHENTICATED = auto()

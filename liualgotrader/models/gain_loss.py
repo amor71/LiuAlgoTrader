@@ -31,18 +31,17 @@ class GainLoss:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
 
     @classmethod
-    async def load(cls, env: str, start_date: date) -> DataFrame:
+    async def load(cls, start_date: date) -> DataFrame:
         q = """
             SELECT symbol, algo_name, algo_env, start_time, gain_percentage, gain_value
             FROM gain_loss as g, algo_run as a
             WHERE 
                 g.algo_run_id = a.algo_run_id AND
-                algo_env = $1 AND
-                start_time >= $2
+                start_time >= $1
             ORDER BY symbol, algo_name, start_time
             """
 
-        return await fetch_as_dataframe(q, env, start_date)
+        return await fetch_as_dataframe(q, start_date)
 
 
 class TradeAnalysis:
@@ -72,15 +71,14 @@ class TradeAnalysis:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
 
     @classmethod
-    async def load(cls, env: str, start_date: date) -> DataFrame:
+    async def load(cls, start_date: date) -> DataFrame:
         q = """
             SELECT symbol, algo_name, algo_env, r_units, gain_percentage, gain_value, t.start_tstamp, t.end_tstamp
             FROM trade_analysis as t, algo_run as a
             WHERE 
                 t.algo_run_id = a.algo_run_id AND
-                algo_env = $1 AND
-                start_time >= $2
+                start_time >= $1
             ORDER BY symbol, algo_name, start_time
             """
 
-        return await fetch_as_dataframe(q, env, start_date)
+        return await fetch_as_dataframe(q, start_date)

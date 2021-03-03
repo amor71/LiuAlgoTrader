@@ -75,7 +75,7 @@ class NewTrade:
 
     @classmethod
     async def load_latest(
-        cls, pool: Pool, symbol: str, strategy_name: str, env: str
+        cls, pool: Pool, symbol: str, strategy_name: str
     ) -> Tuple[int, float, float, float, Dict, datetime]:
         async with pool.acquire() as con:
             async with con.transaction():
@@ -86,13 +86,11 @@ class NewTrade:
                         WHERE 
                             t.algo_run_id=a.algo_run_id AND
                             a.algo_name=$2 AND
-                            symbol=$1 AND
-                            algo_env=$3
+                            symbol=$1 
                         ORDER BY tstamp DESC LIMIT 1
                     """,
                     symbol,
                     strategy_name,
-                    env,
                 )
 
                 if row:

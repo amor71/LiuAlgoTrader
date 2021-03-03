@@ -62,7 +62,7 @@ async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
     )
 
 
-async def liquidator(trading_api: tradeapi) -> None:
+async def liquidator() -> None:
     tlog("liquidator() task starting")
     try:
         dt = datetime.today().astimezone(timezone("America/New_York"))
@@ -80,6 +80,12 @@ async def liquidator(trading_api: tradeapi) -> None:
 
     tlog("liquidator() -> starting liqudation process")
     try:
+        trading_api = tradeapi.REST(
+            base_url=config.alpaca_base_url,
+            key_id=config.alpaca_api_key,
+            secret_key=config.alpaca_api_secret,
+        )
+
         for symbol in trading_data.positions:
             tlog(f"liquidator() -> checking {symbol}")
             if (
@@ -87,8 +93,26 @@ async def liquidator(trading_api: tradeapi) -> None:
                 and trading_data.last_used_strategy[symbol].type
                 == StrategyType.DAY_TRADE
             ):
-                await liquidate(
-                    symbol, int(trading_data.positions[symbol]), trading_api
+                retry = 5
+                while retry:
+                    try:
+                        await liquidate(
+                            symbol,
+                            int(trading_data.positions[symbol]),
+                            trading_api,
+                        )
+                        break
+                    except ConnectionError:
+                        trading_api = tradeapi.REST(
+                            base_url=config.alpaca_base_url,
+                            key_id=config.alpaca_api_key,
+                            secret_key=config.alpaca_api_secret,
+                        )
+                        await asyncio.sleep(1)
+                        retry -= 1
+            else:
+                tlog(
+                    f"liquidator(): {symbol} {trading_data.positions[symbol]} {trading_data.last_used_strategy[symbol].type} {trading_data.last_used_strategy[symbol].name}"
                 )
     except asyncio.CancelledError:
         tlog("liquidator() cancelled")
@@ -461,8 +485,9 @@ async def aggregate_bar_data(
             data["low"],
             data["close"],
             data["volume"],
-            data["vwap"],
             data["average"],
+            data["count"],
+            data["vwap"],
         ]
     else:
         new_data = [
@@ -471,10 +496,17 @@ async def aggregate_bar_data(
             min(data["low"], current.low),
             data["close"],
             current.volume + data["volume"],
-            data["vwap"],
             data["average"],
+            data["count"],
+            data["vwap"],
         ]
-    data_loader[symbol].loc[ts] = new_data
+    try:
+        data_loader[symbol].loc[ts] = new_data
+    except ValueError:
+        print(f"loaded for {symbol}")
+        data_loader[symbol][-1]
+        data_loader[symbol].loc[ts] = new_data
+
     market_data.volume_today[symbol] = data["totalvolume"]
 
 
@@ -549,6 +581,15 @@ async def execute_strategy_result(
         trading_data.open_orders[symbol] = (o, what["side"])
         trading_data.open_order_strategy[symbol] = strategy
 
+        await save(
+            symbol=symbol,
+            new_qty=0,
+            last_op=str(what["side"]),
+            price=0.0,
+            indicators={},
+            now=str(datetime.utcnow()),
+        )
+
         tlog(
             f"executed strategy {strategy.name} on {symbol} w data {data_loader[symbol][-10:]}"
         )
@@ -589,7 +630,7 @@ async def do_strategies(
                 symbol=symbol,
                 shortable=shortable[symbol],
                 position=position,
-                minute_history=data_loader[symbol],
+                minute_history=data_loader[symbol].symbol_data,
                 now=now,
                 trading_api=trading_api,
                 portfolio_value=config.portfolio_value,
@@ -708,21 +749,24 @@ async def handle_data_queue_msg(
 
 async def queue_consumer(
     queue: Queue,
-    trading_api: tradeapi,
     data_loader: DataLoader,
 ) -> None:
     tlog("queue_consumer() starting")
 
     try:
+        trading_api = tradeapi.REST(
+            base_url=config.alpaca_base_url,
+            key_id=config.alpaca_api_key,
+            secret_key=config.alpaca_api_secret,
+        )
         while True:
             try:
-                raw_data = queue.get(timeout=2)
-                data = json.loads(raw_data)
-
+                data = queue.get(timeout=2)
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
+                    # print(f"[{os.getpid()}] RECEIVED: {data}")
                     if not await handle_data_queue_msg(
                         data, trading_api, data_loader
                     ):
@@ -732,6 +776,16 @@ async def queue_consumer(
 
             except Empty:
                 await asyncio.sleep(0)
+                continue
+            except ConnectionError:
+                trading_api = tradeapi.REST(
+                    base_url=config.alpaca_base_url,
+                    key_id=config.alpaca_api_key,
+                    secret_key=config.alpaca_api_secret,
+                )
+                # re-post back to queue
+                queue.put(data, timeout=1)
+                await asyncio.sleep(1)
                 continue
             except Exception as e:
                 tlog(
@@ -797,7 +851,7 @@ async def consumer_async_main(
     strategies_conf: Dict,
 ):
     await create_db_connection(str(config.dsn))
-
+    data_loader = DataLoader()
     if symbols:
         try:
             trending_db = TrendingTickers(unique_id)
@@ -814,7 +868,9 @@ async def consumer_async_main(
             del exc_info
 
     trading_api = tradeapi.REST(
-        key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
+        base_url=config.alpaca_base_url,
+        key_id=config.alpaca_api_key,
+        secret_key=config.alpaca_api_secret,
     )
 
     nyc = timezone("America/New_York")
@@ -859,7 +915,9 @@ async def consumer_async_main(
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
         tlog(f"initializing {type(strategy_type).__name__}")
-        s = strategy_type(batch_id=unique_id, dl=None, **strategy_details)
+        s = strategy_type(
+            batch_id=unique_id, data_loader=data_loader, **strategy_details
+        )
         await s.create()
 
         trading_data.strategies.append(s)
@@ -868,7 +926,6 @@ async def consumer_async_main(
                 trading_api=trading_api,
                 symbols=symbols,
                 strategy=s,
-                env=config.env,
             )
 
     if symbols and loaded != len(symbols):
@@ -877,10 +934,10 @@ async def consumer_async_main(
         )
 
     queue_consumer_task = asyncio.create_task(
-        queue_consumer(queue, trading_api, DataLoader(scale=TimeScale.minute))
+        queue_consumer(queue, data_loader)
     )
 
-    liquidate_task = asyncio.create_task(liquidator(trading_api))
+    liquidate_task = asyncio.create_task(liquidator())
 
     tear_down = asyncio.create_task(
         teardown_task(timezone("America/New_York"), queue_consumer_task)
@@ -896,7 +953,9 @@ async def consumer_async_main(
 
 
 async def load_current_positions(
-    trading_api: tradeapi, symbols: List[str], strategy: Strategy, env: str
+    trading_api: tradeapi,
+    symbols: List[str],
+    strategy: Strategy,
 ) -> int:
     loaded = 0
     for symbol in symbols:
@@ -920,7 +979,6 @@ async def load_current_positions(
                     config.db_conn_pool,
                     symbol=symbol,
                     strategy_name=strategy.name,
-                    env=env,
                 )
 
                 if prev_run_id is None:
@@ -964,7 +1022,6 @@ async def load_current_positions(
 def consumer_main(
     queue: Queue,
     symbols: List[str],
-    minute_history: Dict[str, df],
     unique_id: str,
     conf: Dict,
 ) -> None:

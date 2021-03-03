@@ -1,7 +1,7 @@
 # This is a TOML configuration file.
 
 # if set to true, allow running outside market open hours
-bypass_market_schedule = false 
+bypass_market_schedule = false
 
 # set max portfolio_value
 # portfolio_value = 25000.0
@@ -24,48 +24,41 @@ bypass_market_schedule = false
 
 events = ["second", "minute", "trade", "quote"]
 
-
 # ticket scanners, may have several
 # scanners during the day
 [scanners]
-    [scanners.momentum]
-        # check documentation for supported providers
-        provider = 'polygon'
+[scanners.momentum]
+# check documentation for supported providers
+provider = 'polygon'
 
-        # scan for tickers with minimal volume since day start
-        min_volume = 30000
+# scan for tickers with minimal volume since day start
+min_volume = 30000
 
-        # minimum daily percentage gap
-        min_gap = 3.5
+# minimum daily percentage gap
+min_gap = 3.5
 
-        # minimum last day dollar volume
-        min_last_dv = 500000
+# minimum last day dollar volume
+min_last_dv = 500000
 
-        min_share_price = 2.0
-        max_share_price = 20.0
+max_share_price = 20.0
+min_share_price = 2.0
 
-        # How many minutes from market open, to start running scanner
-        from_market_open = 15
+# How many minutes from market open, to start running scanner
+from_market_open = 15
 
-        recurrence = 5
+recurrence = 5
 
-        max_symbols = 440
+max_symbols = 440
 
-        # target_strategy_name = ""
+# target_strategy_name = ""
 
 # trading strategies, can have several *strategy* blocks
 [strategies]
-    # strategy class name, must implement Strategy class
+# strategy class name, must implement Strategy class
 
-    [strategies.MomentumLongV3]
-        filename = "./momentum_long_simplified.py"
+[strategies.MomentumLongV3]
+filename = "./momentum_long_simplified.py"
 
-        [[strategies.MomentumLongV3.schedule]]
-            start = 15
-            duration = 60
-
-
-
-
-
-
+[[strategies.MomentumLongV3.schedule]]
+duration = 60
+start = 15
