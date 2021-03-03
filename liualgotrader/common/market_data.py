@@ -13,13 +13,13 @@ from pandas import Timestamp
 from pytz import timezone
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.ticker_snapshot import TickerSnapshot
 
 volume_today: Dict[str, int] = {}
-minute_history: Dict[str, df] = {}
 quotes: Dict[str, df] = {}
 
 

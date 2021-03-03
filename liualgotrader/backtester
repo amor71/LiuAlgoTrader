@@ -154,7 +154,7 @@ if __name__ == "__main__":
                 if opt in ("--to"):
                     to_date = dateFromString(arg)
                 elif opt in ("--scale"):
-                    if arg in ("DAILY", "MINUTE"):
+                    if arg in ("day", "minute"):
                         scale = TimeScale[arg]
                     else:
                         print(

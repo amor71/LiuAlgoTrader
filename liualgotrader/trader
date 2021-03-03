@@ -14,8 +14,6 @@ import asyncio
 from datetime import datetime
 from math import ceil
 from typing import List
-
-import alpaca_trade_api as tradeapi
 import pygit2
 import toml
 from pytz import timezone
@@ -27,6 +25,7 @@ from liualgotrader.consumer import consumer_main
 from liualgotrader.polygon_producer import polygon_producer_main
 from liualgotrader.scanners_runner import main
 from liualgotrader.analytics import consolidate
+from liualgotrader.data_stream.base import DataAPI
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
@@ -196,7 +195,8 @@ if __name__ == "__main__":
     for scanner in scanners_conf:
         tlog(f"- {scanner} scanner detected")
 
-    data_api = tradeapi.REST(
+    data_api = DataAPI()
+    tradeapi.REST(
         base_url=config.prod_base_url,
         key_id=config.prod_api_key_id,
         secret_key=config.prod_api_secret,

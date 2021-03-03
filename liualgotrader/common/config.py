@@ -5,11 +5,21 @@ from typing import List, Optional
 
 from asyncpg.pool import Pool
 
+from liualgotrader.common.types import DataConnectorType
+
 tradeplan_folder: str = (
-    os.getenv("TRADEPLAN_DIR", ".") if len(os.getenv("TRADEPLAN_DIR", ".")) > 0 else "."
+    os.getenv("TRADEPLAN_DIR", ".")
+    if len(os.getenv("TRADEPLAN_DIR", ".")) > 0
+    else "."
 )
 configuration_filename: str = "tradeplan.toml"
 miner_configuration_filename: str = "miner.toml"
+env: str
+
+try:
+    data_connector: str = DataConnectorType[os.getenv("DATA_CONNECTOR")]  # type: ignore
+except Exception as e:
+    raise AssertionError(f"Missing environment variable 'DATA_CONNECTOR' {e}")
 
 
 #
@@ -34,21 +44,16 @@ batch_id: str
 # API keys
 #
 # Replace these with your API connection info from the dashboard
-paper_base_url = os.getenv("ALPACA_PAPER_BASEURL", "https://paper-api.alpaca.markets")
-paper_api_key_id = os.getenv("ALPACA_PAPER_API_KEY")
-paper_api_secret = os.getenv("ALPACA_PAPER_API_SECRET")
+polygon_api_key = os.getenv("POLYGON_API_KEY")
+alpaca_api_key = os.getenv("APCA_API_KEY_ID")
+alpaca_api_secret = os.getenv("APCA_API_SECRET_KEY")
+
 finnhub_api_key = os.getenv("FINNHUB_API_KEY")
 finnhub_base_url = os.getenv("FINNHUB_BASE_URL")
 finnhub_websocket_limit = 50
 #
 # Execution details (env variable)
-#
-env: str = os.getenv("TRADE", "PAPER")
 dsn: str = os.getenv("DSN", "")
-
-prod_base_url = os.getenv("ALPACA_LIVE_BASEURL", "https://api.alpaca.markets")
-prod_api_key_id = os.getenv("APCA_API_KEY_ID")
-prod_api_secret = os.getenv("APCA_API_SECRET_KEY")
 
 
 # Stop limit to default to

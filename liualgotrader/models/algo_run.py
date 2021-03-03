@@ -15,7 +15,10 @@ class AlgoRun:
         self.batch_id = batch_id
 
     async def save(
-        self, pool: Pool = None, env: str = None, ref_algo_run_id: int = None
+        self,
+        pool: Pool = None,
+        env: str = "unknown",
+        ref_algo_run_id: int = None,
     ) -> None:
         if not pool:
             pool = config.db_conn_pool
@@ -32,7 +35,7 @@ class AlgoRun:
                     self.run_id = await con.fetchval(
                         q,
                         self.strategy_name,
-                        env if env else config.env,
+                        env if env else "unknown",
                         config.build_label,
                         json.dumps(
                             {
@@ -50,7 +53,7 @@ class AlgoRun:
                     self.run_id = await con.fetchval(
                         q,
                         self.strategy_name,
-                        env if env else config.env,
+                        env if env else "unknown",
                         config.build_label,
                         json.dumps(
                             {

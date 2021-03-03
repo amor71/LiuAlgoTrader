@@ -17,6 +17,7 @@ from tabulate import tabulate
 
 from liualgotrader.analytics.analysis import load_trades_by_batch_id
 from liualgotrader.common import config, market_data, trading_data
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
@@ -65,7 +66,7 @@ def show_usage():
     print(
         f"usage:\n{sys.argv[0]} batch --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>",
         "\nOR"
-        f"\n{sys.argv[0]} from <start_date> [--to=<end_date> DEFAULT is today] [--scale=DAILY(DEFAULT)|MINUTE|SECOND]",
+        f"\n{sys.argv[0]} from <start_date> [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute",
     )
     msg = """
     'backter' application re-runs a past trading session, or test strategies on past data. 
@@ -145,7 +146,7 @@ async def create_strategies(
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
         config.env = "BACKTEST"
-        tlog(f"initializing {strategy_type.name}")
+        tlog(f"initializing {strategy_type.__name__}")
 
         if "schedule" not in strategy_details:
             print("duration:", duration)
@@ -173,7 +174,7 @@ async def create_strategies(
 
 @timeit
 async def backtest_symbol(
-    data_api: tradeapi,
+    data_loader: DataLoader,
     portfolio_value: float,
     symbol: str,
     start: datetime,
@@ -204,53 +205,27 @@ async def backtest_symbol(
     if debug_symbol:
         print("--> using DEBUG mode")
 
-    re_try = 3
+    symbol_data = pd.DataFrame(
+        data_loader[symbol][start_time : start_time + duration]  # type: ignore
+    )
+    add_daily_vwap(
+        symbol_data,
+        debug=debug_symbol,
+    )
+    print(f"loaded {len(symbol_data)} agg data points")
 
-    while re_try > 0:
-        # load historical data
-        try:
-            symbol_data = data_api.polygon.historic_agg_v2(
-                symbol,
-                1,
-                "minute",
-                _from=str(start_time - timedelta(days=8)),
-                to=str(start_time + timedelta(days=1)),
-                limit=10000,
-            ).df
-        except HTTPError as e:
-            tlog(f"Received HTTP error {e} for {symbol}")
-            return
-
-        if len(symbol_data) < 100:
-            tlog(f"not enough data-points  for {symbol}")
-            return
-
-        add_daily_vwap(
-            symbol_data,
-            debug=debug_symbol,
-        )
-        market_data.minute_history[symbol] = symbol_data
-        print(
-            f"loaded {len(market_data.minute_history[symbol].index)} agg data points"
-        )
-        try:
-            minute_index = symbol_data["close"].index.get_loc(
-                start_time, method="nearest"
-            )
-            break
-        except (Exception, ValueError) as e:
-            print(f"[EXCEPTION] {e} - trying to reload-data. ")
-            re_try -= 1
-
-    if re_try <= 0:
-        return
+    minute_index = symbol_data["close"].index.get_loc(
+        start_time, method="nearest"
+    )
 
     position: int = 0
     new_now = symbol_data.index[minute_index]
     print(f"start time with data {new_now}")
     price = 0.0
     last_run_id = None
+
     # start_time + duration
+    rejected: Dict[str, List] = {}
     while (
         new_now < config.market_close
         and minute_index < symbol_data.index.size - 1
@@ -266,6 +241,8 @@ async def backtest_symbol(
                 print(
                     f"Execute strategy {strategy.name} on {symbol} at {new_now}"
                 )
+            if symbol in rejected.get(strategy.name, []):
+                continue
 
             try:
                 do, what = await strategy.run(
@@ -328,6 +305,12 @@ async def backtest_symbol(
                         symbol, price, int(float(what["qty"]))
                     )
                     break
+            elif what.get("reject", False):
+                if strategy.name in rejected:
+                    rejected[strategy.name].append(symbol)
+                else:
+                    rejected[strategy.name] = [symbol]
+
             last_run_id = strategy.algo_run.run_id
 
         minute_index += 1
@@ -361,11 +344,7 @@ def backtest(
     specific_symbols: List[str] = None,
     bypass_duration: int = None,
 ) -> str:
-    data_api: tradeapi = tradeapi.REST(
-        base_url=config.prod_base_url,
-        key_id=config.prod_api_key_id,
-        secret_key=config.prod_api_secret,
-    )
+    data_loader = DataLoader()
     portfolio_value: float = (
         100000.0 if not config.portfolio_value else config.portfolio_value
     )
@@ -424,7 +403,7 @@ def backtest(
             for symbol_and_start_time in symbols_and_start_time:
                 symbol = symbol_and_start_time[0]
                 await backtest_symbol(
-                    data_api=data_api,
+                    data_loader=data_loader,
                     portfolio_value=portfolio_value,
                     symbol=symbol,
                     start=start,
@@ -488,15 +467,9 @@ class BackTestDay:
     def __init__(self, conf_dict: Dict):
         self.uid = str(uuid.uuid4())
 
-        self.data_api: tradeapi = tradeapi.REST(
-            base_url=config.prod_base_url,
-            key_id=config.prod_api_key_id,
-            secret_key=config.prod_api_secret,
-        )
-
         self.conf_dict = conf_dict
         config.portfolio_value = self.conf_dict.get("portfolio_value", None)
-        self.minute_history: Dict[str, pd.DataFrame] = {}
+        self.data_loader = DataLoader()
         self.scanners: List[Scanner] = []
 
     async def create(self, day: date) -> str:
@@ -526,7 +499,7 @@ class BackTestDay:
                     )
                     scanner_object = Momentum(
                         provider=scanner_details["provider"],
-                        data_api=self.data_api,
+                        data_loader=self.data_loader,
                         min_last_dv=scanner_details["min_last_dv"],
                         min_share_price=scanner_details["min_share_price"],
                         max_share_price=scanner_details["max_share_price"],
@@ -570,13 +543,13 @@ class BackTestDay:
                     scanner_details.pop("filename")
                     if "recurrence" not in scanner_details:
                         scanner_object = custom_scanner(
-                            data_api=self.data_api,
+                            data_loader=self.data_loader,
                             **scanner_details,
                         )
                     else:
                         recurrence = scanner_details.pop("recurrence")
                         scanner_object = custom_scanner(
-                            data_api=self.data_api,
+                            data_loader=self.data_loader,
                             recurrence=timedelta(minutes=recurrence),
                             **scanner_details,
                         )
@@ -628,17 +601,6 @@ class BackTestDay:
                             rc_msg.append(
                                 f"Loaded data for {len(really_new)} symbols: {really_new}"
                             )
-                            self.minute_history = {
-                                **self.minute_history,
-                                **(
-                                    market_data.get_historical_data_from_poylgon_for_symbols(
-                                        self.data_api,
-                                        really_new,
-                                        self.start - timedelta(days=7),
-                                        self.start + timedelta(days=1),
-                                    )
-                                ),
-                            }
                             self.symbols += really_new
                             print(f"loaded data for {len(really_new)} stocks")
 
@@ -647,17 +609,15 @@ class BackTestDay:
                     for strategy in trading_data.strategies:
 
                         try:
-                            minute_index = self.minute_history[symbol][
+                            minute_index = self.data_loader[symbol][
                                 "close"
                             ].index.get_loc(self.now, method="nearest")
                         except Exception as e:
                             print(f"[Exception] {self.now} {symbol} {e}")
-                            print(self.minute_history[symbol]["close"][-100:])
+                            print(self.data_loader[symbol]["close"][-100:])
                             continue
 
-                        price = self.minute_history[symbol]["close"][
-                            minute_index
-                        ]
+                        price = self.data_loader[symbol]["close"][minute_index]
 
                         if symbol not in trading_data.positions:
                             trading_data.positions[symbol] = 0
@@ -666,7 +626,7 @@ class BackTestDay:
                             symbol,
                             True,
                             int(trading_data.positions[symbol]),
-                            self.minute_history[symbol][: minute_index + 1],
+                            self.data_loader[symbol][: minute_index + 1],
                             self.now,
                             self.portfolio_value,
                             debug=False,  # type: ignore
@@ -741,10 +701,10 @@ class BackTestDay:
                 == StrategyType.DAY_TRADE
             ):
                 position = trading_data.positions[symbol]
-                minute_index = self.minute_history[symbol][
-                    "close"
-                ].index.get_loc(self.now, method="nearest")
-                price = self.minute_history[symbol]["close"][minute_index]
+                minute_index = self.data_loader[symbol]["close"].index.get_loc(
+                    self.now, method="nearest"
+                )
+                price = self.data_loader[symbol]["close"][minute_index]
                 tlog(f"[{self.end}]{symbol} liquidate {position} at {price}")
                 db_trade = NewTrade(
                     algo_run_id=trading_data.last_used_strategy[symbol].algo_run.run_id,  # type: ignore

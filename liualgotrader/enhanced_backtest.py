@@ -23,7 +23,7 @@ portfolio_value: float
 
 
 async def create_scanners(
-    data_api: tradeapi, scanners_conf: Dict
+    data_loader: DataLoader, scanners_conf: Dict
 ) -> List[Scanner]:
     scanners: List = []
     for scanner_name in scanners_conf:
@@ -37,7 +37,7 @@ async def create_scanners(
                 )
                 scanner_object = Momentum(
                     provider=scanner_details["provider"],
-                    data_api=data_api,
+                    data_loader=data_loader,
                     min_last_dv=scanner_details["min_last_dv"],
                     min_share_price=scanner_details["min_share_price"],
                     max_share_price=scanner_details["max_share_price"],
@@ -61,7 +61,9 @@ async def create_scanners(
         else:
             scanners.append(
                 await Scanner.get_scanner(
-                    data_api, scanner_name, scanners_conf[scanner_name]
+                    data_loader=data_loader,
+                    scanner_name=scanner_name,
+                    scanner_details=scanners_conf[scanner_name],
                 )
             )
 
@@ -195,12 +197,6 @@ async def backtest_main(
         f"Starting back-test from {from_date} to {to_date} with time scale {scale}"
     )
 
-    data_api = tradeapi.REST(
-        base_url=config.prod_base_url,
-        key_id=config.prod_api_key_id,
-        secret_key=config.prod_api_secret,
-    )
-
     global portfolio_value
     if "portfolio_value" in tradeplan:
         portfolio_value = tradeplan["portfolio_value"]
@@ -208,11 +204,16 @@ async def backtest_main(
         portfolio_value = 100000
 
     await create_db_connection()
-    scanners = await create_scanners(data_api, tradeplan["scanners"])
-    strategies = await create_strategies(
-        uid, tradeplan["strategies"], DataLoader(data_api, scale)
+
+    data_loader = DataLoader(scale)
+    trade_api = tradeapi.REST(
+        key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
     )
-    calendars = data_api.get_calendar(str(from_date), str(to_date))
+    scanners = await create_scanners(data_loader, tradeplan["scanners"])
+    strategies = await create_strategies(
+        uid, tradeplan["strategies"], data_loader
+    )
+    calendars = trade_api.get_calendar(str(from_date), str(to_date))
 
     symbols: Dict = {}
     for day in calendars:
