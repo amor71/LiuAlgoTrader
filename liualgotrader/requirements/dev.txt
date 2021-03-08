@@ -21,7 +21,7 @@ websockets==8.1
 nb-clean==2.0.2
 matplotlib==3.3.4
 tabulate==0.8.9
-sphinx==3.5.1
+sphinx==3.5.2
 sphinx-autodoc-typehints==1.11.1
 setuptools==53.0.0
 wheel==0.36.2
