@@ -8,6 +8,7 @@ import time
 from liualgotrader.common import config
 import os
 
+
 def show_version():
     print(f"Liu Algo Trading Framework v{config.build_label}")
 
@@ -19,7 +20,14 @@ def show_usage():
     print(f"usgae: liu quickstart")
     print()
 
-def setup_db(db_location: str, db_name : str, user_name : str, password : str, restore_sample_db: bool):
+
+def setup_db(
+    db_location: str,
+    db_name: str,
+    user_name: str,
+    password: str,
+    restore_sample_db: bool,
+):
     try:
         print()
         print("+---------------------+")
@@ -27,25 +35,32 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str, r
         print("+---------------------+")
         print()
 
-
         p = pathlib.Path(db_location)
         if not p.exists():
             p.mkdir()
-        if db_location[-1] != '/':
-            db_location += '/'
+        if db_location[-1] != "/":
+            db_location += "/"
 
         print("downloading files..")
         if os.name == "nt":
-            r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose-windows.yml')
+            r = requests.get(
+                "https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose-windows.yml"
+            )
         else:
-            r = requests.get('https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose.yml')
-        resolved = r.text.replace("{db_name}", db_name).replace("{user_name}", user_name).replace("{password}", password)
+            r = requests.get(
+                "https://raw.github.com/amor71/LiuAlgoTrader/master/database/docker-compose.yml"
+            )
+        resolved = (
+            r.text.replace("{db_name}", db_name)
+            .replace("{user_name}", user_name)
+            .replace("{password}", password)
+        )
 
         with open(f"{db_location}docker-compose.yml", "w") as f:
             f.write(resolved)
             f.write("\n")
 
-        base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/database/'
+        base_url = "https://raw.github.com/amor71/LiuAlgoTrader/master/database/"
         files = ["schema.sql", "postgres.conf"]
         if restore_sample_db:
             files.append("liu_dump.sql")
@@ -57,7 +72,9 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str, r
                 f.write("")
     except Exception as e:
         print(f"Something went wrong:{e}")
-        print("Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
+        print(
+            "Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'"
+        )
         exit(0)
 
     print("files loaded successfully.")
@@ -77,7 +94,6 @@ def setup_db(db_location: str, db_name : str, user_name : str, password : str, r
     print("check deployment using `\psql -h localhost -p 5400 -U liu`")
 
 
-
 def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> None:
     try:
         print()
@@ -88,10 +104,12 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
         p = pathlib.Path(samples_location)
         if not p.exists():
             p.mkdir()
-        if samples_location[-1] != '/':
-            samples_location += '/'
+        if samples_location[-1] != "/":
+            samples_location += "/"
 
-        base_url = 'https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/'
+        base_url = (
+            "https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/"
+        )
         files = ["tradeplan.toml", "vwap_short.py", "momentum_long_simplified.py"]
 
         for file in files:
@@ -109,15 +127,16 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
                 f.write(f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
         else:
             with open(f"{samples_location}env_vars.sh", "w") as f:
-                f.write(f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
-
+                f.write(
+                    f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
+                )
 
     except Exception as e:
         print(f"Something went wrong:{e}")
-        print("Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'")
+        print(
+            "Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'"
+        )
         exit(0)
-
-
 
 
 def quickstart():
@@ -125,9 +144,9 @@ def quickstart():
     print()
     print("This wizard will guide you through the setup process.")
     print()
-    print("+--------------------------------------+")
-    print("| Step #1 - Alpaca.Markets credentials |")
-    print("+--------------------------------------+")
+    print("+----------------------------------------+")
+    print("| Step #1 - Alpaca & Polygon credentials |")
+    print("+----------------------------------------+")
     print()
     print("To use Liu Algo Trading Framework you need a funded Alpaca Markets account,")
     print("do you already have a funded account [Y]/n:")
@@ -140,31 +159,28 @@ def quickstart():
         print("For additional details `https://alpaca.markets/docs/about-us/`")
         return
 
-
-    if not config.prod_api_key_id or not config.prod_api_secret:
+    to_exit = False
+    if not config.alpaca_api_key or not config.alpaca_api_secret:
+        print("Liu Algo Trading Framework uses Alpaca for both LIVE and PAPER trading.")
+        print()
+        print("The Framework expects three environment variables to be set:")
+        print("`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`: reflecting the funded")
+        print("account's API key and secret respectively.")
+        print("And `ALPACA_BASEURL` reflecting the base URL for your account.")
+        print("Please set the three environment variables and re-run the wizard.")
+        to_exit = True
+    if not config.polygon_api_key:
         print(
-            "Liu Algo Trading Framework uses Polygon.io data for both LIVE and PAPER trading."
+            "Liu Algo Trading Framework uses Polygon.io `developer` plan (or above) for data retrival"
         )
         print()
-        print("The Framework expects two environment variables to be set:")
-        print("`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` reflecting the funded")
-        print("account's API key and secret respectively.")
-        print("Please set the two environment and re-run the wizard.")
-        return
+        print("The Framework expects an environment variables to be set:")
+        print("`POLYGON_API_KEY` with you Polygon.io credentials ")
+        print("Please set the three environment variables and re-run the wizard.")
+        to_exit = True
 
-    print()
-    print("Do you plan on using the framework for PAPER or LIVE trading? [P]/L")
-    i = input()
-    use_paper = True if not len(i) or i.lower() in ('p', "paper") else False
-
-    if use_paper:
-        if not config.paper_api_key_id or not config.paper_api_secret:
-            print("The Framework expects two environment variables to be set:")
-            print("`ALPACA_PAPER_API_KEY` and `ALPACA_PAPER_API_SECRET` reflecting the paper")
-            print("account's API key and secret respectively.")
-            print("Please set the two environment and re-run the wizard.")
-        else:
-            print("GREAT! both keys are present. Good job.")
+    if to_exit:
+        sys.exit(0)
 
     print()
     print("+----------------------------------+")
@@ -184,7 +200,9 @@ def quickstart():
         restore_sample_db = False
     else:
         pwd = pathlib.Path().absolute()
-        print("Liu Algo Trading Framework uses `docker-compose` to run a local database.")
+        print(
+            "Liu Algo Trading Framework uses `docker-compose` to run a local database."
+        )
         print("The installation will download the docker-compose.yml, database schema")
         print("and prepare the database for first time usage. You can stop and re-run")
         print("the database using `docker-compose up -d ` and `docker-compose down`")
@@ -200,14 +218,18 @@ def quickstart():
         print("may also download a sample database, with existing data to help you")
         print("take your first steps with Liu Algo Trading Framework.")
         print("However, in order to restore the sample data, you need to select")
-        print("the default username ('liu') password ('liu)', and database name ('liu').")
+        print(
+            "the default username ('liu') password ('liu)', and database name ('liu')."
+        )
         print("after you try out the sample, you can delete data and re-run this")
         print("wizard to install a fresh copy of the database.")
         print()
         print("Would you like to download the sample database? [Y]/n")
         i = input()
         restore_sample_db = (
-            True if len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes") else False
+            True
+            if len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
+            else False
         )
         print("Select the database name for keeping track of your trading [liu]:")
         db_name = input()
@@ -232,7 +254,9 @@ def quickstart():
         pwd = pathlib.Path().absolute()
         print(f"Select location for sample files [{pwd}/liu_samples]:")
         sample_location = input()
-        sample_location = f"{pwd}/liu_samples" if not len(sample_location) else sample_location
+        sample_location = (
+            f"{pwd}/liu_samples" if not len(sample_location) else sample_location
+        )
 
     print()
     print("Ready to go?? Press [ENTER] to start the installation..")
@@ -254,26 +278,35 @@ def quickstart():
     print("The full documentation is available here: `https://liualgotrader.rtfd.io`.")
     if restore_sample_db:
         print()
-        print("The restored database includes data for the first week and half of Oct 2020.")
+        print(
+            "The restored database includes data for the first week and half of Oct 2020."
+        )
         print("You may now run a back-testing sessions for these days, as well as ")
         print("analyze an existing trading session.")
     print()
 
     if sample_location:
         print("To experience Liu Algo Trading for the first time:")
-        print(f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),")
+        print(
+            f"1. change your working directory to the sample directory {sample_location} ('cd {sample_location}'),"
+        )
         if os.name == "nt":
             print("2. run the env-vars script ('env_vars.bat'),")
         else:
             print("2. run the env-vars script ('source env_vars.sh'),")
-        print(f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py`")
+        print(
+            f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py`"
+        )
         if restore_sample_db:
             print("4. On the app selection select the 'analyzer` app")
-            print("5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>")
+            print(
+                "5. copy and paste the batch-id '2398380c-5146-4b58-843a-a50c458c8071' and press <enter>"
+            )
 
     print()
     print("Thank you for choosing Liu Algo Trading Framework. ")
     print()
+
 
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
@@ -297,6 +330,5 @@ if __name__ == "__main__":
             print("Oops... exiting gracefully")
     else:
         show_usage()
-
 
     exit(0)

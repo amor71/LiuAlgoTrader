@@ -39,3 +39,4 @@ torch==1.8.0
 fastai==2.2.7
 parsedatetime==2.6
 scipy==1.6.1
+polygon-api-client

@@ -1,10 +1,12 @@
 import asyncio
+import json
 from datetime import date, timedelta
 from typing import Dict, Tuple
 
 import pandas as pd
 from pytz import timezone
 
+from liualgotrader.common import config
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
 
@@ -83,7 +85,7 @@ def load_trades_for_period(
     return loop.run_until_complete(fetch_as_dataframe(query))
 
 
-def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
+def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""
     SELECT t.*, a.batch_id, a.algo_name
     FROM 
@@ -92,8 +94,7 @@ def load_trades(day: date, env: str, end_date: date = None) -> pd.DataFrame:
         t.algo_run_id = a.algo_run_id AND 
         t.tstamp >= '{day}' AND 
         t.tstamp < '{day + timedelta(days=1) if not end_date else end_date}' AND
-        t.expire_tstamp is null AND
-        a.algo_env = '{env}'
+        t.expire_tstamp is null 
     ORDER BY symbol, tstamp
     """
     loop = asyncio.get_event_loop()
@@ -127,15 +128,14 @@ def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     return loop.run_until_complete(aload_trades_by_batch_id(batch_id))
 
 
-def load_runs(day: date, env: str, end_date: date = None) -> pd.DataFrame:
+def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""
      SELECT * 
      FROM 
      algo_run as t
      WHERE 
          start_time >= '{day}' AND 
-         start_time < '{day + timedelta(days=1) if not end_date else end_date}' AND
-         algo_env = '{env}'
+         start_time < '{day + timedelta(days=1) if not end_date else end_date}'
      ORDER BY start_time
      """
     loop = asyncio.get_event_loop()
@@ -153,8 +153,7 @@ def load_batch_list(day: date, env: str) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             t.tstamp >= '{day}' AND 
             t.tstamp < '{day + timedelta(days=1)}'AND
-            t.expire_tstamp is null AND
-            a.algo_env = '{env}'
+            t.expire_tstamp is null 
         """
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(fetch_as_dataframe(query))
@@ -223,3 +222,92 @@ def count_trades(symbol, trades: pd.DataFrame, batch_id: str) -> int:
         (trades["symbol"] == symbol) & (trades["batch_id"] == batch_id)
     ]
     return len(symbol_df.index)
+
+
+def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
+    day_to_analyze = min(trades["client_time"].tolist())
+    config.market_open = day_to_analyze.replace(
+        hour=9, minute=30, second=0, microsecond=0
+    )
+    trades_anlytics = pd.DataFrame()
+    trades["client_time"] = pd.to_datetime(trades["client_time"])
+    trades_anlytics["symbol"] = trades.symbol.unique()
+    trades_anlytics["revenues"] = trades_anlytics["symbol"].apply(
+        lambda x: calc_batch_revenue(x, trades, batch_id)
+    )
+    trades_anlytics["count"] = trades_anlytics["symbol"].apply(
+        lambda x: count_trades(x, trades, batch_id)
+    )
+
+    return trades_anlytics
+
+
+def symobl_trade_analytics(
+    symbol_df: pd.DataFrame, open_price: float, plt
+) -> Tuple[pd.DataFrame, float]:
+    delta = 0.0
+    profit = 0.0
+
+    operations = []
+    deltas = []
+    profits = []
+    times = []
+    prices = []
+    qtys = []
+    indicators = []
+    target_price = []
+    stop_price = []
+    daily_change = []
+    precent_vwap = []
+    algo_names = []
+    for _, row in symbol_df.iterrows():
+        delta = (
+            row["price"]
+            * row["qty"]
+            * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
+        )
+        profit += float(delta)
+        plt.scatter(
+            row["client_time"].to_pydatetime(),
+            row["price"],
+            c="g" if row["operation"] == "buy" else "r",
+            s=100,
+        )
+        algo_names.append(row["algo_name"])
+        deltas.append(round(delta, 2))
+        profits.append(round(profit, 2))
+        operations.append(row["operation"])
+        times.append(pd.to_datetime(row["client_time"]))
+        prices.append(row["price"])
+        qtys.append(row["qty"])
+        indicator = json.loads(row.indicators)
+        indicators.append(indicator)
+        target_price.append(row["target_price"])
+        stop_price.append(row["stop_price"])
+        daily_change.append(
+            f"{round(100.0 * (float(row['price']) - open_price) / open_price, 2)}%"
+        )
+        precent_vwap.append(
+            f"{round(100.0 * (indicator['buy']['avg'] - open_price) / open_price, 2)}%"
+            if "buy" in indicator
+            and indicator["buy"]
+            and "avg" in indicator["buy"]
+            else ""
+        )
+
+    d = {
+        "balance": profits,
+        "trade": deltas,
+        "algo": algo_names,
+        "operation": operations,
+        "at": times,
+        "price": prices,
+        "qty": qtys,
+        "daily change": daily_change,
+        "vwap": precent_vwap,
+        "indicators": indicators,
+        "target price": target_price,
+        "stop price": stop_price,
+    }
+
+    return pd.DataFrame(d), profit

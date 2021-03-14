@@ -4,8 +4,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-import alpaca_trade_api as tradeapi
-
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
 
 
@@ -13,7 +12,7 @@ class Scanner(metaclass=ABCMeta):
     def __init__(
         self,
         name: str,
-        data_api: tradeapi,
+        data_loader: DataLoader,
         recurrence: Optional[timedelta],
         target_strategy_name: Optional[str],
         data_source: object = None,
@@ -21,7 +20,7 @@ class Scanner(metaclass=ABCMeta):
         self.name = name
         self.recurrence = recurrence
         self.target_strategy_name = target_strategy_name
-        self.data_api = data_api
+        self.data_loader = data_loader
         self.data_source = data_source
 
     def __repr__(self):
@@ -38,7 +37,7 @@ class Scanner(metaclass=ABCMeta):
     @classmethod
     async def get_scanner(
         cls,
-        data_api: tradeapi,
+        data_loader: DataLoader,
         scanner_name: str,
         scanner_details: Dict,
     ):
@@ -47,7 +46,7 @@ class Scanner(metaclass=ABCMeta):
                 "module.name", scanner_details["filename"]
             )
             custom_scanner_module = importlib.util.module_from_spec(spec)  # type: ignore
-            spec.loader.exec_module(custom_scanner_module)
+            spec.loader.exec_module(custom_scanner_module)  # type: ignore
             class_name = scanner_name
             custom_scanner = getattr(custom_scanner_module, class_name)
 
@@ -60,13 +59,13 @@ class Scanner(metaclass=ABCMeta):
             scanner_details.pop("filename")
             if "recurrence" not in scanner_details:
                 scanner_object = custom_scanner(
-                    data_api=data_api,
+                    data_loader=data_loader,
                     **scanner_details,
                 )
             else:
                 recurrence = scanner_details.pop("recurrence")
                 scanner_object = custom_scanner(
-                    data_api=data_api,
+                    data_loader=data_loader,
                     recurrence=timedelta(minutes=recurrence),
                     **scanner_details,
                 )

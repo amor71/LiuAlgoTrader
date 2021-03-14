@@ -14,31 +14,30 @@ import asyncio
 from datetime import datetime
 from math import ceil
 from typing import List
-
-import alpaca_trade_api as tradeapi
 import pygit2
 import toml
 from pytz import timezone
-
+import alpaca_trade_api as tradeapi
 from liualgotrader.common import config
-from liualgotrader.common.market_data import get_historical_data_from_polygon
 from liualgotrader.common.tlog import tlog
 from liualgotrader.consumer import consumer_main
 from liualgotrader.polygon_producer import polygon_producer_main
 from liualgotrader.scanners_runner import main
 from liualgotrader.analytics import consolidate
+from liualgotrader.common.data_loader import DataLoader
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
     """Display welcome message"""
 
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+    tlog("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    tlog("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     tlog(f"{filename} {version} starting")
     tlog(f"unique id: {unique_id}")
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"DSN: {config.dsn}")
     tlog(f"MAX SYMBOLS: {config.total_tickers}")
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+    tlog("----------------------------------------------------------")
+    tlog("----------------------------------------------------------")
 
 
 def get_trading_windows(tz, api):
@@ -168,7 +167,6 @@ if __name__ == "__main__":
     )
     fname = f"{folder}{config.configuration_filename}"
     try:
-
         conf_dict = toml.load(fname)
         tlog(f"loaded configuration file from {fname}")
     except FileNotFoundError:
@@ -196,30 +194,18 @@ if __name__ == "__main__":
     for scanner in scanners_conf:
         tlog(f"- {scanner} scanner detected")
 
-    data_api = tradeapi.REST(
-        base_url=config.prod_base_url,
-        key_id=config.prod_api_key_id,
-        secret_key=config.prod_api_secret,
+    trade_api = tradeapi.REST(
+        base_url=config.alpaca_base_url,
+        key_id=config.alpaca_api_key,
+        secret_key=config.alpaca_api_secret,
     )
 
-    if ready_to_start(data_api):
+    if ready_to_start(trade_api):
         # add open positions
         symbols: List = []
-        base_url = (
-            config.prod_base_url if config.env == "PROD" else config.paper_base_url
-        )
-        api_key_id = (
-            config.prod_api_key_id if config.env == "PROD" else config.paper_api_key_id
-        )
-        api_secret = (
-            config.prod_api_secret if config.env == "PROD" else config.paper_api_secret
-        )
-        trading_api = tradeapi.REST(
-            base_url=base_url, key_id=api_key_id, secret_key=api_secret
-        )
 
         if "skip_existing" not in conf_dict or not conf_dict["skip_existing"]:
-            existing_positions = trading_api.list_positions()
+            existing_positions = trade_api.list_positions()
 
             if len(existing_positions) == 0:
                 tlog("no open positions")
@@ -230,13 +216,6 @@ if __name__ == "__main__":
                         tlog(f"added existing open position in {position.symbol}")
         else:
             tlog("skipping existing open positions")
-
-        minute_history = get_historical_data_from_polygon(
-            api=data_api,
-            symbols=symbols,
-            max_tickers=min(config.total_tickers, len(symbols)),
-        )
-        symbols = list(minute_history.keys())
 
         if not scanners_only:
             # Consumers first
@@ -260,7 +239,6 @@ if __name__ == "__main__":
                     args=(
                         queues[i],
                         symbol_by_queue[i] if i in symbol_by_queue else None,
-                        minute_history,
                         uid,
                         conf_dict,
                     ),

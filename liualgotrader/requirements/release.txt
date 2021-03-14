@@ -17,3 +17,4 @@ nest_asyncio==1.5.1
 hypothesis==6.6.0
 parsedatetime==2.6
 scipy==1.6.1
+polygon-api-client
