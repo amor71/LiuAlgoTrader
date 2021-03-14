@@ -4,7 +4,7 @@ Quickstart
 Prerequisite
 ------------
 
-1. Paper, and a funded account with Alpaca_ Markets,
+1. Paper, or a funded account with Alpaca_ Markets, 
 
 .. _Alpaca: https://alpaca.markets/docs/about-us
 
@@ -15,6 +15,7 @@ Prerequisite
 3. Docker Compose_
 
 .. _Compose: https://docs.docker.com/compose/install/
+
 
 Touch & Go
 ----------

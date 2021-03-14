@@ -18,6 +18,7 @@ def event_loop():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_market_industries():
     industry_list = await get_market_industries()
 
@@ -27,6 +28,7 @@ async def test_get_market_industries():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_market_sectors():
     sector_list = await get_market_sectors()
     print(sector_list)
@@ -35,6 +37,7 @@ async def test_get_market_sectors():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_market_sectors_symbols():
     sector_list = await get_market_sectors()
 
@@ -46,6 +49,7 @@ async def test_get_market_sectors_symbols():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_market_industries_symbols():
     industries_list = await get_market_industries()
 

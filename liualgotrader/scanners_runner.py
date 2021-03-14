@@ -58,6 +58,7 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
             f"scanner_runner() cancelled, closing scanner task {scanner.name}"
         )
     except Exception as e:
+        traceback.print_exc()
         tlog(
             f"[ERROR]Exception in scanner_runner({scanner.name}): exception of type {type(e).__name__} with args {e.args}"
         )
@@ -80,7 +81,6 @@ async def scanners_runner(
                     "target_strategy_name", None
                 )
                 scanner_object = Momentum(
-                    provider=scanner_details["provider"],
                     data_loader=data_loader,
                     trading_api=trader,
                     min_last_dv=scanner_details["min_last_dv"],

@@ -19,6 +19,7 @@ def event_loop():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_symbols():
     global alpaca_trader
     assets = await alpaca_trader.get_tradeable_symbols()
@@ -28,6 +29,7 @@ async def test_get_symbols():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_get_shortable_symbols():
     global alpaca_trader
     assets = await alpaca_trader.get_shortable_symbols()

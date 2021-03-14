@@ -13,7 +13,6 @@ from queue import Empty, Full
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
-from alpaca_trade_api.stream2 import StreamConn, polygon
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
@@ -21,10 +20,10 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import WSEventType
-from liualgotrader.data.polygon import PolygonStream
-from liualgotrader.data.streaming_base import QueueMapper
+from liualgotrader.common.types import QueueMapper, WSEventType
+from liualgotrader.data.data_factory import streaming_factory
 from liualgotrader.models.trending_tickers import TrendingTickers
+from liualgotrader.trading.alpaca import AlpacaTrader
 
 last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
@@ -57,7 +56,7 @@ async def scanner_input(
                         symbol_strategy[
                             symbol_details["symbol"]
                         ] = symbol_details["target_strategy_name"]
-                        PolygonStream.get_instance().queues[
+                        streaming_factory().get_instance().queues[
                             symbol_details["symbol"]
                         ] = queues[
                             random.SystemRandom().randint(
@@ -66,7 +65,7 @@ async def scanner_input(
                         ]
 
                 if len(new_symbols):
-                    await PolygonStream.get_instance().subscribe(
+                    await streaming_factory().get_instance().subscribe(
                         new_symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG]
                     )
                     symbols += new_symbols
@@ -99,50 +98,28 @@ async def scanner_input(
     tlog("scanner_input() task completed")
 
 
-async def trade_run(
-    ws: StreamConn,
-    queues: List[Queue],
-) -> None:
-
+async def trade_run(qm: QueueMapper) -> None:
     tlog("trade_run() starting using Alpaca trading ")
-
-    @ws.on(r"trade_update")
-    async def handle_trade_update(conn, channel, data):
-        global queue_id_hash
-        try:
-            # tlog(f"producer TRADE UPDATE event: {data.__dict__}")
-            symbol = data.__dict__["_raw"]["order"]["symbol"]
-            if qid := queue_id_hash.get(symbol, None):
-                data.__dict__["_raw"]["EV"] = "trade_update"
-                data.__dict__["_raw"]["symbol"] = symbol
-                queues[qid].put(data.__dict__["_raw"])
-
-        except Exception as e:
-            tlog(
-                f"[ERROR]Exception in handle_trade_update(): exception of type {type(e).__name__} with args {e.args}"
-            )
-            traceback.print_exc()
-
-    await ws.subscribe(["trade_updates"])
+    at = AlpacaTrader(qm)
+    await at.run()
     tlog("trade_run() completed")
 
 
 async def run(
     queues: List[Queue],
+    qm: QueueMapper,
 ) -> None:
     global data_channels
     global queue_id_hash
 
-    qm = QueueMapper()
-    ps = PolygonStream(qm)
+    ps = streaming_factory()(qm)
+    await ps.run()
     for symbol in symbols:
         qm[symbol] = queues[queue_id_hash[symbol]]
     await ps.subscribe(symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG])
 
 
-async def teardown_task(
-    tz: DstTzInfo, ws: List[StreamConn], tasks: List[asyncio.Task]
-) -> None:
+async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
     tlog("poylgon_producer teardown_task() starting")
     if not config.market_close:
         tlog(
@@ -170,13 +147,10 @@ async def teardown_task(
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
 
-        tlog("closing PolygonStream")
-        await PolygonStream.close()
+        tlog("closing Stream")
+        await streaming_factory().get_instance().close()
 
         tlog("poylgon_producer teardown closing web-sockets")
-        for w in ws:
-            await w.close(False)
-
         tlog("poylgon_producer teardown closing tasks")
 
         for task in tasks:
@@ -209,17 +183,11 @@ async def producer_async_main(
     num_consumer_processes: int,
 ):
     await create_db_connection(str(config.dsn))
-
-    await run(queues=queues)
-
-    trade_ws = tradeapi.StreamConn(
-        base_url=config.alpaca_base_url,
-        key_id=config.alpaca_api_key,
-        secret_key=config.alpaca_api_secret,
-    )
+    qm = QueueMapper()
+    await run(queues=queues, qm=qm)
 
     trade_updates_task = asyncio.create_task(
-        trade_run(ws=trade_ws, queues=queues),
+        trade_run(qm=qm),
         name="trade_updates_task",
     )
 
@@ -230,7 +198,6 @@ async def producer_async_main(
     tear_down = asyncio.create_task(
         teardown_task(
             timezone("America/New_York"),
-            [trade_ws],
             [scanner_input_task],
         )
     )
@@ -245,7 +212,7 @@ async def producer_async_main(
     tlog("producer_async_main() completed")
 
 
-def polygon_producer_main(
+def producer_main(
     unique_id: str,
     queues: List[Queue],
     current_symbols: List[str],
@@ -255,7 +222,7 @@ def polygon_producer_main(
     scanner_queue: Queue,
     num_consumer_processes: int,
 ) -> None:
-    tlog(f"*** polygon_producer_main() starting w pid {os.getpid()} ***")
+    tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
     try:
         config.market_close = market_close
         config.batch_id = unique_id
@@ -276,7 +243,7 @@ def polygon_producer_main(
                 config.WS_DATA_CHANNELS.append("Q")
 
         tlog(
-            f"polygon_producer_main(): listening for events {config.WS_DATA_CHANNELS}"
+            f"producer_main(): listening for events {config.WS_DATA_CHANNELS}"
         )
         global symbols
         global queue_id_hash
@@ -290,11 +257,11 @@ def polygon_producer_main(
         )
 
     except KeyboardInterrupt:
-        tlog("polygon_producer_main() - Caught KeyboardInterrupt")
+        tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:
         tlog(
-            f"polygon_producer_main() - exception of type {type(e).__name__} with args {e.args}"
+            f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
         traceback.print_exc()
 
-    tlog("*** polygon_producer_main() completed ***")
+    tlog("*** producer_main() completed ***")

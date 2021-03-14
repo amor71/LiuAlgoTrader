@@ -11,6 +11,7 @@ from pytz import timezone
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import DataConnectorType
 from liualgotrader.models.ticker_data import StockOhlc
 from liualgotrader.trading.base import Trader
 
@@ -22,7 +23,6 @@ class Momentum(Scanner):
 
     def __init__(
         self,
-        provider: str,
         recurrence: Optional[timedelta],
         target_strategy_name: Optional[str],
         data_loader: DataLoader,
@@ -36,7 +36,6 @@ class Momentum(Scanner):
         max_symbols: int = config.total_tickers,
         data_source: object = None,
     ):
-        self.provider = provider
         self.max_share_price = max_share_price
         self.min_share_price = min_share_price
         self.min_last_dv = min_last_dv
@@ -286,13 +285,11 @@ class Momentum(Scanner):
         if not back_time:
             await self._wait_time()
 
-            if self.provider == "polygon":
+            if config.data_connector == DataConnectorType.polygon:
                 return await self.run_polygon()
-            elif self.provider == "finnhub":
-                return await self.run_finnhub()
             else:
                 raise Exception(
-                    f"Invalid provider {self.provider} for scanner {self.name}"
+                    f"scanner {self.name} can't run using data provider {config.data_connector} "
                 )
         else:
             rows = await self.load_from_db(back_time)

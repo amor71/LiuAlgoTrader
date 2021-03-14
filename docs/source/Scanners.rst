@@ -42,14 +42,14 @@ A Generic implementation for the `__init__()` function:
 
 .. code-block:: python
 
-    def __init__(self, recurrence: Optional[timedelta], data_api: tradeapi, **args):
-        print(args)
-        super().__init__(
-            name=self.name,
-            recurrence=recurrence,
-            data_api=data_api,
-            target_strategy_name=None,
-        )
+    def __init__(
+        self,
+        name: str,
+        data_loader: DataLoader,
+        recurrence: Optional[timedelta],
+        target_strategy_name: Optional[str],
+        data_source: object = None,
+    )
 
 
 The run() function
@@ -66,9 +66,33 @@ The run() function returns the list to stock symbol which the framework needs to
 
 .. code-block:: python
 
-    self.data_api
+    self.data_loader
 
-Holds the Alpaca.Markets tradeapi to be used for querying the stock universe. Refer to the Alpaca API documentation to learn more of its usage. Note that since the framework is dependent on the API, it will be automatically installed when you install the framework. It is recommended that that you pull up the **momentum scanner** implementation code as a good starting point, some examples can be found in the `examples` folder too.
+Holds the generic interface for querying the stock universe. 
+
+Using DataLoader() class
+************************
+
+The DataLoader() class is core for writing scanners (as well as strategies). The Class provides a wrapper on top of `pandas` DataFrame() class, which also automatically downloads data. 
+
+For example, to load recent `ohlc` data for Apple Inc all you have to do is:
+
+.. code-block:: python
+
+    apple_ohlc = self.data_loader['AAPL'][-1] 
+
+Notes:
+
+1. Data will be loaded based on the time-scale (min/hour/day) configured by the LiuAlgoTrader framework. During trading you can expect per-minute time-scale, during back-testing you can select which time-frame should be used,
+2. Data is loaded from the data-providers configured in the `DATA_CONNECTOR` environment variables, the framework cannonizes column names and gurrenties to include atlease open-high-low-close data, as well as volume. Different data providers may include additional details (such as VWAP, average, count and more),
+3. Calling `self.data_loader.symbol_data` grants direct access to the `DataFrame` class,
+4. Calling `self.data_loader.data_api` grants access to the instance of the `DataAPI` class, that provides an abstraction for the different data-providers. Using this class, the scanner can get list of avalible / tradeable symbols. For more detais, check the implementation of the momenutum_ scanner.
+
+.. _momenutum:
+    https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/scanners/momentum.py#L82
+
+
+
 
 Behind the scenes
 *****************
@@ -156,23 +180,4 @@ properties:
 
 **Notes**
 
-- When using Finnhub, since there is currently no way to get a full view of the market, it's best advised to use the max_symbols property, at lower numbers, unless you have access to a paid Finnhub account without API throttling.
 - Unless otherwise specified, the trader applications scans & trades a limited number of stocks, however that limitation may be overwritten using **LIU_MAX_SYMBOLS** env variable.
-
-
-Scanners in back-test application
-*********************************
-
-The scanners `run()` function receives a datetime
-parameter **back_time**. The parameter is used when
-called from the backtester when the
-"`back-test against the whole day`" option is used.
-
-Scanners are expected to support this mode by querying
-past data from the database, if such data is present, or pull the past data from Polygon.io.
-Sample_ implementation can be found
-
-.. _Sample:
-    https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/scanners/momentum.py#L270
-
-

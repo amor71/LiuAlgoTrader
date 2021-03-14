@@ -1,4 +1,6 @@
 from enum import Enum, auto
+from multiprocessing import Queue
+from typing import Dict
 
 
 class DataConnectorType(Enum):
@@ -23,3 +25,20 @@ class WSConnectState(Enum):
     NOT_CONNECTED = auto()
     CONNECTED = auto()
     AUTHENTICATED = auto()
+
+
+class QueueMapper:
+    def __init__(self):
+        self.queues: Dict[str, Queue] = {}
+
+    def __repr__(self):
+        return str(list(self.queues.keys()))
+
+    def __getitem__(self, key: str) -> Queue:
+        try:
+            return self.queues[key]
+        except KeyError:
+            raise AssertionError(f"No queue exists for symbol {key}")
+
+    def __setitem__(self, key: str, newvalue: Queue):
+        self.queues[key] = newvalue

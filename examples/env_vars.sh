@@ -16,6 +16,9 @@ export ALPACA_BASEURL="https://paper-api.alpaca.markets"
 export APCA_API_KEY_ID=""
 export APCA_API_SECRET_KEY=""
 
+# "sip" for PRO subscriptions
+export alpaca_data_feed="iex" 
+
 # max number of symbols to trade in parallel
 export LIU_MAX_SYMBOLS=440
 

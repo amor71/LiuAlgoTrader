@@ -1,33 +1,31 @@
-from multiprocessing import Queue
 from typing import Awaitable, Dict, List
 
-from liualgotrader.common.types import WSEventType
-
-
-class QueueMapper:
-    def __init__(self):
-        self.queues: Dict[str, Queue] = {}
-
-    def __getitem__(self, key: str) -> Queue:
-        try:
-            return self.queues[key]
-        except KeyError:
-            raise AssertionError(f"No queue exists for symbol {key}")
-
-    def __setitem__(self, key: str, newvalue: Queue):
-        self.queues[key] = newvalue
+from liualgotrader.common.types import QueueMapper, WSEventType
 
 
 class StreamingAPI:
+    __instance: object = None
+
     def __init__(self, queues: QueueMapper):
         self.queues = queues
+        StreamingAPI.__instance = self
 
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
         pass
 
+    @classmethod
+    def get_instance(cls):
+        if not cls.__instance:
+            raise AssertionError("Must instantiate before usage")
+
+        return cls.__instance  # type: ignore
+
     async def unsubscribe(self, symbol: str) -> bool:
+        pass
+
+    async def run(self):
         pass
 
     async def close(self) -> None:

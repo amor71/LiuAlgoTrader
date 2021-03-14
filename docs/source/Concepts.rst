@@ -10,6 +10,18 @@ The framework executes two type of components in parallel: Scanners and Strategi
 * Scanners, or stock screeners as they are called by some platforms, a run periodically by the framework to search the stock universe for stocks that adhere to criteria of choice. Users can easily create and deploy scanners, with only few lines of Python code. Scanners notify the framework when it's time to `subscribe` for a specific stock events. Events may be per second or per minute price changes, quotes or trades.
 * Strategies receive stock event updates, for stocks selected by the scanners. Strategies analyse the stock movement, and use a wide range of indicators to decide if it's time to buy or sell an equity. A Strategy may act on a single stock movement, or on movement in a collection of stocks. A Strategy may also elect to `reject` a stock, leading to `unsubscribe` from further events. The framework support both long and short buying to equities. The framework is designed to allow hundreds of concurrent stocks being constantly acted upon by numerous strategies to make up a portfolio. Scanner may decide to address stock events only to a specific strategy, or to all running strategies.
 
+Data Propagation 
+----------------
+**new in version 1.0** 
+
+Data is either loaded directly from a data-providers, 
+or updated in real-time using web-sockets.
+
+* `DataLoader()` class introduces a DataFrame like interface to load existing data from a data providers, or updating data from web-sockets,
+* `StreamingAPI()` and `DataAPI()` are abstract classes for integrating data-providers (there are implemented connectors for both Alpaca and Polygon), 
+* `data_loader_factory()` instantiate implemetation for StreamingAPI and DataAPI, based on the selected data-providers,
+* `Trader()` is a base-class for integration Broker APIs (currently only Alpaca is supported),
+
 Usage Fundamentals
 ------------------
 
@@ -34,7 +46,7 @@ considerations.
 High Level Architecture
 -----------------------
 
-Polygon.io and the other real-time stock data
+Polygon.io, Alpaca and the other real-time stock data
 providers are using WebSockets_ to send data. In most cases
 data providers become impatient when posted data is not
 collected by the intended recipient on a timely manner.
@@ -138,16 +150,24 @@ files for a future developer.
     |      └── various design & concepts documents
     ├── liualgotrader
     │   ├── common
+    |   |   ├── types.py
     |   |   ├── config.py
     |   |   ├── market_data.py
     |   |   ├── tlog.py
+    |   |   ├── data_loader.py
     |   |   └── trading_data.py
+    |   ├── data
+    |   |   ├── data_base.py   
+    |   |   ├── streaming_base.py     
+    |   |   ├── data_factory.py      
+    |   |   ├── polygon.py      
+    |   |   └── alpaca.py      
+    |   ├── trading  
+    |   |   ├── base.py      
+    |   |   └── alpaca.py       
     │   ├─── analytics
     |   |    ├── analysis.py
     |   |    └── consolidate.py
-    │   ├─── data_stream
-    |   |    ├── alpaca.py
-    |   |    └── streaming_base.py
     │   ├── fincalcs
     |   |    ├── candle_patterns.py
     |   |    ├── support_resistance.py
@@ -179,8 +199,10 @@ common
 ******
 The common folder contains three important files that the developer should be aware of:
 
-- `config.py` this is a global configuration file. The file includes internal constant which are no accessible via the environment variables of the configuration file for now.
-- `tlog.py` is a simple log implementation which write log entries both to STDOUT, as well as GCP *stackdriver* logger, if it is configured.
+- `config.py` this is a global configuration file. The file includes internal constant which are no accessible via the environment variables of the configuration file for now,
+- `types.py` inclues various enums/classes used throughput the framework,
+- `tlog.py` is a simple log implementation which write log entries both to STDOUT, as well as GCP *stackdriver* logger, if it is configured,
+- `data_loader.py` explained above,
 - `trading_data` includes global variables that are shared between the strategies and the consumer infrastructure. This file should be viewed in details to understand data passing.
 
 fincalcs
