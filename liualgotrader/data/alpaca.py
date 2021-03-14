@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 from multiprocessing import Queue
 from typing import Awaitable, Dict, List
 
-import deprecation
 import pandas as pd
 import websockets
 from alpaca_trade_api.rest import REST, TimeFrame
