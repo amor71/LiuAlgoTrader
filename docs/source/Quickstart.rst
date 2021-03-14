@@ -4,17 +4,24 @@ Quickstart
 Prerequisite
 ------------
 
-1. Paper, and a funded account with Alpaca_ Markets,
+1. Paper, or a funded account with Alpaca_ Markets, 
 
 .. _Alpaca: https://alpaca.markets/docs/about-us
 
-2. Installed Docker Engine_ and,
+
+2. Developer subscription w/ Polygon_ 
+
+.. _Polygon: https://polygon.io/
+
+3. Installed Docker Engine_ and,
 
 .. _Engine: https://docs.docker.com/engine/install
 
-3. Docker Compose_
+4. Docker Compose_
 
 .. _Compose: https://docs.docker.com/compose/install/
+
+**NOTE:** Alpaca only version coming soon,
 
 Touch & Go
 ----------
