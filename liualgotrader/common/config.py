@@ -16,10 +16,8 @@ configuration_filename: str = "tradeplan.toml"
 miner_configuration_filename: str = "miner.toml"
 env: str
 
-try:
-    data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR")]  # type: ignore
-except Exception as e:
-    raise AssertionError(f"Missing environment variable 'DATA_CONNECTOR' {e}")
+
+data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "polygon")]  # type: ignore
 
 
 #
