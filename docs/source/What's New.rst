@@ -4,9 +4,10 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
-| 0.1.00           | *Competible Breaking Release*                |
+| 0.1.00           | **Competible Breaking Release**              |
+|                  |                                              |
 |                  | 1. Added support for Alpaca and Polygon      |
-|                  |    "separation",                             |
+|                  |    `separation`,                             |
 |                  | 2. Re-architecting integration w/            |
 |                  |    data providers (Polygon) and brokers      |
 |                  |    (Alpaca) laying ground for future         |
@@ -18,7 +19,7 @@ What's New
 |                  |    backtesting environment,                  |
 |                  | 5. Breaking changes to base classes,         |
 |                  |    which may result in minor adjustments     |
-|                  |    for customer scanners & strategies,       |
+|                  |    for customer scanners and strategies,     |
 |                  | 6. Improved test automation,                 |
 |                  | 7. Improved performance.                     |
 +------------------+----------------------------------------------+
