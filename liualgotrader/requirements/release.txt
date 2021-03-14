@@ -3,7 +3,7 @@ requests==2.25.1
 deprecated==1.2.11
 urllib3==1.26.3
 numpy==1.20.1
-alpaca-trade-api==0.52.0
+alpaca-trade-api
 google-cloud-logging==2.2.0
 asyncpg==0.22.0
 pygit2==1.4.0
@@ -17,3 +17,4 @@ nest_asyncio==1.5.1
 hypothesis==6.3.0
 parsedatetime
 scipy==1.6.1
+polygon-api-client

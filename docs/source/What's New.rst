@@ -4,6 +4,24 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.1.00           | *Competible Breaking Release*                |
+|                  | 1. Added support for Alpaca and Polygon      |
+|                  |    "separation",                             |
+|                  | 2. Re-architecting integration w/            |
+|                  |    data providers (Polygon) and brokers      |
+|                  |    (Alpaca) laying ground for future         |
+|                  |    changes,                                  |
+|                  | 3. Adding concept of `DataLoader`, little    |
+|                  |    bit like how ZipLine works,               |
+|                  | 4. Introduce backtesting for long periods    |
+|                  |    similarly to ZipLine, creating a full     |
+|                  |    backtesting environment,                  |
+|                  | 5. Breaking changes to base classes,         |
+|                  |    which may result in minor adjustments     |
+|                  |    for customer scanners & strategies,       |
+|                  | 6. Improved test automation,                 |
+|                  | 7. Improved performance.                     |
++------------------+----------------------------------------------+
 | 0.0.85           | 1. Added `portfolio` DB table, and           |
 |                  |    model support,                            |
 |                  | 2. Enhance `market_miner`, to support        |

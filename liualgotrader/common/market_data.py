@@ -13,13 +13,15 @@ from pandas import Timestamp
 from pytz import timezone
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.ticker_snapshot import TickerSnapshot
 
 volume_today: Dict[str, int] = {}
-minute_history: Dict[str, df] = {}
 quotes: Dict[str, df] = {}
 
 
@@ -158,32 +160,16 @@ def get_historical_data_from_polygon_by_range(
 
 
 def get_symbol_data(
-    api: tradeapi,
     symbol: str,
     start_date: date,
     end_date: date,
+    data_loader=None,
     scale="minute",
-) -> Optional[df]:
+) -> df:
+    if not data_loader:
+        data_loader = DataLoader(TimeScale[scale])
 
-    retry = 5
-    df = None
-    while retry > 0:
-        try:
-            df = api.polygon.historic_agg_v2(
-                symbol,
-                1,
-                scale,
-                _from=str(start_date),
-                to=str(end_date),
-            ).df
-            df["average"] = 0.0
-            break
-        except Exception:
-            time.sleep(15)
-            retry -= 1
-            continue
-
-    return df
+    return data_loader[symbol][start_date:end_date]  # type: ignore
 
 
 def daily_bars(api: tradeapi, symbol: str, days: int) -> df:
@@ -313,8 +299,11 @@ def get_historical_data_from_polygon(
     return minute_history
 
 
-async def get_sector_tickers(pool: Pool, sector: str) -> List[str]:
-    async with pool.acquire() as conn:
+async def get_sector_tickers(sector: str) -> List[str]:
+    if not hasattr(config, "db_conn_pool"):
+        await create_db_connection()
+
+    async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
             records = await conn.fetch(
                 """
@@ -328,8 +317,11 @@ async def get_sector_tickers(pool: Pool, sector: str) -> List[str]:
             return [record[0] for record in records if record[0]]
 
 
-async def get_industry_tickers(pool: Pool, industry: str) -> List[str]:
-    async with pool.acquire() as conn:
+async def get_industry_tickers(industry: str) -> List[str]:
+    if not hasattr(config, "db_conn_pool"):
+        await create_db_connection()
+
+    async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
             records = await conn.fetch(
                 """
@@ -343,8 +335,11 @@ async def get_industry_tickers(pool: Pool, industry: str) -> List[str]:
             return [record[0] for record in records if record[0]]
 
 
-async def get_market_sectors(pool: Pool) -> List[str]:
-    async with pool.acquire() as conn:
+async def get_market_sectors() -> List[str]:
+    if not hasattr(config, "db_conn_pool"):
+        await create_db_connection()
+
+    async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
             records = await conn.fetch(
                 """
@@ -355,8 +350,11 @@ async def get_market_sectors(pool: Pool) -> List[str]:
             return [record[0] for record in records if record[0]]
 
 
-async def get_market_industries(pool: Pool) -> List[str]:
-    async with pool.acquire() as conn:
+async def get_market_industries() -> List[str]:
+    if not hasattr(config, "db_conn_pool"):
+        await create_db_connection()
+
+    async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
             records = await conn.fetch(
                 """

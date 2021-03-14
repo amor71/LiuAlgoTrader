@@ -1,4 +1,5 @@
 import uuid
+from datetime import date, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
@@ -8,8 +9,10 @@ from stockstats import StockDataFrame
 from tabulate import tabulate
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.market_data import daily_bars, index_data
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import TimeScale
 from liualgotrader.miners.base import Miner
 from liualgotrader.models.portfolio import Portfolio as DBPortfolio
 
@@ -31,11 +34,7 @@ class Portfolio(Miner):
             self.debug = debug
             self.portfolio_size = data["portfolio_size"]
             self.risk_factor = data["risk_factor"]
-            self.data_api = tradeapi.REST(
-                base_url=config.prod_base_url,
-                key_id=config.prod_api_key_id,
-                secret_key=config.prod_api_secret,
-            )
+            self.data_loader = DataLoader(TimeScale.day)
 
         except Exception:
             raise ValueError(
@@ -58,18 +57,17 @@ class Portfolio(Miner):
                 tlog(
                     f"loading 200 days for symbol {symbol} ({i}/{len(symbols)})"
                 )
-            self.data_bars[symbol] = daily_bars(
-                api=self.data_api,
-                symbol=symbol,
-                days=int(200 * 7 / 5),
-            )
+            self.data_bars[symbol] = self.data_loader[symbol][
+                date.today() - timedelta(days=int(200 * 7 / 5)) : date.today()  # type: ignore
+            ]
+
             if self.debug:
                 try:
                     p_points = len(self.data_bars[symbol])
                 except TypeError:
                     p_points = 0
 
-                tlog(f"loaded {p_points} data-points")
+                tlog(f"loaded at least {p_points} relevant data-points")
             i += 1
 
     async def calc_momentum(self) -> None:
@@ -78,10 +76,11 @@ class Portfolio(Miner):
 
         i = 0
         for symbol, d in self.data_bars.items():
-            d["delta"] = d.close.pct_change()
-            d = d.dropna()
+            _df = df(d)
+            _df["delta"] = _df.close.pct_change()
+            _df = _df.dropna()
 
-            deltas = d.delta.tolist()[-self.rank_days :]
+            deltas = _df.delta.tolist()[-self.rank_days :]
             slope, intercept, r, _, _ = linregress(range(len(deltas)), deltas)
             i += 1
             if slope > 0:

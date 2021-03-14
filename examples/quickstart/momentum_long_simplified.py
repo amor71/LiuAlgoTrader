@@ -9,6 +9,7 @@ from pandas import DataFrame as df
 from stockstats import StockDataFrame
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.trading_data import (buy_indicators, buy_time,
                                                cool_down, last_used_strategy,
@@ -30,13 +31,15 @@ class MomentumLongV3(Strategy):
         schedule: List[Dict],
         ref_run_id: int = None,
         check_patterns: bool = False,
+        data_loader: DataLoader = None,
     ):
         self.check_patterns = check_patterns
         super().__init__(
-            name=self.name,
+            name=type(self).__name__,
             type=StrategyType.DAY_TRADE,
             batch_id=batch_id,
             ref_run_id=ref_run_id,
+            data_loader=data_loader,
             schedule=schedule,
         )
 
@@ -66,8 +69,8 @@ class MomentumLongV3(Strategy):
         symbol: str,
         shortable: bool,
         position: int,
-        minute_history: df,
         now: datetime,
+        minute_history: df,
         portfolio_value: float = None,
         trading_api: tradeapi = None,
         debug: bool = False,

@@ -28,14 +28,14 @@ class Strategy(metaclass=ABCMeta):
         batch_id: str,
         schedule: List[Dict],
         ref_run_id: int = None,
-        dl: DataLoader = None,
+        data_loader: DataLoader = None,
     ):
         self.name = name
         self.type = type
         self.ref_run_id = ref_run_id
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
         self.schedule = schedule
-        self.dl = dl
+        self.data_loader = data_loader
 
     def __repr__(self):
         return self.name
@@ -52,7 +52,7 @@ class Strategy(metaclass=ABCMeta):
         shortable: bool,
         position: int,
         now: datetime,
-        minute_history: df = None,
+        minute_history: df,
         portfolio_value: float = None,
         trading_api: tradeapi = None,
         debug: bool = False,
@@ -82,7 +82,7 @@ class Strategy(metaclass=ABCMeta):
         return (
             True
             if any(
-                schedule["duration"]
+                (schedule["duration"] + schedule["start"])
                 > (now - config.market_open).seconds // 60
                 > schedule["start"]
                 for schedule in self.schedule
@@ -106,7 +106,7 @@ class Strategy(metaclass=ABCMeta):
         batch_id: str,
         strategy_name: str,
         strategy_details: Dict,
-        dl: DataLoader = None,
+        data_loader: DataLoader = None,
         ref_run_id: Optional[int] = None,
     ):
         try:
@@ -126,7 +126,7 @@ class Strategy(metaclass=ABCMeta):
             s = custom_strategy(
                 batch_id=batch_id,
                 ref_run_id=ref_run_id,
-                dl=dl,
+                data_loader=data_loader,
                 **strategy_details,
             )
             await s.create()

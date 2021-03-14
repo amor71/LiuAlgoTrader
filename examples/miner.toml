@@ -1,37 +1,37 @@
 # This is a TOML configuration file for market_miner.py
 [miners]
 
-    #
-    # grab industry-sector and other details for symbol
-    #
-    [miners.StockCluster]
+#
+# grab industry-sector and other details for symbol
+#
+[miners.StockCluster]
 
-    #
-    # Store daily OHLC data
-    #
-    [miners.DailyOHLC]
-        filename = "<select-path>/examples/miners/daily_ohlc.py"
-        #symbols = ['SPY',]
-        days = 14
+#
+# Store daily OHLC data
+#
+[miners.DailyOHLC]
+filename = "<select-path>/examples/miners/daily_ohlc.py"
+#symbols = ['SPY',]
+days = 14
 
-        min_share_price = 2.0
-        max_share_price = 20.0
+max_share_price = 20.0
+min_share_price = 2.0
 
-    #
-    # Calculate P&L
-    #
-    [miners.gainloss]
-        days = 45
+#
+# Calculate P&L
+#
+[miners.gainloss]
+days = 45
 
-    #
-    # Calculate Momentum Portfolio
-    #
-    [miners.portfolio]
-        filename = "<select-path>/portfolio.py"
-        portfolio_size = 2000
-        debug = true
-        index = 'SP500'
-        rank_days = 90
-        atr_days = 20
-        risk_factor = 0.002
-        indicators = ['SMA100']
+#
+# Calculate Momentum Portfolio
+#
+[miners.portfolio]
+atr_days = 20
+debug = true
+filename = "<select-path>/portfolio.py"
+index = 'SP500'
+indicators = ['SMA100']
+portfolio_size = 2000
+rank_days = 90
+risk_factor = 0.002

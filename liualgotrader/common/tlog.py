@@ -4,8 +4,6 @@ from datetime import datetime
 
 from google.cloud import logging
 
-from liualgotrader.common import config
-
 try:
     logger = logging.Client().logger("trader")
 except Exception:
@@ -20,7 +18,7 @@ def tlog(msg: str) -> None:
 
     if logger:
         try:
-            logger.log_text(f"[{config.env}]{calling_fn}[{os.getpid()}] {msg}")
+            logger.log_text(f"{calling_fn}[{os.getpid()}] {msg}")
         except Exception as e:
             print(f"[Error] exception when trying to log to Stackdriver {e}")
             pass

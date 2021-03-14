@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from datetime import date, timedelta
 
 import alpaca_trade_api as tradeapi
@@ -18,6 +19,7 @@ from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
                                               load_trades_by_batch_id)
 from liualgotrader.backtester import BackTestDay, backtest
 from liualgotrader.common import config, database
+from liualgotrader.common.data_loader import DataLoader
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -54,7 +56,7 @@ if app == "back-test":
         "Select back-testing mode",
         (
             "back-test a specific batch",
-            "back-test against the whole day",
+            # "back-test against the whole day",
         ),
     )
 
@@ -112,7 +114,7 @@ if app == "back-test":
         )
         if bid:
             how_was_my_day = pd.DataFrame()
-            trades = load_trades(day_to_analyze, env)
+            trades = load_trades(day_to_analyze)
             start_time = df[df.batch_id == bid].start_time
             start_time = pytz.utc.localize(start_time.min()).astimezone(est)
             how_was_my_day["symbol"] = trades.loc[trades["batch_id"] == bid][
@@ -201,43 +203,51 @@ elif app == "analyzer":
 
         c = 0
 
+        data_loader = DataLoader()
         day_to_analyze = min(t["client_time"].tolist())
         with st.spinner(text="Loading historical data from Polygon..."):
             for symbol in t.symbol.unique().tolist():
                 if symbol not in minute_history:
-                    minute_history[symbol] = api.polygon.historic_agg_v2(
-                        symbol,
-                        1,
-                        "minute",
-                        _from=day_to_analyze - timedelta(days=7),
-                        to=day_to_analyze + timedelta(days=1),
-                    ).df.tz_convert("US/Eastern")
+                    minute_history[symbol] = data_loader[symbol]
+                    # api.polygon.historic_agg_v2(
+                    #    symbol,
+                    #    1,
+                    #    "minute",
+                    #    _from=day_to_analyze - timedelta(days=7),
+                    #    to=day_to_analyze + timedelta(days=1),
+                    # ).df.tz_convert("US/Eastern")
                     c += 1
         st.success(f"LOADED {c} symbols' data!")
-
+        est = pytz.timezone("US/Eastern")
         for symbol in minute_history:
             symbol_df = t.loc[t["symbol"] == symbol]
-            start_date = symbol_df["client_time"].min().to_pydatetime()
-            start_date = start_date.replace(hour=9, minute=30)
+            start_date = symbol_df.client_time.astype(
+                "datetime64[ns, US/Eastern]"
+            ).min()
+            start_date = start_date.replace(
+                hour=9, minute=30, second=0, microsecond=0
+            )
             end_date = start_date.replace(hour=16, minute=00)
+            print(start_date, end_date)
+            symbol_data = minute_history[symbol][start_date:end_date]
             try:
-                start_index = minute_history[symbol]["close"].index.get_loc(
+                start_index = symbol_data.close.index.get_loc(
                     start_date, method="nearest"
                 )
-                end_index = minute_history[symbol]["close"].index.get_loc(
+                end_index = symbol_data.close.index.get_loc(
                     end_date, method="nearest"
                 )
             except Exception as e:
+                traceback.print_exc()
                 print(f"Error for {symbol}: {e}")
                 continue
 
-            open_price = minute_history[symbol]["close"][start_index]
+            open_price = symbol_data.close[start_index]
 
             fig, ax = plt.subplots()
             ax.plot(
-                minute_history[symbol]["close"][
-                    start_index:end_index
-                ].between_time("9:30", "16:00"),
+                symbol_data.close[start_index:end_index],
+                # .between_time("9:30", "16:00"),
                 label=symbol,
             )
             # fig.xticks(rotation=45)
@@ -270,8 +280,12 @@ elif app == "analyzer":
                 )
                 profit += delta
 
+                print(
+                    row.client_time.to_pydatetime(),
+                    "g" if row["operation"] == "buy" else "r",
+                )
                 ax.scatter(
-                    row["client_time"].to_pydatetime(),
+                    row.client_time.to_pydatetime(),
                     row["price"],
                     c="g" if row["operation"] == "buy" else "r",
                     s=100,

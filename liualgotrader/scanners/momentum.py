@@ -1,16 +1,18 @@
 import asyncio
 import time
-from datetime import datetime, timedelta, date
-from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
-import alpaca_trade_api as tradeapi
+from datetime import date, datetime, timedelta
+from typing import List, Optional
+
 import requests
+from alpaca_trade_api.rest import REST as tradeapi
 from pytz import timezone
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.ticker_data import StockOhlc
-from liualgotrader.common.market_data import get_historical_daily_from_polygon_by_range
+from liualgotrader.trading.base import Trader
 
 from .base import Scanner
 
@@ -23,7 +25,8 @@ class Momentum(Scanner):
         provider: str,
         recurrence: Optional[timedelta],
         target_strategy_name: Optional[str],
-        data_api: tradeapi,
+        data_loader: DataLoader,
+        trading_api: Trader,
         max_share_price: float,
         min_share_price: float,
         min_last_dv: float,
@@ -41,11 +44,13 @@ class Momentum(Scanner):
         self.today_change_percent = today_change_percent
         self.from_market_open = from_market_open
         self.max_symbols = max_symbols
+        self.trading_api = trading_api
+
         super().__init__(
             name=self.name,
             recurrence=recurrence,
             target_strategy_name=target_strategy_name,
-            data_api=data_api,
+            data_loader=data_loader,
             data_source=data_source,
         )
 
@@ -56,7 +61,9 @@ class Momentum(Scanner):
     async def _wait_time(self) -> None:
         if not config.bypass_market_schedule and config.market_open:
             nyc = timezone("America/New_York")
-            since_market_open = datetime.today().astimezone(nyc) - config.market_open
+            since_market_open = (
+                datetime.today().astimezone(nyc) - config.market_open
+            )
 
             if since_market_open.seconds // 60 < self.from_market_open:
                 tlog(f"market open, wait {self.from_market_open} minutes")
@@ -68,37 +75,36 @@ class Momentum(Scanner):
 
         tlog(f"Scanner {self.name} ready to run")
 
-    def _get_trade_able_symbols(self) -> List[str]:
-        assets = self.data_api.list_assets()
-        tlog(f"loaded list of {len(assets)} trade-able assets from Alpaca")
-
-        trade_able_symbols = [asset.symbol for asset in assets if asset.tradable]
-        tlog(f"total number of trade-able symbols is {len(trade_able_symbols)}")
-        return trade_able_symbols
+    async def _get_trade_able_symbols(self) -> List[str]:
+        symbols = await self.trading_api.get_tradeable_symbols()
+        tlog(f"loaded list of {len(symbols)} trade-able symbols from Alpaca")
+        return symbols
 
     async def run_polygon(self) -> List[str]:
         tlog(f"{self.name}: run_polygon(): started")
         try:
             while True:
-                tickers = self.data_api.polygon.all_tickers()
+                tickers = self.data_loader.data_api.get_symbols()
                 tlog(f"loaded {len(tickers)} tickers from Polygon")
                 if not len(tickers):
                     break
-                trade_able_symbols = self._get_trade_able_symbols()
+                trade_able_symbols = await self._get_trade_able_symbols()
 
                 unsorted = [
                     ticker
                     for ticker in tickers
                     if (
-                        ticker.ticker in trade_able_symbols
+                        ticker["ticker"] in trade_able_symbols  # type: ignore
                         and self.max_share_price
-                        >= ticker.lastTrade["p"]
-                        >= self.min_share_price
-                        and ticker.prevDay["v"] * ticker.lastTrade["p"]
-                        > self.min_last_dv
-                        and ticker.todaysChangePerc >= self.today_change_percent
+                        >= ticker["lastTrade"]["p"]  # type: ignore
+                        >= self.min_share_price  # type: ignore
+                        and float(ticker["prevDay"]["v"])  # type: ignore
+                        * float(ticker["lastTrade"]["p"])  # type: ignore
+                        > self.min_last_dv  # type: ignore
+                        and ticker["todaysChangePerc"]  # type: ignore
+                        >= self.today_change_percent  # type: ignore
                         and (
-                            ticker.day["v"] > self.min_volume
+                            ticker["day"]["v"] > self.min_volume  # type: ignore
                             or config.bypass_market_schedule
                         )
                     )
@@ -106,11 +112,13 @@ class Momentum(Scanner):
                 if len(unsorted) > 0:
                     ticker_by_volume = sorted(
                         unsorted,
-                        key=lambda ticker: float(ticker.day["v"]),
+                        key=lambda ticker: float(ticker["day"]["v"]),  # type: ignore
                         reverse=True,
                     )
                     tlog(f"picked {len(ticker_by_volume)} symbols")
-                    return [x.ticker for x in ticker_by_volume][: self.max_symbols]
+                    return [x["ticker"] for x in ticker_by_volume][  # type: ignore
+                        : self.max_symbols
+                    ]
 
                 tlog("did not find gaping stock, retrying")
                 await asyncio.sleep(30)
@@ -122,7 +130,7 @@ class Momentum(Scanner):
 
     async def run_finnhub(self) -> List[str]:
         tlog(f"{self.name}: run_finnhub(): started")
-        trade_able_symbols = self._get_trade_able_symbols()
+        trade_able_symbols = await self._get_trade_able_symbols()
 
         nyc = timezone("America/New_York")
         _from = datetime.today().astimezone(nyc) - timedelta(days=1)
@@ -165,7 +173,9 @@ class Momentum(Scanner):
                                     and response["v"][1] > self.min_volume
                                 ):
                                     symbols.append(symbol)
-                                    tlog(f"collected {len(symbols)}/{self.max_symbols}")
+                                    tlog(
+                                        f"collected {len(symbols)}/{self.max_symbols}"
+                                    )
                                     if len(symbols) == self.max_symbols:
                                         break
 
@@ -189,9 +199,9 @@ class Momentum(Scanner):
         return symbols
 
     async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
-        _minute_data = get_historical_daily_from_polygon_by_range(
-            self.data_api, [symbol], when, when + timedelta(days=1)
-        )
+        _minute_data = self.data_loader[symbol][
+            when : when + timedelta(days=1)  # type: ignore
+        ]
 
         await asyncio.sleep(0)
         if _minute_data[symbol].empty:
@@ -222,7 +232,10 @@ class Momentum(Scanner):
                 print(f"saved data for {symbol} @ {index}")
 
     async def fetch_symbol_details(
-        self, symbol: str, back_time: datetime, session: requests.Session = None
+        self,
+        symbol: str,
+        back_time: datetime,
+        session: requests.Session = None,
     ):
         if not await StockOhlc.check_stock_date_exists(symbol, back_time):
             await self.add_stock_data_for_date(symbol, back_time)
@@ -230,7 +243,9 @@ class Momentum(Scanner):
         if not await StockOhlc.check_stock_date_exists(
             symbol, back_time - timedelta(days=1)
         ):
-            await self.add_stock_data_for_date(symbol, back_time - timedelta(days=1))
+            await self.add_stock_data_for_date(
+                symbol, back_time - timedelta(days=1)
+            )
 
     async def load_from_db(self, back_time: date) -> List[str]:
         pool = config.db_conn_pool
@@ -283,7 +298,7 @@ class Momentum(Scanner):
             rows = await self.load_from_db(back_time)
 
             if not len(rows):
-                trade_able_symbols = self._get_trade_able_symbols()
+                trade_able_symbols = await self._get_trade_able_symbols()
                 tlog(
                     f"{self.name} scanner => loading {len(trade_able_symbols)} symbols from Polygon and building cache. this may take a while."
                 )
@@ -297,5 +312,7 @@ class Momentum(Scanner):
 
                 rows = await self.load_from_db(back_time)
 
-            print(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
+            print(
+                f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
+            )
             return rows
