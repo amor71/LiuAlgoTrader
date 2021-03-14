@@ -18,6 +18,7 @@ def event_loop():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_apple_sec_agg():
     global polygon_stream
     apple = await polygon_stream.subscribe(["AAPL"], [WSEventType.SEC_AGG])

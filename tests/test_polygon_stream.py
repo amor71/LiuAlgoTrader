@@ -23,6 +23,7 @@ def event_loop():
 
 
 @pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_apple_sec_agg():
     global polygon_stream
     global queues

@@ -11,6 +11,7 @@ from liualgotrader.common.types import DataConnectorType, TimeScale
 nyc = timezone("America/New_York")
 
 
+@pytest.mark.devtest
 def test_create_data_loader_default() -> bool:
 
     if DataLoader():
@@ -18,6 +19,7 @@ def test_create_data_loader_default() -> bool:
     return False
 
 
+@pytest.mark.devtest
 def test_create_data_loader_types() -> bool:
     for data_connector in DataConnectorType:
         config.data_connector = data_connector
@@ -29,6 +31,7 @@ def test_create_data_loader_types() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_current_price() -> bool:
     dl = DataLoader(TimeScale.minute)
     last_price = dl["AAPL"].close[-1]
@@ -43,6 +46,7 @@ def test_apple_stock_current_price() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_current_price_range_int_minute() -> bool:
     print("test_apple_stock_current_price_range_int_minute")
     dl = DataLoader(TimeScale.minute)
@@ -51,6 +55,7 @@ def test_apple_stock_current_price_range_int_minute() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_current_price_range_int_day() -> bool:
     print("test_apple_stock_current_price_range_int_day")
     dl = DataLoader(TimeScale.day)
@@ -60,6 +65,7 @@ def test_apple_stock_current_price_range_int_day() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_daily_price() -> bool:
     print("test_apple_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day)
@@ -74,6 +80,7 @@ def test_apple_stock_daily_price() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_negative_current_price() -> bool:
     dl = DataLoader(TimeScale.minute)
     try:
@@ -84,6 +91,7 @@ def test_negative_current_price() -> bool:
     return False
 
 
+@pytest.mark.devtest
 def test_apple_stock_close_price_range_str_day() -> bool:
     print("test_apple_stock_close_price_range_int_day")
     dl = DataLoader(TimeScale.day)
@@ -95,6 +103,7 @@ def test_apple_stock_close_price_range_str_day() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_close_price_range_str_minute() -> bool:
     print("test_apple_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute)
@@ -106,6 +115,7 @@ def test_apple_stock_close_price_range_str_minute() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_close_price_range_str_minute_int() -> bool:
     print("test_apple_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute)
@@ -117,6 +127,7 @@ def test_apple_stock_close_price_range_str_minute_int() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_close_price_range_int_str_minute() -> bool:
     print("test_apple_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute)
@@ -128,6 +139,7 @@ def test_apple_stock_close_price_range_int_str_minute() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_int_minute() -> bool:
     print("test_apple_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute)
@@ -137,6 +149,7 @@ def test_apple_stock_price_range_int_minute() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_int_day() -> bool:
     print("test_apple_stock_price_range_int_day")
     dl = DataLoader(TimeScale.day)
@@ -146,6 +159,7 @@ def test_apple_stock_price_range_int_day() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_day() -> bool:
     print("test_apple_stock_price_range_date_day")
     dl = DataLoader(TimeScale.day)
@@ -155,6 +169,7 @@ def test_apple_stock_price_range_date_day() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_int_day() -> bool:
     print("test_apple_stock_price_range_date_int_day")
     dl = DataLoader(TimeScale.day)
@@ -164,6 +179,7 @@ def test_apple_stock_price_range_date_int_day() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_int_min() -> bool:
     print("test_apple_stock_price_range_date_int_min")
     dl = DataLoader(TimeScale.minute)
@@ -172,6 +188,7 @@ def test_apple_stock_price_range_date_int_min() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_int_min_open() -> bool:
     print("test_apple_stock_price_range_date_int_min_open")
     dl = DataLoader(TimeScale.minute)
@@ -180,6 +197,7 @@ def test_apple_stock_price_range_date_int_min_open() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_open_range_date_int_min_open() -> bool:
     print("test_apple_stock_price_close_range_date_int_min_open")
     dl = DataLoader(TimeScale.minute)
@@ -188,6 +206,7 @@ def test_apple_stock_price_open_range_date_int_min_open() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_min_open() -> bool:
     print("test_apple_stock_price_range_date_min_open")
     dl = DataLoader(TimeScale.minute)
@@ -199,6 +218,7 @@ def test_apple_stock_price_range_date_min_open() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_open_range_date_min_open() -> bool:
     print("test_apple_stock_price_open_range_date_min_open")
     dl = DataLoader(TimeScale.minute)
@@ -210,6 +230,7 @@ def test_apple_stock_price_open_range_date_min_open() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_min() -> bool:
     print("test_apple_stock_price_range_date_min")
     dl = DataLoader(TimeScale.minute)
@@ -223,6 +244,7 @@ def test_apple_stock_price_range_date_min() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_min_mixed() -> bool:
     print("test_apple_stock_price_range_date_min_mixed")
     dl = DataLoader(TimeScale.minute)
@@ -235,6 +257,7 @@ def test_apple_stock_price_range_date_min_mixed() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_range_date_day_mixed() -> bool:
     print("test_apple_stock_price_range_date_day_mixed")
     dl = DataLoader(TimeScale.day)
@@ -245,6 +268,7 @@ def test_apple_stock_price_range_date_day_mixed() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_open_range_date_min_mixed() -> bool:
     print("test_apple_stock_price_range_date_min_mixed")
     dl = DataLoader(TimeScale.minute)
@@ -259,6 +283,7 @@ def test_apple_stock_price_open_range_date_min_mixed() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_open_str() -> bool:
     print("test_apple_stock_price_open_str")
     dl = DataLoader(TimeScale.minute)
@@ -269,6 +294,7 @@ def test_apple_stock_price_open_str() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_stock_price_open_date() -> bool:
     print("test_apple_stock_price_open_date")
     dl = DataLoader(TimeScale.minute)
@@ -279,6 +305,7 @@ def test_apple_stock_price_open_date() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_get_symbols_polygon() -> bool:
     print("test_get_symbols_polygon")
     config.data_connector = DataConnectorType.polygon
@@ -289,6 +316,7 @@ def test_get_symbols_polygon() -> bool:
     return True
 
 
+@pytest.mark.devtest
 def test_apple_update() -> bool:
     print("test_apple_stock_price_open_str")
     dl = DataLoader(TimeScale.minute)
