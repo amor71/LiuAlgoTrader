@@ -30,7 +30,7 @@ streamlit==0.78.0
 stockstats==0.3.2
 nest_asyncio==1.5.1
 nbqa==0.5.7
-pre-commit==2.10.1
+pre-commit==2.11.1
 empyrical==0.5.5
 sklearn==0.0
 plotly==4.14.3
