@@ -38,4 +38,4 @@ hypothesis==6.8.1
 torch==1.8.0
 parsedatetime==2.6
 scipy==1.6.1
-polygon-api-client
+polygon-api-client==0.1.9
