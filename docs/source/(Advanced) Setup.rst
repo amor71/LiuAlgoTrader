@@ -9,14 +9,20 @@ install and setup `LiuAlgoTrader` for first time use on a pre-existing PostgreSQ
 Prerequisite
 ------------
 - Paper, or a funded Live account with `Alpaca Markets`_ ,
-- Developer subscription w/ Polygon_ ,
 - An Installed and configured PostgreSQL_ database.
 
 .. _Alpaca Markets: https://alpaca.markets/docs/about-us/
 .. _PostgreSQL: https://www.postgresql.org/
-.. _Polygon: https://polygon.io/
 
-**NOTE:** Alpaca only version coming soon,
+Data Sources
+------------
+LiuAlgoTrader supports both Alpaca and Polygon.io as data-sources, 
+however Alpaca data offering has a more limited functionality.
+
+When using Polygon.io A `Stater`, or above subscription w/ Polygon_ is required.
+
+.. _Polygon: https://polygon.io/pricing
+
 
 Installation
 ------------
@@ -26,7 +32,6 @@ To install LiuAlgoTrader type:
 .. code-block:: bash
 
    pip install liualgotrader
-
 
 Database Setup
 --------------
@@ -75,11 +80,11 @@ Algorithmic trading is only as good as the data feed it rely on.
 Without an accurate, near-real-time data feed even the
 best strategy will keep losing money.
 
-LiuAlgoTrader currently support Polygon.io as a data-provider, 
-while Alapaca native data integration is underway, as well as Finnhub_.
+LiuAlgoTrader currently support Polygon.io as a data-provider, as well as 
+Alapaca native data integration. Additional integration are underway (Finnhub_).
+
 
 .. _Finnhub: https://finnhub.io/dashboard
-
 
 Example Setup on GCP
 --------------------

@@ -3,8 +3,9 @@ from multiprocessing import Queue
 
 import pytest
 
+from liualgotrader.common.types import QueueMapper
 from liualgotrader.data.polygon import PolygonStream
-from liualgotrader.data.streaming_base import QueueMapper, WSEventType
+from liualgotrader.data.streaming_base import WSEventType
 from liualgotrader.trading.alpaca import AlpacaTrader
 
 queues: QueueMapper

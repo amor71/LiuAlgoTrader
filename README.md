@@ -17,7 +17,7 @@ LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server 
 and it will automatically optimize for best performance for either. 
 
-LiuAlgoTrader uses Alpaca.Markets brokerage APIs & data, and Polygon.io for data, yet the framework is evolving to support additional brokers and data-providers.
+LiuAlgoTrader uses Alpaca.Markets brokerage APIs for trading, and can use either Alpaca or Polygon.io for stocks' data. The framework is evolving to support additional brokers and data-providers.
 
 ## See LiuAlgoTrader in Action
 
@@ -31,10 +31,9 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 ### Prerequisite
 
 - Paper, and/or a funded account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
-- Polygon.io subscription ( Alpaca data subscription support coming soon)
+- Polygon.io subscription optional (`Starter` plan and above),
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
-(the prerequisties are for the `quickstart` wizard, not the framework)
 ### Install & Configure
 
 **Step 1**: 

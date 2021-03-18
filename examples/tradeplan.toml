@@ -16,9 +16,6 @@ bypass_market_schedule = true
 # scanners during the day
 [scanners]
 [scanners.momentum]
-# check documentation for supported providers
-provider = 'polygon'
-
 # scan for tickers with minimal volume since day start
 min_volume = 30000
 

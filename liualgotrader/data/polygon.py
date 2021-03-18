@@ -11,9 +11,9 @@ from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import TimeScale, WSEventType
+from liualgotrader.common.types import QueueMapper, TimeScale, WSEventType
 from liualgotrader.data.data_base import DataAPI
-from liualgotrader.data.streaming_base import QueueMapper, StreamingAPI
+from liualgotrader.data.streaming_base import StreamingAPI
 
 
 class PolygonData(DataAPI):
@@ -79,79 +79,59 @@ class PolygonData(DataAPI):
         return _df
 
 
-class PolygonStream:
-    __instance: object = None
-
-    def __init__(self, qm: QueueMapper):
-        PolygonStream.__instance = self.__PolygonStream(qm)
-
-    class __PolygonStream(StreamingAPI):
-        def __init__(self, queues: QueueMapper):
-            super().__init__(queues)
-
-            self.polygon_ws_client = WebSocketClient(
-                cluster=STOCKS_CLUSTER,
-                auth_key=config.polygon_api_key,
-                process_message=PolygonStream.process_message,
-                on_close=PolygonStream.on_close,
-                on_error=PolygonStream.on_error,
+class PolygonStream(StreamingAPI):
+    def __init__(self, queues: QueueMapper):
+        self.polygon_ws_client = WebSocketClient(
+            cluster=STOCKS_CLUSTER,
+            auth_key=config.polygon_api_key,
+            process_message=PolygonStream.process_message,
+            on_close=PolygonStream.on_close,
+            on_error=PolygonStream.on_error,
+        )
+        if not self.polygon_ws_client:
+            raise AssertionError(
+                "Failed to authenticate Polygon web_socket client"
             )
-            if not self.polygon_ws_client:
-                raise AssertionError(
-                    "Failed to authenticate Polygon web_socket client"
-                )
-            self.polygon_ws_client.run_async()
+        self.polygon_ws_client.run_async()
+        super().__init__(queues)
 
-        async def subscribe(
-            self, symbols: List[str], events: List[WSEventType]
-        ) -> bool:
-            args = []
+    async def subscribe(
+        self, symbols: List[str], events: List[WSEventType]
+    ) -> bool:
+        args = []
+        for symbol in symbols:
+            for event in events:
+                if event == WSEventType.SEC_AGG:
+                    action = "A"
+                elif event == WSEventType.MIN_AGG:
+                    action = "AM"
+                elif event == WSEventType.TRADE:
+                    action = "T"
+                elif event == WSEventType.QUOTE:
+                    action = "Q"
 
-            for symbol in symbols:
-                for event in events:
-                    if event == WSEventType.SEC_AGG:
-                        action = "A"
-                    elif event == WSEventType.MIN_AGG:
-                        action = "AM"
-                    elif event == WSEventType.TRADE:
-                        action = "T"
-                    elif event == WSEventType.QUOTE:
-                        action = "Q"
+                args.append(f"{action}.{symbol}")
 
-                    args.append(f"{action}.{symbol}")
+        tlog(f"subscribe(): adding subcription {args}")
+        self.polygon_ws_client.subscribe(*args)
 
-            tlog(f"subscribe(): adding subcription {args}")
-            self.polygon_ws_client.subscribe(*args)
+        return True
 
-            return True
+    async def run(self):
+        pass
 
-        async def unsubscribe(self, symbol: str) -> bool:
-            raise NotImplementedError("not implemented yet")
+    async def unsubscribe(self, symbol: str) -> bool:
+        raise NotImplementedError("not implemented yet")
 
-        async def close(
-            self,
-        ) -> None:
-            self.polygon_ws_client.close_connection()
-
-    @classmethod
-    def get_instance(cls) -> StreamingAPI:
-        if not cls.__instance:
-            raise AssertionError("Must instantiate before usage")
-
-        return cls.__instance  # type: ignore
-
-    @classmethod
-    def subscribe(cls, *args):
-        return cls.get_instance().subscribe(*args)
-
-    @classmethod
-    def close(cls):
-        return cls.get_instance().close()
+    async def close(
+        self,
+    ) -> None:
+        self.polygon_ws_client.close_connection()
 
     @classmethod
     def process_message(cls, message):
         payload = json.loads(message)
-
+        print(payload)
         for event in payload:
             if event["ev"] in ("A", "AM", "T", "Q"):
                 try:

@@ -93,7 +93,7 @@ class Portfolio(Miner):
                         "symbol": symbol,
                         "slope": slope,
                         "r": r,
-                        "ranked_slope": slope * r,
+                        "ranked_slope": slope * (r ** 2),
                     },
                     ignore_index=True,
                 )

@@ -13,7 +13,7 @@ nyc = timezone("America/New_York")
 
 @pytest.mark.devtest
 def test_create_data_loader_default() -> bool:
-
+    config.data_connector = DataConnectorType.alpaca
     if DataLoader():
         return True
     return False
@@ -27,12 +27,13 @@ def test_create_data_loader_types() -> bool:
             if not DataLoader(scale=scale):
                 return False
 
-    config.data_connector = DataConnectorType.polygon
+    config.data_connector = DataConnectorType.alpaca
     return True
 
 
 @pytest.mark.devtest
 def test_apple_stock_current_price() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     dl = DataLoader(TimeScale.minute)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
@@ -57,6 +58,7 @@ def test_apple_stock_current_price_range_int_minute() -> bool:
 
 @pytest.mark.devtest
 def test_apple_stock_current_price_range_int_day() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     print("test_apple_stock_current_price_range_int_day")
     dl = DataLoader(TimeScale.day)
     last_price_range = dl["AAPL"].close[-6:-1]  # type:ignore
@@ -67,6 +69,7 @@ def test_apple_stock_current_price_range_int_day() -> bool:
 
 @pytest.mark.devtest
 def test_apple_stock_daily_price() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     print("test_apple_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day)
     last_price = dl["AAPL"].close[-1]
@@ -82,6 +85,7 @@ def test_apple_stock_daily_price() -> bool:
 
 @pytest.mark.devtest
 def test_negative_current_price() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     dl = DataLoader(TimeScale.minute)
     try:
         dl["DFGDFGDFG"].close[-1]
@@ -93,6 +97,7 @@ def test_negative_current_price() -> bool:
 
 @pytest.mark.devtest
 def test_apple_stock_close_price_range_str_day() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     print("test_apple_stock_close_price_range_int_day")
     dl = DataLoader(TimeScale.day)
     last_price_range = dl["AAPL"].close[
@@ -105,6 +110,7 @@ def test_apple_stock_close_price_range_str_day() -> bool:
 
 @pytest.mark.devtest
 def test_apple_stock_close_price_range_str_minute() -> bool:
+    config.data_connector = DataConnectorType.alpaca
     print("test_apple_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute)
     last_price_range = dl["AAPL"].close[
@@ -324,8 +330,6 @@ def test_apple_update() -> bool:
     last_price_range = dl["AAPL"][-1]
     print("after this")
     dl["AAPL"].loc["2021-02-02 09:46:00"] = [
-        100.0,
-        100.0,
         100.0,
         100.0,
         100.0,

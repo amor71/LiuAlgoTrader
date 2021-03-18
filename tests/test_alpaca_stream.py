@@ -1,18 +1,23 @@
 import asyncio
+from multiprocessing import Queue
 
 import pytest
 
-from liualgotrader.common.types import WSEventType
-from liualgotrader.data.alpaca import AlpacaStream, QueueMapper
+from liualgotrader.common.types import QueueMapper, WSEventType
+from liualgotrader.data.alpaca import AlpacaStream
 
-polygon_stream: AlpacaStream
+alpaca_stream: AlpacaStream
+queues: QueueMapper
 
 
 @pytest.fixture
 def event_loop():
-    global polygon_stream
+    global alpaca_stream
+    global queues
     loop = asyncio.get_event_loop()
-    polygon_stream = AlpacaStream(QueueMapper())
+    queues = QueueMapper()
+    alpaca_stream = AlpacaStream(queues)
+
     yield loop
     loop.close()
 
@@ -21,11 +26,18 @@ def event_loop():
 @pytest.mark.devtest
 async def test_apple_sec_agg():
     global polygon_stream
-    apple = await polygon_stream.subscribe(["AAPL"], [WSEventType.SEC_AGG])
-    print(apple)
+    await alpaca_stream.run()
+    print("going to subscribe")
+    queues["JNUG"] = Queue()
+    queues["GLD"] = Queue()
+    queues["AAPL"] = Queue()
+    status = await alpaca_stream.subscribe(
+        ["JNUG", "GLD", "AAPL"], [WSEventType.MIN_AGG]
+    )
+    print(f"subscribe resut: {status}")
+    if not status:
+        raise AssertionError(f"Failed in alpaca_stream.subscribe w/ {status}")
     await asyncio.sleep(5 * 60)
-
-    print("done")
-    await polygon_stream.close()
+    await alpaca_stream.close()
 
     return True

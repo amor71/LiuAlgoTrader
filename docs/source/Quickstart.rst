@@ -8,20 +8,14 @@ Prerequisite
 
 .. _Alpaca: https://alpaca.markets/docs/about-us
 
-
-2. Developer subscription w/ Polygon_ 
-
-.. _Polygon: https://polygon.io/
-
-3. Installed Docker Engine_ and,
+2. Installed Docker Engine_ and,
 
 .. _Engine: https://docs.docker.com/engine/install
 
-4. Docker Compose_
+3. Docker Compose_
 
 .. _Compose: https://docs.docker.com/compose/install/
 
-**NOTE:** Alpaca only version coming soon,
 
 Touch & Go
 ----------
