@@ -1,6 +1,6 @@
 iso8601==0.1.14
 requests==2.25.1
-deprecated==1.2.11
+deprecated==1.2.12
 urllib3==1.26.3
 numpy==1.20.1
 alpaca-trade-api==1.0.1
@@ -14,7 +14,7 @@ streamlit==0.78.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
-hypothesis==6.6.0
+hypothesis==6.8.1
 parsedatetime==2.6
 scipy==1.6.1
-polygon-api-client
+polygon-api-client==0.1.9
