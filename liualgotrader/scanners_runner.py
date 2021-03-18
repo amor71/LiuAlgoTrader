@@ -21,6 +21,8 @@ from liualgotrader.trading.base import Trader
 
 scanner_tasks = []
 
+nyc = timezone("America/New_York")
+
 
 async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
     try:
@@ -172,9 +174,9 @@ async def scanners_runner(
         tlog("scanners_runner.scanners_runner()  done.")
 
 
-async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
+async def teardown_task(tasks: List[asyncio.Task]) -> None:
     tlog("scanners_runner.teardown_task() starting")
-    dt = datetime.today().astimezone(tz)
+    dt = datetime.now().astimezone(nyc)
     to_market_close: timedelta
 
     if not config.market_close:
@@ -231,7 +233,6 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
 
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"),
             [main_task],
         )
     )

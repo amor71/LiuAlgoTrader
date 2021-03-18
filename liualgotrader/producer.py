@@ -31,6 +31,8 @@ data_channels: List = []
 queue_id_hash: Dict[str, int]
 symbol_strategy: Dict = {}
 
+nyc = timezone("America/New_York")
+
 
 async def scanner_input(
     scanner_queue: Queue,
@@ -119,15 +121,15 @@ async def run(
     await ps.subscribe(symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG])
 
 
-async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
-    tlog("poylgon_producer teardown_task() starting")
+async def teardown_task(tasks: List[asyncio.Task]) -> None:
+    tlog("producer teardown_task() starting")
     if not config.market_close:
         tlog(
             "we're probably in market schedule by-pass mode, exiting poylgon_producer tear-down task"
         )
         return
 
-    dt = datetime.today().astimezone(tz)
+    dt = datetime.now().astimezone(nyc)
     to_market_close: timedelta
     try:
         to_market_close = (
@@ -136,11 +138,11 @@ async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
             else timedelta(hours=24) + (config.market_close - dt)
         )
         tlog(
-            f"poylgon_producer tear-down task waiting for market close: {to_market_close}"
+            f"producer tear-down task waiting for market close: {to_market_close}"
         )
     except Exception as e:
         tlog(
-            f"poylgon_producer - exception of type {type(e).__name__} with args {e.args}"
+            f"producer - exception of type {type(e).__name__} with args {e.args}"
         )
         return
 
@@ -150,8 +152,8 @@ async def teardown_task(tz: DstTzInfo, tasks: List[asyncio.Task]) -> None:
         tlog("closing Stream")
         await streaming_factory().get_instance().close()
 
-        tlog("poylgon_producer teardown closing web-sockets")
-        tlog("poylgon_producer teardown closing tasks")
+        tlog("producer teardown closing web-sockets")
+        tlog("producer teardown closing tasks")
 
         for task in tasks:
             tlog(
@@ -186,10 +188,8 @@ async def producer_async_main(
     qm = QueueMapper()
     await run(queues=queues, qm=qm)
 
-    trade_updates_task = asyncio.create_task(
-        trade_run(qm=qm),
-        name="trade_updates_task",
-    )
+    at = AlpacaTrader(qm)
+    trade_updates_task = await at.run()
 
     scanner_input_task = asyncio.create_task(
         scanner_input(scanner_queue, queues, num_consumer_processes),
@@ -197,7 +197,6 @@ async def producer_async_main(
     )
     tear_down = asyncio.create_task(
         teardown_task(
-            timezone("America/New_York"),
             [scanner_input_task],
         )
     )

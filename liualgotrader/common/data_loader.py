@@ -287,6 +287,10 @@ class SymbolData:
                     start_index = self.symbol_data.index.get_loc(
                         key.start, method="nearest"
                     )
+                except pd.errors.InvalidIndexError:
+                    print(key)
+                    print(self.symbol_data)
+                    raise
 
                 try:
                     stop_index = self.symbol_data.index.get_loc(
@@ -361,6 +365,9 @@ class SymbolData:
             self.symbol_data = pd.concat(
                 [self.symbol_data, _df]
             ).drop_duplicates()
+            self.symbol_data = self.symbol_data.loc[
+                ~self.symbol_data.index.duplicated(keep="first")
+            ]
 
     def fetch_data_range(self, start: datetime, end: datetime) -> None:
         if self.scale in (TimeScale.minute, TimeScale.day):
@@ -387,6 +394,7 @@ class SymbolData:
                     scale=self.scale,
                 )
                 new_df = pd.concat([_df, new_df]).drop_duplicates()
+
                 end -= timedelta(
                     days=7 if self.scale == TimeScale.minute else 500
                 )
@@ -395,9 +403,9 @@ class SymbolData:
             self.symbol_data = pd.concat(
                 [new_df, self.symbol_data]
             ).drop_duplicates()
-            # self.symbol_data = self.symbol_data[
-            #    ~self.symbol_data.index.duplicated(keep="first")
-            # ]
+            self.symbol_data = self.symbol_data[
+                ~self.symbol_data.index.duplicated(keep="first")
+            ]
 
 
 class DataLoader:

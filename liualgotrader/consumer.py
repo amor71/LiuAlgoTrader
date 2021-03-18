@@ -33,6 +33,8 @@ shortable: Dict = {}
 symbol_data_error: Dict = {}
 rejects: Dict[str, List[str]] = {}
 
+nyc = timezone("America/New_York")
+
 
 async def end_time(reason: str):
     for s in trading_data.strategies:
@@ -65,7 +67,7 @@ async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
 async def liquidator() -> None:
     tlog("liquidator() task starting")
     try:
-        dt = datetime.today().astimezone(timezone("America/New_York"))
+        dt = datetime.now().astimezone(nyc)
         to_market_close = (
             config.market_close - dt
             if config.market_close > dt
@@ -78,7 +80,7 @@ async def liquidator() -> None:
     except KeyboardInterrupt:
         tlog("liquidator() - Caught KeyboardInterrupt")
 
-    tlog("liquidator() -> starting liqudation process")
+    tlog("liquidator() -> starting to liquidate positions")
     try:
         trading_api = tradeapi.REST(
             base_url=config.alpaca_base_url,
@@ -133,7 +135,7 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
 
     to_market_close: timedelta
     try:
-        dt = datetime.today().astimezone(tz)
+        dt = datetime.now().astimezone(nyc)
         to_market_close = (
             config.market_close - dt
             if config.market_close > dt
@@ -246,8 +248,12 @@ async def save(
     await db_trade.save(
         config.db_conn_pool,
         str(now),
-        trading_data.stop_prices[symbol],
-        trading_data.target_prices[symbol],
+        trading_data.stop_prices[symbol]
+        if symbol in trading_data.stop_prices
+        else 0.0,
+        trading_data.target_prices[symbol]
+        if symbol in trading_data.target_prices
+        else 0.0,
     )
 
 
@@ -873,9 +879,11 @@ async def consumer_async_main(
         secret_key=config.alpaca_api_secret,
     )
 
-    nyc = timezone("America/New_York")
     config.market_open, config.market_close = get_trading_windows(
         nyc, trading_api
+    )
+    tlog(
+        f"market open:{config.market_open} market close:{config.market_close}"
     )
     strategy_types = []
     for strategy_name in strategies_conf:

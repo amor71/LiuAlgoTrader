@@ -131,7 +131,6 @@ class PolygonStream(StreamingAPI):
     @classmethod
     def process_message(cls, message):
         payload = json.loads(message)
-        print(payload)
         for event in payload:
             if event["ev"] in ("A", "AM", "T", "Q"):
                 try:
