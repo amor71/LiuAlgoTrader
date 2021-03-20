@@ -228,7 +228,6 @@ elif app == "analyzer":
                 hour=9, minute=30, second=0, microsecond=0
             )
             end_date = start_date.replace(hour=16, minute=00)
-            print(start_date, end_date)
             symbol_data = minute_history[symbol][start_date:end_date]
             try:
                 start_index = symbol_data.close.index.get_loc(
@@ -279,11 +278,6 @@ elif app == "analyzer":
                     )
                 )
                 profit += delta
-
-                print(
-                    row.client_time.to_pydatetime(),
-                    "g" if row["operation"] == "buy" else "r",
-                )
                 ax.scatter(
                     row.client_time.to_pydatetime(),
                     row["price"],
