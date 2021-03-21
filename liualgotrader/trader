@@ -126,7 +126,7 @@ def calc_num_consumer_processes() -> int:
     if not load_avg:
         load_avg = 1.0
 
-    num_processes = max(
+    return max(
         1,
         ceil(
             num_cpus / min(load_avg, 1.0) * config.proc_factor
@@ -135,12 +135,11 @@ def calc_num_consumer_processes() -> int:
         ),
     )
 
-    return num_processes
-
 
 """
 starting
 """
+
 
 
 if __name__ == "__main__":
@@ -175,11 +174,10 @@ if __name__ == "__main__":
 
     # parse configuration
     config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
-    scanners_only = (
-        False
-        if "test_scanners" not in conf_dict or not conf_dict["test_scanners"]
-        else True
+    scanners_only = bool(
+        "test_scanners" in conf_dict and conf_dict["test_scanners"]
     )
+
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")

@@ -77,29 +77,28 @@ class SwingMamaFama(Strategy):
             target_prices[symbol] = target_price
 
             if portfolio_value is None:
-                if trading_api:
-                    retry = 3
-                    while retry > 0:
-                        try:
-                            portfolio_value = float(
-                                trading_api.get_account().portfolio_value
-                            )
-                            break
-                        except ConnectionError as e:
-                            tlog(
-                                f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
-                            )
-                            await asyncio.sleep(0)
-                            retry -= 1
-
-                    if not portfolio_value:
-                        tlog("f[{symbol}][{now}[Error] failed to get portfolio_value")
-                        return False, {}
-                else:
+                if not trading_api:
                     raise Exception(
                         f"{self.name}: both portfolio_value and trading_api can't be None"
                     )
 
+                retry = 3
+                while retry > 0:
+                    try:
+                        portfolio_value = float(
+                            trading_api.get_account().portfolio_value
+                        )
+                        break
+                    except ConnectionError as e:
+                        tlog(
+                            f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
+                        )
+                        await asyncio.sleep(0)
+                        retry -= 1
+
+                if not portfolio_value:
+                    tlog("f[{symbol}][{now}[Error] failed to get portfolio_value")
+                    return False, {}
             shares_to_buy = (
                 portfolio_value * config.risk // (data.close - stop_prices[symbol])
             )

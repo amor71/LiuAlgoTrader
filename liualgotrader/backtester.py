@@ -144,10 +144,10 @@ async def create_strategies(
                 traceback.print_exc()
                 exit(0)
 
+    config.env = "BACKTEST"
     for strategy_tuple in strategy_types:
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
-        config.env = "BACKTEST"
         tlog(f"initializing {strategy_type.__name__}")
 
         if "schedule" not in strategy_details:
@@ -324,24 +324,22 @@ async def backtest_symbol(
         minute_index += 1
         new_now = symbol_data.index[minute_index]
 
-    if position:
-        if (
-            trading_data.last_used_strategy[symbol].type
-            == StrategyType.DAY_TRADE
-        ):
-            tlog(f"[{new_now}]{symbol} liquidate {position} at {price}")
-            db_trade = NewTrade(
-                algo_run_id=last_run_id,  # type: ignore
-                symbol=symbol,
-                qty=int(position) if int(position) > 0 else -int(position),
-                operation="sell" if position > 0 else "buy",
-                price=price,
-                indicators={"liquidate": 1},
-            )
-            await db_trade.save(
-                config.db_conn_pool,
-                str(symbol_data.index[minute_index - 1]),
-            )
+    if position and (
+        trading_data.last_used_strategy[symbol].type == StrategyType.DAY_TRADE
+    ):
+        tlog(f"[{new_now}]{symbol} liquidate {position} at {price}")
+        db_trade = NewTrade(
+            algo_run_id=last_run_id,  # type: ignore
+            symbol=symbol,
+            qty=int(position) if int(position) > 0 else -int(position),
+            operation="sell" if position > 0 else "buy",
+            price=price,
+            indicators={"liquidate": 1},
+        )
+        await db_trade.save(
+            config.db_conn_pool,
+            str(symbol_data.index[minute_index - 1]),
+        )
 
 
 def backtest(
@@ -418,7 +416,7 @@ def backtest(
                     start=start,
                     duration=duration,
                     scanner_start_time=symbol_and_start_time[1],
-                    debug_symbol=True if symbol in debug_symbols else False,
+                    debug_symbol=symbol in debug_symbols,
                 )
 
     @timeit
@@ -434,16 +432,14 @@ def backtest(
                 start=min(starts),
                 duration=timedelta(
                     minutes=max(
-                        [
-                            w["duration"]
-                            for w in [
-                                item
-                                for sublist in [
-                                    conf_dict["strategies"][s]["schedule"]  # type: ignore
-                                    for s in conf_dict["strategies"]  # type: ignore
-                                ]
-                                for item in sublist
+                        w["duration"]
+                        for w in [
+                            item
+                            for sublist in [
+                                conf_dict["strategies"][s]["schedule"]  # type: ignore
+                                for s in conf_dict["strategies"]  # type: ignore
                             ]
+                            for item in sublist
                         ]
                     )
                     if not bypass_duration
@@ -591,118 +587,118 @@ class BackTestDay:
 
     async def next_minute(self) -> Tuple[bool, List[Optional[str]]]:
         rc_msg: List[Optional[str]] = []
-        if self.now < self.end:
-            for i in range(0, len(self.scanners)):
-                if self.now == self.start or (
+        if self.now >= self.end:
+            return False, []
+
+        for i in range(len(self.scanners)):
+            if self.now == self.start or (
                     self.scanners[i].recurrence is not None
                     and self.scanners[i].recurrence.total_seconds() > 0  # type: ignore
                     and int((self.now - self.start).total_seconds() // 60)  # type: ignore
                     % int(self.scanners[i].recurrence.total_seconds() // 60)  # type: ignore
                     == 0
                 ):
-                    new_symbols = await self.scanners[i].run(self.now)
-                    if new_symbols:
-                        really_new = [
-                            x for x in new_symbols if x not in self.symbols
-                        ]
-                        if len(really_new) > 0:
-                            print(
-                                f"Loading data for {len(really_new)} symbols: {really_new}"
-                            )
-                            rc_msg.append(
-                                f"Loaded data for {len(really_new)} symbols: {really_new}"
-                            )
-                            self.symbols += really_new
-                            print(f"loaded data for {len(really_new)} stocks")
-
-            for symbol in self.symbols:
-                try:
-                    for strategy in trading_data.strategies:
-
-                        try:
-                            minute_index = self.data_loader[symbol][
-                                "close"
-                            ].index.get_loc(self.now, method="nearest")
-                        except Exception as e:
-                            print(f"[Exception] {self.now} {symbol} {e}")
-                            print(self.data_loader[symbol]["close"][-100:])
-                            continue
-
-                        price = self.data_loader[symbol]["close"][minute_index]
-
-                        if symbol not in trading_data.positions:
-                            trading_data.positions[symbol] = 0
-
-                        do, what = await strategy.run(
-                            symbol,
-                            True,
-                            int(trading_data.positions[symbol]),
-                            self.data_loader[symbol][: minute_index + 1],
-                            self.now,
-                            self.portfolio_value,
-                            debug=False,  # type: ignore
-                            backtesting=True,
+                new_symbols = await self.scanners[i].run(self.now)
+                if new_symbols:
+                    really_new = [
+                        x for x in new_symbols if x not in self.symbols
+                    ]
+                    if really_new:
+                        print(
+                            f"Loading data for {len(really_new)} symbols: {really_new}"
                         )
-                        if do:
-                            if (
-                                what["side"] == "buy"
-                                and float(what["qty"]) > 0
-                                or what["side"] == "sell"
-                                and float(what["qty"]) < 0
-                            ):
-                                trading_data.positions[symbol] += int(
-                                    float(what["qty"])
-                                )
-                                trading_data.buy_time[
-                                    symbol
-                                ] = self.now.replace(second=0, microsecond=0)
-                            else:
-                                trading_data.positions[symbol] -= int(
-                                    float(what["qty"])
-                                )
+                        rc_msg.append(
+                            f"Loaded data for {len(really_new)} symbols: {really_new}"
+                        )
+                        self.symbols += really_new
+                        print(f"loaded data for {len(really_new)} stocks")
 
-                            trading_data.last_used_strategy[symbol] = strategy
+        for symbol in self.symbols:
+            try:
+                for strategy in trading_data.strategies:
 
-                            rc_msg.append(
-                                f"[{self.now}][{strategy.name}] {what['side']} {what['qty']} of {symbol} @ {price}"
+                    try:
+                        minute_index = self.data_loader[symbol][
+                            "close"
+                        ].index.get_loc(self.now, method="nearest")
+                    except Exception as e:
+                        print(f"[Exception] {self.now} {symbol} {e}")
+                        print(self.data_loader[symbol]["close"][-100:])
+                        continue
+
+                    price = self.data_loader[symbol]["close"][minute_index]
+
+                    if symbol not in trading_data.positions:
+                        trading_data.positions[symbol] = 0
+
+                    do, what = await strategy.run(
+                        symbol,
+                        True,
+                        int(trading_data.positions[symbol]),
+                        self.data_loader[symbol][: minute_index + 1],
+                        self.now,
+                        self.portfolio_value,
+                        debug=False,  # type: ignore
+                        backtesting=True,
+                    )
+                    if do:
+                        if (
+                            what["side"] == "buy"
+                            and float(what["qty"]) > 0
+                            or what["side"] == "sell"
+                            and float(what["qty"]) < 0
+                        ):
+                            trading_data.positions[symbol] += int(
+                                float(what["qty"])
                             )
-                            db_trade = NewTrade(
-                                algo_run_id=strategy.algo_run.run_id,
-                                symbol=symbol,
-                                qty=int(float(what["qty"])),
-                                operation=what["side"],
-                                price=price,
-                                indicators=trading_data.buy_indicators[symbol]
-                                if what["side"] == "buy"
-                                else trading_data.sell_indicators[symbol],
+                            trading_data.buy_time[
+                                symbol
+                            ] = self.now.replace(second=0, microsecond=0)
+                        else:
+                            trading_data.positions[symbol] -= int(
+                                float(what["qty"])
                             )
 
-                            await db_trade.save(
-                                config.db_conn_pool,
-                                str(self.now.to_pydatetime()),
-                                trading_data.stop_prices[symbol],
-                                trading_data.target_prices[symbol],
+                        trading_data.last_used_strategy[symbol] = strategy
+
+                        rc_msg.append(
+                            f"[{self.now}][{strategy.name}] {what['side']} {what['qty']} of {symbol} @ {price}"
+                        )
+                        db_trade = NewTrade(
+                            algo_run_id=strategy.algo_run.run_id,
+                            symbol=symbol,
+                            qty=int(float(what["qty"])),
+                            operation=what["side"],
+                            price=price,
+                            indicators=trading_data.buy_indicators[symbol]
+                            if what["side"] == "buy"
+                            else trading_data.sell_indicators[symbol],
+                        )
+
+                        await db_trade.save(
+                            config.db_conn_pool,
+                            str(self.now.to_pydatetime()),
+                            trading_data.stop_prices[symbol],
+                            trading_data.target_prices[symbol],
+                        )
+
+                        if what["side"] == "buy":
+                            await strategy.buy_callback(
+                                symbol, price, int(float(what["qty"]))
                             )
+                            break
+                        elif what["side"] == "sell":
+                            await strategy.sell_callback(
+                                symbol, price, int(float(what["qty"]))
+                            )
+                            break
+            except Exception as e:
+                print(f"[Exception] {self.now} {symbol} {e}")
+                traceback.print_exc()
 
-                            if what["side"] == "buy":
-                                await strategy.buy_callback(
-                                    symbol, price, int(float(what["qty"]))
-                                )
-                                break
-                            elif what["side"] == "sell":
-                                await strategy.sell_callback(
-                                    symbol, price, int(float(what["qty"]))
-                                )
-                                break
-                except Exception as e:
-                    print(f"[Exception] {self.now} {symbol} {e}")
-                    traceback.print_exc()
+        self.now += timedelta(minutes=1)
 
-            self.now += timedelta(minutes=1)
-
-            return True, rc_msg
-        else:
-            return False, []
+        return True, rc_msg
 
     async def liquidate(self):
         for symbol in trading_data.positions:

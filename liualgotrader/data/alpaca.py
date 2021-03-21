@@ -37,8 +37,7 @@ class AlpacaData(DataAPI):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")
 
-        data = self.alpaca_rest_client.list_assets()
-        return data
+        return self.alpaca_rest_client.list_assets()
 
     def get_symbol_data(
         self,
@@ -113,19 +112,20 @@ class AlpacaStream(StreamingAPI):
     @classmethod
     async def bar_handler(cls, msg):
         print("msg:", msg)
-        event = {}
-        event["symbol"] = msg.symbol
-        event["open"] = msg.open
-        event["close"] = msg.close
-        event["high"] = msg.high
-        event["low"] = msg.low
-        event["start"] = int(msg.timestamp // 1000000)
-        event["volume"] = msg.volume
-        event["count"] = 0.0
-        event["vwap"] = 0.0
-        event["average"] = 0.0
-        event["totalvolume"] = None
-        event["EV"] = "AM"
+        event = {
+            "symbol": msg.symbol,
+            "open": msg.open,
+            "close": msg.close,
+            "high": msg.high,
+            "low": msg.low,
+            "start": int(msg.timestamp // 1000000),
+            "volume": msg.volume,
+            "count": 0.0,
+            "vwap": 0.0,
+            "average": 0.0,
+            "totalvolume": None,
+            "EV": "AM",
+        }
 
         try:
             print(event)

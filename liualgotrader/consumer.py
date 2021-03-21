@@ -55,12 +55,10 @@ async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
             await asyncio.sleep(10)
 
     return (
-        False
-        if asset.tradable is False
-        or asset.shortable is False
-        or asset.status == "inactive"
-        or asset.easy_to_borrow is False
-        else True
+        asset.tradable is not False
+        and asset.shortable is not False
+        and asset.status != "inactive"
+        and asset.easy_to_borrow is not False
     )
 
 
@@ -222,10 +220,7 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     # Make sure the order's not too old
     submitted_at = order.submitted_at.astimezone(timezone("America/New_York"))
     order_lifetime = market_clock - submitted_at
-    if market_clock > submitted_at and order_lifetime.seconds // 60 >= 1:
-        return True
-
-    return False
+    return market_clock > submitted_at and order_lifetime.seconds // 60 >= 1
 
 
 async def save(
@@ -267,7 +262,7 @@ async def update_partially_filled_order(
     qty = int(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
-        qty = qty * -1
+        qty *= -1
 
     trading_data.positions[order.symbol] = trading_data.positions.get(
         order.symbol, 0
@@ -310,7 +305,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     qty = int(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
-        qty = qty * -1
+        qty *= -1
 
     trading_data.positions[order.symbol] = trading_data.positions.get(
         order.symbol, 0
@@ -420,9 +415,7 @@ async def handle_transaction(data: Dict) -> bool:
 async def handle_quote(data: Dict) -> bool:
     if "askprice" not in data or "bidprice" not in data:
         return True
-    if "condition" in data and any(
-        item == data["condition"] for item in QUOTE_SKIP_CONDITIONS
-    ):
+    if "condition" in data and data["condition"] in QUOTE_SKIP_CONDITIONS:
         return True
 
     symbol = data["symbol"]
@@ -675,9 +668,10 @@ async def handle_aggregate(
     # Next, check for existing orders for the stock
     existing_order = trading_data.open_orders.get(symbol)
 
-    if existing_order is not None:
-        if await order_inflight(symbol, existing_order, ts, trading_api):
-            return True
+    if existing_order is not None and await order_inflight(
+        symbol, existing_order, ts, trading_api
+    ):
+        return True
 
     # do we have a position?
     symbol_position = trading_data.positions.get(symbol, 0)

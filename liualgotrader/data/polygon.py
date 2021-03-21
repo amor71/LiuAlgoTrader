@@ -50,9 +50,7 @@ class PolygonData(DataAPI):
                 f"[ERROR] {symbol} has no data for {start} to {end} w {scale.name}"
             )
 
-        d = {}
-        for result in data.results:
-            d[pd.Timestamp(result["t"], unit="ms", tz="America/New_York")] = [
+        d = {pd.Timestamp(result["t"], unit="ms", tz="America/New_York"): [
                 result.get("o"),
                 result.get("h"),
                 result.get("l"),
@@ -60,8 +58,7 @@ class PolygonData(DataAPI):
                 result.get("v"),
                 result.get("vw"),
                 result.get("n"),
-            ]
-
+            ] for result in data.results}
         _df = pd.DataFrame.from_dict(
             d,
             orient="index",

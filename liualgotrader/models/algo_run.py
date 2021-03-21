@@ -35,7 +35,7 @@ class AlgoRun:
                     self.run_id = await con.fetchval(
                         q,
                         self.strategy_name,
-                        env if env else "unknown",
+                        env or "unknown",
                         config.build_label,
                         json.dumps(
                             {
@@ -44,6 +44,7 @@ class AlgoRun:
                         ),
                         self.batch_id,
                     )
+
                 else:
                     q = """
                         INSERT INTO algo_run (algo_name, algo_env, build_number, parameters, batch_id, ref_algo_run)
@@ -53,7 +54,7 @@ class AlgoRun:
                     self.run_id = await con.fetchval(
                         q,
                         self.strategy_name,
-                        env if env else "unknown",
+                        env or "unknown",
                         config.build_label,
                         json.dumps(
                             {
