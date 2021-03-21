@@ -39,25 +39,19 @@ class SymbolData:
                         _key_start = nyc.localize(date_parser(key.start))
                         key = slice(_key_start, key.stop)
                     elif type(key.start) == int:
-                        if not len(self.data.symbol_data):
-                            if self.data.scale == TimeScale.minute:
-                                _key_start = datetime.now(tz=nyc).replace(
-                                    second=0, microsecond=0
-                                ) + timedelta(minutes=1 + key.start)
-                            elif self.data.scale == TimeScale.day:
-                                _key_start = datetime.now(tz=nyc).replace(
-                                    second=0, microsecond=0
-                                ) + timedelta(days=1 + key.start)
-                        else:
-                            if self.data.scale == TimeScale.minute:
+                        if self.data.scale == TimeScale.minute:
+                            if len(self.data.symbol_data):
                                 _key_start = self.data.symbol_data.index[
                                     -1
                                 ] + timedelta(minutes=1 + key.start)
-                            elif self.data.scale == TimeScale.day:
-                                _key_start = self.data.symbol_data.index[
-                                    -1
-                                ] + timedelta(days=1 + key.start)
-
+                            else:
+                                _key_start = datetime.now(tz=nyc).replace(
+                                    second=0, microsecond=0
+                                ) + timedelta(minutes=1 + key.start)
+                        elif self.data.scale == TimeScale.day:
+                            _key_start = datetime.now(tz=nyc).replace(
+                                second=0, microsecond=0
+                            ) + timedelta(days=1 + key.start)
                         key = slice(_key_start, key.stop)
                     elif type(key.start) == date:
                         key = slice(
@@ -75,24 +69,19 @@ class SymbolData:
                         ) + timedelta(days=1)
                         key = slice(key.start, _key_stop)
                     elif type(key.stop) == int:
-                        if not len(self.data.symbol_data):
-                            if self.data.scale == TimeScale.minute:
-                                _key_end = datetime.now(tz=nyc).replace(
-                                    second=0, microsecond=0
-                                ) + timedelta(minutes=1 + key.stop)
-                            elif self.data.scale == TimeScale.day:
-                                _key_end = datetime.now(tz=nyc).replace(
-                                    second=0, microsecond=0
-                                ) + timedelta(days=1 + key.stop)
-                        else:
-                            if self.data.scale == TimeScale.minute:
+                        if self.data.scale == TimeScale.minute:
+                            if len(self.data.symbol_data):
                                 _key_end = self.data.symbol_data.index[
                                     -1
                                 ] + timedelta(minutes=1 + key.stop)
-                            elif self.data.scale == TimeScale.day:
-                                _key_end = self.data.symbol_data.index[
-                                    -1
-                                ] + timedelta(days=1 + key.stop)
+                            else:
+                                _key_end = datetime.now(tz=nyc).replace(
+                                    second=0, microsecond=0
+                                ) + timedelta(minutes=1 + key.stop)
+                        elif self.data.scale == TimeScale.day:
+                            _key_end = datetime.now(tz=nyc).replace(
+                                second=0, microsecond=0
+                            ) + timedelta(days=1 + key.stop)
                         key = slice(key.start, _key_end)
                     elif type(key.stop) == date:
                         key = slice(
@@ -129,24 +118,19 @@ class SymbolData:
                     if type(key) == str:
                         key = nyc.localize(date_parser(key))
                     elif type(key) == int:
-                        if not len(self.data.symbol_data):
-                            if self.data.scale == TimeScale.minute:
+                        if self.data.scale == TimeScale.minute:
+                            if not len(self.data.symbol_data):
                                 key = datetime.now(tz=nyc).replace(
                                     second=0, microsecond=0
                                 ) + timedelta(minutes=1 + key)
-                            elif self.data.scale == TimeScale.day:
-                                key = datetime.now(tz=nyc).replace(
-                                    second=0, microsecond=0
-                                ) + timedelta(days=1 + key)
-                        else:
-                            if self.data.scale == TimeScale.minute:
+                            else:
                                 key = self.data.symbol_data.index[
                                     -1
                                 ] + timedelta(minutes=1 + key)
-                            elif self.data.scale == TimeScale.day:
-                                key = self.data.symbol_data.index[
-                                    -1
-                                ] + timedelta(days=1 + key)
+                        elif self.data.scale == TimeScale.day:
+                            key = datetime.now(tz=nyc).replace(
+                                second=0, microsecond=0
+                            ) + timedelta(days=1 + key)
                     elif type(key) == date:
                         key = nyc.localize(
                             datetime.combine(key, datetime.min.time())
@@ -205,25 +189,19 @@ class SymbolData:
                     _key_start = nyc.localize(date_parser(key.start))
                     key = slice(_key_start, key.stop)
                 elif type(key.start) == int:
-                    if not len(self.symbol_data):
-                        if self.scale == TimeScale.minute:
-                            _key_start = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(minutes=1 + key.start)
-                        elif self.scale == TimeScale.day:
-                            _key_start = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(days=1 + key.start)
-                    else:
-                        if self.scale == TimeScale.minute:
+                    if self.scale == TimeScale.minute:
+                        if len(self.symbol_data):
                             _key_start = self.symbol_data.index[
                                 -1
                             ] + timedelta(minutes=1 + key.start)
-                        elif self.scale == TimeScale.day:
-                            _key_start = self.symbol_data.index[
-                                -1
-                            ] + timedelta(days=1 + key.start)
-
+                        else:
+                            _key_start = datetime.now(tz=nyc).replace(
+                                second=0, microsecond=0
+                            ) + timedelta(minutes=1 + key.start)
+                    elif self.scale == TimeScale.day:
+                        _key_start = datetime.now(tz=nyc).replace(
+                            second=0, microsecond=0
+                        ) + timedelta(days=1 + key.start)
                     key = slice(_key_start, key.stop)
                 elif type(key.start) == date:
                     key = slice(
@@ -239,24 +217,19 @@ class SymbolData:
                     ) + timedelta(days=1)
                     key = slice(key.start, _key_stop)
                 elif type(key.stop) == int:
-                    if not len(self.symbol_data):
-                        if self.scale == TimeScale.minute:
-                            _key_end = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(minutes=1 + key.stop)
-                        elif self.scale == TimeScale.day:
-                            _key_end = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(days=1 + key.stop)
-                    else:
-                        if self.scale == TimeScale.minute:
+                    if self.scale == TimeScale.minute:
+                        if len(self.symbol_data):
                             _key_end = self.symbol_data.index[-1] + timedelta(
                                 minutes=1 + key.stop
                             )
-                        elif self.scale == TimeScale.day:
-                            _key_end = self.symbol_data.index[-1] + timedelta(
-                                days=1 + key.stop
-                            )
+                        else:
+                            _key_end = datetime.now(tz=nyc).replace(
+                                second=0, microsecond=0
+                            ) + timedelta(minutes=1 + key.stop)
+                    elif self.scale == TimeScale.day:
+                        _key_end = datetime.now(tz=nyc).replace(
+                            second=0, microsecond=0
+                        ) + timedelta(days=1 + key.stop)
                     key = slice(key.start, _key_end)
                 elif type(key.stop) == date:
                     key = slice(
@@ -322,90 +295,89 @@ class SymbolData:
             raise
 
     def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
-        if self.scale in (TimeScale.minute, TimeScale.day):
-            if type(timestamp) == pd.Timestamp:
-                _start = timestamp.to_pydatetime() - timedelta(
-                    days=6 if self.scale == TimeScale.minute else 500
-                )
-                _end = timestamp.to_pydatetime() + timedelta(days=1)
-            elif type(timestamp) == int:
+        if self.scale not in (TimeScale.minute, TimeScale.day):
+            return
+
+        if type(timestamp) == pd.Timestamp:
+            _start = timestamp.to_pydatetime() - timedelta(
+                days=6 if self.scale == TimeScale.minute else 500
+            )
+            _end = timestamp.to_pydatetime() + timedelta(days=1)
+        elif type(timestamp) == int:
+            if self.scale == TimeScale.minute:
                 if not len(self.symbol_data):
-                    if self.scale == TimeScale.minute:
-                        _end = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(minutes=1 + timestamp)
-                    elif self.scale == TimeScale.day:
-                        _end = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(days=1 + timestamp)
+                    _end = datetime.now(tz=nyc).replace(
+                        second=0, microsecond=0
+                    ) + timedelta(minutes=1 + timestamp)
                 else:
-                    if self.scale == TimeScale.minute:
-                        _end = self.symbol_data.index[-1] + timedelta(
-                            minutes=1 + timestamp
-                        )
-                    elif self.scale == TimeScale.day:
-                        _end = self.symbol_data.index[-1] + timedelta(
-                            days=1 + timestamp
-                        )
-                _start = _end - timedelta(
-                    days=6 if self.scale == TimeScale.minute else 500
-                )
+                    _end = self.symbol_data.index[-1] + timedelta(
+                        minutes=1 + timestamp
+                    )
+            elif self.scale == TimeScale.day:
+                _end = datetime.now(tz=nyc).replace(
+                    second=0, microsecond=0
+                ) + timedelta(days=1 + timestamp)
+            _start = _end - timedelta(
+                days=6 if self.scale == TimeScale.minute else 500
+            )
+        else:
+            _start = timestamp - timedelta(
+                days=6 if self.scale == TimeScale.minute else 500
+            )
+            _end = timestamp + timedelta(days=1)
+
+        _df = self.data_api.get_symbol_data(
+            self.symbol,
+            start=_start.date() if type(_start) != date else _start,
+            end=_end.date() if type(_end) != date else _end,
+            scale=self.scale,
+        )
+        self.symbol_data = pd.concat(
+            [self.symbol_data, _df]
+        ).drop_duplicates()
+        self.symbol_data = self.symbol_data.loc[
+            ~self.symbol_data.index.duplicated(keep="first")
+        ]
+
+    def fetch_data_range(self, start: datetime, end: datetime) -> None:
+        if self.scale not in (TimeScale.minute, TimeScale.day):
+            return
+
+        new_df = pd.DataFrame()
+        while end >= start:
+            if type(end) == pd.Timestamp:
+                _start = (
+                    end
+                    - timedelta(
+                        days=7 if self.scale == TimeScale.minute else 500
+                    )
+                ).date()
+                _end = end.date()
             else:
-                _start = timestamp - timedelta(
-                    days=6 if self.scale == TimeScale.minute else 500
+                _start = end - timedelta(
+                    days=7 if self.scale == TimeScale.minute else 500
                 )
-                _end = timestamp + timedelta(days=1)
+                _end = end
 
             _df = self.data_api.get_symbol_data(
                 self.symbol,
-                start=_start.date() if type(_start) != date else _start,
-                end=_end.date() if type(_end) != date else _end,
+                start=_start,
+                end=_end,
                 scale=self.scale,
             )
-            self.symbol_data = pd.concat(
-                [self.symbol_data, _df]
-            ).drop_duplicates()
-            self.symbol_data = self.symbol_data.loc[
-                ~self.symbol_data.index.duplicated(keep="first")
-            ]
+            new_df = pd.concat([_df, new_df]).drop_duplicates()
 
-    def fetch_data_range(self, start: datetime, end: datetime) -> None:
-        if self.scale in (TimeScale.minute, TimeScale.day):
-            new_df = pd.DataFrame()
-            while end >= start:
-                if type(end) == pd.Timestamp:
-                    _start = (
-                        end
-                        - timedelta(
-                            days=7 if self.scale == TimeScale.minute else 500
-                        )
-                    ).date()
-                    _end = end.date()
-                else:
-                    _start = end - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 500
-                    )
-                    _end = end
+            end -= timedelta(
+                days=7 if self.scale == TimeScale.minute else 500
+            )
 
-                _df = self.data_api.get_symbol_data(
-                    self.symbol,
-                    start=_start,
-                    end=_end,
-                    scale=self.scale,
-                )
-                new_df = pd.concat([_df, new_df]).drop_duplicates()
-
-                end -= timedelta(
-                    days=7 if self.scale == TimeScale.minute else 500
-                )
-
-            # new_df = new_df[~new_df.index.duplicated(keep="first")]
-            self.symbol_data = pd.concat(
-                [new_df, self.symbol_data]
-            ).drop_duplicates()
-            self.symbol_data = self.symbol_data[
-                ~self.symbol_data.index.duplicated(keep="first")
-            ]
+        # new_df = new_df[~new_df.index.duplicated(keep="first")]
+        self.symbol_data = pd.concat(
+            [new_df, self.symbol_data]
+        ).drop_duplicates()
+        self.symbol_data = self.symbol_data[
+            ~self.symbol_data.index.duplicated(keep="first")
+        ]
 
 
 class DataLoader:

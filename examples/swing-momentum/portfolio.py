@@ -51,8 +51,7 @@ class Portfolio(Miner):
                 "load_data() received an empty list of symbols to load. aborting"
             )
 
-        i = 1
-        for symbol in symbols:
+        for i, symbol in enumerate(symbols, start=1):
             if self.debug:
                 tlog(
                     f"loading 200 days for symbol {symbol} ({i}/{len(symbols)})"
@@ -68,21 +67,18 @@ class Portfolio(Miner):
                     p_points = 0
 
                 tlog(f"loaded at least {p_points} relevant data-points")
-            i += 1
 
     async def calc_momentum(self) -> None:
         if not len(self.data_bars):
             raise Exception("calc_momentum() can't run without data. aborting")
 
-        i = 0
-        for symbol, d in self.data_bars.items():
+        for i, (symbol, d) in enumerate(self.data_bars.items(), start=1):
             _df = df(d)
             _df["delta"] = _df.close.pct_change()
             _df = _df.dropna()
 
             deltas = _df.delta.tolist()[-self.rank_days :]
             slope, intercept, r, _, _ = linregress(range(len(deltas)), deltas)
-            i += 1
             if slope > 0:
                 if self.debug:
                     tlog(
@@ -103,12 +99,10 @@ class Portfolio(Miner):
         )
 
     async def apply_filters(self) -> None:
-        c = 0
         d = df(self.portfolio)
-        for i, row in self.portfolio.iterrows():
+        for c, (i, row) in enumerate(self.portfolio.iterrows(), start=1):
             indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
 
-            c += 1
             removed = False
             for indicator in self.indicators:
                 if indicator == "SMA100":
@@ -131,13 +125,12 @@ class Portfolio(Miner):
                 -1
             ]  # self.data_bars[row.symbol].close[-90:].max()
             low = self.data_bars[row.symbol].close[-90:].min()
-            if not removed and high / low > 1.15:
-                if self.debug:
-                    tlog(
-                        f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 15% in last 90 days"
-                    )
-                    d = d.drop(index=i)
-                    removed = True
+            if not removed and high / low > 1.15 and self.debug:
+                tlog(
+                    f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 15% in last 90 days"
+                )
+                d = d.drop(index=i)
+                removed = True
 
         self.portfolio = d
 

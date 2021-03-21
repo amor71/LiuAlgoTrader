@@ -106,9 +106,7 @@ class MyStrategy(Strategy):
         current_second_data = minute_history.iloc[-1]
         tlog(f"{symbol} data: {current_second_data}")
 
-        morning_rush = (
-            True if (now - config.market_open).seconds // 60 < 30 else False
-        )
+        morning_rush = (now - config.market_open).seconds // 60 < 30
         if await super().is_buy_time(now) and not position:
             # Check for buy signals
             lbound = config.market_open

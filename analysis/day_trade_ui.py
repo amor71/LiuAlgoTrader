@@ -180,10 +180,10 @@ if st.sidebar.checkbox("Show details"):
         stop_price = []
         daily_change = []
         precent_vwap = []
-        for index, row in symbol_df.iterrows():
-            resistance = None
-            support = None
+        resistance = None
+        support = None
 
+        for index, row in symbol_df.iterrows():
             delta = (
                 row["price"]
                 * row["qty"]

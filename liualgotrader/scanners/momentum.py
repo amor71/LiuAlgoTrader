@@ -108,7 +108,7 @@ class Momentum(Scanner):
                         )
                     )
                 ]
-                if len(unsorted) > 0:
+                if unsorted:
                     ticker_by_volume = sorted(
                         unsorted,
                         key=lambda ticker: float(ticker["day"]["v"]),  # type: ignore
@@ -123,8 +123,6 @@ class Momentum(Scanner):
                 await asyncio.sleep(30)
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
-            pass
-
         return []
 
     async def run_finnhub(self) -> List[str]:
@@ -192,8 +190,6 @@ class Momentum(Scanner):
 
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
-            pass
-
         tlog(f"loaded {len(symbols)} from Finnhub")
         return symbols
 

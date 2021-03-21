@@ -34,7 +34,7 @@ def portfolio_return(
             invested_table[d]["invested"] = 0.0
 
         strat = row["algo_name"]
-        if not strat in table[d]:
+        if strat not in table[d]:
             table[d][strat] = 0.0
             invested_table[d][strat] = 0.0
             percentages_table[d][strat] = 0.0
@@ -193,13 +193,11 @@ def calc_batch_revenue(
         (trades["symbol"] == symbol)
         & (not batch_id or trades["batch_id"] == batch_id)
     ]
-    rc = 0
-    for index, row in symbol_df.iterrows():
-        rc += (
+    rc = sum((
             row["price"]
             * row["qty"]
             * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
-        )
+        ) for index, row in symbol_df.iterrows())
     return round(rc, 2)
 
 
@@ -207,13 +205,11 @@ def calc_revenue(symbol: str, trades: pd.DataFrame, env) -> float:
     symbol_df = trades[
         (trades["symbol"] == symbol) & (trades["algo_env"] == env)
     ]
-    rc = 0
-    for index, row in symbol_df.iterrows():
-        rc += (
+    rc = sum((
             row["price"]
             * row["qty"]
             * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
-        )
+        ) for index, row in symbol_df.iterrows())
     return round(rc, 2)
 
 

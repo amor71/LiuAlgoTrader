@@ -98,10 +98,11 @@ class GapDown(Scanner):
                     date.today() - timedelta(days=30),
                     "day",
                 )
-                std = {}
-                for symbol in symbols:
-                    if symbol in _daiy_data:
-                        std[symbol] = statistics.pstdev(_daiy_data[symbol]["low"])
+                std = {
+                    symbol: statistics.pstdev(_daiy_data[symbol]["low"])
+                    for symbol in symbols
+                    if symbol in _daiy_data
+                }
 
                 unsorted = [
                     x
@@ -110,7 +111,7 @@ class GapDown(Scanner):
                     and x.day["o"] < (x.prevDay["l"] - std[x.ticker])
                 ]
 
-                if len(unsorted) > 0:
+                if unsorted:
                     ticker_by_volume = sorted(
                         unsorted,
                         key=lambda ticker: float(ticker.day["v"]),
@@ -124,7 +125,6 @@ class GapDown(Scanner):
 
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
-            pass
         except Exception as e:
             print(e)
 

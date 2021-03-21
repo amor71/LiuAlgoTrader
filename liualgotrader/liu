@@ -151,9 +151,7 @@ def quickstart():
     print("To use Liu Algo Trading Framework you need a funded Alpaca Markets account,")
     print("do you already have a funded account [Y]/n:")
     i = input()
-    have_funded = (
-        True if len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes") else False
-    )
+    have_funded = len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
 
     if not have_funded:
         print("For additional details `https://alpaca.markets/docs/about-us/`")
@@ -189,9 +187,7 @@ def quickstart():
     print()
     print("Do you already have a PostgreSQL instance configured [N]/y:")
     i = input()
-    already_have_db = (
-        True if len(i) > 0 and (i == "y" or i == "Y" or i.lower() == "yes") else False
-    )
+    already_have_db = len(i) > 0 and (i == "y" or i == "Y" or i.lower() == "yes")
 
     if already_have_db:
         print(
@@ -226,11 +222,7 @@ def quickstart():
         print()
         print("Would you like to download the sample database? [Y]/n")
         i = input()
-        restore_sample_db = (
-            True
-            if len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
-            else False
-        )
+        restore_sample_db = len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
         print("Select the database name for keeping track of your trading [liu]:")
         db_name = input()
         db_name = "liu" if not len(db_name) else db_name
@@ -248,7 +240,7 @@ def quickstart():
     print()
     print("Would you like to download & view samples? [Y]/n:")
     i = input()
-    samples = True if not len(i) or i.lower in ("y", "yes") else False
+    samples = not len(i) or i.lower in ("y", "yes")
     sample_location = None
     if samples:
         pwd = pathlib.Path().absolute()

@@ -56,7 +56,7 @@ class NewTrade:
                     self.operation,
                     self.qty,
                     self.price,
-                    json.dumps(self.indicators if self.indicators else {}),
+                    json.dumps(self.indicators or {}),
                     client_buy_time,
                     stop_price,
                     target_price,
@@ -102,9 +102,8 @@ class NewTrade:
                         json.loads(row[4]),
                         row[5],
                     )
-                else:
-                    tlog(f"{symbol} no data for strategy {strategy_name}")
-                    raise ValueError
+                tlog(f"{symbol} no data for strategy {strategy_name}")
+                raise ValueError
 
     @classmethod
     async def get_run_symbols(

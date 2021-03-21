@@ -14,9 +14,7 @@ nyc = timezone("America/New_York")
 @pytest.mark.devtest
 def test_create_data_loader_default() -> bool:
     config.data_connector = DataConnectorType.alpaca
-    if DataLoader():
-        return True
-    return False
+    return bool(DataLoader())
 
 
 @pytest.mark.devtest

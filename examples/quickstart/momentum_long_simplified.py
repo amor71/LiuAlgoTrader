@@ -79,9 +79,7 @@ class MomentumLongV3(Strategy):
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
 
-        morning_rush = (
-            True if (now - config.market_open).seconds // 60 < 30 else False
-        )
+        morning_rush = (now - config.market_open).seconds // 60 < 30
 
         if (
             await super().is_buy_time(now)
@@ -178,32 +176,30 @@ class MomentumLongV3(Strategy):
                     stop_prices[symbol] = stop_price
 
                     if portfolio_value is None:
-                        if trading_api:
-
-                            retry = 3
-                            while retry > 0:
-                                try:
-                                    portfolio_value = float(
-                                        trading_api.get_account().portfolio_value
-                                    )
-                                    break
-                                except ConnectionError as e:
-                                    tlog(
-                                        f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
-                                    )
-                                    await asyncio.sleep(0)
-                                    retry -= 1
-
-                            if not portfolio_value:
-                                tlog(
-                                    "f[{symbol}][{now}[Error] failed to get portfolio_value"
-                                )
-                                return False, {}
-                        else:
+                        if not trading_api:
                             raise Exception(
                                 f"{self.name}: both portfolio_value and trading_api can't be None"
                             )
 
+                        retry = 3
+                        while retry > 0:
+                            try:
+                                portfolio_value = float(
+                                    trading_api.get_account().portfolio_value
+                                )
+                                break
+                            except ConnectionError as e:
+                                tlog(
+                                    f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
+                                )
+                                await asyncio.sleep(0)
+                                retry -= 1
+
+                        if not portfolio_value:
+                            tlog(
+                                "f[{symbol}][{now}[Error] failed to get portfolio_value"
+                            )
+                            return False, {}
                     shares_to_buy = (
                         portfolio_value
                         * config.risk
@@ -364,38 +360,11 @@ class MomentumLongV3(Strategy):
                     "sell_macd_signal": macd_signal[-5:].tolist(),
                     "vwap": data.vwap,
                     "avg": data.average,
-                    "reasons": " AND ".join(
-                        [str(elem) for elem in sell_reasons]
-                    ),
+                    "reasons": " AND ".join(str(elem) for elem in sell_reasons),
                 }
 
-                if not partial_sell:
-                    if not limit_sell:
-                        tlog(
-                            f"[{self.name}][{now}] Submitting sell for {position} shares of {symbol} at market with reason:{sell_reasons}"
-                        )
-                        return (
-                            True,
-                            {
-                                "side": "sell",
-                                "qty": str(position),
-                                "type": "market",
-                            },
-                        )
-                    else:
-                        tlog(
-                            f"[{self.name}][{now}] Submitting sell for {position} shares of {symbol} at {data.close} with reason:{sell_reasons}"
-                        )
-                        return (
-                            True,
-                            {
-                                "side": "sell",
-                                "qty": str(position),
-                                "type": "limit",
-                                "limit_price": str(data.close),
-                            },
-                        )
-                else:
+
+                if partial_sell:
                     qty = int(position / 2) if position > 1 else 1
                     tlog(
                         f"[{self.name}][{now}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close }with reason:{sell_reasons}"
@@ -410,4 +379,30 @@ class MomentumLongV3(Strategy):
                         },
                     )
 
+                else:
+                    if limit_sell:
+                        tlog(
+                            f"[{self.name}][{now}] Submitting sell for {position} shares of {symbol} at {data.close} with reason:{sell_reasons}"
+                        )
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(position),
+                                "type": "limit",
+                                "limit_price": str(data.close),
+                            },
+                        )
+                    else:
+                        tlog(
+                            f"[{self.name}][{now}] Submitting sell for {position} shares of {symbol} at market with reason:{sell_reasons}"
+                        )
+                        return (
+                            True,
+                            {
+                                "side": "sell",
+                                "qty": str(position),
+                                "type": "market",
+                            },
+                        )
         return False, {}
