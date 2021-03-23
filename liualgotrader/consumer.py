@@ -9,14 +9,12 @@ from multiprocessing import Queue
 from queue import Empty
 from typing import Any, Dict, List
 
-import alpaca_trade_api as tradeapi
 import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.rest import APIError
 from pandas import DataFrame as df
 from pytz import timezone
-from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.data_loader import DataLoader
@@ -28,6 +26,8 @@ from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
+from liualgotrader.trading.base import Trader
+from liualgotrader.trading.trader_factory import trader_factory
 
 shortable: Dict = {}
 symbol_data_error: Dict = {}
@@ -44,33 +44,14 @@ async def end_time(reason: str):
         )
 
 
-async def is_shortable(trading_api: tradeapi, symbol: str) -> bool:
-
-    asset = None
-    while not asset:
-        try:
-            asset = trading_api.get_asset(symbol)
-        except Exception as e:
-            tlog(f"is_shortable({symbol}) got exception {e}, retrying...")
-            await asyncio.sleep(10)
-
-    return (
-        asset.tradable is not False
-        and asset.shortable is not False
-        and asset.status != "inactive"
-        and asset.easy_to_borrow is not False
-    )
-
-
-async def liquidator() -> None:
+async def liquidator(trader: Trader) -> None:
     tlog("liquidator() task starting")
     try:
-        dt = datetime.now().astimezone(nyc)
-        to_market_close = (
-            config.market_close - dt
-            if config.market_close > dt
-            else timedelta(hours=24) + (config.market_close - dt)
-        ) - timedelta(minutes=15)
+        to_market_close = trader.get_time_market_close() - timedelta(
+            minutes=15
+        )
+
+        tlog(f"liquidator() - waiting for market close: {to_market_close}")
         await asyncio.sleep(to_market_close.total_seconds())
 
     except asyncio.CancelledError:
@@ -80,12 +61,6 @@ async def liquidator() -> None:
 
     tlog("liquidator() -> starting to liquidate positions")
     try:
-        trading_api = tradeapi.REST(
-            base_url=config.alpaca_base_url,
-            key_id=config.alpaca_api_key,
-            secret_key=config.alpaca_api_secret,
-        )
-
         for symbol in trading_data.positions:
             tlog(f"liquidator() -> checking {symbol}")
             if (
@@ -99,15 +74,11 @@ async def liquidator() -> None:
                         await liquidate(
                             symbol,
                             int(trading_data.positions[symbol]),
-                            trading_api,
+                            trader,
                         )
                         break
                     except ConnectionError:
-                        trading_api = tradeapi.REST(
-                            base_url=config.alpaca_base_url,
-                            key_id=config.alpaca_api_key,
-                            secret_key=config.alpaca_api_secret,
-                        )
+                        await trader.reconnect()
                         await asyncio.sleep(1)
                         retry -= 1
             else:
@@ -122,7 +93,7 @@ async def liquidator() -> None:
     tlog("liquidator() task completed")
 
 
-async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
+async def teardown_task(trader: Trader, task: asyncio.Task) -> None:
     tlog(f"consumer-teardown_task() - starting ")
 
     if not config.market_close:
@@ -131,22 +102,10 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
         )
         return
 
-    to_market_close: timedelta
-    try:
-        dt = datetime.now().astimezone(nyc)
-        to_market_close = (
-            config.market_close - dt
-            if config.market_close > dt
-            else timedelta(hours=24) + (config.market_close - dt)
-        )
-        tlog(
-            f"consumer-teardown_task() - waiting for market close: {to_market_close}"
-        )
-    except Exception as e:
-        tlog(
-            f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
-        )
-        return
+    to_market_close = trader.get_time_market_close()
+    tlog(
+        f"consumer-teardown_task() - waiting for market close: {to_market_close}"
+    )
 
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
@@ -177,7 +136,7 @@ async def teardown_task(tz: DstTzInfo, task: asyncio.Task) -> None:
 async def liquidate(
     symbol: str,
     symbol_position: int,
-    trading_api: tradeapi,
+    trader: Trader,
 ) -> None:
 
     if symbol_position and symbol not in trading_data.open_orders:
@@ -186,7 +145,7 @@ async def liquidate(
         )
         try:
             if symbol_position < 0:
-                o = trading_api.submit_order(
+                o = trader.submit_order(
                     symbol=symbol,
                     qty=str(-symbol_position),
                     side="buy",
@@ -197,7 +156,7 @@ async def liquidate(
                 trading_data.buy_indicators[symbol] = {"liquidation": 1}
 
             else:
-                o = trading_api.submit_order(
+                o = trader.submit_order(
                     symbol=symbol,
                     qty=str(symbol_position),
                     side="sell",
@@ -250,10 +209,6 @@ async def save(
         if symbol in trading_data.target_prices
         else 0.0,
     )
-
-
-async def get_order(api: tradeapi, order_id: str) -> Order:
-    return api.get_order(order_id)
 
 
 async def update_partially_filled_order(
@@ -509,15 +464,11 @@ async def aggregate_bar_data(
     market_data.volume_today[symbol] = data["totalvolume"]
 
 
-async def order_inflight(
-    symbol, existing_order, original_ts, trading_api
-) -> bool:
+async def order_inflight(symbol, existing_order, original_ts, trader) -> bool:
     existing_order = existing_order[0]
     try:
         if await should_cancel_order(existing_order, original_ts):
-            inflight_order = await get_order(
-                trading_api, existing_order.id  # type: ignore
-            )
+            inflight_order = await trader.get_order(existing_order.id)
             if inflight_order and inflight_order.status == "filled":
                 tlog(
                     f"order_id {existing_order.id} for {symbol} already filled {inflight_order}"  # type: ignore
@@ -541,7 +492,7 @@ async def order_inflight(
                 tlog(
                     f"Cancel order id {existing_order.id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                 )
-                trading_api.cancel_order(existing_order.id)  # type: ignore
+                await trader.cancel_order(existing_order.id)  # type: ignore
                 trading_data.open_orders.pop(symbol, None)
 
         return True
@@ -553,14 +504,14 @@ async def order_inflight(
 
 async def execute_strategy_result(
     strategy: Strategy,
-    trading_api: tradeapi,
+    trader: Trader,
     data_loader: DataLoader,
     symbol: str,
     what: Dict,
 ):
     try:
         if what["type"] == "limit":
-            o = trading_api.submit_order(
+            o = trader.submit_order(
                 symbol=symbol,
                 qty=what["qty"],
                 side=what["side"],
@@ -569,7 +520,7 @@ async def execute_strategy_result(
                 limit_price=what["limit_price"],
             )
         else:
-            o = trading_api.submit_order(
+            o = trader.submit_order(
                 symbol=symbol,
                 qty=what["qty"],
                 side=what["side"],
@@ -605,7 +556,7 @@ async def execute_strategy_result(
 
 
 async def do_strategies(
-    trading_api: tradeapi,
+    trader: Trader,
     data_loader: DataLoader,
     symbol: str,
     position: int,
@@ -631,10 +582,9 @@ async def do_strategies(
                 position=position,
                 minute_history=data_loader[symbol].symbol_data,
                 now=now,
-                trading_api=trading_api,
                 portfolio_value=config.portfolio_value,
             )
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             exc_info = sys.exc_info()
             lines = traceback.format_exception(*exc_info)
@@ -645,7 +595,7 @@ async def do_strategies(
         if do:
             await execute_strategy_result(
                 strategy=s,
-                trading_api=trading_api,
+                trader=trader,
                 data_loader=data_loader,
                 symbol=symbol,
                 what=what,
@@ -659,7 +609,7 @@ async def do_strategies(
 
 
 async def handle_aggregate(
-    trading_api: tradeapi,
+    trader: Trader,
     data_loader: DataLoader,
     symbol: str,
     ts: pd.Timestamp,
@@ -669,7 +619,7 @@ async def handle_aggregate(
     existing_order = trading_data.open_orders.get(symbol)
 
     if existing_order is not None and await order_inflight(
-        symbol, existing_order, ts, trading_api
+        symbol, existing_order, ts, trader
     ):
         return True
 
@@ -685,10 +635,10 @@ async def handle_aggregate(
         and trading_data.last_used_strategy[symbol].type
         == StrategyType.DAY_TRADE
     ):
-        await liquidate(symbol, symbol_position, trading_api)
+        await liquidate(symbol, symbol_position, trader)
     else:
         await do_strategies(
-            trading_api=trading_api,
+            trader=trader,
             data_loader=data_loader,
             symbol=symbol,
             position=symbol_position,
@@ -700,7 +650,7 @@ async def handle_aggregate(
 
 
 async def handle_data_queue_msg(
-    data: Dict, trading_api: tradeapi, data_loader: DataLoader
+    data: Dict, trader: Trader, data_loader: DataLoader
 ) -> bool:
     global shortable
     global symbol_data_error
@@ -737,7 +687,7 @@ async def handle_data_queue_msg(
             return True
 
         return await handle_aggregate(
-            trading_api=trading_api,
+            trader=trader,
             data_loader=data_loader,
             symbol=symbol,
             ts=original_ts,
@@ -748,17 +698,10 @@ async def handle_data_queue_msg(
 
 
 async def queue_consumer(
-    queue: Queue,
-    data_loader: DataLoader,
+    queue: Queue, data_loader: DataLoader, trader: Trader
 ) -> None:
     tlog("queue_consumer() starting")
-
     try:
-        trading_api = tradeapi.REST(
-            base_url=config.alpaca_base_url,
-            key_id=config.alpaca_api_key,
-            secret_key=config.alpaca_api_secret,
-        )
         while True:
             try:
                 data = queue.get(timeout=2)
@@ -766,9 +709,8 @@ async def queue_consumer(
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
-                    # print(f"[{os.getpid()}] RECEIVED: {data}")
                     if not await handle_data_queue_msg(
-                        data, trading_api, data_loader
+                        data, trader, data_loader
                     ):
                         while not queue.empty():
                             _ = queue.get()
@@ -778,11 +720,7 @@ async def queue_consumer(
                 await asyncio.sleep(0)
                 continue
             except ConnectionError:
-                trading_api = tradeapi.REST(
-                    base_url=config.alpaca_base_url,
-                    key_id=config.alpaca_api_key,
-                    secret_key=config.alpaca_api_secret,
-                )
+                await trader.reconnect()
                 # re-post back to queue
                 queue.put(data, timeout=1)
                 await asyncio.sleep(1)
@@ -814,36 +752,6 @@ async def queue_consumer(
         tlog("queue_consumer() task done.")
 
 
-def get_trading_windows(tz, api):
-    """Get start and end time for trading"""
-
-    today = datetime.today().astimezone(tz)
-    today_str = datetime.today().astimezone(tz).strftime("%Y-%m-%d")
-
-    calendar = api.get_calendar(start=today_str, end=today_str)[0]
-
-    tlog(f"next open date {calendar.date.date()}")
-
-    if today.date() < calendar.date.date():
-        tlog(f"which is not today {today}")
-        return None, None
-    market_open = today.replace(
-        hour=calendar.open.hour,
-        minute=calendar.open.minute,
-        second=0,
-        microsecond=0,
-        tzinfo=timezone("America/New_York"),
-    )
-    market_close = today.replace(
-        hour=calendar.close.hour,
-        minute=calendar.close.minute,
-        second=0,
-        microsecond=0,
-        tzinfo=timezone("America/New_York"),
-    )
-    return market_open, market_close
-
-
 async def consumer_async_main(
     queue: Queue,
     symbols: List[str],
@@ -867,15 +775,8 @@ async def consumer_async_main(
             traceback.print_exception(*exc_info)
             del exc_info
 
-    trading_api = tradeapi.REST(
-        base_url=config.alpaca_base_url,
-        key_id=config.alpaca_api_key,
-        secret_key=config.alpaca_api_secret,
-    )
-
-    config.market_open, config.market_close = get_trading_windows(
-        nyc, trading_api
-    )
+    trader = trader_factory()()
+    config.market_open, config.market_close = trader.get_market_schedule()
     tlog(
         f"market open:{config.market_open} market close:{config.market_close}"
     )
@@ -925,7 +826,7 @@ async def consumer_async_main(
         trading_data.strategies.append(s)
         if symbols:
             loaded += await load_current_positions(
-                trading_api=trading_api,
+                trading_api=trader,
                 symbols=symbols,
                 strategy=s,
             )
@@ -936,14 +837,12 @@ async def consumer_async_main(
         )
 
     queue_consumer_task = asyncio.create_task(
-        queue_consumer(queue, data_loader)
+        queue_consumer(queue, data_loader, trader)
     )
 
-    liquidate_task = asyncio.create_task(liquidator())
+    liquidate_task = asyncio.create_task(liquidator(trader))
 
-    tear_down = asyncio.create_task(
-        teardown_task(timezone("America/New_York"), queue_consumer_task)
-    )
+    tear_down = asyncio.create_task(teardown_task(trader, queue_consumer_task))
     await asyncio.gather(
         tear_down,
         liquidate_task,
@@ -955,7 +854,7 @@ async def consumer_async_main(
 
 
 async def load_current_positions(
-    trading_api: tradeapi,
+    trading_api: Trader,
     symbols: List[str],
     strategy: Strategy,
 ) -> int:
@@ -968,7 +867,6 @@ async def load_current_positions(
             continue
 
         if position:
-
             try:
                 (
                     prev_run_id,
@@ -998,9 +896,7 @@ async def load_current_positions(
                 ] = trading_data.latest_scalp_basis[symbol] = price
                 trading_data.open_order_strategy[symbol] = strategy
                 trading_data.last_used_strategy[symbol] = strategy
-                trading_data.buy_time[symbol] = timestamp.astimezone(
-                    tz=timezone("America/New_York")
-                )
+                trading_data.buy_time[symbol] = timestamp.astimezone(tz=nyc)
 
                 await NewTrade.rename_algo_run_id(
                     strategy.algo_run.run_id, prev_run_id, symbol

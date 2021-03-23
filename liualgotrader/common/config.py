@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from asyncpg.pool import Pool
 
-from liualgotrader.common.types import DataConnectorType
+from liualgotrader.common.types import BrokerType, DataConnectorType
 
 tradeplan_folder: str = (
     os.getenv("TRADEPLAN_DIR", ".")
@@ -19,7 +19,10 @@ env: str
 
 data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "polygon")]  # type: ignore
 
-
+#
+# Broker
+#
+broker: BrokerType = BrokerType.alpaca
 #
 # Market Schedule
 #

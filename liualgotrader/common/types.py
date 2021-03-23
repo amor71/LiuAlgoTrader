@@ -9,6 +9,10 @@ class DataConnectorType(Enum):
     # finhub = 3
 
 
+class BrokerType(Enum):
+    alpaca = 1
+
+
 class TimeScale(Enum):
     day = 24 * 60 * 60
     minute = 60
