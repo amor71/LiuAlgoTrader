@@ -68,6 +68,9 @@ class Trader:
     ):
         pass
 
+    async def get_order(self, order_id: str):
+        pass
+
     async def cancel_order(self, order_id: str):
         pass
 

@@ -19,8 +19,6 @@ from liualgotrader.scanners.momentum import Momentum
 from liualgotrader.trading.alpaca import AlpacaTrader
 from liualgotrader.trading.base import Trader
 
-scanner_tasks = []
-
 nyc = timezone("America/New_York")
 
 
@@ -68,83 +66,71 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
         tlog(f"scanner_runner {scanner.name} completed")
 
 
+async def create_momentum_scanner(
+    trader: Trader, data_loader: DataLoader, scanner_details: Dict
+) -> Momentum:
+    try:
+        recurrence = scanner_details.get("recurrence", None)
+        target_strategy_name = scanner_details.get(
+            "target_strategy_name", None
+        )
+        return Momentum(
+            data_loader=data_loader,
+            trading_api=trader,
+            min_last_dv=scanner_details["min_last_dv"],
+            min_share_price=scanner_details["min_share_price"],
+            max_share_price=scanner_details["max_share_price"],
+            min_volume=scanner_details["min_volume"],
+            from_market_open=scanner_details["from_market_open"],
+            today_change_percent=scanner_details["min_gap"],
+            recurrence=timedelta(minutes=recurrence) if recurrence else None,
+            target_strategy_name=target_strategy_name,
+            max_symbols=scanner_details.get(
+                "max_symbols", config.total_tickers
+            ),
+        )
+    except KeyError as e:
+        tlog(
+            f"Error {e} in processing of scanner configuration {scanner_details}"
+        )
+        exit(0)
+
+
+async def create_scanners(
+    trader: Trader, data_loader: DataLoader, scanners_conf: Dict
+) -> List[Scanner]:
+    scanners: List[Scanner] = []
+
+    for scanner_name in scanners_conf:
+        if scanner_name == "momentum":
+            scanners.append(
+                await create_momentum_scanner(
+                    trader, data_loader, scanners_conf[scanner_name]
+                )
+            )
+            tlog(f"instantiated momentum scanner")
+        else:
+            tlog(f"custom scanner {scanner_name} selected")
+            scanners.append(
+                await Scanner.get_scanner(
+                    data_loader, scanner_name, scanners_conf[scanner_name]
+                )
+            )
+
+    return scanners
+
+
 async def scanners_runner(
     scanners_conf: Dict, queue: mp.Queue, trader: Trader
 ) -> None:
     print("** scanners_runner() task starting **")
-    data_loader = DataLoader()
-
-    for scanner_name in scanners_conf:
-        if scanner_name == "momentum":
-            scanner_details = scanners_conf[scanner_name]
-            try:
-                recurrence = scanner_details.get("recurrence", None)
-                target_strategy_name = scanner_details.get(
-                    "target_strategy_name", None
-                )
-                scanner_object = Momentum(
-                    data_loader=data_loader,
-                    trading_api=trader,
-                    min_last_dv=scanner_details["min_last_dv"],
-                    min_share_price=scanner_details["min_share_price"],
-                    max_share_price=scanner_details["max_share_price"],
-                    min_volume=scanner_details["min_volume"],
-                    from_market_open=scanner_details["from_market_open"],
-                    today_change_percent=scanner_details["min_gap"],
-                    recurrence=timedelta(minutes=recurrence)
-                    if recurrence
-                    else None,
-                    target_strategy_name=target_strategy_name,
-                    max_symbols=scanner_details.get(
-                        "max_symbols", config.total_tickers
-                    ),
-                )
-                tlog(f"instantiated momentum scanner")
-            except KeyError as e:
-                tlog(
-                    f"Error {e} in processing of scanner configuration {scanner_details}"
-                )
-                exit(0)
-        else:
-            tlog(f"custom scanner {scanner_name} selected")
-            scanner_details = scanners_conf[scanner_name]
-            try:
-                spec = importlib.util.spec_from_file_location(
-                    "module.name", scanner_details["filename"]
-                )
-                custom_scanner_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(custom_scanner_module)  # type: ignore
-                class_name = scanner_name
-                custom_scanner = getattr(custom_scanner_module, class_name)
-
-                if not issubclass(custom_scanner, Scanner):
-                    tlog(
-                        f"custom scanner must inherit from class {Scanner.__name__}"
-                    )
-                    exit(0)
-
-                scanner_details.pop("filename")
-                if "recurrence" not in scanner_details:
-                    scanner_object = custom_scanner(
-                        data_loader=data_loader,
-                        **scanner_details,
-                    )
-                else:
-                    recurrence = scanner_details.pop("recurrence")
-                    scanner_object = custom_scanner(
-                        data_loader=data_loader,
-                        recurrence=timedelta(minutes=recurrence),
-                        **scanner_details,
-                    )
-
-            except Exception as e:
-                tlog(
-                    f"[Error] scanners_runner.scanners_runner() for {scanner_name}:{e} "
-                )
-
-        scanner_tasks.append(
-            asyncio.create_task(scanner_runner(scanner_object, queue))
-        )
+    scanners: List[Scanner] = await create_scanners(
+        trader, DataLoader(), scanners_conf
+    )
+    scanner_tasks = [
+        asyncio.create_task(scanner_runner(scanner, queue))
+        for scanner in scanners
+    ]
 
     try:
         await asyncio.gather(
@@ -174,30 +160,19 @@ async def scanners_runner(
         tlog("scanners_runner.scanners_runner()  done.")
 
 
-async def teardown_task(tasks: List[asyncio.Task]) -> None:
+async def teardown_task(
+    to_market_close: timedelta, tasks: List[asyncio.Task]
+) -> None:
     tlog("scanners_runner.teardown_task() starting")
-    dt = datetime.now().astimezone(nyc)
-    to_market_close: timedelta
-
     if not config.market_close:
         tlog(
             "we're probably in market schedule by-pass mode, exiting teardown_task()"
         )
         return
-    try:
-        to_market_close = (
-            config.market_close - dt
-            if config.market_close > dt
-            else timedelta(hours=24) + (config.market_close - dt)
-        )
-        tlog(
-            f"scanners_runner.teardown_task() task waiting for market close: {to_market_close}"
-        )
-    except Exception as e:
-        tlog(
-            f"scanners_runner.teardown_task() - exception of type {type(e).__name__} with args {e.args}"
-        )
-        return
+
+    tlog(
+        f"scanners_runner.teardown_task() task waiting for market close: {to_market_close}"
+    )
 
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
@@ -226,15 +201,16 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
         scanners_runner(
             scanners_conf,
             queue,
-            trader=AlpacaTrader(),
+            trader=(at := AlpacaTrader()),
         ),
         name="main_task",
     )
 
     tear_down = asyncio.create_task(
         teardown_task(
+            at.get_time_market_close(),
             [main_task],
-        )
+        ),
     )
 
     await asyncio.gather(

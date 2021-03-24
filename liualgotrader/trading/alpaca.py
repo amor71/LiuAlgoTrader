@@ -21,7 +21,9 @@ nyc = timezone("America/New_York")
 class AlpacaTrader(Trader):
     def __init__(self, qm: QueueMapper = None):
         self.alpaca_rest_client = REST(
-            key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
+            base_url=URL(config.alpaca_base_url),
+            key_id=config.alpaca_api_key,
+            secret_key=config.alpaca_api_secret,
         )
         if not self.alpaca_rest_client:
             raise AssertionError(
@@ -76,6 +78,11 @@ class AlpacaTrader(Trader):
             raise AssertionError("Must call w/ authenticated Alpaca client")
         return self.alpaca_rest_client.get_position(symbol)
 
+    async def get_order(self, order_id: str):
+        if not self.alpaca_rest_client:
+            raise AssertionError("Must call w/ authenticated Alpaca client")
+        return self.alpaca_rest_client.get_order(order_id)
+
     def is_market_open_today(self) -> bool:
         return self.market_open is not None
 
@@ -83,9 +90,6 @@ class AlpacaTrader(Trader):
         if not self.is_market_open_today():
             raise AssertionError("Market closed today")
 
-        print(
-            f"############## now:{datetime.now(nyc)} market_close {self.market_close}"
-        )
         return self.market_close - datetime.now(nyc)
 
     async def reconnect(self):

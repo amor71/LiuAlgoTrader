@@ -31,8 +31,6 @@ data_channels: List = []
 queue_id_hash: Dict[str, int]
 symbol_strategy: Dict = {}
 
-nyc = timezone("America/New_York")
-
 
 async def scanner_input(
     scanner_queue: Queue,
@@ -121,7 +119,9 @@ async def run(
     await ps.subscribe(symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG])
 
 
-async def teardown_task(tasks: List[asyncio.Task]) -> None:
+async def teardown_task(
+    to_market_close: timedelta, tasks: List[asyncio.Task]
+) -> None:
     tlog("producer teardown_task() starting")
     if not config.market_close:
         tlog(
@@ -129,23 +129,9 @@ async def teardown_task(tasks: List[asyncio.Task]) -> None:
         )
         return
 
-    dt = datetime.now().astimezone(nyc)
-    to_market_close: timedelta
-    try:
-        to_market_close = (
-            config.market_close - dt
-            if config.market_close > dt
-            else timedelta(hours=24) + (config.market_close - dt)
-        )
-        tlog(
-            f"producer tear-down task waiting for market close: {to_market_close}"
-        )
-    except Exception as e:
-        tlog(
-            f"producer - exception of type {type(e).__name__} with args {e.args}"
-        )
-        return
-
+    tlog(
+        f"producer tear-down task waiting for market close: {to_market_close}"
+    )
     try:
         await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
 
@@ -197,6 +183,7 @@ async def producer_async_main(
     )
     tear_down = asyncio.create_task(
         teardown_task(
+            at.get_time_market_close(),
             [scanner_input_task],
         )
     )

@@ -145,22 +145,22 @@ async def liquidate(
         )
         try:
             if symbol_position < 0:
-                o = trader.submit_order(
+                o = await trader.submit_order(
                     symbol=symbol,
                     qty=str(-symbol_position),
                     side="buy",
-                    type="market",
+                    order_type="market",
                     time_in_force="day",
                 )
                 op = "buy"
                 trading_data.buy_indicators[symbol] = {"liquidation": 1}
 
             else:
-                o = trader.submit_order(
+                o = await trader.submit_order(
                     symbol=symbol,
                     qty=str(symbol_position),
                     side="sell",
-                    type="market",
+                    order_type="market",
                     time_in_force="day",
                 )
                 op = "sell"
@@ -497,6 +497,7 @@ async def order_inflight(symbol, existing_order, original_ts, trader) -> bool:
 
         return True
     except AttributeError:
+        traceback.print_exc()
         tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
 
     return False
@@ -511,20 +512,20 @@ async def execute_strategy_result(
 ):
     try:
         if what["type"] == "limit":
-            o = trader.submit_order(
+            o = await trader.submit_order(
                 symbol=symbol,
                 qty=what["qty"],
                 side=what["side"],
-                type="limit",
+                order_type="limit",
                 time_in_force="day",
                 limit_price=what["limit_price"],
             )
         else:
-            o = trader.submit_order(
+            o = await trader.submit_order(
                 symbol=symbol,
                 qty=what["qty"],
                 side=what["side"],
-                type=what["type"],
+                order_type=what["type"],
                 time_in_force="day",
             )
 
