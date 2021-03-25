@@ -151,3 +151,24 @@ class NewTrade:
                     old_run_id,
                     symbol,
                 )
+
+    @classmethod
+    async def get_latest_algo_run_id(
+        cls, symbol: str, pool: Pool = None
+    ) -> int:
+        if not pool:
+            pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                val = await con.fetchval(
+                    """
+                        SELECT  algo_run_id
+                        FROM new_trades
+                        WHERE symbol = $1
+                        ORDER BY tstamp DESC
+                        LIMIT 1
+                    """,
+                    symbol,
+                )
+
+                return val

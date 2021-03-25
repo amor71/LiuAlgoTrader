@@ -287,14 +287,16 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 
     if order.side == "buy":
         trading_data.buy_indicators.pop(order.symbol, None)
-        await strategy.buy_callback(
-            order.symbol, float(order.filled_avg_price), int(new_qty)
-        )
+        if strategy:
+            await strategy.buy_callback(
+                order.symbol, float(order.filled_avg_price), int(new_qty)
+            )
     else:
         trading_data.sell_indicators.pop(order.symbol, None)
-        await strategy.sell_callback(
-            order.symbol, float(order.filled_avg_price), int(new_qty)
-        )
+        if strategy:
+            await strategy.sell_callback(
+                order.symbol, float(order.filled_avg_price), int(new_qty)
+            )
 
     trading_data.open_orders.pop(order.symbol, None)
     trading_data.open_order_strategy.pop(order.symbol, None)
@@ -335,6 +337,14 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
     tlog(
         f"trade update without order for {symbol} data={data} with event {event}"
     )
+
+    algo_run_id = await NewTrade.get_latest_algo_run_id(symbol=symbol)
+    tlog(f"found algo_run_id {algo_run_id}")
+    for s in trading_data.strategies:
+        if s.algo_run.run_id == algo_run_id:
+            trading_data.last_used_strategy[symbol] = s
+            tlog(f"found strategy {str(s)}")
+            break
 
     if event == "partial_fill":
         await update_partially_filled_order(
@@ -911,6 +921,7 @@ async def load_current_positions(
             except ValueError:
                 pass
             except Exception as e:
+                traceback.print_exc()
                 tlog(
                     f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )

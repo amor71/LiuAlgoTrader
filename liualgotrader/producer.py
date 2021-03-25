@@ -138,10 +138,11 @@ async def teardown_task(
 
         tlog("closing Stream")
         await streaming_factory().get_instance().close()
+        tlog("producer teardown closed streaming web-sockets")
         await trader_factory().get_instance().close()
-        tlog("producer teardown closing web-sockets")
-        tlog("producer teardown closing tasks")
+        tlog("producer teardown closed trading web-sockets")
 
+        tlog("producer teardown closing tasks")
         for task in tasks:
             tlog(
                 f"teardown_task(): requesting task {task.get_name()} to cancel"
@@ -156,6 +157,10 @@ async def teardown_task(
 
     except asyncio.CancelledError:
         tlog("teardown_task() cancelled during sleep")
+
+    except Exception as e:
+        tlog(f"[ERROR] Exception {e}")
+        traceback.print_exc()
 
     finally:
         tlog("teardown_task() done.")
