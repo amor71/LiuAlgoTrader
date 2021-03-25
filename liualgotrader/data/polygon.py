@@ -50,7 +50,8 @@ class PolygonData(DataAPI):
                 f"[ERROR] {symbol} has no data for {start} to {end} w {scale.name}"
             )
 
-        d = {pd.Timestamp(result["t"], unit="ms", tz="America/New_York"): [
+        d = {
+            pd.Timestamp(result["t"], unit="ms", tz="America/New_York"): [
                 result.get("o"),
                 result.get("h"),
                 result.get("l"),
@@ -58,7 +59,9 @@ class PolygonData(DataAPI):
                 result.get("v"),
                 result.get("vw"),
                 result.get("n"),
-            ] for result in data.results}
+            ]
+            for result in data.results
+        }
         _df = pd.DataFrame.from_dict(
             d,
             orient="index",
@@ -109,7 +112,7 @@ class PolygonStream(StreamingAPI):
 
                 args.append(f"{action}.{symbol}")
 
-        tlog(f"subscribe(): adding subcription {args}")
+        tlog(f"subscribe(): adding subscription {args}")
         self.polygon_ws_client.subscribe(*args)
 
         return True

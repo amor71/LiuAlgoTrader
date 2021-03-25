@@ -77,6 +77,9 @@ class Trader:
     async def run(self) -> Optional[asyncio.Task]:
         pass
 
+    async def close(self):
+        pass
+
     @classmethod
     def get_instance(cls):
         if not cls.__instance:

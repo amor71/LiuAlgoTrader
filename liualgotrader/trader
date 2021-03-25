@@ -141,7 +141,6 @@ starting
 """
 
 
-
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
     mp.set_start_method("spawn")
@@ -174,10 +173,7 @@ if __name__ == "__main__":
 
     # parse configuration
     config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
-    scanners_only = bool(
-        "test_scanners" in conf_dict and conf_dict["test_scanners"]
-    )
-
+    scanners_only = bool("test_scanners" in conf_dict and conf_dict["test_scanners"])
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
@@ -289,7 +285,7 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             if not scanners_only:
-                producer.terminate()
+                producer.kill()
             scanner.terminate()
 
             if not scanners_only:

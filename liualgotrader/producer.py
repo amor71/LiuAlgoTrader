@@ -24,6 +24,7 @@ from liualgotrader.common.types import QueueMapper, WSEventType
 from liualgotrader.data.data_factory import streaming_factory
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.trading.alpaca import AlpacaTrader
+from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
@@ -137,7 +138,7 @@ async def teardown_task(
 
         tlog("closing Stream")
         await streaming_factory().get_instance().close()
-
+        await trader_factory().get_instance().close()
         tlog("producer teardown closing web-sockets")
         tlog("producer teardown closing tasks")
 

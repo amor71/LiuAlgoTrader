@@ -110,6 +110,12 @@ class AlpacaTrader(Trader):
             )
         return None
 
+    async def close(self):
+        if not self.alpaca_ws_client:
+            raise AssertionError("Must call w/ authenticated Alpaca client")
+        if self.running:
+            self.alpaca_ws_client.close()
+
     async def get_tradeable_symbols(self) -> List[str]:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
