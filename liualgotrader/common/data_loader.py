@@ -343,7 +343,9 @@ class SymbolData:
             end=_end.date() if type(_end) != date else _end,
             scale=self.scale,
         )
-        self.symbol_data = pd.concat([self.symbol_data, _df]).drop_duplicates()
+        self.symbol_data = pd.concat(
+            [self.symbol_data, _df], sort=True
+        ).drop_duplicates()
         self.symbol_data = self.symbol_data.loc[
             ~self.symbol_data.index.duplicated(keep="first")
         ]
@@ -374,13 +376,13 @@ class SymbolData:
                 end=_end,
                 scale=self.scale,
             )
-            new_df = pd.concat([_df, new_df]).drop_duplicates()
+            new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
 
             end -= timedelta(days=7 if self.scale == TimeScale.minute else 500)
 
         # new_df = new_df[~new_df.index.duplicated(keep="first")]
         self.symbol_data = pd.concat(
-            [new_df, self.symbol_data]
+            [new_df, self.symbol_data], sort=True
         ).drop_duplicates()
         self.symbol_data = self.symbol_data[
             ~self.symbol_data.index.duplicated(keep="first")
