@@ -190,7 +190,7 @@ async def producer_async_main(
     tear_down = asyncio.create_task(
         teardown_task(
             at.get_time_market_close(),
-            [scanner_input_task],
+            [scanner_input_task, trade_updates_task],
         )
     )
 

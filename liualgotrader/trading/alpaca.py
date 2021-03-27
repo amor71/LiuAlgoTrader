@@ -43,7 +43,7 @@ class AlpacaTrader(Trader):
             self.alpaca_ws_client.subscribe_trade_updates(
                 AlpacaTrader.trade_update_handler
             )
-        self.running = False
+        self.running_task: Optional[asyncio.Task] = None
 
         now = datetime.now(nyc)
         calendar = self.alpaca_rest_client.get_calendar(
@@ -102,13 +102,12 @@ class AlpacaTrader(Trader):
             )
 
     async def run(self) -> Optional[asyncio.Task]:
-        if not self.running:
+        if not self.running_task:
             tlog("starting Alpaca listener")
-            self.running = True
-            return asyncio.create_task(
+            self.running_task = asyncio.create_task(
                 self.alpaca_ws_client._trading_ws._run_forever()
             )
-        return None
+        return self.running_task
 
     async def close(self):
         if not self.alpaca_ws_client:
