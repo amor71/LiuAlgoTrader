@@ -115,7 +115,8 @@ async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     """
     df: pd.DataFrame = await fetch_as_dataframe(query)
     try:
-        df["client_time"] = pd.to_datetime(df["client_time"])
+        if not df.empty:
+            df["client_time"] = pd.to_datetime(df["client_time"])
     except Exception:
         tlog(
             f"[Error] aload_trades_by_batch_id({batch_id}) can't convert 'client_time' column to datetime"
@@ -193,11 +194,14 @@ def calc_batch_revenue(
         (trades["symbol"] == symbol)
         & (not batch_id or trades["batch_id"] == batch_id)
     ]
-    rc = sum((
+    rc = sum(
+        (
             row["price"]
             * row["qty"]
             * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
-        ) for index, row in symbol_df.iterrows())
+        )
+        for index, row in symbol_df.iterrows()
+    )
     return round(rc, 2)
 
 
@@ -205,11 +209,14 @@ def calc_revenue(symbol: str, trades: pd.DataFrame, env) -> float:
     symbol_df = trades[
         (trades["symbol"] == symbol) & (trades["algo_env"] == env)
     ]
-    rc = sum((
+    rc = sum(
+        (
             row["price"]
             * row["qty"]
             * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
-        ) for index, row in symbol_df.iterrows())
+        )
+        for index, row in symbol_df.iterrows()
+    )
     return round(rc, 2)
 
 

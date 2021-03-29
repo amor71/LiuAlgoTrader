@@ -25,4 +25,9 @@ async def fetch_as_dataframe(query: str, *args) -> pd.DataFrame:
         stmt = await con.prepare(query)
         columns = [a.name for a in stmt.get_attributes()]
         data = await stmt.fetch(*args)
-        return pd.DataFrame(data=data, columns=columns)
+
+        return (
+            pd.DataFrame(data=data, columns=columns)
+            if data and len(data) > 0
+            else pd.DataFrame()
+        )
