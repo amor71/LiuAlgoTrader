@@ -18,15 +18,15 @@ class Portfolio:
                     async with con.transaction():
                         _ = await con.fetchval(
                             """
-                                INSERT INTO portfolio(portfolio_id, symbol, rank, qty, atr)
+                                INSERT INTO portfolio(portfolio_id, symbol, score, qty, volatility)
                                 VALUES ($1, $2, $3, $4, $5)
                                 RETURNING portfolio_entry_id
                             """,
                             id,
                             row.symbol,
-                            row.ranked_slope,
+                            row.score,
                             int(row.qty),
-                            row.ATR,
+                            row.volatility,
                         )
                 except Exception as e:
                     tlog(f"[ERROR] inserting {row} resulted in exception {e}")
@@ -35,7 +35,7 @@ class Portfolio:
     async def load(cls, portfolio_id: str) -> DataFrame:
         q = """
             SELECT 
-                symbol, qty, rank, atr
+                symbol, qty, score, volatility
             FROM 
                 portfolio
             WHERE 

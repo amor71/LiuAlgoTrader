@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
+import numpy as np
 from pandas import DataFrame as df
 from scipy.stats import linregress
 from stockstats import StockDataFrame
@@ -18,7 +19,7 @@ from liualgotrader.models.portfolio import Portfolio as DBPortfolio
 
 
 class Portfolio(Miner):
-    portfolio: df = df(columns=["symbol", "slope", "r", "ranked_slope"])
+    portfolio: df = df(columns=["symbol", "slope", "r", "score"])
     data_bars: Dict[str, df] = {}
 
     def __init__(
@@ -59,7 +60,6 @@ class Portfolio(Miner):
             self.data_bars[symbol] = self.data_loader[symbol][
                 date.today() - timedelta(days=int(200 * 7 / 5)) : date.today()  # type: ignore
             ]
-
             if self.debug:
                 try:
                     p_points = len(self.data_bars[symbol])
@@ -74,28 +74,29 @@ class Portfolio(Miner):
 
         for i, (symbol, d) in enumerate(self.data_bars.items(), start=1):
             _df = df(d)
-            _df["delta"] = _df.close.pct_change()
-            _df = _df.dropna()
-
-            deltas = _df.delta.tolist()[-self.rank_days :]
-            slope, intercept, r, _, _ = linregress(range(len(deltas)), deltas)
+            deltas = np.log(_df.close[-self.rank_days :])
+            slope, _, r_value, _, _ = linregress(
+                np.arange(len(deltas)), deltas
+            )
             if slope > 0:
+                annualized_slope = (np.power(np.exp(slope), 252) - 1) * 100
+                score = annualized_slope * (r_value ** 2)
                 if self.debug:
                     tlog(
-                        f"{symbol}({i}/{len(self.data_bars.keys())}) slope:{slope} r:{r} ({len(deltas)} days)"
+                        f"{symbol}({i}/{len(self.data_bars.keys())}) slope:{slope} annualized_slope:{annualized_slope} r:{r_value} ({len(deltas)} days)"
                     )
                 self.portfolio = self.portfolio.append(
                     {
                         "symbol": symbol,
-                        "slope": slope,
-                        "r": r,
-                        "ranked_slope": slope * (r ** 2),
+                        "slope": annualized_slope,
+                        "r": r_value,
+                        "score": score,
                     },
                     ignore_index=True,
                 )
 
         self.portfolio = self.portfolio.sort_values(
-            by="ranked_slope", ascending=False
+            by="score", ascending=False
         )
 
     async def apply_filters(self) -> None:
@@ -125,9 +126,9 @@ class Portfolio(Miner):
                 -1
             ]  # self.data_bars[row.symbol].close[-90:].max()
             low = self.data_bars[row.symbol].close[-90:].min()
-            if not removed and high / low > 1.15 and self.debug:
+            if not removed and high / low > 1.25 and self.debug:
                 tlog(
-                    f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 15% in last 90 days"
+                    f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 25% in last 90 days"
                 )
                 d = d.drop(index=i)
                 removed = True
@@ -141,10 +142,20 @@ class Portfolio(Miner):
             indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
             indicator_calculator.ATR_SMMA = self.atr_days
             atr = indicator_calculator["atr"][-1]
-            qty = int(self.portfolio_size * self.risk_factor // atr)
+            volatility = (
+                self.data_bars[row.symbol]
+                .close.pct_change()
+                .rolling(20)
+                .std()
+                .iloc[-1]
+            )
+            qty = int(self.portfolio_size * self.risk_factor // volatility)
             self.portfolio.loc[
                 self.portfolio.symbol == row.symbol, "ATR"
             ] = atr
+            self.portfolio.loc[
+                self.portfolio.symbol == row.symbol, "volatility"
+            ] = volatility
             self.portfolio.loc[
                 self.portfolio.symbol == row.symbol, "qty"
             ] = qty
