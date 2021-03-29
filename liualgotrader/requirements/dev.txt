@@ -9,7 +9,7 @@ pylint==2.7.2
 flake8==3.9.0
 Cython==0.29.22
 alpaca-trade-api==1.1.0
-google-cloud-logging==2.2.0
+google-cloud-logging==2.3.1
 therapist==2.1.0
 jupyter==1.0.0
 asyncpg==0.22.0
