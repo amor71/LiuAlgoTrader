@@ -8,7 +8,7 @@ google-cloud-logging==2.3.1
 asyncpg==0.22.0
 pygit2==1.4.0
 websockets==8.1
-matplotlib==3.3.4
+matplotlib==3.4.0
 tabulate==0.8.9
 streamlit==0.79.0
 stockstats==0.3.2
