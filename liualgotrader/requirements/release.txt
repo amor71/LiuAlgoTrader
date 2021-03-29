@@ -4,7 +4,7 @@ deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.2
 alpaca-trade-api==1.1.0
-google-cloud-logging==2.2.0
+google-cloud-logging==2.3.1
 asyncpg==0.22.0
 pygit2==1.4.0
 websockets==8.1
