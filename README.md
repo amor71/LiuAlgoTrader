@@ -58,7 +58,7 @@ Additional samples can we found in the [examples](examples) directory.
 
 ## Back-testing
 
-While Liu is first and foremost and trading platform, it comes equipped with full back-testing capabilities, providing command-line tool & jupyter notebook for analysis, and a browser-based UI covering both functionalities.
+While Liu is first and foremost a trading platform, it comes equipped with full back-testing capabilities, providing command-line tool & jupyter notebook for analysis, and a browser-based UI covering both functionalities.
 ## Machine Learning 
 
 These features are still work in process:
