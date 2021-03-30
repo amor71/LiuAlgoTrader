@@ -44,9 +44,6 @@ new_bid: str = ""
 est = pytz.timezone("America/New_York")
 
 if app == "back-test":
-    env = st.sidebar.selectbox(
-        "Select environment", ("PAPER", "BACKTEST", "PROD")
-    )
     new_bid = ""
     st.text("Back-testing a past trading day, or a specific batch-id.")
 
@@ -101,7 +98,7 @@ if app == "back-test":
     else:
         try:
             with st.spinner("Loading list of trading sessions"):
-                df = load_batch_list(day_to_analyze, env)
+                df = load_batch_list(day_to_analyze, "")
             if df.empty:
                 st.error("Select another day")
                 st.stop()
@@ -124,7 +121,7 @@ if app == "back-test":
                 lambda x: calc_batch_revenue(x, trades, bid)
             )
             how_was_my_day["count"] = how_was_my_day["symbol"].apply(
-                lambda x: count_trades(x, trades, env)
+                lambda x: count_trades(x, trades, bid)
             )
             st.text(
                 f"batch_id:{bid}\nstart time:{start_time }\nrevenue=${round(sum(how_was_my_day['revenues']), 2)}"
@@ -221,13 +218,15 @@ elif app == "analyzer":
         est = pytz.timezone("US/Eastern")
         for symbol in minute_history:
             symbol_df = t.loc[t["symbol"] == symbol]
-            start_date = symbol_df.client_time.astype(
-                "datetime64[ns, US/Eastern]"
-            ).min()
+            start_date = symbol_df.client_time.min()
+            end_date = symbol_df.client_time.max()
+            # .astype(
+            #    "datetime64[ns, US/Eastern]"
+            # ).min()
             start_date = start_date.replace(
                 hour=9, minute=30, second=0, microsecond=0
             )
-            end_date = start_date.replace(hour=16, minute=00)
+            end_date = end_date.replace(hour=16, minute=00)
             symbol_data = minute_history[symbol][start_date:end_date]
             try:
                 start_index = symbol_data.close.index.get_loc(
@@ -279,7 +278,7 @@ elif app == "analyzer":
                 )
                 profit += delta
                 ax.scatter(
-                    row.client_time.to_pydatetime(),
+                    row.client_time,  # .to_pydatetime(),
                     row["price"],
                     c="g" if row["operation"] == "buy" else "r",
                     s=100,
@@ -312,7 +311,7 @@ elif app == "analyzer":
                 "at": times,
                 "price": prices,
                 "qty": qtys,
-                "daily change": daily_change,
+                "% change": daily_change,
                 "target price": target_price,
                 "stop price": stop_price,
                 "indicators": indicators,

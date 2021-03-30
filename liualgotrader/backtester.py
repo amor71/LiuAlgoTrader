@@ -39,7 +39,7 @@ def get_batch_list():
         print(
             tabulate(
                 data,
-                headers=["build", "batch_id", "strategy", "env", "start time"],
+                headers=["build", "batch_id", "strategy", "start time"],
             )
         )
 
@@ -67,7 +67,7 @@ def show_usage():
     print(
         f"usage:\n{sys.argv[0]} batch --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>",
         "\nOR"
-        f"\n{sys.argv[0]} from <start_date> [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute",
+        f"\n{sys.argv[0]} from <start_date> [--scanners=<scanner-name,>] [--strats=<strategy-name,>] [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute",
     )
     msg = """
     'backter' application re-runs a past trading session, or test strategies on past data. 
@@ -503,7 +503,6 @@ class BackTestDay:
                         "target_strategy_name", None
                     )
                     scanner_object = Momentum(
-                        provider=scanner_details["provider"],
                         data_loader=self.data_loader,
                         trading_api=AlpacaTrader(),
                         min_last_dv=scanner_details["min_last_dv"],
@@ -592,12 +591,12 @@ class BackTestDay:
 
         for i in range(len(self.scanners)):
             if self.now == self.start or (
-                    self.scanners[i].recurrence is not None
-                    and self.scanners[i].recurrence.total_seconds() > 0  # type: ignore
-                    and int((self.now - self.start).total_seconds() // 60)  # type: ignore
-                    % int(self.scanners[i].recurrence.total_seconds() // 60)  # type: ignore
-                    == 0
-                ):
+                self.scanners[i].recurrence is not None
+                and self.scanners[i].recurrence.total_seconds() > 0  # type: ignore
+                and int((self.now - self.start).total_seconds() // 60)  # type: ignore
+                % int(self.scanners[i].recurrence.total_seconds() // 60)  # type: ignore
+                == 0
+            ):
                 new_symbols = await self.scanners[i].run(self.now)
                 if new_symbols:
                     really_new = [
@@ -651,9 +650,9 @@ class BackTestDay:
                             trading_data.positions[symbol] += int(
                                 float(what["qty"])
                             )
-                            trading_data.buy_time[
-                                symbol
-                            ] = self.now.replace(second=0, microsecond=0)
+                            trading_data.buy_time[symbol] = self.now.replace(
+                                second=0, microsecond=0
+                            )
                         else:
                             trading_data.positions[symbol] -= int(
                                 float(what["qty"])

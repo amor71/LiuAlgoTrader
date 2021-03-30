@@ -2,7 +2,7 @@ import asyncio
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -23,10 +23,14 @@ portfolio_value: float
 
 
 async def create_scanners(
-    data_loader: DataLoader, scanners_conf: Dict
+    data_loader: DataLoader,
+    scanners_conf: Dict,
+    scanner_names: Optional[List],
 ) -> List[Scanner]:
     scanners: List = []
     for scanner_name in scanners_conf:
+        if scanner_names and scanner_name not in scanner_name:
+            continue
         tlog(f"scanner {scanner_name} selected")
         if scanner_name == "momentum":
             tlog(
@@ -48,10 +52,13 @@ async def create_strategies(
     uid: str,
     conf_dict: Dict,
     dl: DataLoader,
+    strategy_names: Optional[List],
 ) -> List[Strategy]:
     strategies = []
     config.env = "BACKTEST"
     for strategy_name in conf_dict:
+        if strategy_names and strategy_name not in strategy_names:
+            continue
         strategy_details = conf_dict[strategy_name]
         strategies.append(
             await Strategy.get_strategy(
@@ -172,7 +179,13 @@ async def do_strategy(
 
 
 async def backtest_main(
-    uid: str, from_date: date, to_date: date, scale: TimeScale, tradeplan: Dict
+    uid: str,
+    from_date: date,
+    to_date: date,
+    scale: TimeScale,
+    tradeplan: Dict,
+    scanners: Optional[List],
+    strategies: Optional[List],
 ) -> None:
     tlog(
         f"Starting back-test from {from_date} to {to_date} with time scale {scale}"
@@ -190,9 +203,11 @@ async def backtest_main(
     trade_api = tradeapi.REST(
         key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
     )
-    scanners = await create_scanners(data_loader, tradeplan["scanners"])
+    scanners = await create_scanners(
+        data_loader, tradeplan["scanners"], scanners
+    )
     strategies = await create_strategies(
-        uid, tradeplan["strategies"], data_loader
+        uid, tradeplan["strategies"], data_loader, strategies
     )
     calendars = trade_api.get_calendar(str(from_date), str(to_date))
 
@@ -229,7 +244,12 @@ async def backtest_main(
 
 
 def backtest(
-    from_date: date, to_date: date, scale: TimeScale, config: Dict
+    from_date: date,
+    to_date: date,
+    scale: TimeScale,
+    config: Dict,
+    scanners: Optional[List],
+    strategies: Optional[List],
 ) -> str:
     uid = str(uuid.uuid4())
     try:
@@ -238,7 +258,9 @@ def backtest(
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(asyncio.new_event_loop())
         loop.run_until_complete(
-            backtest_main(uid, from_date, to_date, scale, config)
+            backtest_main(
+                uid, from_date, to_date, scale, config, scanners, strategies
+            )
         )
     except KeyboardInterrupt:
         tlog("backtest() - Caught KeyboardInterrupt")

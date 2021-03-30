@@ -3,7 +3,7 @@ actions:
         run: mypy --show-error-context --pretty  --strict-optional  --ignore-missing-imports {files}
         include: "*.py"
     bandit:
-        run: bandit {files}
+        run: bandit -ii {files}
         include: "*.py"
     black:
         run: black -l 79 {files}

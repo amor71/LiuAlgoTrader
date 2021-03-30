@@ -140,18 +140,26 @@ if __name__ == "__main__":
         from_date = dateFromString(sys.argv[2])
 
         try:
+            scanners: Optional[List] = None
+            strategies: Optional[List] = None
             to_date = date.today()
-            scale = "DAILY"
+            scale = TimeScale["day"]
             opts, args = getopt.getopt(
                 sys.argv[3:],
                 shortopts=[],
                 longopts=[
                     "to=",
                     "scale=",
+                    "scanners=",
+                    "strats=",
                 ],
             )
             for opt, arg in opts:
-                if opt in ("--to"):
+                if opt in ("--scanners"):
+                    scanners = arg.split(",")
+                elif opt in ("--strats"):
+                    strategies = arg.split(",")
+                elif opt in ("--to"):
                     to_date = dateFromString(arg)
                 elif opt in ("--scale"):
                     if arg in ("day", "minute"):
@@ -167,7 +175,12 @@ if __name__ == "__main__":
             sys.exit(0)
 
         enhanced_backtest.backtest(
-            from_date=from_date, to_date=to_date, scale=scale, config=conf_dict
+            from_date=from_date,
+            to_date=to_date,
+            scale=scale,
+            config=conf_dict,
+            scanners=scanners,
+            strategies=strategies,
         )
     else:
         print(f"Error parsing {sys.argv[1:]}\n")

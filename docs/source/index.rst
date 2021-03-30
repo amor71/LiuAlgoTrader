@@ -38,7 +38,9 @@ sessions w/ LiuAlgoTrader.
    Configuration
    Scanners
    Strategies
-   Usage
+   Trading
+   Backtesting 
+   Off-market
    Analysis
    Examples
    How to Contribute
