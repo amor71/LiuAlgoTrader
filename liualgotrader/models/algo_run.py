@@ -111,7 +111,7 @@ class AlgoRun:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT build_number, batch_id, algo_name, algo_env, date_trunc('minute', min(start_time)) as start
+                        SELECT build_number, batch_id, algo_name, date_trunc('minute', min(start_time)) as start
                         FROM algo_run
                         WHERE start_time > $2
                         GROUP BY batch_id, algo_name, algo_env, build_number

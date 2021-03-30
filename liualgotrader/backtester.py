@@ -39,7 +39,7 @@ def get_batch_list():
         print(
             tabulate(
                 data,
-                headers=["build", "batch_id", "strategy", "env", "start time"],
+                headers=["build", "batch_id", "strategy", "start time"],
             )
         )
 
