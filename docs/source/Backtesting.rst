@@ -154,7 +154,6 @@ Below is a sample output of a running `backtester batch`:
 Understanding command-line parameters
 *************************************
 
-
 +----------------+-------------------------------------------------------+
 | Parameter Name | Description                                           |
 +----------------+-------------------------------------------------------+
@@ -234,14 +233,62 @@ database.
 *backtester* for Swing-Trading
 ------------------------------
 
-Back-testing over large period of time, is simple to execute. 
+Back-testing over large period of time, is simple to execute. Once run a new `batch-id` is generated, allowing analysis for the strategy behaviour. 
+
+
 Prerequisites
 *************
 1. Installed and configured Liu Algo Tradring Framework,
 2. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
 
-How-To
-******
+How-To Use
+**********
 
+To run the back-testing you need to specify a starting day. 
+For example, assuming `tradeplan.toml` file is present:
 
+.. code-block:: bash
 
+    backtester from '2020-10-18'
+
+would generate output similar to:
+
+.. image:: /images/backtester4.png
+    :width: 800
+    :align: left
+    :alt: *backtester* backtester period
+
+Once ran, both the browser-based UI (w/ `streamlit`) can be used to analyze the trading session, or any of the analysis notebook(s) explained in the Analysis documentation section:
+
+.. image:: /images/streamlit-2.png
+    :width: 800
+    :align: left
+    :alt: *backtester* streamlit analyzer 
+
+Understanding command-line parameters
+*************************************
+
++----------------+-------------------------------------------------------+
+| Parameter Name | Description                                           |
++----------------+-------------------------------------------------------+
+| to             | The last day for calculating the back-testing.        |
+|                | the date is provided in the format `YYYY-MM-DD`.      |
+|                | The `to` date will be included in the back-testing    |
+|                | session. If not specified, `today` is being used.     |
++----------------+-------------------------------------------------------+
+| scale          | The time-scale for running the backtest.              |
+|                | Allowed values are: day or minute. If not specified   |
+|                | day will be used. Keep in mind that minute will       |
+|                | take longer to run, but may be more realistic         |
+|                | for your strategy.                                    |
++----------------+-------------------------------------------------------+
+| scanners       | Comma-seperated list of scanner names to used in      |
+|                | the back-testing session. The scanner names are       |
+|                | taken from the `tradeplan.toml` file. if not          |
+|                | specified all scanners will be tried.                 |
++----------------+-------------------------------------------------------+
+| strats         | Comma-seperated list of strategy names to used in     |
+|                | the back-testing session. The strategy names are      |
+|                | taken from the `tradeplan.toml` file. if not          |
+|                | specified all strategies will be executed.            |
++----------------+-------------------------------------------------------+
