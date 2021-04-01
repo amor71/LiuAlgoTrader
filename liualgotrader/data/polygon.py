@@ -129,47 +129,49 @@ class PolygonStream(StreamingAPI):
         self.polygon_ws_client.close_connection()
 
     @classmethod
+    def handle_event(cls, event: Dict):
+        try:
+            event["EV"] = event["ev"]
+            if "s" in event:
+                event["start"] = event["s"]
+            if "o" in event:
+                event["open"] = event["o"]
+            if "h" in event:
+                event["high"] = event["h"]
+            if "l" in event:
+                event["low"] = event["l"]
+            if "c" in event:
+                event["close"] = event["c"]
+            if "v" in event:
+                event["volume"] = event["v"]
+            if "vw" in event:
+                event["vwap"] = event["vw"]
+            if "a" in event:
+                event["average"] = event["a"]
+            if "av" in event:
+                event["totalvolume"] = event["av"]
+            if "sym" in event:
+                event["symbol"] = event["sym"]
+            if "z" in event:
+                event["count"] = event["z"]
+            cls.get_instance().queues[event["sym"]].put(event, timeout=1)
+        except queue.Full as f:
+            tlog(
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}, sleeping for 2 seconds and re-trying."
+            )
+            raise
+        except Exception as e:
+            tlog(
+                f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
+            )
+            traceback.print_exc()
+
+    @classmethod
     def process_message(cls, message):
         payload = json.loads(message)
         for event in payload:
             if event["ev"] in ("A", "AM", "T", "Q"):
-                try:
-                    event["EV"] = event["ev"]
-                    if "s" in event:
-                        event["start"] = event["s"]
-                    if "o" in event:
-                        event["open"] = event["o"]
-                    if "h" in event:
-                        event["high"] = event["h"]
-                    if "l" in event:
-                        event["low"] = event["l"]
-                    if "c" in event:
-                        event["close"] = event["c"]
-                    if "v" in event:
-                        event["volume"] = event["v"]
-                    if "vw" in event:
-                        event["vwap"] = event["vw"]
-                    if "a" in event:
-                        event["average"] = event["a"]
-                    if "av" in event:
-                        event["totalvolume"] = event["av"]
-                    if "sym" in event:
-                        event["symbol"] = event["sym"]
-                    if "z" in event:
-                        event["count"] = event["z"]
-                    cls.get_instance().queues[event["sym"]].put(
-                        event, timeout=1
-                    )
-                except queue.Full as f:
-                    tlog(
-                        f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}, sleeping for 2 seconds and re-trying."
-                    )
-                    raise
-                except Exception as e:
-                    tlog(
-                        f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
-                    )
-                    traceback.print_exc()
+                cls.handle_event(event)
 
     @classmethod
     def on_error(ws, error):
