@@ -32,7 +32,7 @@ from liualgotrader.trading.trader_factory import trader_factory
 shortable: Dict = {}
 symbol_data_error: Dict = {}
 rejects: Dict[str, List[str]] = {}
-
+time_tick: Dict[str, datetime] = {}
 nyc = timezone("America/New_York")
 
 
@@ -368,13 +368,46 @@ async def handle_trade_update(data: Dict) -> bool:
         return await handle_trade_update_wo_order(data)
 
 
-async def handle_transaction(data: Dict) -> bool:
-    if "conditions" in data and any(
-        item in data["conditions"] for item in TRADE_CONDITIONS
+async def handle_transaction(
+    symbol: str, data: Dict, trader: Trader, data_loader: DataLoader
+) -> bool:
+    ts = data["timestamp"].replace(second=0, microsecond=0)
+
+    data["open"] = data["price"]
+    data["high"] = data["price"]
+    data["low"] = data["price"]
+    data["close"] = data["price"]
+    data["average"] = None
+    data["count"] = None
+    data["vwap"] = None
+
+    await aggregate_bar_data(data_loader, data, ts)
+
+    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=10):  # type: ignore
+        tlog(f"T$ {symbol} too out of sync w {time_diff}")
+        return False
+    elif (
+        datetime.now(tz=timezone("America/New_York")).replace(
+            second=0, microsecond=0
+        )
+        > ts
     ):
-        # tlog(f"trade={data}")
         return True
-    return True
+    if (
+        time_tick.get(symbol)
+        and data["timestamp"].replace(microsecond=0) == time_tick[symbol]
+    ):
+        return True
+
+    time_tick[symbol] = data["timestamp"].replace(microsecond=0)
+
+    return await handle_aggregate(
+        trader=trader,
+        data_loader=data_loader,
+        symbol=symbol,
+        ts=time_tick[symbol],
+        data=data,
+    )
 
 
 async def handle_quote(data: Dict) -> bool:
@@ -460,9 +493,9 @@ async def aggregate_bar_data(
             min(data["low"], current.low),
             data["close"],
             current.volume + data["volume"],
-            data["average"],
-            data["count"],
-            data["vwap"],
+            data["average"] or current.average,
+            data["count"] or current.count,
+            data["vwap"] or current.vwap,
         ]
     try:
         data_loader[symbol].loc[ts] = new_data
@@ -671,7 +704,7 @@ async def handle_data_queue_msg(
     shortable[symbol] = True  # ToDO
 
     if data["EV"] == "T":
-        return await handle_transaction(data)
+        return await handle_transaction(symbol, data, trader, data_loader)
     elif data["EV"] == "Q":
         return await handle_quote(data)
 

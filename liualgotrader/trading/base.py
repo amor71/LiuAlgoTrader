@@ -16,7 +16,9 @@ class Trader:
     def __repr__(self):
         return type(self).__name__
 
-    def get_market_schedule(self) -> Tuple[datetime, datetime]:
+    def get_market_schedule(
+        self,
+    ) -> Tuple[Optional[datetime], Optional[datetime]]:
         """Get market open, close in NYC timezone, timedelta to close.
 
         Returns

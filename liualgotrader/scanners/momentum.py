@@ -125,74 +125,6 @@ class Momentum(Scanner):
             tlog("KeyboardInterrupt")
         return []
 
-    async def run_finnhub(self) -> List[str]:
-        tlog(f"{self.name}: run_finnhub(): started")
-        trade_able_symbols = await self._get_trade_able_symbols()
-
-        nyc = timezone("America/New_York")
-        _from = datetime.today().astimezone(nyc) - timedelta(days=1)
-        _to = datetime.now(nyc)
-        symbols = []
-        try:
-            with requests.Session() as s:
-                for symbol in trade_able_symbols:
-                    try:
-                        retry = True
-                        while retry:
-                            retry = False
-                            url = (
-                                f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&"
-                                f"resolution=D&from={_from.strftime('%s')}&to={_to.strftime('%s')}&"
-                                f"token={config.finnhub_api_key}"
-                            )
-
-                            try:
-                                r = s.get(url)
-                            except ConnectionError:
-                                retry = True
-                                continue
-
-                            if r.status_code == 200:
-                                response = r.json()
-                            if response["s"] != "no_data":
-                                prev_prec = (
-                                    100.0
-                                    * (response["c"][1] - response["c"][0])
-                                    / response["c"][0]
-                                )
-                                if (
-                                    self.max_share_price
-                                    > response["c"][1]
-                                    > self.min_share_price
-                                    and response["v"][0] * response["c"][0]
-                                    > self.min_last_dv
-                                    and prev_prec > self.today_change_percent
-                                    and response["v"][1] > self.min_volume
-                                ):
-                                    symbols.append(symbol)
-                                    tlog(
-                                        f"collected {len(symbols)}/{self.max_symbols}"
-                                    )
-                                    if len(symbols) == self.max_symbols:
-                                        break
-
-                            elif r.status_code == 429:
-                                tlog(
-                                    f"{trade_able_symbols.index(symbol)}/{len(trade_able_symbols)} API limit: ({r.text})"
-                                )
-                                time.sleep(30)
-                                retry = True
-                            else:
-                                tlog(f"[ERROR] {r.status_code}, {r.text}")
-
-                    except IndexError:
-                        pass
-
-        except KeyboardInterrupt:
-            tlog("KeyboardInterrupt")
-        tlog(f"loaded {len(symbols)} from Finnhub")
-        return symbols
-
     async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
         _minute_data = self.data_loader[symbol][
             when : when + timedelta(days=1)  # type: ignore
@@ -280,13 +212,7 @@ class Momentum(Scanner):
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
             await self._wait_time()
-
-            if config.data_connector == DataConnectorType.polygon:
-                return await self.run_polygon()
-            else:
-                raise Exception(
-                    f"scanner {self.name} can't run using data provider {config.data_connector} "
-                )
+            return await self.run_polygon()
         else:
             rows = await self.load_from_db(back_time)
 

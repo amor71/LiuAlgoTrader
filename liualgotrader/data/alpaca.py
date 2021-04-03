@@ -35,7 +35,7 @@ class AlpacaData(DataAPI):
 
     def get_symbols(self) -> List[Dict]:
         if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated polygon client")
+            raise AssertionError("Must call w/ authenticated Alpaca client")
 
         return self.alpaca_rest_client.list_assets()
 
@@ -56,7 +56,6 @@ class AlpacaData(DataAPI):
             if end >= date.today()
             else end
         )
-        print(_start, _end)
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
@@ -89,6 +88,7 @@ class AlpacaStream(StreamingAPI):
             base_url=URL(config.alpaca_base_url),
             key_id=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
+            data_feed="sip",  # config.alpaca_data_feed,
         )
 
         if not self.alpaca_ws_client:
@@ -111,23 +111,21 @@ class AlpacaStream(StreamingAPI):
 
     @classmethod
     async def bar_handler(cls, msg):
-        print("msg:", msg)
-        event = {
-            "symbol": msg.symbol,
-            "open": msg.open,
-            "close": msg.close,
-            "high": msg.high,
-            "low": msg.low,
-            "start": int(msg.timestamp // 1000000),
-            "volume": msg.volume,
-            "count": 0.0,
-            "vwap": 0.0,
-            "average": 0.0,
-            "totalvolume": None,
-            "EV": "AM",
-        }
-
         try:
+            event = {
+                "symbol": msg.symbol,
+                "open": msg.open,
+                "close": msg.close,
+                "high": msg.high,
+                "low": msg.low,
+                "start": int(msg.timestamp // 1000000),
+                "volume": msg.volume,
+                "count": 0.0,
+                "vwap": 0.0,
+                "average": 0.0,
+                "totalvolume": None,
+                "EV": "AM",
+            }
             print(event)
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
@@ -143,7 +141,29 @@ class AlpacaStream(StreamingAPI):
 
     @classmethod
     async def trades_handler(cls, msg):
-        print(f"trades_handler:{msg}")
+        try:
+            event = {
+                "symbol": msg.symbol,
+                "price": msg.price,
+                "timestamp": msg.timestamp,
+                "volume": msg.size,
+                "exchange": msg.exchange,
+                "conditions": msg.conditions,
+                "tape": msg.tape,
+                "EV": "T",
+            }
+            # print(event, flush=True)
+            cls.get_instance().queues[msg.symbol].put(event, timeout=1)
+        except queue.Full as f:
+            tlog(
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}, sleeping for 2 seconds and re-trying."
+            )
+            raise
+        except Exception as e:
+            tlog(
+                f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
+            )
+            traceback.print_exc()
 
     @classmethod
     async def quotes_handler(cls, msg):
@@ -155,17 +175,17 @@ class AlpacaStream(StreamingAPI):
         print(symbols, events)
         for event in events:
             if event == WSEventType.SEC_AGG:
-                tlog(f"event {event} not implemente in Alpaca")
+                tlog(f"event {event} not implemented in Alpaca")
             elif event == WSEventType.MIN_AGG:
                 self.alpaca_ws_client.subscribe_bars(
                     AlpacaStream.bar_handler, *symbols
                 )
             elif event == WSEventType.TRADE:
                 self.alpaca_ws_client.subscribe_trades(
-                    AlpacaStream.trades_handler, symbols
+                    AlpacaStream.trades_handler, *symbols
                 )
             elif event == WSEventType.QUOTE:
                 self.alpaca_ws_client.subscribe_quotes(
-                    AlpacaStream.quotes_handler, symbols
+                    AlpacaStream.quotes_handler, *symbols
                 )
         return True

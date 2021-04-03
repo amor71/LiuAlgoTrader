@@ -32,9 +32,9 @@ async def test_apple_sec_agg():
     queues["GLD"] = Queue()
     queues["AAPL"] = Queue()
     status = await alpaca_stream.subscribe(
-        ["JNUG", "GLD", "AAPL"], [WSEventType.MIN_AGG]
+        ["JNUG", "GLD", "AAPL"], [WSEventType.MIN_AGG, WSEventType.TRADE]
     )
-    print(f"subscribe resut: {status}")
+    print(f"subscribe result: {status}")
     if not status:
         raise AssertionError(f"Failed in alpaca_stream.subscribe w/ {status}")
     await asyncio.sleep(5 * 60)

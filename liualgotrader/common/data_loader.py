@@ -9,8 +9,9 @@ import pandas as pd
 from dateutil.parser import parse as date_parser
 from pytz import timezone
 
+from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import TimeScale
+from liualgotrader.common.types import DataConnectorType, TimeScale
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.data_factory import data_loader_factory
 
@@ -19,7 +20,7 @@ nyc = timezone("America/New_York")
 
 class SymbolData:
     class _Column:
-        def __init__(self, data_api: DataAPI, name: str, data: object):
+        def __init__(self, data_api: DataAPI, name: str, data: SymbolData):
             self.name = name
             self.data_api = data_api
             self.data = data
@@ -27,30 +28,31 @@ class SymbolData:
         def __repr__(self):
             return str(self.data.symbol_data[self.name])
 
-        def _getitem_slice(self, key):
-            if not key.start and not len(self.data.symbol_data):
-                raise ValueError(f"[:{key.stop}] is not a valid slice")
-            if not key.stop:
-                key = slice(key.start, -1)
-
-            if type(key.start) == str:
-                _key_start = nyc.localize(date_parser(key.start))
-                key = slice(_key_start, key.stop)
-            elif type(key.start) == int:
-                if self.data.scale == TimeScale.minute:
-                    if len(self.data.symbol_data):
-                        _key_start = self.data.symbol_data.index[
-                            -1
-                        ] + timedelta(minutes=1 + key.start)
-                    else:
-                        _key_start = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(minutes=1 + key.start)
-                elif self.data.scale == TimeScale.day:
-                    _key_start = datetime.now(tz=nyc).replace(
+        def _convert_offset_to_datetime(self, offset: int) -> datetime:
+            if self.data.scale == TimeScale.minute:
+                if len(self.data.symbol_data):
+                    _rc = self.data.symbol_data.index[-1] + timedelta(
+                        minutes=1 + offset
+                    )
+                else:
+                    _rc = datetime.now(tz=nyc).replace(
                         second=0, microsecond=0
-                    ) + timedelta(days=1 + key.start)
-                key = slice(_key_start, key.stop)
+                    ) + timedelta(minutes=1 + offset)
+            elif self.data.scale == TimeScale.day:
+                _rc = datetime.now(tz=nyc).replace(
+                    second=0, microsecond=0
+                ) + timedelta(days=1 + offset)
+
+            return _rc
+
+        def _handle_slice_conversion(self, key: slice) -> slice:
+            # handle slide start
+            if type(key.start) == str:
+                key = slice(nyc.localize(date_parser(key.start)), key.stop)
+            elif type(key.start) == int:
+                key = slice(
+                    self._convert_offset_to_datetime(key.start), key.stop
+                )
             elif type(key.start) == date:
                 key = slice(
                     nyc.localize(
@@ -59,26 +61,16 @@ class SymbolData:
                     key.stop,
                 )
 
+            # handle slice end
             if type(key.stop) == str:
-                _key_stop = nyc.localize(date_parser(key.stop)) + timedelta(
-                    days=1
+                key = slice(
+                    key.start,
+                    nyc.localize(date_parser(key.stop)) + timedelta(days=1),
                 )
-                key = slice(key.start, _key_stop)
             elif type(key.stop) == int:
-                if self.data.scale == TimeScale.minute:
-                    if len(self.data.symbol_data):
-                        _key_end = self.data.symbol_data.index[-1] + timedelta(
-                            minutes=1 + key.stop
-                        )
-                    else:
-                        _key_end = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(minutes=1 + key.stop)
-                elif self.data.scale == TimeScale.day:
-                    _key_end = datetime.now(tz=nyc).replace(
-                        second=0, microsecond=0
-                    ) + timedelta(days=1 + key.stop)
-                key = slice(key.start, _key_end)
+                key = slice(
+                    key.start, self._convert_offset_to_datetime(key.stop)
+                )
             elif type(key.stop) == date:
                 key = slice(
                     key.start,
@@ -87,7 +79,29 @@ class SymbolData:
                     )
                     + timedelta(days=1),
                 )
+            return key
 
+        def _get_index(self, index: datetime) -> int:
+            try:
+                return self.data.symbol_data.index.get_loc(
+                    index, method="ffill"
+                )
+            except KeyError:
+                self.data.fetch_data_timestamp(index)
+                return self.data.symbol_data.index.get_loc(
+                    index, method="nearest"
+                )
+
+        def _getitem_slice(self, key):
+            if not key.start and not len(self.data.symbol_data):
+                raise ValueError(f"[:{key.stop}] is not a valid slice")
+            if not key.stop:
+                key = slice(key.start, -1)
+
+            # ensure key represents datetime
+            key = self._handle_slice_conversion(key)
+
+            # load data, if missing
             if (
                 not len(self.data.symbol_data)
                 or key.stop > self.data.symbol_data.index[-1]
@@ -99,26 +113,11 @@ class SymbolData:
                     key.start, self.data.symbol_data.index[0]
                 )
 
-            try:
-                start_index = self.data.symbol_data.index.get_loc(
-                    key.start, method="ffill"
-                )
-            except KeyError:
-                self.data.fetch_data_timestamp(key.start)
-                start_index = self.data.symbol_data.index.get_loc(
-                    key.start, method="nearest"
-                )
+            # get start and end index
+            start_index = self._get_index(key.start)
+            stop_index = self._get_index(key.stop)
 
-            try:
-                stop_index = self.data.symbol_data.index.get_loc(
-                    key.stop, method="ffill"
-                )
-            except KeyError:
-                self.data.fetch_data_timestamp(key.stop)
-                stop_index = self.data.symbol_data.index.get_loc(
-                    key.stop, method="nearest"
-                )
-
+            # return data range
             return self.data.symbol_data.iloc[start_index : stop_index + 1][
                 self.name
             ]
@@ -127,19 +126,7 @@ class SymbolData:
             if type(key) == str:
                 key = nyc.localize(date_parser(key))
             elif type(key) == int:
-                if self.data.scale == TimeScale.minute:
-                    if not len(self.data.symbol_data):
-                        key = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(minutes=1 + key)
-                    else:
-                        key = self.data.symbol_data.index[-1] + timedelta(
-                            minutes=1 + key
-                        )
-                elif self.data.scale == TimeScale.day:
-                    key = datetime.now(tz=nyc).replace(
-                        second=0, microsecond=0
-                    ) + timedelta(days=1 + key)
+                key = self._convert_offset_to_datetime(key)
             elif type(key) == date:
                 key = nyc.localize(datetime.combine(key, datetime.min.time()))
 
@@ -162,7 +149,6 @@ class SymbolData:
             try:
                 if type(key) == slice:
                     return self._getitem_slice(key)
-
                 return self._getitem(key)
             except Exception:
                 traceback.print_exc()
@@ -188,6 +174,58 @@ class SymbolData:
             self.columns[attr] = self._Column(self.data_api, attr, self)
         return self.columns[attr]
 
+    def _convert_offset_to_datetime(self, offset: int) -> datetime:
+        if self.scale == TimeScale.minute:
+            if len(self.symbol_data):
+                _rc = self.symbol_data.index[-1] + timedelta(
+                    minutes=1 + offset
+                )
+            else:
+                _rc = datetime.now(tz=nyc).replace(
+                    second=0, microsecond=0
+                ) + timedelta(minutes=1 + offset)
+        elif self.scale == TimeScale.day:
+            _rc = datetime.now(tz=nyc).replace(
+                second=0, microsecond=0
+            ) + timedelta(days=1 + offset)
+
+        return _rc
+
+    def _handle_slice_conversion(self, key: slice) -> slice:
+        # handle slide start
+        if type(key.start) == str:
+            key = slice(nyc.localize(date_parser(key.start)), key.stop)
+        elif type(key.start) == int:
+            key = slice(self._convert_offset_to_datetime(key.start), key.stop)
+        elif type(key.start) == date:
+            key = slice(
+                nyc.localize(datetime.combine(key.start, datetime.min.time())),
+                key.stop,
+            )
+
+        # handle slice end
+        if type(key.stop) == str:
+            key = slice(
+                key.start,
+                nyc.localize(date_parser(key.stop)) + timedelta(days=1),
+            )
+        elif type(key.stop) == int:
+            key = slice(key.start, self._convert_offset_to_datetime(key.stop))
+        elif type(key.stop) == date:
+            key = slice(
+                key.start,
+                nyc.localize(datetime.combine(key.stop, datetime.min.time()))
+                + timedelta(days=1),
+            )
+        return key
+
+    def _get_index(self, index: datetime) -> int:
+        try:
+            return self.symbol_data.index.get_loc(index, method="ffill")
+        except KeyError:
+            self.fetch_data_timestamp(index)
+            return self.symbol_data.index.get_loc(index, method="nearest")
+
     def __getitem__(self, key):
         try:
             if type(key) == slice:
@@ -196,61 +234,10 @@ class SymbolData:
                 if not key.stop:
                     key = slice(key.start, -1)
 
-                if type(key.start) == str:
-                    _key_start = nyc.localize(date_parser(key.start))
-                    key = slice(_key_start, key.stop)
-                elif type(key.start) == int:
-                    if self.scale == TimeScale.minute:
-                        if len(self.symbol_data):
-                            _key_start = self.symbol_data.index[
-                                -1
-                            ] + timedelta(minutes=1 + key.start)
-                        else:
-                            _key_start = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(minutes=1 + key.start)
-                    elif self.scale == TimeScale.day:
-                        _key_start = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(days=1 + key.start)
-                    key = slice(_key_start, key.stop)
-                elif type(key.start) == date:
-                    key = slice(
-                        nyc.localize(
-                            datetime.combine(key.start, datetime.min.time())
-                        ),
-                        key.stop,
-                    )
+                # handle slice conversations
+                key = self._handle_slice_conversion(key)
 
-                if type(key.stop) == str:
-                    _key_stop = nyc.localize(
-                        date_parser(key.stop)
-                    ) + timedelta(days=1)
-                    key = slice(key.start, _key_stop)
-                elif type(key.stop) == int:
-                    if self.scale == TimeScale.minute:
-                        if len(self.symbol_data):
-                            _key_end = self.symbol_data.index[-1] + timedelta(
-                                minutes=1 + key.stop
-                            )
-                        else:
-                            _key_end = datetime.now(tz=nyc).replace(
-                                second=0, microsecond=0
-                            ) + timedelta(minutes=1 + key.stop)
-                    elif self.scale == TimeScale.day:
-                        _key_end = datetime.now(tz=nyc).replace(
-                            second=0, microsecond=0
-                        ) + timedelta(days=1 + key.stop)
-                    key = slice(key.start, _key_end)
-                elif type(key.stop) == date:
-                    key = slice(
-                        key.start,
-                        nyc.localize(
-                            datetime.combine(key.stop, datetime.min.time())
-                        )
-                        + timedelta(days=1),
-                    )
-
+                # load data
                 if (
                     not len(self.symbol_data)
                     or key.stop > self.symbol_data.index[-1]
@@ -263,32 +250,21 @@ class SymbolData:
                 ):
                     self.fetch_data_range(key.start, self.symbol_data.index[0])
 
-                try:
-                    start_index = self.symbol_data.index.get_loc(
-                        key.start, method="ffill"
-                    )
-                except KeyError:
-                    start_index = self.symbol_data.index.get_loc(
-                        key.start, method="nearest"
-                    )
-                except pd.errors.InvalidIndexError:
-                    print(key)
-                    print(self.symbol_data)
-                    raise
-
-                try:
-                    stop_index = self.symbol_data.index.get_loc(
-                        key.stop, method="ffill"
-                    )
-                except KeyError:
-                    stop_index = self.symbol_data.index.get_loc(
-                        key.stop, method="nearest"
-                    )
+                # get index for start & end
+                start_index = self._get_index(key.start)
+                stop_index = self._get_index(key.stop)
 
                 return self.symbol_data.iloc[start_index : stop_index + 1]
             else:
                 if type(key) == str:
                     key = nyc.localize(date_parser(key))
+                elif type(key) == int:
+                    key = self._convert_offset_to_datetime(key)
+                elif type(key) == date:
+                    key = nyc.localize(
+                        datetime.combine(key, datetime.min.time())
+                    )
+
                 if (
                     not len(self.symbol_data)
                     or key > self.symbol_data.index[-1]
@@ -390,8 +366,12 @@ class SymbolData:
 
 
 class DataLoader:
-    def __init__(self, scale: TimeScale = TimeScale.minute):
-        self.data_api = data_loader_factory()
+    def __init__(
+        self,
+        scale: TimeScale = TimeScale.minute,
+        connector: DataConnectorType = config.data_connector,
+    ):
+        self.data_api = data_loader_factory(connector)
         self.data: Dict[str, SymbolData] = {}
         if not self.data_api:
             raise AssertionError("Failed to create data loader")

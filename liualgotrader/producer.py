@@ -67,7 +67,12 @@ async def scanner_input(
 
                 if len(new_symbols):
                     await streaming_factory().get_instance().subscribe(
-                        new_symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG]
+                        new_symbols,
+                        [
+                            WSEventType.SEC_AGG,
+                            WSEventType.MIN_AGG,
+                            WSEventType.TRADE,
+                        ],
                     )
                     symbols += new_symbols
                     data_channels += new_channels
@@ -117,7 +122,9 @@ async def run(
     await ps.run()
     for symbol in symbols:
         qm[symbol] = queues[queue_id_hash[symbol]]
-    await ps.subscribe(symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG])
+    await ps.subscribe(
+        symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG, WSEventType.TRADE]
+    )
 
 
 async def teardown_task(

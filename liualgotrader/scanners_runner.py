@@ -14,6 +14,7 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import DataConnectorType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
 from liualgotrader.trading.alpaca import AlpacaTrader
@@ -105,7 +106,9 @@ async def create_scanners(
         if scanner_name == "momentum":
             scanners.append(
                 await create_momentum_scanner(
-                    trader, data_loader, scanners_conf[scanner_name]
+                    trader,
+                    DataLoader(connector=DataConnectorType.polygon),
+                    scanners_conf[scanner_name],
                 )
             )
             tlog(f"instantiated momentum scanner")
