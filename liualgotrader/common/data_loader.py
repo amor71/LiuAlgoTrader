@@ -1,3 +1,4 @@
+# type: ignore
 import sys
 import traceback
 from datetime import date, datetime, timedelta
@@ -20,7 +21,12 @@ nyc = timezone("America/New_York")
 
 class SymbolData:
     class _Column:
-        def __init__(self, data_api: DataAPI, name: str, data: SymbolData):
+        def __init__(
+            self,
+            data_api: DataAPI,
+            name: str,
+            data: object,
+        ):
             self.name = name
             self.data_api = data_api
             self.data = data
