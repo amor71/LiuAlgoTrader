@@ -14,7 +14,7 @@ streamlit==0.79.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
-hypothesis==6.8.3
+hypothesis==6.8.5
 parsedatetime==2.6
 scipy==1.6.2
 polygon-api-client==0.1.9
