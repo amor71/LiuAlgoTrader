@@ -19,7 +19,7 @@ pytest-asyncio==0.14.0
 pytest-cov==2.11.1
 websockets==8.1
 nb-clean==2.0.2
-matplotlib==3.4.0
+matplotlib==3.4.1
 tabulate==0.8.9
 sphinx==3.5.3
 sphinx-autodoc-typehints==1.11.1
