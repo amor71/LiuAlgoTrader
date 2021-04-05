@@ -18,7 +18,7 @@ from liualgotrader.miners.base import Miner
 from liualgotrader.models.portfolio import Portfolio as DBPortfolio
 
 
-class Portfolio(Miner):
+class Trend(Miner):
     portfolio: df = df(columns=["symbol", "slope", "r", "score"])
     data_bars: Dict[str, df] = {}
 

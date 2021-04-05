@@ -50,9 +50,7 @@ class AlpacaData(DataAPI):
             datetime.combine(start, datetime.min.time())
         ).isoformat()
         _end = (
-            nytz.localize(
-                datetime.now().replace(microsecond=0) - timedelta(days=1)
-            ).isoformat()
+            nytz.localize(datetime.now().replace(microsecond=0)).isoformat()
             if end >= date.today()
             else end
         )
@@ -74,6 +72,11 @@ class AlpacaData(DataAPI):
             limit=10000,
             adjustment="raw",
         ).df
+        data = data.tz_convert("America/New_York")
+        data["vwap"] = None
+        data["average"] = None
+        data["count"] = None
+
         if data.empty:
             raise ValueError(
                 f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
@@ -126,7 +129,6 @@ class AlpacaStream(StreamingAPI):
                 "totalvolume": None,
                 "EV": "AM",
             }
-            print(event)
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
             tlog(
@@ -145,7 +147,7 @@ class AlpacaStream(StreamingAPI):
             event = {
                 "symbol": msg.symbol,
                 "price": msg.price,
-                "timestamp": msg.timestamp,
+                "timestamp": pd.to_datetime(msg.timestamp),
                 "volume": msg.size,
                 "exchange": msg.exchange,
                 "conditions": msg.conditions,
@@ -172,11 +174,11 @@ class AlpacaStream(StreamingAPI):
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
-        print(symbols, events)
         for event in events:
             if event == WSEventType.SEC_AGG:
                 tlog(f"event {event} not implemented in Alpaca")
             elif event == WSEventType.MIN_AGG:
+                self.alpaca_ws_client._data_ws._running = False
                 self.alpaca_ws_client.subscribe_bars(
                     AlpacaStream.bar_handler, *symbols
                 )

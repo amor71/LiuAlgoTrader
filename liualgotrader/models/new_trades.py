@@ -45,6 +45,13 @@ class NewTrade:
     ):
         async with pool.acquire() as con:
             async with con.transaction():
+                try:
+                    indicators_s = json.dumps(
+                        self.indicators or {}, allow_nan=False
+                    )
+                except ValueError:
+                    indicators_s = json.dumps({})
+
                 self.trade_id = await con.fetchval(
                     """
                         INSERT INTO new_trades (algo_run_id, symbol, operation, qty, price, indicators, client_time, stop_price, target_price)
@@ -56,7 +63,7 @@ class NewTrade:
                     self.operation,
                     self.qty,
                     self.price,
-                    json.dumps(self.indicators or {}),
+                    indicators_s,
                     client_buy_time,
                     stop_price,
                     target_price,

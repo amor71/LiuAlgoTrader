@@ -13,7 +13,7 @@ from pandas import Timestamp
 from pytz import timezone
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog

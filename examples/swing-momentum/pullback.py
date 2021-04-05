@@ -8,6 +8,7 @@ from pandas import DataFrame as df
 from scipy.stats import linregress
 from stockstats import StockDataFrame
 from tabulate import tabulate
+from talib import BBANDS, MACD, RSI, MA_Type
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -18,7 +19,7 @@ from liualgotrader.miners.base import Miner
 from liualgotrader.models.portfolio import Portfolio as DBPortfolio
 
 
-class Portfolio(Miner):
+class Pullback(Miner):
     portfolio: df = df(columns=["symbol", "slope", "r", "score"])
     data_bars: Dict[str, df] = {}
 
@@ -29,14 +30,13 @@ class Portfolio(Miner):
     ):
         try:
             self.rank_days = int(data["rank_days"])
-            self.atr_days = int(data["atr_days"])
             self.index = data["index"]
             self.indicators = data["indicators"]
             self.debug = debug
             self.portfolio_size = data["portfolio_size"]
             self.risk_factor = data["risk_factor"]
             self.data_loader = DataLoader(TimeScale.day)
-
+            self.pullback_days = data["pullback_days"]
         except Exception:
             raise ValueError(
                 "[ERROR] Miner must receive all valid parameter(s)"
@@ -110,7 +110,6 @@ class Portfolio(Miner):
         for c, (i, row) in enumerate(self.portfolio.iterrows(), start=1):
             indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
 
-            removed = False
             for indicator in self.indicators:
                 if indicator == "SMA100":
                     sma_100 = indicator_calculator["close_100_sma"]
@@ -125,50 +124,76 @@ class Portfolio(Miner):
                             tlog(f"{row.symbol} REMOVED on SMA")
 
                         d = d.drop(index=i)
-                        removed = True
-
-            # filter stocks moving > 15% in last 90 days
-            high = self.data_bars[row.symbol].close[
-                -1
-            ]  # self.data_bars[row.symbol].close[-90:].max()
-            low = self.data_bars[row.symbol].close[-90:].min()
-            if not removed and high / low > 1.25 and self.debug:
-                tlog(
-                    f"{row.symbol} ({c}/{len(self.portfolio)}) REMOVED on movement ({high},{low})> 25% in last 90 days"
-                )
-                d = d.drop(index=i)
-                removed = True
 
         self.portfolio = d
 
-    async def calc_balance(self) -> None:
-        print("BEFORE ATR:")
-        print(f"\n{tabulate(self.portfolio, headers='keys', tablefmt='psql')}")
+    async def calc_pullback(self) -> None:
         for i, row in self.portfolio.iterrows():
-            indicator_calculator = StockDataFrame(self.data_bars[row.symbol])
-            indicator_calculator.ATR_SMMA = self.atr_days
-            atr = indicator_calculator["atr"][-1]
-            volatility = (
-                self.data_bars[row.symbol]
-                .close.pct_change()
-                .rolling(20)
-                .std()
-                .iloc[-1]
+            # print(row.symbol, len(self.data_bars[row.symbol]))
+
+            bband = BBANDS(
+                self.data_bars[row.symbol].close,
+                timeperiod=7,
+                nbdevdn=1,
+                nbdevup=1,
+                matype=MA_Type.EMA,
             )
-            qty = int(self.portfolio_size * self.risk_factor // volatility)
+
+            lower_band = bband[2]
+            upper_band = bband[0]
+
+            volatility = upper_band[-1] - lower_band[-1]
+
+            position = 0
+            profit = 0.0
+            count = 0
+            for i in range(-self.pullback_days, -1, 1):
+                if (
+                    not position
+                    and self.data_bars[row.symbol].close[i - 1]
+                    < lower_band[i - 1]
+                    and self.data_bars[row.symbol].close[i]
+                    > self.data_bars[row.symbol].close[i - 1]
+                    and self.data_bars[row.symbol].close[i] > lower_band[i]
+                ):
+                    position = (
+                        self.portfolio_size
+                        // self.data_bars[row.symbol].open[i]
+                    )
+                    profit -= position * self.data_bars[row.symbol].open[i]
+                    count += 1
+                elif (
+                    position
+                    and self.data_bars[row.symbol].open[i] > upper_band[i - 1]
+                ):
+                    profit += position * self.data_bars[row.symbol].open[i]
+                    position = 0
+
             self.portfolio.loc[
-                self.portfolio.symbol == row.symbol, "ATR"
-            ] = atr
+                self.portfolio.symbol == row.symbol, "count"
+            ] = count
+            self.portfolio.loc[
+                self.portfolio.symbol == row.symbol, "profit"
+            ] = profit
             self.portfolio.loc[
                 self.portfolio.symbol == row.symbol, "volatility"
             ] = volatility
+            qty = int(count * self.risk_factor / volatility)
             self.portfolio.loc[
                 self.portfolio.symbol == row.symbol, "qty"
             ] = qty
             self.portfolio.loc[self.portfolio.symbol == row.symbol, "est"] = (
                 qty * self.data_bars[row.symbol].close[-1]
             )
-        self.portfolio = self.portfolio.loc[self.portfolio.qty > 0]
+            self.portfolio.loc[
+                self.portfolio.symbol == row.symbol, "opt"
+            ] = bool(self.data_bars[row.symbol].close[-1] < lower_band[-1])
+        self.portfolio = self.portfolio.loc[
+            (self.portfolio.profit > 0)
+            & (self.portfolio.opt == True)
+            & (self.portfolio.volatility > 2.0)
+            & (self.portfolio.score > 35.0)
+        ]
 
     async def save_portfolio(self) -> str:
         portfolio_id = str(uuid.uuid4())
@@ -195,7 +220,7 @@ class Portfolio(Miner):
 
         await self.apply_filters()
 
-        await self.calc_balance()
+        await self.calc_pullback()
 
         portfolio_id = await self.save_portfolio()
 

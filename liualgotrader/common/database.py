@@ -17,7 +17,8 @@ async def create_db_connection(dsn: str = None) -> None:
 
 async def fetch_as_dataframe(query: str, *args) -> pd.DataFrame:
     try:
-        pass
+        if config.db_conn_pool:
+            pass
     except AttributeError:
         await create_db_connection()
 

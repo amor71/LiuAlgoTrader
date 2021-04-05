@@ -87,10 +87,10 @@ class SymbolData:
                 )
             return key
 
-        def _get_index(self, index: datetime) -> int:
+        def _get_index(self, index: datetime, method: str = "ffill") -> int:
             try:
                 return self.data.symbol_data.index.get_loc(
-                    index, method="ffill"
+                    index, method=method
                 )
             except KeyError:
                 self.data.fetch_data_timestamp(index)
@@ -120,7 +120,7 @@ class SymbolData:
                 )
 
             # get start and end index
-            start_index = self._get_index(key.start)
+            start_index = self._get_index(key.start, method="bfill")
             stop_index = self._get_index(key.stop)
 
             # return data range
@@ -147,9 +147,15 @@ class SymbolData:
                     f"details for symbol {self.data.symbol} do not exist"
                 )
 
-            return self.data.symbol_data.iloc[
-                self.data.symbol_data.index.get_loc(key, method="ffill")
-            ][self.name]
+            try:
+                return self.data.symbol_data.iloc[
+                    self.data.symbol_data.index.get_loc(key, method="ffill")
+                ][self.name]
+            except KeyError:
+                self.data.fetch_data_timestamp(key)
+                return self.data.symbol_data.index.get_loc(
+                    key, method="nearest"
+                )
 
         def __getitem__(self, key):
             try:
@@ -225,9 +231,9 @@ class SymbolData:
             )
         return key
 
-    def _get_index(self, index: datetime) -> int:
+    def _get_index(self, index: datetime, method: str = "ffill") -> int:
         try:
-            return self.symbol_data.index.get_loc(index, method="ffill")
+            return self.symbol_data.index.get_loc(index, method=method)
         except KeyError:
             self.fetch_data_timestamp(index)
             return self.symbol_data.index.get_loc(index, method="nearest")
@@ -257,7 +263,7 @@ class SymbolData:
                     self.fetch_data_range(key.start, self.symbol_data.index[0])
 
                 # get index for start & end
-                start_index = self._get_index(key.start)
+                start_index = self._get_index(key.start, method="bfill")
                 stop_index = self._get_index(key.stop)
 
                 return self.symbol_data.iloc[start_index : stop_index + 1]
@@ -331,6 +337,18 @@ class SymbolData:
         self.symbol_data = self.symbol_data.loc[
             ~self.symbol_data.index.duplicated(keep="first")
         ]
+        self.symbol_data = self.symbol_data.reindex(
+            columns=[
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "vwap",
+                "average",
+                "count",
+            ]
+        )
 
     def fetch_data_range(self, start: datetime, end: datetime) -> None:
         if self.scale not in (TimeScale.minute, TimeScale.day):
@@ -369,6 +387,18 @@ class SymbolData:
         self.symbol_data = self.symbol_data[
             ~self.symbol_data.index.duplicated(keep="first")
         ]
+        self.symbol_data = self.symbol_data.reindex(
+            columns=[
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "vwap",
+                "average",
+                "count",
+            ]
+        )
 
 
 class DataLoader:

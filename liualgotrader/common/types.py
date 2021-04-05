@@ -6,7 +6,7 @@ from typing import Dict
 class DataConnectorType(Enum):
     polygon = 1
     alpaca = 2
-    # finhub = 3
+    finnhub = 3
 
 
 class BrokerType(Enum):

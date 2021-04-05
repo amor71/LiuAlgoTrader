@@ -233,7 +233,7 @@ def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
         hour=9, minute=30, second=0, microsecond=0
     )
     trades_anlytics = pd.DataFrame()
-    trades["client_time"] = pd.to_datetime(trades["client_time"])
+    trades["client_time"] = pd.to_datetime(trades["client_time"], utc=True)
     trades_anlytics["symbol"] = trades.symbol.unique()
     trades_anlytics["revenues"] = trades_anlytics["symbol"].apply(
         lambda x: calc_batch_revenue(x, trades, batch_id)

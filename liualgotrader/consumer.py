@@ -17,7 +17,7 @@ from pandas import DataFrame as df
 from pytz import timezone
 
 from liualgotrader.common import config, market_data, trading_data
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
@@ -371,7 +371,9 @@ async def handle_trade_update(data: Dict) -> bool:
 async def handle_transaction(
     symbol: str, data: Dict, trader: Trader, data_loader: DataLoader
 ) -> bool:
-    ts = data["timestamp"].replace(second=0, microsecond=0)
+    ts = pd.to_datetime(
+        data["timestamp"].replace(second=0, microsecond=0, nanosecond=0)
+    )
 
     data["open"] = data["price"]
     data["high"] = data["price"]
@@ -488,23 +490,27 @@ async def aggregate_bar_data(
         ]
     else:
         new_data = [
-            current.open,
-            max(data["high"], current.high),
-            min(data["low"], current.low),
+            current["open"],
+            max(data["high"], current["high"]),
+            min(data["low"], current["low"]),
             data["close"],
-            current.volume + data["volume"],
-            data["average"] or current.average,
-            data["count"] or current.count,
-            data["vwap"] or current.vwap,
+            current["volume"] + data["volume"],
+            data["average"] or current["average"],
+            data["count"] or current["count"],
+            data["vwap"] or current["vwap"],
         ]
     try:
         data_loader[symbol].loc[ts] = new_data
     except ValueError:
-        print(f"loaded for {symbol}")
+        print(f"loaded for {symbol} {new_data}")
         data_loader[symbol][-1]
         data_loader[symbol].loc[ts] = new_data
 
-    market_data.volume_today[symbol] = data["totalvolume"]
+    market_data.volume_today[symbol] = (
+        market_data.volume_today[symbol] + data["volume"]
+        if symbol in market_data.volume_today
+        else data["volume"]
+    )
 
 
 async def order_inflight(symbol, existing_order, original_ts, trader) -> bool:
@@ -625,7 +631,9 @@ async def do_strategies(
                 shortable=shortable[symbol],
                 position=position,
                 minute_history=data_loader[symbol].symbol_data,
-                now=now,
+                now=pd.to_datetime(now.replace(nanosecond=0)).replace(
+                    second=0, microsecond=0
+                ),
                 portfolio_value=config.portfolio_value,
             )
         except Exception:
@@ -714,7 +722,7 @@ async def handle_data_queue_msg(
         )
         ts = ts.replace(second=0, microsecond=0)
 
-        await aggregate_bar_data(data_loader, data, ts)
+        await aggregate_bar_data(data_loader, data, pd.to_datetime(ts))
 
         if data["EV"] == "A":
             if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=10):  # type: ignore

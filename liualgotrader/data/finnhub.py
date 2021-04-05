@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import queue
 import traceback
@@ -38,16 +39,23 @@ class FinnhubData(DataAPI):
         if not self.finnhub_rest_client:
             raise AssertionError("Failed to authenticate Finnhub  client")
 
-        self.stock_exchanges = pd.read_csv(static.finnhub_exchanges_url)
+        s = requests.get(static.finnhub_exchanges_url).content
+        self.stock_exchanges: pd.DataFrame = pd.read_csv(
+            io.StringIO(s.decode("utf-8"))
+        )
 
     @check_auth
     def get_symbols(
-        self, country: str = "", exchange: str = None
+        self,
+        country: str = "US",
     ) -> List[Dict]:
-        exchanges = ""
-        return self.finnhub_rest_client.stock_symbols(exchange=exchanges)
+        if country not in self.stock_exchanges.code.to_list():
+            raise AssertionError(
+                f"country code {country} not supported, valid values are {self.stock_exchanges.code.to_list()}"
+            )
+        return self.finnhub_rest_client.stock_symbols(exchange=country)
 
-    @check_auth
+    # @check_auth
     def get_symbol_data(
         self,
         symbol: str,
@@ -55,12 +63,13 @@ class FinnhubData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        _start = nytz.localize(
-            datetime.combine(start, datetime.min.time())
-        ).timestamp()
-        _end = nytz.localize(
-            datetime.now().replace(microsecond=0) - timedelta(days=1)
-        ).timestamp()
+        _start = int(datetime.combine(start, datetime.min.time()).timestamp())
+        _end = int(
+            datetime.combine(
+                end if scale == TimeScale.day else end + timedelta(days=1),
+                datetime.min.time(),
+            ).timestamp()
+        )
         t: Optional[str] = (
             "1"
             if scale == TimeScale.minute
@@ -81,6 +90,22 @@ class FinnhubData(DataAPI):
                 _end,
             )
         )
+        data.t = pd.to_datetime(data.t, unit="s")
+        data = data.set_index(data.t)
+        data = data.tz_localize("America/New_York", ambiguous="infer")
+        data = data[data.s == "ok"]
+        data = data.drop(columns=["s", "t"])
+        data.rename(
+            columns={
+                "o": "open",
+                "c": "close",
+                "h": "high",
+                "l": "low",
+                "v": "volume",
+            },
+            inplace=True,
+        )
+
         if data.empty:
             raise ValueError(
                 f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"

@@ -10,7 +10,7 @@ import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.algo_run import AlgoRun
 
