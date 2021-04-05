@@ -18,5 +18,5 @@ hypothesis==6.8.5
 parsedatetime==2.6
 scipy==1.6.2
 polygon-api-client==0.1.9
-finnhub-python
+finnhub-python==2.4.0
 
