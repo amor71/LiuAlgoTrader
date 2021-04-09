@@ -5,7 +5,7 @@ set -e
 export DSN="postgresql://momentum@localhost/tradedb"
 
 # Which data providers to use values maybe polygon/alpaca (finnhub coming soon)
-export DATA_CONNECTOR="polygon"
+export DATA_CONNECTOR="alpaca"
 
 # Polygon API key
 export POLYGON_API_KEY=""
@@ -16,7 +16,7 @@ export ALPACA_BASEURL="https://paper-api.alpaca.markets"
 export APCA_API_KEY_ID=""
 export APCA_API_SECRET_KEY=""
 
-# "sip" for PRO subscriptions
+# "sip" for PRO subscriptions, "iex" for free
 export alpaca_data_feed="iex" 
 
 # max number of symbols to trade in parallel

@@ -4,6 +4,8 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.1.05           | Alapaca data-provider production ready       |
++------------------+----------------------------------------------+
 | 0.1.00           | **Competible Breaking Release**              |
 |                  |                                              |
 |                  | 1. Added support for Alpaca and Polygon      |

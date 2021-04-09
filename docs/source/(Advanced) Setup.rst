@@ -23,6 +23,7 @@ When using Polygon.io A `Stater`, or above subscription w/ Polygon_ is required.
 
 .. _Polygon: https://polygon.io/pricing
 
+Alpaca is the default data-provider, Unlimited/Pro subscription is recommanded.
 
 Installation
 ------------

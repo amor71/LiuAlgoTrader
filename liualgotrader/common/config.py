@@ -17,7 +17,7 @@ miner_configuration_filename: str = "miner.toml"
 env: str
 
 
-data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "polygon")]  # type: ignore
+data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "alpaca")]  # type: ignore
 
 #
 # Broker

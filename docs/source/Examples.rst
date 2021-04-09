@@ -24,7 +24,7 @@ Inspired by Andrew Clenow's Book `Stocks On The Move`_ :
 * SP500_ analysis notebook.
 
 .. _miner:
-    https://github.com/amor71/LiuAlgoTrader/blob/master/examples/swing_momentum/portfolio.py
+    https://github.com/amor71/LiuAlgoTrader/blob/master/examples/swing_momentum/trend.py
 
 .. _configuration:
     https://github.com/amor71/LiuAlgoTrader/blob/master/examples/swing_momentum/miner.toml

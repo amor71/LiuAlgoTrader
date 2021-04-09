@@ -110,19 +110,19 @@ CREATE INDEX ON trending_tickers(batch_id);
 INSERT INTO trending_tickers (symbol, batch_id)
 SELECT distinct t.symbol,
                 r.batch_id
-FROM new_trades as t,
-     algo_run as r
+FROM new_trades AS t,
+     algo_run AS r
 WHERE t.algo_run_id = r.algo_run_id
     AND batch_id != '';
 
-BEGIN;
+BEGIN ;
 
 
-alter table new_trades
-drop constraint "new_trades_qty_check";
+alter TABLE new_trades
+DROP constraint "new_trades_qty_check";
 
 
-alter table new_trades add check (qty != 0);
+alter TABLE new_trades add check (qty != 0);
 
 
 COMMIT;
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS trade_analysis (trade_analysis_id serial PRIMARY KEY,
                                                                                                                                                                       end_tstamp timestamp with time zone NOT NULL,
                                                                                                                                                                                                           gain_percentage decimal (5, 2) NOT NULL,
                                                                                                                                                                                                                                          gain_value decimal (8, 2) NOT NULL,
-                                                                                                                                                                                                                                                                   r_units decimal(4,2),
+                                                                                                                                                                                                                                                                   r_units decimal(4, 2),
                                                                                                                                                                                                                                                                            tstamp timestamp with time zone DEFAULT current_timestamp,
                                                                                                                                                                                                                                                                                                                    UNIQUE(symbol, algo_run_id, start_tstamp));
 
@@ -199,12 +199,11 @@ CREATE INDEX ON portfolio(portfolio_id);
 CREATE INDEX ON portfolio(symbol);
 
 
-alter table new_trades
-drop constraint "new_trades_qty_check";
+alter TABLE new_trades
+DROP constraint "new_trades_qty_check";
 
 
 ALTER TABLE portfolio RENAME COLUMN "rank" TO "score";
 
 
 ALTER TABLE portfolio RENAME COLUMN "atr" TO "volatility";
-
