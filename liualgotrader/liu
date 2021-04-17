@@ -148,8 +148,8 @@ def quickstart():
     print("| Step #1 - Alpaca & Polygon credentials |")
     print("+----------------------------------------+")
     print()
-    print("To use Liu Algo Trading Framework you need a funded Alpaca Markets account,")
-    print("do you already have a funded account [Y]/n:")
+    print("To use Liu Algo Trading Framework you need an account with Alpaca Markets,")
+    print("do you already have an account [Y]/n:")
     i = input()
     have_funded = len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
 
@@ -167,7 +167,6 @@ def quickstart():
         print("And `ALPACA_BASEURL` reflecting the base URL for your account.")
         print("Please set the three environment variables and re-run the wizard.")
         to_exit = True
-    
 
     if to_exit:
         sys.exit(0)
