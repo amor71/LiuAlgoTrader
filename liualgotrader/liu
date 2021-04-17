@@ -167,15 +167,7 @@ def quickstart():
         print("And `ALPACA_BASEURL` reflecting the base URL for your account.")
         print("Please set the three environment variables and re-run the wizard.")
         to_exit = True
-    if not config.polygon_api_key:
-        print(
-            "Liu Algo Trading Framework uses Polygon.io `developer` plan (or above) for data retrival"
-        )
-        print()
-        print("The Framework expects an environment variables to be set:")
-        print("`POLYGON_API_KEY` with you Polygon.io credentials ")
-        print("Please set the three environment variables and re-run the wizard.")
-        to_exit = True
+    
 
     if to_exit:
         sys.exit(0)
