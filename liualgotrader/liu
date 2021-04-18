@@ -5,8 +5,12 @@ import pygit2
 import pathlib
 import requests
 import time
+import getopt
+import asyncio
 from liualgotrader.common import config
 import os
+from liualgotrader.models.accounts import Accounts
+from liualgotrader.common.database import create_db_connection
 
 
 def show_version():
@@ -17,7 +21,13 @@ def show_usage():
     show_version()
 
     print()
-    print(f"usgae: liu quickstart")
+    print("usgae:")
+    print("\tliu quickstart")
+    print("\tOR")
+    print("\tliu create_account <amount> [--credit=<credit>]")
+    print("\n")
+    print("options:")
+    print("\t--credit\tAccount credit line")
     print()
 
 
@@ -291,6 +301,15 @@ def quickstart():
     print()
 
 
+def create_account(amount: float, credit: float):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_db_connection())
+    account_id = loop.run_until_complete(
+        Accounts.create(amount, allow_negative=credit > 0, credit_line=credit)
+    )
+    print(f"Account ID {account_id} created")
+
+
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
 
@@ -303,14 +322,44 @@ if __name__ == "__main__":
 
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         show_usage()
         exit(0)
+
     if sys.argv[1] == "quickstart":
         try:
             quickstart()
         except KeyboardInterrupt:
             print("Oops... exiting gracefully")
+    elif sys.argv[1] == "create_account":
+        try:
+            if float(sys.argv[2]) <= 0.0:
+                print(
+                    "Oops.. account size must be positive. Always think positive w/ Liu"
+                )
+                exit(0)
+        except Exception:
+            print("Oops.. account size must be positive. Always think positive w/ Liu")
+            exit(0)
+
+        credit = 0.0
+        opts, args = getopt.getopt(
+            sys.argv[3:],
+            shortopts=[],
+            longopts=[
+                "credit=",
+            ],
+        )
+        for opt, arg in opts:
+            if opt in ("--credit"):
+                credit = float(arg)
+                if credit <= 0.0:
+                    print(
+                        "Oops.. creditamount must be positive. Always think positive w/ Liu"
+                    )
+                    exit(0)
+
+        create_account(float(sys.argv[2]), credit)
     else:
         show_usage()
 

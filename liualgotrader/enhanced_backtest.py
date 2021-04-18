@@ -2,18 +2,19 @@ import asyncio
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
 from pytz import timezone
 
 from liualgotrader.common import config, trading_data
-from liualgotrader.common.data_loader import DataLoader, TimeScale
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import TimeScale
 from liualgotrader.models.new_trades import NewTrade
-from liualgotrader.scanners.base import Scanner
+from liualgotrader.scanners.base import Scanner  # type: ignore
 from liualgotrader.scanners.momentum import Momentum
 from liualgotrader.strategies.base import Strategy
 
@@ -101,23 +102,25 @@ async def do_strategy_result(
     strategy: Strategy, symbol: str, now: datetime, what: Dict
 ) -> None:
     global portfolio_value
-    if (
-        what["side"] == "buy"
-        and float(what["qty"]) > 0
-        or what["side"] == "sell"
-        and float(what["qty"]) < 0
-    ):
-        try:
-            trading_data.positions[symbol] += int(float(what["qty"]))
-        except KeyError:
-            trading_data.positions[symbol] = int(float(what["qty"]))
-        trading_data.buy_time[symbol] = now.replace(second=0, microsecond=0)
-    else:
-        try:
-            trading_data.positions[symbol] -= int(float(what["qty"]))
-        except KeyError:
-            trading_data.positions[symbol] = -int(float(what["qty"]))
 
+    sign = (
+        1
+        if (
+            what["side"] == "buy"
+            and float(what["qty"]) > 0
+            or what["side"] == "sell"
+            and float(what["qty"]) < 0
+        )
+        else -1
+    )
+
+    try:
+        trading_data.positions[symbol] = trading_data.positions[
+            symbol
+        ] + sign * int(float(what["qty"]))
+    except KeyError:
+        trading_data.positions[symbol] = sign * int(float(what["qty"]))
+    trading_data.buy_time[symbol] = now.replace(second=0, microsecond=0)
     trading_data.last_used_strategy[symbol] = strategy
 
     price = strategy.data_loader[symbol].close[now]  # type: ignore
@@ -127,9 +130,7 @@ async def do_strategy_result(
         qty=int(float(what["qty"])),
         operation=what["side"],
         price=price,
-        indicators=trading_data.buy_indicators[symbol]
-        if what["side"] == "buy"
-        else trading_data.sell_indicators[symbol],
+        indicators={},
     )
 
     await db_trade.save(
@@ -149,13 +150,35 @@ async def do_strategy_result(
         await strategy.sell_callback(symbol, price, int(float(what["qty"])))
 
 
-async def do_strategy(
+async def do_strategy_all(
     data_loader: DataLoader,
-    now: datetime,
+    now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
 ):
-    global portfolio_value
+    try:
+        do = await strategy.run_all(
+            symbols_position=trading_data.positions,
+            now=now.to_pydatetime(),
+            portfolio_value=portfolio_value,
+            backtesting=True,
+            data_loader=data_loader,
+        )
+        for symbol, what in do.items():
+            await do_strategy_result(strategy, symbol, now, what)
+
+    except Exception as e:
+        tlog(f"[Exception] {now} {strategy}->{e}")
+        traceback.print_exc()
+        raise
+
+
+async def do_strategy_by_symbol(
+    data_loader: DataLoader,
+    now: pd.Timestamp,
+    strategy: Strategy,
+    symbols: List[str],
+):
     for symbol in symbols:
         try:
             _ = data_loader[symbol][now - timedelta(days=30) : now]  # type: ignore
@@ -176,6 +199,20 @@ async def do_strategy(
             tlog(f"[Exception] {now} {strategy}({symbol})->{e}")
             traceback.print_exc()
             raise
+
+
+async def do_strategy(
+    data_loader: DataLoader,
+    now: pd.Timestamp,
+    strategy: Strategy,
+    symbols: List[str],
+):
+    global portfolio_value
+
+    if await strategy.should_run_all():
+        await do_strategy_all(data_loader, now, strategy, symbols)
+    else:
+        await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
 
 async def backtest_main(
@@ -210,7 +247,6 @@ async def backtest_main(
         uid, tradeplan["strategies"], data_loader, strategies
     )
     calendars = trade_api.get_calendar(str(from_date), str(to_date))
-
     symbols: Dict = {}
     for day in calendars:
         day_start = day.date.replace(
@@ -223,6 +259,7 @@ async def backtest_main(
             minute=day.close.minute,
             tzinfo=timezone("America/New_York"),
         )
+
         config.market_open = day_start
         config.market_close = day_end
         current_time = day_start

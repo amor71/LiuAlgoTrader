@@ -44,6 +44,94 @@ async def end_time(reason: str):
         )
 
 
+def get_position(trader: Trader, symbol: str) -> int:
+    try:
+        return trader.get_position(symbol)
+    except Exception:
+        return 0
+
+
+async def do_strategy_all(
+    data_loader: DataLoader,
+    trader: Trader,
+    strategy: Strategy,
+    symbols: List[str],
+):
+    try:
+        now = datetime.now(nyc)
+        do = await strategy.run_all(
+            symbols_position={
+                symbol: trading_data.positions[symbol]
+                if symbol in trading_data.positions
+                else get_position(trader, symbol)
+                for symbol in symbols
+            },
+            now=now,
+            portfolio_value=config.portfolio_value,
+            backtesting=True,
+            data_loader=data_loader,
+        )
+        for symbol, what in do.items():
+            await execute_strategy_result(
+                strategy=strategy,
+                trader=trader,
+                data_loader=data_loader,
+                symbol=symbol,
+                what=what,
+            )
+
+    except Exception as e:
+        tlog(f"[Exception] {now} {strategy}->{e}")
+        traceback.print_exc()
+        raise
+
+
+async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
+    tlog("periodic_runner() task starting")
+    try:
+        while True:
+            # run strategies
+            for s in trading_data.strategies:
+                try:
+                    skip = not await s.should_run_all()
+                except Exception:
+                    skip = True
+                finally:
+                    if skip:
+                        continue
+
+                symbols = [
+                    symbol
+                    for symbol in trading_data.last_used_strategy
+                    if trading_data.last_used_strategy[symbol] == s
+                ]
+                asyncio.create_task(
+                    do_strategy_all(
+                        trader=trader,
+                        data_loader=data_loader,
+                        strategy=s,
+                        symbols=symbols,
+                    )
+                )
+
+            await asyncio.sleep(60.0)
+
+    except Exception:
+        traceback.print_exc()
+        exc_info = sys.exc_info()
+        lines = traceback.format_exception(*exc_info)
+        for line in lines:
+            tlog(f"{line}")
+        del exc_info
+
+    except asyncio.CancelledError:
+        tlog("periodic_runner() cancelled")
+    except KeyboardInterrupt:
+        tlog("periodic_runner() - Caught KeyboardInterrupt")
+
+    tlog("periodic_runner() task completed")
+
+
 async def liquidator(trader: Trader) -> None:
     tlog("liquidator() task starting")
     try:
@@ -93,7 +181,7 @@ async def liquidator(trader: Trader) -> None:
     tlog("liquidator() task completed")
 
 
-async def teardown_task(trader: Trader, task: asyncio.Task) -> None:
+async def teardown_task(trader: Trader, tasks: List[asyncio.Task]) -> None:
     tlog(f"consumer-teardown_task() - starting ")
 
     if not config.market_close:
@@ -114,11 +202,12 @@ async def teardown_task(trader: Trader, task: asyncio.Task) -> None:
         await end_time("market close")
 
         tlog("consumer-teardown_task(): requesting tasks to cancel")
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            tlog("consumer-teardown_task(): tasks are cancelled now")
+        for task in tasks:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                tlog("consumer-teardown_task(): task is cancelled now")
 
     except asyncio.CancelledError:
         tlog("consumer-teardown_task() cancelled during sleep")
@@ -346,11 +435,11 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
             tlog(f"found strategy {str(s)}")
             break
 
-    if event == "partial_fill":
+    if event == "partial_fill" and symbol in trading_data.last_used_strategy:
         await update_partially_filled_order(
             trading_data.last_used_strategy[symbol], Order(data["order"])
         )
-    elif event == "fill":
+    elif event == "fill" and symbol in trading_data.last_used_strategy:
         await update_filled_order(
             trading_data.last_used_strategy[symbol], Order(data["order"])
         )
@@ -626,6 +715,14 @@ async def do_strategies(
             continue
 
         try:
+            skip = await s.should_run_all()
+        except Exception:
+            skip = False
+        finally:
+            if skip:
+                continue
+        try:
+
             do, what = await s.run(
                 symbol=symbol,
                 shortable=shortable[symbol],
@@ -759,7 +856,7 @@ async def queue_consumer(
                 data = queue.get(timeout=2)
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
-                    await handle_trade_update(data)
+                    asyncio.create_task(handle_trade_update(data))
                 else:
                     if not await handle_data_queue_msg(
                         data, trader, data_loader
@@ -804,34 +901,13 @@ async def queue_consumer(
         tlog("queue_consumer() task done.")
 
 
-async def consumer_async_main(
-    queue: Queue,
+async def create_strategies(
+    batch_id: str,
     symbols: List[str],
-    unique_id: str,
+    trader: Trader,
+    data_loader: DataLoader,
     strategies_conf: Dict,
-):
-    await create_db_connection(str(config.dsn))
-    data_loader = DataLoader()
-    if symbols:
-        try:
-            trending_db = TrendingTickers(unique_id)
-            await trending_db.save(symbols)
-        except Exception as e:
-            tlog(
-                f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
-            )
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"error: {line}")
-            traceback.print_exception(*exc_info)
-            del exc_info
-
-    trader = trader_factory()()
-    config.market_open, config.market_close = trader.get_market_schedule()
-    tlog(
-        f"market open:{config.market_open} market close:{config.market_close}"
-    )
+) -> int:
     strategy_types = []
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
@@ -871,17 +947,56 @@ async def consumer_async_main(
         strategy_details = strategy_tuple[1]
         tlog(f"initializing {type(strategy_type).__name__}")
         s = strategy_type(
-            batch_id=unique_id, data_loader=data_loader, **strategy_details
+            batch_id=batch_id, data_loader=data_loader, **strategy_details
         )
-        await s.create()
+        if await s.create():
+            trading_data.strategies.append(s)
+            if symbols:
+                loaded += await load_current_positions(
+                    trading_api=trader,
+                    symbols=symbols,
+                    strategy=s,
+                )
 
-        trading_data.strategies.append(s)
-        if symbols:
-            loaded += await load_current_positions(
-                trading_api=trader,
-                symbols=symbols,
-                strategy=s,
+    return loaded
+
+
+async def consumer_async_main(
+    queue: Queue,
+    symbols: List[str],
+    unique_id: str,
+    strategies_conf: Dict,
+):
+    await create_db_connection(str(config.dsn))
+    data_loader = DataLoader()
+    if symbols:
+        try:
+            trending_db = TrendingTickers(unique_id)
+            await trending_db.save(symbols)
+        except Exception as e:
+            tlog(
+                f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
             )
+            exc_info = sys.exc_info()
+            lines = traceback.format_exception(*exc_info)
+            for line in lines:
+                tlog(f"error: {line}")
+            traceback.print_exception(*exc_info)
+            del exc_info
+
+    trader = trader_factory()()
+    config.market_open, config.market_close = trader.get_market_schedule()
+    tlog(
+        f"market open:{config.market_open} market close:{config.market_close}"
+    )
+
+    loaded = await create_strategies(
+        batch_id=unique_id,
+        symbols=symbols,
+        trader=trader,
+        data_loader=data_loader,
+        strategies_conf=strategies_conf,
+    )
 
     if symbols and loaded != len(symbols):
         tlog(
@@ -893,12 +1008,18 @@ async def consumer_async_main(
     )
 
     liquidate_task = asyncio.create_task(liquidator(trader))
+    periodic_runner_task = asyncio.create_task(
+        periodic_runner(data_loader, trader)
+    )
 
-    tear_down = asyncio.create_task(teardown_task(trader, queue_consumer_task))
+    tear_down = asyncio.create_task(
+        teardown_task(trader, [queue_consumer_task, periodic_runner_task])
+    )
     await asyncio.gather(
         tear_down,
         liquidate_task,
         queue_consumer_task,
+        periodic_runner_task,
         return_exceptions=True,
     )
 
@@ -997,8 +1118,6 @@ def consumer_main(
         ]
 
     try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
         asyncio.run(
             consumer_async_main(queue, symbols, unique_id, conf["strategies"])
         )

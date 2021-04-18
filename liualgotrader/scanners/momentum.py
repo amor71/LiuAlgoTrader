@@ -9,7 +9,7 @@ from alpaca_trade_api.rest import REST as tradeapi
 from pytz import timezone
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType
 from liualgotrader.models.ticker_data import StockOhlc

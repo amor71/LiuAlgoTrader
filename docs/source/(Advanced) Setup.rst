@@ -65,7 +65,6 @@ Database Schema script
 The following SQL script creates the required database schema:
 
 .. literalinclude:: ../../database/schema.sql
-  :language: SQL
   :linenos:
 
 

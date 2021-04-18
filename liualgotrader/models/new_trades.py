@@ -104,9 +104,9 @@ class NewTrade:
                     return (
                         int(row[0]),
                         float(row[1]),
-                        float(row[2]),
-                        float(row[3]),
-                        json.loads(row[4]),
+                        float(row[2] or 0.0),
+                        float(row[3] or 0.0),
+                        json.loads(row[4] or "{}"),
                         row[5],
                     )
                 tlog(f"{symbol} no data for strategy {strategy_name}")

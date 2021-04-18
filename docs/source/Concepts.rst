@@ -174,8 +174,7 @@ files for a future developer.
     |   |    └── vwap.py
     │   ├── models
     |   |    ├── algo_run.py
-    |   |    ├── gain_loss.py
-    |   |    └── new_trades.py
+    |   |    └── ...
     │   ├── miners
     |   |    ├── base.py
     |   |    ├── stock_cluster.py
@@ -221,6 +220,17 @@ Data abstraction layer implementing the persistence and loading of the data mode
 Data Model
 ----------
 
+The following diagram represents the conceptual models which make up the framework.
+It is important to understand the different concept, and thier relations, when developing 
+strategies using the platform.
+
+.. image:: /images/conceptual_model.png
+    :width: 1000
+    :align: left
+    :alt: liu architecture
+
+
+
 The data-model, as represented in the database tables can
 be used by the various strategies, as well as for analysis
 and back-testing.
@@ -238,31 +248,43 @@ main database tables
 
 The main database tables are:
 
-+-------------------+-----------------------------------------------+
-| Name              | Description                                   |
-+-------------------+-----------------------------------------------+
-| stock_ohlc        | Daily OHLC "cache" for purposes for           |
-|                   | back-testing.                                 |
-+-------------------+-----------------------------------------------+
-| trending_tickers  | Tracks picked stocks, per `batch_id`.         |
-|                   | including time-stamp.                         |
-+-------------------+-----------------------------------------------+
-| algo_run          | Strategy execution log, per `batch_id` and    |
-|                   | consumer process. More details below.         |
-+-------------------+-----------------------------------------------+
-| new_trades        | Tracking each order (including partial), that |
-|                   | was executed, per `algo_run`, including       |
-|                   | whatever reasoning is persisted by the        |
-|                   | executed strategy.                            |
-+-------------------+-----------------------------------------------+
-| gain_loss         | Tracking per symbol, per algo_run, the        |
-|                   | profit & loss, measured as percentage and     |
-|                   | as absolute value                             |
-+-------------------+-----------------------------------------------+
-| trade_analysis    | Tracking per per trade, the r_units,          |
-|                   | profit & loss, measured as percentage and     |
-|                   | as absolute value                             |
-+-------------------+-----------------------------------------------+
++---------------------+-----------------------------------------------+
+| Name                | Description                                   |
++---------------------+-----------------------------------------------+
+| stock_ohlc          | Daily OHLC "cache" for purposes for           |
+|                     | back-testing.                                 |
++---------------------+-----------------------------------------------+
+| trending_tickers    | Tracks picked stocks, per `batch_id`.         |
+|                     | including time-stamp.                         |
++---------------------+-----------------------------------------------+
+| algo_run            | Strategy execution log, per `batch_id` and    |
+|                     | consumer process. More details below.         |
++---------------------+-----------------------------------------------+
+| new_trades          | Tracking each order (including partial), that |
+|                     | was executed, per `algo_run`, including       |
+|                     | whatever reasoning is persisted by the        |
+|                     | executed strategy.                            |
++---------------------+-----------------------------------------------+
+| gain_loss           | Tracking per symbol, per algo_run, the        |
+|                     | profit & loss, measured as percentage and     |
+|                     | as absolute value.                            |
++---------------------+-----------------------------------------------+
+| trade_analysis      | Tracking per per trade, the r_units,          |
+|                     | profit & loss, measured as percentage and     |
+|                     | as absolute value.                            |
++---------------------+-----------------------------------------------+
+| portfolio           | Tracking securities value over time.          | 
++---------------------+-----------------------------------------------+
+| portfolio_batch_ids | Association table, associating portfolio      |
+|                     | with batches.                                 |
++---------------------+-----------------------------------------------+
+| keystore            | Key/Value repository. Convinient for          |
+|                     | Strategies to track values cross batch        |
+|                     | executions.                                   |
++---------------------+-----------------------------------------------+
+| accounts            | Bank-Accoun equivalent. Mostly used to keep   |
+|                     | track of portfolio cash amounts.              |
++---------------------+-----------------------------------------------+
 
 `stock_ohlc` table
 ^^^^^^^^^^^^^^^^^^

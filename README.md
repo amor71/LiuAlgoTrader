@@ -23,7 +23,8 @@ LiuAlgoTrader uses Alpaca.Markets brokerage APIs for trading, and can use either
 
 LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 
 
-[Watch a $4,000 Profit](https://youtu.be/rVwFCbHsbIY) using LiuAlgoTrader out-of-the-box tools.
+- [Watch a $4,000 Daily Profit](https://youtu.be/rVwFCbHsbIY) using LiuAlgoTrader Framework for Day Trading.
+- [Watch Trend-Following strategy beating SP-500](https://youtu.be/BhifqoJBn84) using LiuAlgoTrader out-of-the-box tools for Swing Trading.
 
 
 ## Quickstart
@@ -65,7 +66,7 @@ These features are still work in process:
 
 * [Design & Planning](https://github.com/amor71/LiuAlgoTrader/blob/master/design/ml-concepts.ipynb),
 * [LSTM sample](https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/LSTM.ipynb)  
-  
+* Attention (Transformer) : WIP  
 ## Analysis & Analytics
 
 The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as `streamlit` applications for analysis for both trading and back-testing sessions. To name a few of the visual analytical tools:

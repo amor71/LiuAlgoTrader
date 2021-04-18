@@ -2,9 +2,10 @@ import asyncio
 import json
 import queue
 import traceback
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
+import pandas as pd
 from alpaca_trade_api.rest import REST, URL
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
@@ -70,6 +71,16 @@ class AlpacaTrader(Trader):
             self.market_open = self.market_close = None
         super().__init__(qm)
 
+    async def is_order_completed(self, order) -> Tuple[bool, float]:
+        if not self.alpaca_rest_client:
+            raise AssertionError("Must call w/ authenticated Alpaca client")
+
+        status = self.alpaca_rest_client.get_order(order_id=order.id)
+        if status.filled_qty == order.qty:
+            return True, float(status.filled_avg_price)
+
+        return False, 0.0
+
     def get_market_schedule(
         self,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
@@ -77,6 +88,19 @@ class AlpacaTrader(Trader):
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
         return self.market_open, self.market_close
+
+    def get_trading_days(
+        self, start_date: date, end_date: date = date.today()
+    ) -> pd.DataFrame:
+        if not self.alpaca_rest_client:
+            raise AssertionError("Must call w/ authenticated Alpaca client")
+
+        calendars = self.alpaca_rest_client.get_calendar(
+            start=str(start_date), end=str(end_date)
+        )
+        _df = pd.DataFrame.from_dict([calendar._raw for calendar in calendars])
+        _df["date"] = pd.to_datetime(_df.date)
+        return _df.set_index("date")
 
     def get_position(self, symbol: str) -> float:
         if not self.alpaca_rest_client:
@@ -211,6 +235,9 @@ class AlpacaTrader(Trader):
                 f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
             )
             raise
+        except AssertionError:
+            for q in cls.get_instance().queues.get_allqueues():
+                q.put(data.__dict__["_raw"], timeout=1)
         except Exception as e:
             tlog(f"[EXCEPTION] process_message(): exception {e}")
             traceback.print_exc()

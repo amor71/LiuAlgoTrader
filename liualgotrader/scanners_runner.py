@@ -11,7 +11,7 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType
@@ -237,15 +237,14 @@ def main(
         "bypass_market_schedule", False
     )
     scanners_conf = conf_dict["scanners"]
-    try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
-        asyncio.run(async_main(scanners_conf, scanner_queue))
-    except KeyboardInterrupt:
-        tlog("scanners_runner.main() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(
-            f"scanners_runner.main() - exception of type {type(e).__name__} with args {e.args}"
-        )
+    if scanners_conf:
+        try:
+            asyncio.run(async_main(scanners_conf, scanner_queue))
+        except KeyboardInterrupt:
+            tlog("scanners_runner.main() - Caught KeyboardInterrupt")
+        except Exception as e:
+            tlog(
+                f"scanners_runner.main() - exception of type {type(e).__name__} with args {e.args}"
+            )
 
     tlog("*** scanners_runner.main() completed ***")
