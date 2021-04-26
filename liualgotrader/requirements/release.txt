@@ -3,7 +3,7 @@ requests==2.25.1
 deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.2
-alpaca-trade-api==1.1.0
+alpaca-trade-api==1.2.0
 google-cloud-logging==2.3.1
 asyncpg==0.22.0
 pygit2==1.4.0
@@ -14,7 +14,7 @@ streamlit==0.80.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
-hypothesis==6.9.0
+hypothesis==6.10.0
 parsedatetime==2.6
 scipy==1.6.2
 polygon-api-client==0.1.9
