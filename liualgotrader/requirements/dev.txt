@@ -17,7 +17,7 @@ pygit2==1.4.0
 pytest==6.2.3
 pytest-asyncio==0.15.1
 pytest-cov==2.11.1
-websockets==8.1
+websockets==9.0.1
 nb-clean==2.0.2
 matplotlib==3.4.1
 tabulate==0.8.9
