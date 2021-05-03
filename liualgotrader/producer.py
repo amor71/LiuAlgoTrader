@@ -17,7 +17,7 @@ from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import QueueMapper, WSEventType
@@ -183,8 +183,9 @@ async def producer_async_main(
     scanner_queue: Queue,
     num_consumer_processes: int,
 ):
+    print("producer_async_main", "queue_list", queues)
     await create_db_connection(str(config.dsn))
-    qm = QueueMapper()
+    qm = QueueMapper(queue_list=queues)
     await run(queues=queues, qm=qm)
 
     at = AlpacaTrader(qm)
@@ -249,8 +250,6 @@ def producer_main(
 
         symbols = current_symbols
         queue_id_hash = current_queue_id_hash
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
         asyncio.run(
             producer_async_main(queues, scanner_queue, num_consumer_processes)
         )

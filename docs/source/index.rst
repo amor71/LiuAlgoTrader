@@ -33,6 +33,7 @@ sessions w/ LiuAlgoTrader.
 
    What's New
    Quickstart
+   Getting Started
    (Advanced) Setup
    Concepts
    Configuration

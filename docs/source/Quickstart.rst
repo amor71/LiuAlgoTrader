@@ -1,5 +1,5 @@
-Quickstart
-==========
+**Quickstart**
+==============
 
 Prerequisite
 ------------
@@ -77,4 +77,4 @@ requires downloading of data from Polygon.io into your local database. This is d
 What's Next?
 ------------
 
-Read through the rest of the documentation, understand the framework concepts, create your on strategies and run a trading session with LiuAlgoTrading Framework.
+Read through the rest of the documentation, starting with the 'Getting Started' section. Understand the framework concepts, create your on strategies and run a trading session with LiuAlgoTrading Framework.

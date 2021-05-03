@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 
 

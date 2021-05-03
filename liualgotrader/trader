@@ -177,10 +177,7 @@ if __name__ == "__main__":
 
     # basic validation for scanners and strategies
     tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
-    if "scanners" not in conf_dict or len(conf_dict["scanners"]) == 0:
-        tlog("must have at least one scanner configured")
-        exit(0)
-    elif "strategies" not in conf_dict or len(conf_dict["strategies"]) == 0:
+    if "strategies" not in conf_dict or len(conf_dict["strategies"]) == 0:
         tlog("must have at least one strategy configured")
         exit(0)
 
@@ -295,8 +292,6 @@ if __name__ == "__main__":
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
     tlog(f"run {uid} completed")
     tlog("Executing off-hours calculations")
-    if not asyncio.get_event_loop().is_closed():
-        asyncio.get_event_loop().close()
     asyncio.run(off_hours(uid))
     tlog("Off-hours calculations completed")
     print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")

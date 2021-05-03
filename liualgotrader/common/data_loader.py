@@ -1,4 +1,5 @@
 # type: ignore
+import asyncio
 import sys
 import traceback
 from datetime import date, datetime, timedelta
@@ -6,6 +7,7 @@ from enum import Enum
 from typing import Dict
 
 import alpaca_trade_api as tradeapi
+import nest_asyncio
 import pandas as pd
 from dateutil.parser import parse as date_parser
 from pytz import timezone
@@ -15,6 +17,8 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType, TimeScale
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.data_factory import data_loader_factory
+
+nest_asyncio.apply()
 
 nyc = timezone("America/New_York")
 
@@ -331,6 +335,7 @@ class SymbolData:
             end=_end.date() if type(_end) != date else _end,
             scale=self.scale,
         )
+
         self.symbol_data = pd.concat(
             [self.symbol_data, _df], sort=True
         ).drop_duplicates()
@@ -376,6 +381,7 @@ class SymbolData:
                 end=_end,
                 scale=self.scale,
             )
+
             new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
 
             end -= timedelta(days=7 if self.scale == TimeScale.minute else 500)
@@ -413,6 +419,9 @@ class DataLoader:
             raise AssertionError("Failed to create data loader")
 
         self.scale = scale
+
+    def __getattr__(self, attr):
+        return self.__getitem__(attr)
 
     def __getitem__(self, symbol: str) -> SymbolData:
         if not self.data_api:

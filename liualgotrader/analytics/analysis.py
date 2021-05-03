@@ -7,8 +7,11 @@ import pandas as pd
 from pytz import timezone
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.portfolio import Portfolio
+from liualgotrader.trading.trader_factory import trader_factory
 
 est = timezone("America/New_York")
 
@@ -314,3 +317,104 @@ def symobl_trade_analytics(
     }
 
     return pd.DataFrame(d), profit
+
+
+def calc_symbol_trades_returns(
+    symbol: str,
+    symbol_trades: pd.DataFrame,
+    daily_returns: pd.DataFrame,
+    data_loader: DataLoader,
+):
+    started = ended = None
+    qty: int
+
+    for _, row in symbol_trades.iterrows():
+        if row.operation == "buy" and not started:
+            qty = row.qty
+            price = float(row.price)
+            started = daily_returns.index.get_loc(str(row.client_time.date()))
+            ended = None
+        elif row.operation == "sell" and started is not None:
+            ended = daily_returns.index.get_loc(str(row.client_time.date()))
+            for i in range(started, ended):
+                value = (
+                    qty
+                    * data_loader[symbol].close[
+                        daily_returns.index[i]
+                        .to_pydatetime()
+                        .replace(tzinfo=est)
+                    ]
+                )
+                daily_returns.loc[daily_returns.index[i], "agg_value"] += value
+                daily_returns.loc[daily_returns.index[i], "cash"] -= (
+                    qty * price
+                )
+            daily_returns.loc[daily_returns.index[ended], "cash"] += (
+                qty
+                * data_loader[symbol].close[
+                    daily_returns.index[ended]
+                    .to_pydatetime()
+                    .replace(tzinfo=est)
+                ]
+            )
+
+            started = None
+            ended = None
+
+    if started and not ended:
+        ended = len(daily_returns.index)
+        for i in range(started, ended):
+            value = (
+                qty
+                * data_loader[symbol].close[
+                    daily_returns.index[i].to_pydatetime().replace(tzinfo=est)
+                ]
+            )
+            daily_returns.loc[daily_returns.index[i], "agg_value"] += value
+            daily_returns.loc[daily_returns.index[i], "cash"] -= qty * price
+
+
+def calc_batch_returns(batch_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    portfolio = loop.run_until_complete(Portfolio.load_by_batch_id(batch_id))
+    data_loader = DataLoader()
+    trades = load_trades_by_batch_id(batch_id)
+    start_date = trades.client_time.min().date()
+    end_date = trades.client_time.max().date()
+    trader = trader_factory()()
+
+    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+
+    td["agg_value"] = 0.0
+    td["cash"] = portfolio.portfolio_size
+
+    num_symbols = len(trades.symbol.unique().tolist())
+    for c, symbol in enumerate(trades.symbol.unique().tolist(), start=1):
+        print(f"{symbol} ({c}/{num_symbols})")
+        symbol_trades = trades[trades.symbol == symbol].sort_values(
+            by="client_time"
+        )
+        calc_symbol_trades_returns(symbol, symbol_trades, td, data_loader)
+
+    td["totals"] = td["agg_value"] + td["cash"]
+    # td["date"] = pd.to_datetime(td.index)
+    # td = td.set_index("date")
+    return pd.DataFrame(td, columns=["agg_value", "cash", "totals"])
+
+
+def compare_to_symbol_returns(batch_id: str, symbol: str) -> pd.DataFrame:
+
+    data_loader = DataLoader()
+    trades = load_trades_by_batch_id(batch_id)
+    start_date = trades.client_time.min().date()
+    end_date = trades.client_time.max().date()
+    trader = trader_factory()()
+
+    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+    td[symbol] = td.apply(
+        lambda row: data_loader[symbol].close[
+            row.name.to_pydatetime().replace(tzinfo=est)
+        ],
+        axis=1,
+    )
+    return td[symbol]

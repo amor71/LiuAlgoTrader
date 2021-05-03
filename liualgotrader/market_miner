@@ -15,7 +15,6 @@ from liualgotrader.miners.base import Miner
 from liualgotrader.miners.stock_cluster import StockCluster
 
 
-
 def motd(filename: str, version: str) -> None:
     """Display welcome message"""
 
@@ -37,7 +36,7 @@ async def main(conf_dict: Dict):
             await asyncio.gather(*task_list)
         else:
             try:
-                if 'filename' in conf_dict["miners"][miner]:
+                if "filename" in conf_dict["miners"][miner]:
                     spec = importlib.util.spec_from_file_location(
                         "module.name", conf_dict["miners"][miner]["filename"]
                     )
@@ -55,7 +54,7 @@ async def main(conf_dict: Dict):
                 tlog(f"[ERROR] miner {miner} resulted in exception:`{e}`")
             else:
                 try:
-                    debug = conf_dict["miners"][miner].get('debug', False)
+                    debug = conf_dict["miners"][miner].get("debug", False)
                     miner = miner_class(debug=debug, data=conf_dict["miners"][miner])
                     task_list.append(asyncio.create_task(miner.run()))
 
@@ -66,7 +65,6 @@ async def main(conf_dict: Dict):
                     traceback.print_exception(*exc_info)
                     del exc_info
                     raise
-
 
 
 if __name__ == "__main__":
@@ -81,7 +79,7 @@ if __name__ == "__main__":
         import liualgotrader
 
         build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
-
+    config.build_label = build_label
     filename = os.path.basename(__file__)
     motd(filename=filename, version=build_label)
 
@@ -92,7 +90,9 @@ if __name__ == "__main__":
     try:
         conf_dict = toml.load(config.miner_configuration_filename)
     except FileNotFoundError:
-        tlog(f"[ERROR] could not locate market_miner configuration file {config.configuration_filename}")
+        tlog(
+            f"[ERROR] could not locate market_miner configuration file {config.configuration_filename}"
+        )
         sys.exit(0)
 
     try:
@@ -110,4 +110,3 @@ if __name__ == "__main__":
         del exc_info
 
     tlog("*** market_miner completed ***")
-

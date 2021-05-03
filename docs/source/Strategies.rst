@@ -76,6 +76,10 @@ developer may elect to ignore them.
 Strategies are instantiated inside `consumer` processes, immediately
 proceeding the creation of the scanners and producer processes.
 
+A Strategy may have any number of parameters, once instanticated, the Framework will 
+pass all the parameters from the `.toml` file to the strategy. 
+Exception will be raised if parameters are missing. Always make sure to called
+`super()` to ensure proper setting of basic parameters.
 
 Developing a Strategy
 ---------------------
@@ -108,46 +112,22 @@ The function is expected to call the base-class
 normally static in the strategy object and not passed
 from the configuration file.
 
-`run()` function
-*****************
-`run()` is called per picked symbol, per event. That would normally mean at least once per second, per stock.
+Please review the base class for furthe details.
 
-.. code-block:: python
+`run()` and `run_all()` functions
+*********************************
 
-        async def run(
-        self,
-        symbol: str,
-        shortable: bool,
-        position: int,
-        minute_history: df,
-        now: datetime,
-        portfolio_value: float = None,
-        trading_api: tradeapi = None,
-        debug: bool = False,
-        backtesting: bool = False,
-    ) -> Tuple[bool, Dict]:
+`run()` is called per picked symbol, per event. That would normally mean at least once per second, 
+per stock. `run_al()` is called once, every one minute, with list of all open positions and a
+DataLoader. The Platform decides which function to call, based on the value returned by 
+`should_run_all()`. See `base.py` for further details.
 
-+-----------------+----------------------------------------------------------+
-| Parameter       | Description                                              |
-+-----------------+----------------------------------------------------------+
-| shortable       | `True` can short the symbol, `False` can not,            |
-+-----------------+----------------------------------------------------------+
-| position        | Current position size,                                   |
-+-----------------+----------------------------------------------------------+
-| minute_history  | A DataFrame, from start of day, with per minute OHLC     |
-|                 | (open, high, low, close) prices, volume, vwap and average|
-|                 | vwap is the per-minute weight price, and average is the  |
-|                 | minute based VWAP,                                       |
-+-----------------+----------------------------------------------------------+
-| now             | Current market clock, specially useful when backtesting, |
-+-----------------+----------------------------------------------------------+
-| debug           | Are we running in debug-mode                             |
-+-----------------+----------------------------------------------------------+
-| backtesting     | Are we running in back-testing simulation                |
-+-----------------+----------------------------------------------------------+
 
-The function returns a tuple of a boolean and dictionary.
-The function may return one of the below combinations:
+`run()` Actions
+***************
+
+The functions returns a tuple of a boolean and dictionary.
+The functions may return one of the below combinations:
 
 .. code-block:: python
 
@@ -326,6 +306,13 @@ Let's assume you hold a position in the symbol. One strategy may identify a sell
 signal, while the other does not. Depending on the strategy combination and
 architecture, it might be wise for a strategy to confirm it was actually
 the one initiating the original buy by consulting **last_used_strategy[symbol]**
+
+Key-store
+*********
+
+The platform implement a key-value store, per strategy (see base.py for implementation details). 
+key-value allows for strategies to persist state across executions. 
+This feature is specifically helpful for `swing` strategies that run across different batches. 
 
 Liquidation Schedule
 ^^^^^^^^^^^^^^^^^^^^

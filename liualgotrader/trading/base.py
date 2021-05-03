@@ -1,9 +1,13 @@
 import asyncio
-from datetime import datetime, timedelta
+import uuid
+from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
+
+import pandas as pd
 
 from liualgotrader.common.exceptions import MarketClosedToday
 from liualgotrader.common.types import QueueMapper
+from liualgotrader.models.algo_run import AlgoRun
 
 
 class Trader:
@@ -16,18 +20,20 @@ class Trader:
     def __repr__(self):
         return type(self).__name__
 
+    async def create_session(self, algo_name: str) -> AlgoRun:
+        new_batch_id = str(uuid.uuid4())
+        algo_run = AlgoRun(algo_name, new_batch_id)
+        await algo_run.save()
+        return algo_run
+
     def get_market_schedule(
         self,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        """Get market open, close in NYC timezone, timedelta to close.
+        pass
 
-        Returns
-        -------
-        datetime
-            market's open datetime in NYC timezone
-        datetime
-            market's close datetime in NYC timezone
-        """
+    def get_trading_days(
+        self, start_date: date, end_date: date = date.today()
+    ) -> pd.DataFrame:
         pass
 
     def is_market_open_today(self) -> bool:
@@ -49,6 +55,9 @@ class Trader:
         pass
 
     async def is_shortable(self, symbol) -> bool:
+        pass
+
+    async def is_order_completed(self, order) -> Tuple[bool, float]:
         pass
 
     async def submit_order(

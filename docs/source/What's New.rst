@@ -1,8 +1,23 @@
 What's New
 ----------
-
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
++------------------+----------------------------------------------+
+| 0.1.20           | **Competible Breaking Release**              |
+|                  |                                              |
+|                  | 1. Add support for Account managment,        |
+|                  | 2. Add support for Portfolio managment,      |
+|                  | 3. Add support for key-value store,          |
+|                  | 4. Extend Strategy to better support         |
+|                  |    'swing' trades, but allow to run          |
+|                  |    on all symbols at one go, instead         |
+|                  |    of getting real-time updates and actions  |
+|                  |    per symbol,                               |
+|                  | 5. Improve analytics for swing trading,      |
+|                  |    including Sharpe Ratio and SP-500         |
+|                  |    comparison,                               |
+|                  | 6. Added test-automation,                    |
+|                  | 7. Improve documentation.                    |
 +------------------+----------------------------------------------+
 | 0.1.05           | Alapaca data-provider production ready       |
 +------------------+----------------------------------------------+

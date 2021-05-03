@@ -154,7 +154,6 @@ class AlpacaStream(StreamingAPI):
                 "tape": msg.tape,
                 "EV": "T",
             }
-            # print(event, flush=True)
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
             tlog(

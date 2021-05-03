@@ -2,7 +2,7 @@ import json
 import queue
 import time
 import traceback
-from datetime import date
+from datetime import date, timedelta
 from multiprocessing import Queue
 from typing import Awaitable, Dict, List, Optional
 
@@ -45,7 +45,6 @@ class PolygonData(DataAPI):
             symbol, 1, scale.name, start, end, unadjusted=False
         )
         if not data or not hasattr(data, "results"):
-            print(data)
             raise ValueError(
                 f"[ERROR] {symbol} has no data for {start} to {end} w {scale.name}"
             )
