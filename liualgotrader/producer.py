@@ -183,7 +183,6 @@ async def producer_async_main(
     scanner_queue: Queue,
     num_consumer_processes: int,
 ):
-    print("producer_async_main", "queue_list", queues)
     await create_db_connection(str(config.dsn))
     qm = QueueMapper(queue_list=queues)
     await run(queues=queues, qm=qm)
