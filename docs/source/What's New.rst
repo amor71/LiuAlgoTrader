@@ -3,7 +3,7 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
-| 0.1.20           | **Competible Breaking Release**              |
+| 0.2.00           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. Add support for Account managment,        |
 |                  | 2. Add support for Portfolio managment,      |

@@ -32,7 +32,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 ### Prerequisite
 
 - Paper, and/or a funded account with [Alpaca Markets](https://alpaca.markets/docs/about-us/).
-- Polygon.io subscription optional (`Starter` plan and above),
+OR Polygon.io subscription optional (`Starter` plan and above),
 - Installed [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
 ### Install & Configure

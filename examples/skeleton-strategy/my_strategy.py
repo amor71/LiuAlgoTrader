@@ -62,7 +62,7 @@ class MyStrategy(Strategy):
         """
         pass
 
-    async def create(self) -> None:
+    async def create(self) -> bool:
         """
         This function is called by the framework during the instantiation
         of the strategy. Keep in mind that running on multi-process environment
@@ -71,21 +71,20 @@ class MyStrategy(Strategy):
         """
         await super().create()
         tlog(f"strategy {self.name} created")
+        return True
 
     async def run(
         self,
         symbol: str,
         shortable: bool,
         position: int,
-        minute_history: df,
         now: datetime,
+        minute_history: df,
         portfolio_value: float = None,
-        trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
         """
-
         :param symbol: the symbol of the stock,
         :param shortable: can the stock be sold short,
         :param position: the current held position,
@@ -94,9 +93,6 @@ class MyStrategy(Strategy):
         :param now: current timestamp, specially important when called
                     from the backtester application,
         :param portfolio_value: your total porfolio value
-        :param trading_api: the Alpca tradeapi, may either be
-                            paper or live, depending on the
-                            environment variable configurations,
         :param debug:       true / false, should be used mostly
                             for adding more verbosity.
         :param backtesting: true / false, which more are we running at
@@ -106,53 +102,32 @@ class MyStrategy(Strategy):
         current_second_data = minute_history.iloc[-1]
         tlog(f"{symbol} data: {current_second_data}")
 
-        morning_rush = (now - config.market_open).seconds // 60 < 30
         if await super().is_buy_time(now) and not position:
-            # Check for buy signals
-            lbound = config.market_open
-            ubound = lbound + timedelta(minutes=15)
+            #
+            # Check for buy signals??
+            #
 
-            if debug:
-                tlog(f"15 schedule {lbound}/{ubound}")
-            try:
-                high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
-                if debug:
-                    tlog(f"{minute_history[lbound:ubound]}")  # type: ignore
-            except Exception as e:
-                return False, {}
+            #
+            # Global, cross strategies passed via the framework
+            #
+            target_prices[symbol] = 15.0
+            stop_prices[symbol] = 3.8
 
-            if (
-                current_second_data.close > high_15m
-                or config.bypass_market_schedule
-            ):
+            #
+            # indicators *should* be filled
+            #
+            buy_indicators[symbol] = {"my_indicator": "random"}
 
-                #
-                # Global, cross strategies passed via the framework
-                #
-                target_prices[symbol] = 15.0
-                stop_prices[symbol] = 3.8
-
-                #
-                # indicators *should* be filled
-                #
-                buy_indicators[symbol] = {"my_indicator": "random"}
-
-                return (
-                    True,
-                    {
-                        "side": "buy",
-                        "qty": str(10),
-                        "type": "limit",
-                        "limit_price": "4.4",
-                    }
-                    if not morning_rush
-                    else {
-                        "side": "buy",
-                        "qty": str(5),
-                        "type": "market",
-                    },
-                )
-        if (
+            return (
+                True,
+                {
+                    "side": "buy",
+                    "qty": str(10),
+                    "type": "limit",
+                    "limit_price": "4.4",
+                },
+            )
+        elif (
             await super().is_sell_time(now)
             and position > 0
             and last_used_strategy[symbol].name == self.name  # important!

@@ -351,6 +351,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     if order.side == "sell":
         qty *= -1
 
+    tlog(f"update_filled_order new qty {new_qty} for {order}")
     trading_data.positions[order.symbol] = trading_data.positions.get(
         order.symbol, 0
     ) - trading_data.partial_fills.get(order.symbol, 0)
@@ -389,6 +390,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
 
     trading_data.open_orders.pop(order.symbol, None)
     trading_data.open_order_strategy.pop(order.symbol, None)
+    tlog(f"update_filled_order open order for {order.symbol} popped")
 
 
 async def handle_trade_update_for_order(data: Dict) -> bool:

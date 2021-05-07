@@ -8,15 +8,11 @@ from talib import MAMA
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.trading_data import (
-    buy_indicators,
-    last_used_strategy,
-    latest_cost_basis,
-    open_orders,
-    sell_indicators,
-    stop_prices,
-    target_prices,
-)
+from liualgotrader.common.trading_data import (buy_indicators,
+                                               last_used_strategy,
+                                               latest_cost_basis, open_orders,
+                                               sell_indicators, stop_prices,
+                                               target_prices)
 from liualgotrader.strategies.base import Strategy, StrategyType
 
 
@@ -43,9 +39,10 @@ class SwingMamaFama(Strategy):
     async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
         pass
 
-    async def create(self) -> None:
+    async def create(self) -> bool:
         await super().create()
         tlog(f"strategy {self.name} created")
+        return True
 
     async def is_buy_time(self, now: datetime):
         return True
@@ -58,10 +55,9 @@ class SwingMamaFama(Strategy):
         symbol: str,
         shortable: bool,
         position: int,
-        minute_history: df,
         now: datetime,
+        minute_history: df,
         portfolio_value: float = None,
-        trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
@@ -76,31 +72,14 @@ class SwingMamaFama(Strategy):
             stop_prices[symbol] = stop_price
             target_prices[symbol] = target_price
 
-            if portfolio_value is None:
-                if not trading_api:
-                    raise Exception(
-                        f"{self.name}: both portfolio_value and trading_api can't be None"
-                    )
-
-                retry = 3
-                while retry > 0:
-                    try:
-                        portfolio_value = float(
-                            trading_api.get_account().portfolio_value
-                        )
-                        break
-                    except ConnectionError as e:
-                        tlog(
-                            f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
-                        )
-                        await asyncio.sleep(0)
-                        retry -= 1
-
-                if not portfolio_value:
-                    tlog("f[{symbol}][{now}[Error] failed to get portfolio_value")
-                    return False, {}
             shares_to_buy = (
-                portfolio_value * config.risk // (data.close - stop_prices[symbol])
+                (
+                    portfolio_value
+                    * config.risk
+                    // (data.close - stop_prices[symbol])
+                )
+                if portfolio_value
+                else 0
             )
             if not shares_to_buy:
                 shares_to_buy = 1

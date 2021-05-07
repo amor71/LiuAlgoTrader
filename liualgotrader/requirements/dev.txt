@@ -2,7 +2,7 @@ iso8601==0.1.14
 requests==2.25.1
 deprecated==1.2.12
 urllib3==1.26.4
-numpy==1.20.2
+numpy==1.20.0
 mypy==0.812
 black
 pylint==2.8.2
@@ -41,4 +41,6 @@ scipy==1.6.3
 polygon-api-client==0.1.9
 bandit==1.7.0
 finnhub-python==2.4.0
+pandas
+
 
