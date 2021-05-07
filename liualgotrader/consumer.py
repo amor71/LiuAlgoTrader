@@ -858,7 +858,7 @@ async def queue_consumer(
                 data = queue.get(timeout=2)
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
-                    asyncio.create_task(handle_trade_update(data))
+                    await handle_trade_update(data)
                 else:
                     if not await handle_data_queue_msg(
                         data, trader, data_loader
