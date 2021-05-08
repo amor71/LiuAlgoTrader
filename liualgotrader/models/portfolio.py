@@ -49,6 +49,29 @@ class Portfolio:
                 return Portfolio(*data)
 
     @classmethod
+    async def load_by_portfolio_id(cls, portfolio_id: str):
+        try:
+            pool = config.db_conn_pool
+        except AttributeError:
+            await create_db_connection()
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            data = await con.fetchrow(
+                """
+                    SELECT p.portfolio_id, p.size, p.stock_count, p.parameters
+                    FROM 
+                        portfolio as p
+                    WHERE
+                        p.portfolio_id = $1
+                """,
+                portfolio_id,
+            )
+
+            if data:
+                return Portfolio(*data)
+
+    @classmethod
     async def save(
         cls,
         portfolio_id: str,

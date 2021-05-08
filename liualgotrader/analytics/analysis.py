@@ -127,9 +127,38 @@ async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     return df
 
 
+async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
+    query = f"""
+        SELECT 
+            t.*, a.batch_id, a.start_time, a.algo_name
+        FROM 
+            new_trades as t, algo_run as a, portfolio_batch_ids as p
+        WHERE 
+            t.algo_run_id = a.algo_run_id AND 
+            a.batch_id = p.batch_id AND
+            p.portfolio_id = '{portfolio_id}' AND
+            t.expire_tstamp is null 
+        ORDER BY symbol, tstamp
+    """
+    df: pd.DataFrame = await fetch_as_dataframe(query)
+    try:
+        if not df.empty:
+            df["client_time"] = pd.to_datetime(df["client_time"])
+    except Exception:
+        tlog(
+            f"[Error] aload_trades_by_portfolio_id({portfolio_id}) can't convert 'client_time' column to datetime"
+        )
+    return df
+
+
 def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(aload_trades_by_batch_id(batch_id))
+
+
+def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(aload_trades_by_portfolio_id(portfolio_id))
 
 
 def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
@@ -402,10 +431,10 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     return pd.DataFrame(td, columns=["agg_value", "cash", "totals"])
 
 
-def compare_to_symbol_returns(batch_id: str, symbol: str) -> pd.DataFrame:
+def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
 
     data_loader = DataLoader()
-    trades = load_trades_by_batch_id(batch_id)
+    trades = load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
     trader = trader_factory()()
@@ -418,3 +447,33 @@ def compare_to_symbol_returns(batch_id: str, symbol: str) -> pd.DataFrame:
         axis=1,
     )
     return td[symbol]
+
+
+def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    portfolio = loop.run_until_complete(
+        Portfolio.load_by_portfolio_id(portfolio_id)
+    )
+    data_loader = DataLoader()
+    trades = load_trades_by_portfolio(portfolio_id)
+    start_date = trades.client_time.min().date()
+    end_date = trades.client_time.max().date()
+    trader = trader_factory()()
+
+    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+
+    td["agg_value"] = 0.0
+    td["cash"] = portfolio.portfolio_size
+
+    num_symbols = len(trades.symbol.unique().tolist())
+    for c, symbol in enumerate(trades.symbol.unique().tolist(), start=1):
+        print(f"{symbol} ({c}/{num_symbols})")
+        symbol_trades = trades[trades.symbol == symbol].sort_values(
+            by="client_time"
+        )
+        calc_symbol_trades_returns(symbol, symbol_trades, td, data_loader)
+
+    td["totals"] = td["agg_value"] + td["cash"]
+    # td["date"] = pd.to_datetime(td.index)
+    # td = td.set_index("date")
+    return pd.DataFrame(td, columns=["agg_value", "cash", "totals"])
