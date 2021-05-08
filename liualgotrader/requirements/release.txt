@@ -3,11 +3,11 @@ requests==2.25.1
 deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.0
-alpaca-trade-api==1.2.0
+alpaca-trade-api
 google-cloud-logging==2.3.1
 asyncpg==0.22.0
 pygit2==1.4.0
-websockets==9.0.1
+websockets
 matplotlib==3.4.1
 tabulate==0.8.9
 streamlit==0.81.0
