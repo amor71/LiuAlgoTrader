@@ -3,7 +3,7 @@ requests==2.25.1
 deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.2
-alpaca-trade-api
+alpaca-trade-api==1.2.1
 google-cloud-logging==2.3.1
 asyncpg==0.22.0
 pygit2==1.4.0
