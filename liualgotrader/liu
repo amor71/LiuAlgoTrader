@@ -7,9 +7,11 @@ import requests
 import time
 import getopt
 import asyncio
+import uuid
 from liualgotrader.common import config
 import os
 from liualgotrader.models.accounts import Accounts
+from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.common.database import create_db_connection
 
 
@@ -24,7 +26,8 @@ def show_usage():
     print("usgae:")
     print("\tliu quickstart")
     print("\tOR")
-    print("\tliu create_account <amount> [--credit=<credit>]")
+    print("\tliu create account <amount> [--credit=<credit>]")
+    print("\tliu create portfolio <account-id> <amount> <num_stocks>")
     print("\n")
     print("options:")
     print("\t--credit\tAccount credit line")
@@ -310,6 +313,21 @@ def create_account(amount: float, credit: float):
     print(f"Account ID {account_id} created")
 
 
+def create_portfolio(account_id: str, amount: float, stock_count: int):
+    portfolio_id = str(uuid.uuid4())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_db_connection())
+    loop.run_until_complete(
+        Portfolio.save(
+            portfolio_id=portfolio_id,
+            portfolio_size=amount,
+            stock_count=stock_count,
+            parameters={},
+        )
+    )
+    print(f"Portfolio ID {portfolio_id} created")
+
+
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
 
@@ -331,35 +349,41 @@ if __name__ == "__main__":
             quickstart()
         except KeyboardInterrupt:
             print("Oops... exiting gracefully")
-    elif sys.argv[1] == "create_account":
+    elif sys.argv[1] == "create":
         try:
-            if float(sys.argv[2]) <= 0.0:
-                print(
-                    "Oops.. account size must be positive. Always think positive w/ Liu"
-                )
-                exit(0)
-        except Exception:
-            print("Oops.. account size must be positive. Always think positive w/ Liu")
-            exit(0)
-
-        credit = 0.0
-        opts, args = getopt.getopt(
-            sys.argv[3:],
-            shortopts=[],
-            longopts=[
-                "credit=",
-            ],
-        )
-        for opt, arg in opts:
-            if opt in ("--credit"):
-                credit = float(arg)
-                if credit <= 0.0:
+            if sys.argv[2] == "account":
+                if float(sys.argv[3]) <= 0.0:
                     print(
-                        "Oops.. creditamount must be positive. Always think positive w/ Liu"
+                        "Oops.. account size must be positive. Always think positive w/ Liu"
                     )
                     exit(0)
 
-        create_account(float(sys.argv[2]), credit)
+                credit = 0.0
+                opts, args = getopt.getopt(
+                    sys.argv[4:],
+                    shortopts=[],
+                    longopts=[
+                        "credit=",
+                    ],
+                )
+                for opt, arg in opts:
+                    if opt in ("--credit"):
+                        credit = float(arg)
+                        if credit <= 0.0:
+                            print(
+                                "Oops.. creditamount must be positive. Always think positive w/ Liu"
+                            )
+                            exit(0)
+
+                create_account(float(sys.argv[3]), credit)
+            elif sys.argv[2] == "portfolio":
+                account_id = sys.argv[3]
+                amount = float(sys.argv[4])
+                num_stocks = int(sys.argv[5])
+
+                create_portfolio(account_id, amount, num_stocks)
+        except Exception:
+            show_usage()
     else:
         show_usage()
 
