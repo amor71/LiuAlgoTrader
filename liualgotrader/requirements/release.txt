@@ -10,7 +10,7 @@ pygit2==1.4.0
 websockets==9.0.2
 matplotlib==3.4.2
 tabulate==0.8.9
-streamlit==0.81.0
+streamlit==0.82.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
