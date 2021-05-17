@@ -8,7 +8,7 @@ black==21.5b1
 pylint==2.8.2
 flake8==3.9.2
 Cython==0.29.23
-alpaca-trade-api==1.2.0
+alpaca-trade-api==1.2.1
 google-cloud-logging==2.3.1
 therapist
 jupyter==1.0.0
