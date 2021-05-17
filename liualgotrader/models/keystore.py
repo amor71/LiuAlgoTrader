@@ -7,22 +7,21 @@ class KeyStore:
     async def load(cls, key: str, algo_name: str, context: str):
         pool = config.db_conn_pool
         async with pool.acquire() as con:
-            async with con.transaction():
-                val = await con.fetchval(
-                    """
-                        SELECT value
-                        FROM keystore
-                        WHERE 
-                            key = $1 
-                            AND context = $3
-                            AND algo_name = $2;
-                    """,
-                    key,
-                    algo_name,
-                    context,
-                )
+            val = await con.fetchval(
+                """
+                    SELECT value
+                    FROM keystore
+                    WHERE 
+                        key = $1 
+                        AND context = $3
+                        AND algo_name = $2;
+                """,
+                key,
+                algo_name,
+                context,
+            )
 
-                return val
+            return val
 
     @classmethod
     async def save(cls, key: str, value: str, algo_name: str, context: str):

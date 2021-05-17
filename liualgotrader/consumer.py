@@ -947,10 +947,10 @@ async def create_strategies(
     for strategy_tuple in strategy_types:
         strategy_type = strategy_tuple[0]
         strategy_details = strategy_tuple[1]
-        tlog(f"initializing {type(strategy_type).__name__}")
         s = strategy_type(
             batch_id=batch_id, data_loader=data_loader, **strategy_details
         )
+        tlog(f"instantiated {s.name}")
         if await s.create():
             trading_data.strategies.append(s)
             if symbols:
