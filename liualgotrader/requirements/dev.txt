@@ -14,7 +14,7 @@ therapist==2.1.0
 jupyter==1.0.0
 asyncpg==0.22.0
 pygit2==1.4.0
-pytest==6.2.3
+pytest==6.2.4
 pytest-asyncio==0.15.1
 pytest-cov==2.11.1
 websockets
