@@ -4,7 +4,7 @@ deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.3
 mypy==0.812
-black
+black==21.5b1
 pylint==2.8.2
 flake8==3.9.1
 Cython==0.29.23
