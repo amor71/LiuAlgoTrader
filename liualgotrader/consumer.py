@@ -81,8 +81,12 @@ async def do_strategy_all(
             )
 
     except Exception as e:
-        tlog(f"[Exception] {now} {strategy}->{e}")
         traceback.print_exc()
+        exc_info = sys.exc_info()
+        lines = traceback.format_exception(*exc_info)
+        tlog(f"[Exception] {now} {strategy}->{e}:{lines}")
+        del exc_info
+
         raise
 
 
