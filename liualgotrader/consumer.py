@@ -109,13 +109,11 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
                     for symbol in trading_data.last_used_strategy
                     if trading_data.last_used_strategy[symbol] == s
                 ]
-                asyncio.create_task(
-                    do_strategy_all(
-                        trader=trader,
-                        data_loader=data_loader,
-                        strategy=s,
-                        symbols=symbols,
-                    )
+                await do_strategy_all(
+                    trader=trader,
+                    data_loader=data_loader,
+                    strategy=s,
+                    symbols=symbols,
                 )
 
             await asyncio.sleep(60.0)
