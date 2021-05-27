@@ -10,6 +10,7 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.trading.trader_factory import trader_factory
 
@@ -354,53 +355,52 @@ def calc_symbol_trades_returns(
     daily_returns: pd.DataFrame,
     data_loader: DataLoader,
 ):
-    started = ended = None
-    qty: int
-
+    t1 = t2 = None
+    qty: int = 0
+    eastern = timezone("US/Eastern")
     for _, row in symbol_trades.iterrows():
-        if row.operation == "buy" and not started:
-            qty = row.qty
-            price = float(row.price)
-            started = daily_returns.index.get_loc(str(row.client_time.date()))
-            ended = None
-        elif row.operation == "sell" and started is not None:
-            ended = daily_returns.index.get_loc(str(row.client_time.date()))
-            for i in range(started, ended):
+        if t1 is None:
+            t1 = daily_returns.index.get_loc(str(row.client_time.date()))
+        else:
+            t2 = daily_returns.index.get_loc(str(row.client_time.date()))
+
+        if t1 is not None and t2 is not None:
+            for i in range(t1, t2):
                 value = (
                     qty
                     * data_loader[symbol].close[
-                        daily_returns.index[i]
-                        .to_pydatetime()
-                        .replace(tzinfo=est)
+                        eastern.localize(
+                            daily_returns.index[i].to_pydatetime()
+                        ).replace(hour=9, minute=30)
                     ]
                 )
-                daily_returns.loc[daily_returns.index[i], "agg_value"] += value
-                daily_returns.loc[daily_returns.index[i], "cash"] -= (
-                    qty * price
-                )
-            daily_returns.loc[daily_returns.index[ended], "cash"] += (
-                qty
-                * data_loader[symbol].close[
-                    daily_returns.index[ended]
-                    .to_pydatetime()
-                    .replace(tzinfo=est)
-                ]
-            )
+                daily_returns.loc[
+                    daily_returns.index[i],
+                    "equity",
+                ] += value
 
-            started = None
-            ended = None
+        if row.operation == "buy":
+            qty += row.qty
+        elif row.operation == "sell":
+            qty -= row.qty
 
-    if started and not ended:
-        ended = len(daily_returns.index)
-        for i in range(started, ended):
+        if qty == 0:
+            t1 = t2 = None
+        elif t2 is not None:
+            t1 = t2
+            t2 = None
+
+    if qty and t1:
+        for i in range(t1, len(daily_returns.index)):
             value = (
                 qty
                 * data_loader[symbol].close[
-                    daily_returns.index[i].to_pydatetime().replace(tzinfo=est)
+                    eastern.localize(
+                        daily_returns.index[i].to_pydatetime()
+                    ).replace(hour=9, minute=30)
                 ]
             )
-            daily_returns.loc[daily_returns.index[i], "agg_value"] += value
-            daily_returns.loc[daily_returns.index[i], "cash"] -= qty * price
+            daily_returns.loc[daily_returns.index[i], "equity"] += value
 
 
 def calc_batch_returns(batch_id: str) -> pd.DataFrame:
@@ -449,11 +449,23 @@ def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
     return td[symbol]
 
 
-def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
+def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(
-        Portfolio.load_by_portfolio_id(portfolio_id)
-    )
+    df = loop.run_until_complete(Accounts.get_transactions(account_id))
+    df = df.groupby(df.index.date).sum()
+    df.iloc[0].amount += initial_cash
+    r = pd.date_range(start=df.index.min(), end=df.index.max())
+    df.reindex(r).fillna(method="backfill")
+    df.rename(columns={"amount": "cash"}, inplace=True)
+    df.index.rename("date", inplace=True)
+    return df
+
+
+def calc_portfolio_returns(
+    account_id: int, initial_account_size: float, portfolio_id: str
+) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
@@ -462,9 +474,10 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 
     td = trader.get_trading_days(start_date=start_date, end_date=end_date)
 
-    td["agg_value"] = 0.0
-    td["cash"] = portfolio.portfolio_size
+    td["equity"] = 0.0
 
+    cash_df = get_cash(account_id, initial_account_size)
+    print(cash_df)
     num_symbols = len(trades.symbol.unique().tolist())
     for c, symbol in enumerate(trades.symbol.unique().tolist(), start=1):
         print(f"{symbol} ({c}/{num_symbols})")
@@ -473,7 +486,6 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
         )
         calc_symbol_trades_returns(symbol, symbol_trades, td, data_loader)
 
-    td["totals"] = td["agg_value"] + td["cash"]
-    # td["date"] = pd.to_datetime(td.index)
-    # td = td.set_index("date")
-    return pd.DataFrame(td, columns=["agg_value", "cash", "totals"])
+    td = td.join(cash_df)
+    td["totals"] = td["equity"] + td["cash"]
+    return pd.DataFrame(td, columns=["equity", "cash", "totals"])

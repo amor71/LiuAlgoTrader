@@ -145,9 +145,13 @@ async def do_strategy_result(
     )
 
     if what["side"] == "buy":
-        await strategy.buy_callback(symbol, price, int(float(what["qty"])))
+        await strategy.buy_callback(
+            symbol, price, int(float(what["qty"])), now
+        )
     elif what["side"] == "sell":
-        await strategy.sell_callback(symbol, price, int(float(what["qty"])))
+        await strategy.sell_callback(
+            symbol, price, int(float(what["qty"])), now
+        )
 
 
 async def do_strategy_all(

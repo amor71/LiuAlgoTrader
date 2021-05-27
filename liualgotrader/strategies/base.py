@@ -162,11 +162,15 @@ class Strategy(object):
             )
         )
 
-    async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
+    async def buy_callback(
+        self, symbol: str, price: float, qty: int, now: datetime = None
+    ) -> None:
         """Called by Framework, upon successful buy (could be partial)"""
         pass
 
-    async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
+    async def sell_callback(
+        self, symbol: str, price: float, qty: int, now: datetime = None
+    ) -> None:
         """Called by Framework, upon successful sell (could be partial)"""
         pass
 
