@@ -41,18 +41,17 @@ class Accounts:
         pool = config.db_conn_pool
 
         async with pool.acquire() as con:
-            async with con.transaction():
-                return await con.fetchval(
-                    """
-                        SELECT
-                            balance
-                        FROM 
-                            accounts 
-                        WHERE
-                            account_id = $1
-                    """,
-                    account_id,
-                )
+            return await con.fetchval(
+                """
+                    SELECT
+                        balance
+                    FROM 
+                        accounts 
+                    WHERE
+                        account_id = $1
+                """,
+                account_id,
+            )
 
     @classmethod
     async def add_transaction(
