@@ -5,6 +5,7 @@ from typing import Dict, Tuple
 
 import pandas as pd
 from pytz import timezone
+from tqdm import tqdm
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -477,10 +478,9 @@ def calc_portfolio_returns(
     td["equity"] = 0.0
 
     cash_df = get_cash(account_id, initial_account_size)
-    print(cash_df)
-    num_symbols = len(trades.symbol.unique().tolist())
-    for c, symbol in enumerate(trades.symbol.unique().tolist(), start=1):
-        print(f"{symbol} ({c}/{num_symbols})")
+    symbols = trades.symbol.unique().tolist()
+    for i in tqdm(range(len(symbols))):
+        symbol = symbols[i]
         symbol_trades = trades[trades.symbol == symbol].sort_values(
             by="client_time"
         )
