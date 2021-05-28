@@ -113,6 +113,21 @@ async def do_strategy_result(
         )
         else -1
     )
+    price = strategy.data_loader[symbol].close[now]  # type: ignore
+    try:
+        if what["side"] == "buy":
+            await strategy.buy_callback(
+                symbol, price, int(float(what["qty"])), now
+            )
+        elif what["side"] == "sell":
+            await strategy.sell_callback(
+                symbol, price, int(float(what["qty"])), now
+            )
+    except Exception as e:
+        tlog(
+            f"do_strategy_result({symbol}, {what} failed w/ {e}. operation not executed"
+        )
+        return
 
     try:
         trading_data.positions[symbol] = trading_data.positions[
@@ -123,7 +138,6 @@ async def do_strategy_result(
     trading_data.buy_time[symbol] = now.replace(second=0, microsecond=0)
     trading_data.last_used_strategy[symbol] = strategy
 
-    price = strategy.data_loader[symbol].close[now]  # type: ignore
     db_trade = NewTrade(
         algo_run_id=strategy.algo_run.run_id,
         symbol=symbol,
@@ -144,11 +158,6 @@ async def do_strategy_result(
         else None,
     )
 
-    if what["side"] == "buy":
-        await strategy.buy_callback(symbol, price, int(float(what["qty"])))
-    elif what["side"] == "sell":
-        await strategy.sell_callback(symbol, price, int(float(what["qty"])))
-
 
 async def do_strategy_all(
     data_loader: DataLoader,
@@ -164,7 +173,9 @@ async def do_strategy_all(
             backtesting=True,
             data_loader=data_loader,
         )
-        for symbol, what in do.items():
+        items = list(do.items())
+        items.sort(key=lambda x: int(x[1]["side"] == "buy"))
+        for symbol, what in items:
             await do_strategy_result(strategy, symbol, now, what)
 
     except Exception as e:

@@ -39,12 +39,11 @@ setuptools.setup(
     data_files=[("liualgotrader", ["liualgotrader/requirements/release.txt"])],
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     scripts=[
         "liualgotrader/trader",
         "liualgotrader/market_miner",

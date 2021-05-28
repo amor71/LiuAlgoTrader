@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS account_transactions (
     details JSONB,
     tstamp timestamp with time zone DEFAULT current_timestamp
 );
+ALTER TABLE account_transactions ADD COLUMN create_tstamp timestamp with time zone DEFAULT current_timestamp;
 
 CREATE OR REPLACE FUNCTION update_balance() 
     RETURNS TRIGGER 
@@ -315,4 +316,5 @@ BEFORE
     INSERT OR UPDATE
 ON 
     account_transactions FOR EACH ROW EXECUTE PROCEDURE update_balance();
+
 

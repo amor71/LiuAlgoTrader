@@ -3,11 +3,11 @@ requests==2.25.1
 deprecated==1.2.12
 urllib3==1.26.4
 numpy==1.20.3
-alpaca-trade-api==1.2.1
+alpaca-trade-api
 google-cloud-logging==2.4.0
 asyncpg==0.23.0
 pygit2==1.4.0
-websockets==9.0.2
+websockets
 matplotlib==3.4.2
 tabulate==0.8.9
 streamlit==0.82.0
@@ -19,4 +19,5 @@ parsedatetime==2.6
 scipy==1.6.3
 polygon-api-client==0.1.11
 finnhub-python==2.4.0
-
+quantstats
+tqdm
