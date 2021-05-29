@@ -24,7 +24,8 @@ LiuAlgoTrader uses Alpaca.Markets brokerage APIs for trading, and can use either
 LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 
 
 - [Watch a $4,000 Daily Profit](https://youtu.be/rVwFCbHsbIY) using LiuAlgoTrader Framework for Day Trading.
-- [Watch Trend-Following strategy beating SP-500](https://youtu.be/BhifqoJBn84) using LiuAlgoTrader out-of-the-box tools for Swing Trading.
+- [Watch Trend-Following strategy beating SP-500](https://youtu.be/BhifqoJBn84) using LiuAlgoTrader out-of-the-box tools for Swing Trading,
+- [Sample tear-sheet](https://amor71.github.io/LiuAlgoTrader/tearsheet.html) using LiuAlgoTrader sample Trend Follow strategy.
 
 
 ## Quickstart
