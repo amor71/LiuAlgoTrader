@@ -26,6 +26,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 - [Watch a $4,000 Daily Profit](https://youtu.be/rVwFCbHsbIY) using LiuAlgoTrader Framework for Day Trading.
 - [Watch Trend-Following strategy beating SP-500](https://youtu.be/BhifqoJBn84) using LiuAlgoTrader out-of-the-box tools for Swing Trading,
 - [Sample tear-sheet](https://amor71.github.io/LiuAlgoTrader/tearsheet.html) using LiuAlgoTrader sample Trend Follow strategy.
+- [Make 30% trading pair volatility](https://amor71.github.io/LiuAlgoTrader/brandtreade_tearsheet.html) using LiuAlgoTrader.
 
 
 ## Quickstart
@@ -68,6 +69,7 @@ These features are still work in process:
 * [Design & Planning](https://github.com/amor71/LiuAlgoTrader/blob/master/design/ml-concepts.ipynb),
 * [LSTM sample](https://github.com/amor71/LiuAlgoTrader/blob/master/analysis/notebooks/LSTM.ipynb)  
 * Attention (Transformer) : WIP  
+
 ## Analysis & Analytics
 
 The framework includes a wide ranges of analysis `Jupyter Notebooks`, as well as `streamlit` applications for analysis for both trading and back-testing sessions. To name a few of the visual analytical tools:

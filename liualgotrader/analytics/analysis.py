@@ -456,7 +456,7 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
     df = df.groupby(df.index.date).sum()
     df.iloc[0].amount += initial_cash
     r = pd.date_range(start=df.index.min(), end=df.index.max())
-    df.reindex(r).fillna(method="backfill")
+    df.reindex(r).fillna(method="ffill")
     df["cash"] = df.amount.cumsum()
     df.index.rename("date", inplace=True)
     return df
@@ -486,6 +486,6 @@ def calc_portfolio_returns(
         )
         calc_symbol_trades_returns(symbol, symbol_trades, td, data_loader)
     td = td.join(cash_df)
-    td = td.fillna(method="backfill")
+    td = td.fillna(method="ffill")
     td["totals"] = td["equity"] + td["cash"]
     return pd.DataFrame(td, columns=["equity", "cash", "totals"])
