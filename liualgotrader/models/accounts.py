@@ -2,6 +2,7 @@ import datetime
 import json
 from typing import Dict
 
+import asyncpg
 import pandas as pd
 
 from liualgotrader.common import config
@@ -17,24 +18,23 @@ class Accounts:
         allow_negative: bool = False,
         credit_line: float = 0.0,
         details: Dict = {},
+        db_connection: asyncpg.Connection = None,
     ) -> int:
-        pool = config.db_conn_pool
+        q = """
+                INSERT INTO 
+                    accounts (balance, allow_negative, credit_line, details)
+                VALUES
+                    ($1, $2, $3, $4)
+                RETURNING account_id;
+            """
+        params = [balance, allow_negative, credit_line, json.dumps(details)]
+        if db_connection:
+            return await db_connection.fetchval(q, *params)
 
+        pool = config.db_conn_pool
         async with pool.acquire() as con:
             async with con.transaction():
-                return await con.fetchval(
-                    """
-                        INSERT INTO 
-                            accounts (balance, allow_negative, credit_line, details)
-                        VALUES
-                            ($1, $2, $3, $4)
-                        RETURNING account_id;
-                    """,
-                    balance,
-                    allow_negative,
-                    credit_line,
-                    json.dumps(details),
-                )
+                return await con.fetchval(q, *params)
 
     @classmethod
     async def get_balance(cls, account_id: int) -> float:

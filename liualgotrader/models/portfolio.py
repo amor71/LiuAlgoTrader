@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import date, datetime
-from typing import Dict
+from typing import Dict, Tuple
 
 import asyncpg
 from pandas import DataFrame
@@ -9,19 +9,18 @@ from pandas import DataFrame
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.accounts import Accounts
 
 
 class Portfolio:
     def __init__(
         self,
         portfolio_id: str,
-        portfolio_size: int,
-        stock_count: int,
+        portfolio_size: float,
         parameters: Dict,
     ):
         self.portfolio_id = portfolio_id
         self.portfolio_size = portfolio_size
-        self.stock_count = stock_count
         self.parameters = parameters
 
     @classmethod
@@ -59,7 +58,7 @@ class Portfolio:
         async with pool.acquire() as con:
             data = await con.fetchrow(
                 """
-                    SELECT p.portfolio_id, p.size, p.stock_count, p.parameters
+                    SELECT p.portfolio_id, p.size, p.parameters
                     FROM 
                         portfolio as p
                     WHERE
@@ -75,22 +74,30 @@ class Portfolio:
     async def save(
         cls,
         portfolio_id: str,
-        portfolio_size: int,
-        stock_count: int,
+        portfolio_size: float,
+        credit: float,
         parameters: Dict,
     ):
         pool = config.db_conn_pool
         async with pool.acquire() as con:
-            await con.execute(
-                """
-                    INSERT INTO portfolio (portfolio_id, size, stock_count, parameters)
-                    VALUES ($1, $2, $3, $4)
-                """,
-                portfolio_id,
-                portfolio_size,
-                stock_count,
-                json.dumps(parameters),
-            )
+            async with con.transaction():
+                account_id = await Accounts.create(
+                    portfolio_size,
+                    allow_negative=credit > 0.0,
+                    credit_line=credit,
+                    db_connection=con,
+                    details=parameters,
+                )
+                await con.execute(
+                    """
+                        INSERT INTO portfolio (portfolio_id, size, account_id, parameters)
+                        VALUES ($1, $2, $3, $4)
+                    """,
+                    portfolio_id,
+                    portfolio_size,
+                    account_id,
+                    json.dumps(parameters),
+                )
 
     @classmethod
     async def associate_batch_id_to_profile(
@@ -122,3 +129,17 @@ class Portfolio:
                 portfolio_id,
             )
             return result
+
+    @classmethod
+    async def load_details(cls, portfolio_id: str) -> Tuple[int, float]:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            result = await con.fetchrow(
+                """
+                    SELECT account_id, size
+                    FROM portfolio
+                    WHERE portfolio_id = $1;
+                """,
+                portfolio_id,
+            )
+            return result[0], result[1]

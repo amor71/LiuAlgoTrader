@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS portfolio (
     tstamp timestamp with time zone DEFAULT current_timestamp
 );
 
+
 CREATE TABLE IF NOT EXISTS portfolio_batch_ids (
     assoc_id serial PRIMARY KEY,
     portfolio_id text NOT NULL REFERENCES portfolio(portfolio_id),
@@ -318,3 +319,6 @@ ON
     account_transactions FOR EACH ROW EXECUTE PROCEDURE update_balance();
 
 
+ALTER TABLE portfolio DROP COLUMN stock_count;
+ALTER TABLE portfolio ADD COLUMN account_id int REFERENCES accounts(account_id);
+CREATE INDEX ON portfolio(account_id);

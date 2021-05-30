@@ -462,11 +462,13 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
     return df
 
 
-def calc_portfolio_returns(
-    account_id: int, initial_account_size: float, portfolio_id: str
-) -> pd.DataFrame:
+def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
     _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
+
+    account_id, initial_account_size = loop.run_until_complete(
+        Portfolio.load_details(portfolio_id)
+    )
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
