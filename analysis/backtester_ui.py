@@ -1,4 +1,7 @@
 import asyncio
+
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 import json
 import traceback
 from datetime import date, timedelta
@@ -19,7 +22,7 @@ from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
                                               load_trades_by_batch_id)
 from liualgotrader.backtester import BackTestDay, backtest
 from liualgotrader.common import config, database
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 
 try:
     config.build_label = pygit2.Repository("../").describe(
@@ -30,9 +33,9 @@ except pygit2.GitError:
 
     config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
+
 nest_asyncio.apply()
+
 
 loop.run_until_complete(database.create_db_connection())
 st.title("Liu Algo Trading Framework")

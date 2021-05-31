@@ -17,7 +17,7 @@ from tabulate import tabulate
 
 from liualgotrader.analytics.analysis import load_trades_by_batch_id
 from liualgotrader.common import config, market_data, trading_data
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
