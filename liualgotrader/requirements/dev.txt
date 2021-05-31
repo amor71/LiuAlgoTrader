@@ -42,7 +42,7 @@ polygon-api-client==0.1.11
 bandit==1.7.0
 finnhub-python==2.4.0
 pandas==1.2.4
-quantstats
+quantstats==0.0.34
 tqdm
 
 
