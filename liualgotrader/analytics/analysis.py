@@ -106,6 +106,22 @@ def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
     return loop.run_until_complete(fetch_as_dataframe(query))
 
 
+def load_client_trades(day: date, end_date: date = None) -> pd.DataFrame:
+    query = f"""
+    SELECT t.*, a.batch_id, a.algo_name
+    FROM 
+    new_trades as t, algo_run as a
+    WHERE 
+        t.algo_run_id = a.algo_run_id AND 
+        t.tstamp >= '{day}' AND 
+        t.tstamp < '{day + timedelta(days=1) if not end_date else end_date}' AND
+        t.expire_tstamp is null 
+    ORDER BY symbol, tstamp
+    """
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(fetch_as_dataframe(query))
+
+
 async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
