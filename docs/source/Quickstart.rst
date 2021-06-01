@@ -8,6 +8,7 @@ Prerequisite
 
 .. _Alpaca: https://alpaca.markets/docs/about-us
 
+
 2. Installed Docker Engine_ and,
 
 .. _Engine: https://docs.docker.com/engine/install
@@ -25,6 +26,10 @@ Touch & Go
 .. code-block:: bash
 
    pip install liualgotrader
+
+Having issues installation? Check out the installation FAQ_
+
+.. _FAQ: https://liualgotrader.readthedocs.io/en/latest/Troubleshooting.html
 
 **Step 2**: Run the setup wizard
 

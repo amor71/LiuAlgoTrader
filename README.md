@@ -43,6 +43,8 @@ OR Polygon.io subscription optional (`Starter` plan and above),
 To install LiuAlgoTrader just type: 
 
 `pip install liualgotrader`
+
+Having issues installation? check out the [installation FAQ page](https://liualgotrader.readthedocs.io/en/latest/Troubleshooting.html)
  
 **Step 2**: To configure the frame work type:
 

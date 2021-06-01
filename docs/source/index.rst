@@ -45,6 +45,8 @@ sessions w/ LiuAlgoTrader.
    Analysis
    Examples
    How to Contribute
+   Troubleshooting
+   
 
 
 Indices and tables
