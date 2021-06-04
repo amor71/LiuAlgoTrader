@@ -13,7 +13,7 @@ from liualgotrader.models.algo_run import AlgoRun
 class Trader:
     __instance: object = None
 
-    def __init__(self, queues: QueueMapper):
+    def __init__(self, queues: QueueMapper = None):
         self.queues = queues
         Trader.__instance = self
 
@@ -39,7 +39,7 @@ class Trader:
     def is_market_open_today(self) -> bool:
         pass
 
-    def get_time_market_close(self) -> timedelta:
+    def get_time_market_close(self) -> Optional[timedelta]:
         pass
 
     def get_position(self, symbol: str) -> float:
@@ -63,7 +63,7 @@ class Trader:
     async def submit_order(
         self,
         symbol: str,
-        qty: int,
+        qty: float,
         side: str,
         order_type: str,
         time_in_force: str,

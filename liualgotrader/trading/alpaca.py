@@ -187,7 +187,7 @@ class AlpacaTrader(Trader):
     async def submit_order(
         self,
         symbol: str,
-        qty: int,
+        qty: float,
         side: str,
         order_type: str,
         time_in_force: str,
@@ -206,7 +206,7 @@ class AlpacaTrader(Trader):
 
         return self.alpaca_rest_client.submit_order(
             symbol,
-            qty,
+            str(qty),
             side,
             order_type,
             time_in_force,

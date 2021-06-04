@@ -78,7 +78,7 @@ class Strategy(object):
 
     async def run_all(
         self,
-        symbols_position: Dict[str, int],
+        symbols_position: Dict[str, float],
         data_loader: DataLoader,
         now: datetime,
         portfolio_value: float = None,
@@ -107,7 +107,7 @@ class Strategy(object):
         self,
         symbol: str,
         shortable: bool,
-        position: int,
+        position: float,
         now: datetime,
         minute_history: df,
         portfolio_value: float = None,
