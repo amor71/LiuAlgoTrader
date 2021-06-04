@@ -29,5 +29,9 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 
 .. _TheSnoozer: https://github.com/TheSnoozer
 
+- Aditya Gupta adi0x90_
+
+.. _adi0x90: https://github.com/adi0x90
+
 
 
