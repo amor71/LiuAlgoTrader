@@ -1,27 +1,60 @@
 Installation FAQ
 ================
 
-Q
--
+Q : How to install on Ubuntu?
+-----------------------------
 
-I'm trying to install Liu on Ubuntu and I get the error message:
+I would like to install `liu` on Ubuntu 20.10. Can you please list the steps I need to take?
+
+Answer
+******
+
+**STEP 1** : Install docker engine (Skip if already installed and running)
+
 .. code-block:: bash
 
-**ImportError: cannot import name '_imaging' from 'PIL' (/usr/lib/python3/dist-packages/PIL/__init__.py)**
+    $ sudo apt update
+    $ sudo apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+    $ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    $ sudo add-apt-repository \ "deb [arch=amd64] https://download.docker.com/linux/ubuntu \ $(lsb_release -cs) stable"
+    $ sudo apt-get update
+    $ sudo apt install docker-ce -y
+    $ sudo usermod -aG docker $USER
 
-A
--
-LiuAlgoTrader uses streamlit_ for some of it's visualizations. streamlit requires the Python PIL library. The imgaging library may not be installed out of the box and you will need to install it with (click here_ for additional details):
+After successful completetion of the above steps, you should logout and login.
+
+**STEP 2**: Install docker-compose (Skip if already installed and working)
+
 .. code-block:: bash
 
-**sudo apt-get build-dep python-imaging**
+    $ sudo curl -L "https://github.com/docker/compose/releases/download/1.28.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    $ sudo chmod +x /usr/local/bin/docker-compose
 
-**sudo apt-get install libjpeg62 libjpeg62-dev**
+**STEP 3**: Install Python3.9 and basic tools
 
-.. _streamlit:
-    https://streamlit.io/
+.. code-block:: bash
 
-.. _here:
-    https://askubuntu.com/questions/156484/how-do-i-install-python-imaging-library-pil
+    $ sudo add-apt-repository ppa:deadsnakes/ppa
+    $ sudo apt update
+    $ sudo apt install python3.9
+    $ sudo apt install python3-pip
+    $ sudo apt install python3.9-venv
 
+**STEP 4**: Install LiuAlgoTrader 
+
+.. code-block:: bash
+
+    $ python3.9 -m venv liu
+    $ source liu//bin/activate
+    (liu) $ mkdir liu ; cd liu
+    (liu) $ pip install liualgotrader
+
+
+**STEP 5**: Run installation wizard
+
+    *make sre you have environment keys properly selected*
+
+.. code-block:: bash    
+
+    (liu) $ liu quickstart
 
