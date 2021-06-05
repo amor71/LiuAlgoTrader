@@ -992,7 +992,7 @@ async def consumer_async_main(
 
     if symbols and loaded != len(symbols):
         tlog(
-            f"[ERROR] Consumer process loaded only {loaded} out of {len(symbols)} open positions. HINT: make sure that your tradeplan.toml file includes all strategues in previous trading session."
+            f"[ERROR] Consumer process loaded only {loaded} out of {len(symbols)} open positions. HINT: make sure that your tradeplan.toml file includes all strategies from previous trading session."
         )
 
     queue_consumer_task = asyncio.create_task(
