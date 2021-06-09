@@ -158,56 +158,42 @@ class Momentum(Scanner):
                 await daily_bar.save()
                 print(f"saved data for {symbol} @ {index}")
 
-    async def fetch_symbol_details(
-        self,
-        symbol: str,
-        back_time: datetime,
-        session: requests.Session = None,
-    ):
-        if not await StockOhlc.check_stock_date_exists(symbol, back_time):
-            await self.add_stock_data_for_date(symbol, back_time)
+    async def load_from_db(self, back_time: datetime) -> List[str]:
+        pool = config.db_conn_pool
 
-        if not await StockOhlc.check_stock_date_exists(
-            symbol, back_time - timedelta(days=1)
-        ):
-            await self.add_stock_data_for_date(
-                symbol, back_time - timedelta(days=1)
+        daily_scale = back_time.hour == 0
+        start = (
+            back_time
+            if daily_scale
+            else back_time.replace(hour=9, minute=30, second=0, microsecond=0)
+        )
+        end = (
+            back_time + timedelta(days=1)
+            if daily_scale
+            else back_time + timedelta(minutes=1)
+        )
+        async with pool.acquire() as con:
+            rows = await con.fetch(
+                """
+                    SELECT
+                        symbol
+                    FROM 
+                        trending_tickers
+                    WHERE
+                        scanner_name = $1 
+                        AND create_tstamp >= $2
+                        AND create_tstamp <= $3
+                """,
+                self.name,
+                start,
+                end,
             )
 
-    async def load_from_db(self, back_time: date) -> List[str]:
-        pool = config.db_conn_pool
-        async with pool.acquire() as con:
-            async with con.transaction():
-                rows = await con.fetch(
-                    """
-                        SELECT
-                            c2.symbol
-                        FROM 
-                            stock_ohlc as c1,
-                            stock_ohlc as c2
-                        WHERE
-                            c1.symbol = c2.symbol AND 
-                            c1.symbol_date = $1 AND
-                            c2.symbol_date = $2 AND
-                            c2.high < $3 AND
-                            c2.low > $4 AND
-                            c2.volume > $5 AND
-                            c1.volume * c1.close > $6 AND
-                            (c2.high / c1.close) > $7
-                    """,
-                    back_time - timedelta(days=1),
-                    back_time,
-                    self.max_share_price,
-                    self.min_share_price,
-                    self.min_volume,
-                    self.min_last_dv,
-                    1.0 + self.today_change_percent / 100.0,
-                )
-
-                if len(rows) > 0:
-                    return [row[0] for row in rows]
-                else:
-                    return []
+            print("load from db", start, end, len(rows))
+            if len(rows) > 0:
+                return [row[0] for row in rows]
+            else:
+                return []
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
@@ -215,21 +201,6 @@ class Momentum(Scanner):
             return await self.run_polygon()
         else:
             rows = await self.load_from_db(back_time)
-
-            if not len(rows):
-                trade_able_symbols = await self._get_trade_able_symbols()
-                tlog(
-                    f"{self.name} scanner => loading {len(trade_able_symbols)} symbols from Polygon and building cache. this may take a while."
-                )
-                tasks = [
-                    asyncio.get_event_loop().create_task(
-                        self.fetch_symbol_details(symbol, back_time, None)
-                    )
-                    for symbol in trade_able_symbols
-                ]
-                await asyncio.gather(*tasks)
-
-                rows = await self.load_from_db(back_time)
 
             print(
                 f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"

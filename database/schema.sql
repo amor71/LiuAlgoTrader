@@ -322,3 +322,9 @@ ON
 ALTER TABLE portfolio DROP COLUMN stock_count;
 ALTER TABLE portfolio ADD COLUMN account_id int REFERENCES accounts(account_id);
 CREATE INDEX ON portfolio(account_id);
+
+
+ALTER TABLE trending_tickers ADD COLUMN scanner_name text NOT NULL DEFAULT 'momentum';
+CREATE INDEX ON trending_tickers (scanner_name);
+CREATE INDEX ON trending_tickers (create_tstamp);
+ALTER TABLE  trending_tickers ALTER COLUMN create_tstamp TYPE timestamp with time zone;

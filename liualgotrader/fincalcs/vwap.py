@@ -34,7 +34,6 @@ def add_daily_vwap(minute_data: df, debug=False) -> bool:
         lambda x: (x["close"] + x["high"] + x["low"]) / 3, axis=1
     )
 
-    # print(f"\n{tabulate(minute_data, headers='keys', tablefmt='psql')}")
     if debug:
         tlog(
             f"\n{tabulate(minute_data[-110:-100], headers='keys', tablefmt='psql')}"

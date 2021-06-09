@@ -5,7 +5,7 @@ import multiprocessing as mp
 import os
 import traceback
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
@@ -83,7 +83,7 @@ async def create_momentum_scanner(
             max_share_price=scanner_details["max_share_price"],
             min_volume=scanner_details["min_volume"],
             from_market_open=scanner_details["from_market_open"],
-            today_change_percent=scanner_details["min_gap"],
+            today_change_percent=scanner_details["today_change_percent"],
             recurrence=timedelta(minutes=recurrence) if recurrence else None,
             target_strategy_name=target_strategy_name,
             max_symbols=scanner_details.get(
@@ -164,10 +164,11 @@ async def scanners_runner(
 
 
 async def teardown_task(
-    to_market_close: timedelta, tasks: List[asyncio.Task]
+    to_market_close: Optional[timedelta], tasks: List[asyncio.Task]
 ) -> None:
     tlog("scanners_runner.teardown_task() starting")
-    if not config.market_close:
+
+    if not to_market_close or not config.market_close:
         tlog(
             "we're probably in market schedule by-pass mode, exiting teardown_task()"
         )

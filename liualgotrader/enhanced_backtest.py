@@ -15,7 +15,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.scanners.base import Scanner  # type: ignore
-from liualgotrader.scanners.momentum import Momentum
+from liualgotrader.scanners_runner import create_momentum_scanner
 from liualgotrader.strategies.base import Strategy
 
 run_scanners: Dict[Scanner, datetime] = {}
@@ -34,8 +34,10 @@ async def create_scanners(
             continue
         tlog(f"scanner {scanner_name} selected")
         if scanner_name == "momentum":
-            tlog(
-                "momentum scanner can not be supported in backtest on time-frame. skipping"
+            scanners.append(
+                await create_momentum_scanner(
+                    None, data_loader, scanners_conf[scanner_name]  # type: ignore
+                )
             )
         else:
             scanners.append(
@@ -77,14 +79,16 @@ async def do_scanners(
     now: datetime, scanners: List[Scanner], symbols: Dict
 ) -> Dict:
     for scanner in scanners:
-        if scanner in run_scanners and (
-            not scanner.recurrence
-            or (now - run_scanners[scanner]) < scanner.recurrence
-        ):
-            continue
+        if scanner in run_scanners:
+            if not scanner.recurrence:
+                if now.date() == run_scanners[scanner].date():
+                    continue
+            elif (now - run_scanners[scanner]) < scanner.recurrence:
+                continue
 
         run_scanners[scanner] = now
         new_symbols = await scanner.run(back_time=now)
+        print(now, new_symbols, scanner.name)
         target_strategy_name = scanner.target_strategy_name
 
         target_strategy_name = (
@@ -190,6 +194,7 @@ async def do_strategy_by_symbol(
     strategy: Strategy,
     symbols: List[str],
 ):
+    print(strategy, symbols)
     for symbol in symbols:
         try:
             _ = data_loader[symbol][now - timedelta(days=30) : now]  # type: ignore
@@ -238,6 +243,10 @@ async def backtest_main(
     tlog(
         f"Starting back-test from {from_date} to {to_date} with time scale {scale}"
     )
+    if scanners:
+        tlog(f"with scanners:{scanners}")
+    if strategies:
+        tlog(f"with strategies:{strategies}")
 
     global portfolio_value
     if "portfolio_value" in tradeplan:
@@ -254,9 +263,11 @@ async def backtest_main(
     scanners = await create_scanners(
         data_loader, tradeplan["scanners"], scanners
     )
+    tlog(f"instantiated {len(scanners)} scanners")
     strategies = await create_strategies(
         uid, tradeplan["strategies"], data_loader, strategies
     )
+    tlog(f"instantiated {len(strategies)} strategies")
     calendars = trade_api.get_calendar(str(from_date), str(to_date))
     symbols: Dict = {}
     for day in calendars:
