@@ -29,10 +29,9 @@ def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
     if len(series) < 4:
         return 0, SeriesTrendType.UNKNOWN
 
-    length = min(10, len(series))
     try:
-        np.seterr(all="raise")
-        slope, _, _, _, _ = linregress(range(length), series[-length:])
+        print(series)
+        slope, _, _, _, _ = linregress(np.arange(len(series)), series)
         slope = round(slope, 3)
     except FloatingPointError:
         return math.inf, SeriesTrendType.UNKNOWN

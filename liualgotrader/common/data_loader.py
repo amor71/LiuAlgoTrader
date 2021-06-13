@@ -181,10 +181,24 @@ class SymbolData:
         self.symbol = symbol
         self.scale = scale
         self.columns: Dict[str, self._Column] = {}  # type: ignore
-        self.symbol_data = pd.DataFrame()
+        self.symbol_data = pd.DataFrame(
+            columns=[
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "vwap",
+                "average",
+                "count",
+            ]
+        )
+
+    #    def __setattr__(self, name, value):
+    #        return self.symbol_data.__setattr__(name, value)
 
     def __getattr__(self, attr) -> _Column:
-        if attr[0:3] == "loc" or attr[0:4] == "iloc":
+        if attr[0:3] == "loc" or attr[0:4] == "iloc" or attr[0:5] == "apply":
             return self.symbol_data.__getattr__(attr)
         elif attr not in self.columns:
             self.columns[attr] = self._Column(self.data_api, attr, self)
@@ -243,6 +257,8 @@ class SymbolData:
             return self.symbol_data.index.get_loc(index, method="nearest")
 
     def __getitem__(self, key):
+        if type(key) == str and key in self.symbol_data.columns.tolist():
+            return self.symbol_data[key]
         try:
             if type(key) == slice:
                 if not key.start:
@@ -405,6 +421,9 @@ class SymbolData:
                 "count",
             ]
         )
+
+    def __repr__(self):
+        return str(self.symbol_data)
 
 
 class DataLoader:

@@ -12,6 +12,7 @@ from liualgotrader.common.tlog import tlog
 def add_daily_vwap(minute_data: df, debug=False) -> bool:
     back_time = ts(config.market_open)
 
+    print("before vwap", minute_data)
     try:
         back_time_index = minute_data["close"].index.get_loc(
             back_time, method="nearest"

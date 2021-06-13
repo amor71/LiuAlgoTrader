@@ -88,7 +88,6 @@ async def do_scanners(
 
         run_scanners[scanner] = now
         new_symbols = await scanner.run(back_time=now)
-        print(now, new_symbols, scanner.name)
         target_strategy_name = scanner.target_strategy_name
 
         target_strategy_name = (
@@ -194,7 +193,6 @@ async def do_strategy_by_symbol(
     strategy: Strategy,
     symbols: List[str],
 ):
-    print(strategy, symbols)
     for symbol in symbols:
         try:
             _ = data_loader[symbol][now - timedelta(days=30) : now]  # type: ignore
@@ -290,6 +288,15 @@ async def backtest_main(
             symbols = await do_scanners(current_time, scanners, symbols)
 
             for strategy in strategies:
+                trading_data.positions.update(
+                    {
+                        symbol: 0
+                        for symbol in symbols[strategy.name]
+                        + symbols.get("_all", [])
+                        if symbol not in trading_data.positions
+                    }
+                )
+
                 strategy_symbols = list(
                     set(symbols.get("_all", [])).union(
                         set(symbols.get(strategy.name, []))
