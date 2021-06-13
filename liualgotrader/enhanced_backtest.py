@@ -94,9 +94,11 @@ async def do_scanners(
             "_all" if not target_strategy_name else target_strategy_name
         )
 
-        symbols[target_strategy_name] = list(
-            set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
-        )
+        symbols[target_strategy_name] = new_symbols
+
+        # list(
+        #    set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
+        # )
 
     return symbols
 
@@ -166,7 +168,6 @@ async def do_strategy_all(
     data_loader: DataLoader,
     now: pd.Timestamp,
     strategy: Strategy,
-    symbols: List[str],
 ):
     try:
         do = await strategy.run_all(
@@ -224,7 +225,7 @@ async def do_strategy(
     global portfolio_value
 
     if await strategy.should_run_all():
-        await do_strategy_all(data_loader, now, strategy, symbols)
+        await do_strategy_all(data_loader, now, strategy)
     else:
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
@@ -286,6 +287,11 @@ async def backtest_main(
         data_loader = DataLoader()
         while current_time < day_end:
             symbols = await do_scanners(current_time, scanners, symbols)
+            trading_data.positions = {
+                symbol: trading_data.positions[symbol]
+                for symbol in trading_data.positions
+                if trading_data.positions[symbol] != 0
+            }
 
             for strategy in strategies:
                 trading_data.positions.update(
