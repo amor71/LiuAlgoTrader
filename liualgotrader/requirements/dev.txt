@@ -10,7 +10,7 @@ flake8==3.9.2
 Cython==0.29.23
 alpaca-trade-api==1.2.1
 google-cloud-logging==2.4.0
-therapist==2.1.0
+therapist==2.1.1
 jupyter==1.0.0
 asyncpg==0.23.0
 pygit2==1.4.0
