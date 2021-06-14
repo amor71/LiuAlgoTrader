@@ -20,4 +20,4 @@ scipy==1.6.3
 polygon-api-client==0.1.11
 finnhub-python==2.4.0
 quantstats==0.0.34
-tqdm==4.61.0
+tqdm==4.61.1
