@@ -4,8 +4,8 @@ deprecated==1.2.12
 urllib3==1.26.5
 numpy==1.20.3
 mypy==0.812
-black==21.5b1
-pylint==2.8.2
+black==21.5b2
+pylint==2.8.3
 flake8==3.9.2
 Cython==0.29.23
 alpaca-trade-api==1.2.1
@@ -16,7 +16,7 @@ asyncpg==0.23.0
 pygit2==1.4.0
 pytest==6.2.4
 pytest-asyncio==0.15.1
-pytest-cov==2.12.0
+pytest-cov==2.12.1
 websockets==9.1
 nb-clean==2.0.2
 matplotlib==3.4.2
@@ -29,12 +29,12 @@ twine==3.4.1
 streamlit==0.82.0
 stockstats==0.3.2
 nest_asyncio==1.5.1
-nbqa==0.10.0
+nbqa==0.11.1
 pre-commit==2.13.0
 empyrical==0.5.5
 sklearn==0.0
 plotly==4.14.3
-hypothesis==6.13.10
+hypothesis==6.13.14
 torch==1.8.1
 parsedatetime==2.6
 scipy==1.6.3
