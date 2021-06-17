@@ -431,7 +431,7 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
 
     td = trader.get_trading_days(start_date=start_date, end_date=end_date)
 
-    td["agg_value"] = 0.0
+    td["equity"] = 0.0
     td["cash"] = portfolio.portfolio_size
 
     num_symbols = len(trades.symbol.unique().tolist())
@@ -442,10 +442,10 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
         )
         calc_symbol_trades_returns(symbol, symbol_trades, td, data_loader)
 
-    td["totals"] = td["agg_value"] + td["cash"]
+    td["totals"] = td["equity"] + td["cash"]
     # td["date"] = pd.to_datetime(td.index)
     # td = td.set_index("date")
-    return pd.DataFrame(td, columns=["agg_value", "cash", "totals"])
+    return pd.DataFrame(td, columns=["equity", "cash", "totals"])
 
 
 def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:

@@ -7,14 +7,13 @@ import pytest
 from liualgotrader.analytics import analysis
 from liualgotrader.common.database import create_db_connection
 
-
-@pytest.mark.devtest
-def test_soyreturns() -> bool:
-    td = analysis.compare_to_symbol_returns(
-        "0664dc2c-f126-4c7f-a069-c5dc246e2df4", "SPY"
-    )
-    print(td)
-    return True
+# @pytest.mark.devtest
+# def test_spyreturns() -> bool:
+#    td = analysis.compare_to_symbol_returns(
+#        "0664dc2c-f126-4c7f-a069-c5dc246e2df4", "SPY"
+#    )
+#    print(td)
+#    return True
 
 
 @pytest.mark.devtest

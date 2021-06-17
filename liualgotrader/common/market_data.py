@@ -14,7 +14,6 @@ from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
-from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
@@ -300,9 +299,6 @@ def get_historical_data_from_polygon(
 
 
 async def get_sector_tickers(sector: str) -> List[str]:
-    if not hasattr(config, "db_conn_pool"):
-        await create_db_connection()
-
     async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
             records = await conn.fetch(
@@ -318,52 +314,40 @@ async def get_sector_tickers(sector: str) -> List[str]:
 
 
 async def get_industry_tickers(industry: str) -> List[str]:
-    if not hasattr(config, "db_conn_pool"):
-        await create_db_connection()
-
     async with config.db_conn_pool.acquire() as conn:
-        async with conn.transaction():
-            records = await conn.fetch(
-                """
-                    SELECT symbol
-                    FROM ticker_data
-                    WHERE industry = $1
-                """,
-                industry,
-            )
+        records = await conn.fetch(
+            """
+                SELECT symbol
+                FROM ticker_data
+                WHERE industry = $1
+            """,
+            industry,
+        )
 
-            return [record[0] for record in records if record[0]]
+        return [record[0] for record in records if record[0]]
 
 
 async def get_market_sectors() -> List[str]:
-    if not hasattr(config, "db_conn_pool"):
-        await create_db_connection()
-
     async with config.db_conn_pool.acquire() as conn:
-        async with conn.transaction():
-            records = await conn.fetch(
-                """
-                    SELECT DISTINCT sector
-                    FROM ticker_data
-                """
-            )
-            return [record[0] for record in records if record[0]]
+        records = await conn.fetch(
+            """
+                SELECT DISTINCT sector
+                FROM ticker_data
+            """
+        )
+        return [record[0] for record in records if record[0]]
 
 
 async def get_market_industries() -> List[str]:
-    if not hasattr(config, "db_conn_pool"):
-        await create_db_connection()
-
     async with config.db_conn_pool.acquire() as conn:
-        async with conn.transaction():
-            records = await conn.fetch(
-                """
-                    SELECT DISTINCT industry
-                    FROM ticker_data
-                """
-            )
+        records = await conn.fetch(
+            """
+                SELECT DISTINCT industry
+                FROM ticker_data
+            """
+        )
 
-            return [record[0] for record in records if record[0]]
+        return [record[0] for record in records if record[0]]
 
 
 async def index_data(index: str) -> df:
