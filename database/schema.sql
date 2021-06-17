@@ -288,7 +288,7 @@ BEGIN
     
     IF 
         negative = FALSE
-        AND b + NEW .amount < 0 
+        AND b + NEW.amount < 0 
     THEN 
         RAISE EXCEPTION 'Account not allowed to get into negative balance';
     ELSEIF 

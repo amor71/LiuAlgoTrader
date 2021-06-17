@@ -64,31 +64,37 @@ class Accounts:
         pool = config.db_conn_pool
         async with pool.acquire() as con:
             async with con.transaction():
-                if tstamp:
-                    await con.execute(
-                        """
-                            INSERT INTO 
-                                account_transactions (account_id, amount, tstamp, details)
-                            VALUES
-                                ($1, $2, $3, $4);
-                        """,
-                        account_id,
-                        amount,
-                        tstamp,
-                        json.dumps(details),
+                try:
+                    if tstamp:
+                        await con.execute(
+                            """
+                                INSERT INTO 
+                                    account_transactions (account_id, amount, tstamp, details)
+                                VALUES
+                                    ($1, $2, $3, $4);
+                            """,
+                            account_id,
+                            amount,
+                            tstamp,
+                            json.dumps(details),
+                        )
+                    else:
+                        await con.execute(
+                            """
+                                INSERT INTO 
+                                    account_transactions (account_id, amount, details)
+                                VALUES
+                                    ($1, $2, $3);
+                            """,
+                            account_id,
+                            amount,
+                            json.dumps(details),
+                        )
+                except Exception as e:
+                    tlog(
+                        f"[EXCEPTION] add_transaction({account_id}, {amount}, {tstamp} ) failed with {e} current balance={await cls.get_balance(account_id)}"
                     )
-                else:
-                    await con.execute(
-                        """
-                            INSERT INTO 
-                                account_transactions (account_id, amount, details)
-                            VALUES
-                                ($1, $2, $3);
-                        """,
-                        account_id,
-                        amount,
-                        json.dumps(details),
-                    )
+                    raise
 
     @classmethod
     async def get_transactions(cls, account_id: int) -> pd.DataFrame:

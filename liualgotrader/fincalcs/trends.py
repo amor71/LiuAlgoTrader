@@ -1,4 +1,5 @@
 import math
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Tuple
 
@@ -6,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pytz
 from scipy.stats import linregress
+
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 
 est = pytz.timezone("US/Eastern")
 
@@ -45,3 +48,14 @@ def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
         t = SeriesTrendType.SHARP_DOWN
 
     return slope, t
+
+
+def volatility(data_loader: DataLoader, symbol: str, now: datetime) -> float:
+    return (
+        data_loader[symbol]
+        .close[now - timedelta(days=30) : now]  # type: ignore
+        .pct_change()
+        .rolling(20)
+        .std()
+        .iloc[-1]
+    )

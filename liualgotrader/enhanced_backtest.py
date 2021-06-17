@@ -103,9 +103,33 @@ async def do_scanners(
     return symbols
 
 
+async def calculate_execution_price(
+    symbol: str, data_loader: DataLoader, what: Dict, now: datetime
+) -> float:
+
+    if what["type"] == "market":
+        return data_loader[symbol].close[now]
+
+    price_limit = float(what["limit_price"])
+    if what["side"] == "buy":
+        if data_loader[symbol].close[now] <= price_limit:
+            return data_loader[symbol].close[now]
+        else:
+            raise Exception(
+                f"can not buy: limit price {price_limit} below market price {data_loader[symbol].close[now]}"
+            )
+
+    if data_loader[symbol].close[now] >= price_limit:
+        return price_limit
+    else:
+        raise Exception(
+            f"can not sell: limit price {price_limit} above market price {data_loader[symbol].close[now]}"
+        )
+
+
 async def do_strategy_result(
     strategy: Strategy, symbol: str, now: datetime, what: Dict
-) -> None:
+) -> bool:
     global portfolio_value
 
     sign = (
@@ -118,8 +142,12 @@ async def do_strategy_result(
         )
         else -1
     )
-    price = strategy.data_loader[symbol].close[now]  # type: ignore
+
     try:
+        price = await calculate_execution_price(
+            symbol=symbol, data_loader=strategy.data_loader, what=what, now=now
+        )
+
         if what["side"] == "buy":
             await strategy.buy_callback(
                 symbol, price, int(float(what["qty"])), now
@@ -130,9 +158,9 @@ async def do_strategy_result(
             )
     except Exception as e:
         tlog(
-            f"do_strategy_result({symbol}, {what} failed w/ {e}. operation not executed"
+            f"do_strategy_result({symbol}, {what}, {now}) failed w/ {e}. operation not executed"
         )
-        return
+        return False
 
     try:
         trading_data.positions[symbol] = trading_data.positions[
@@ -162,6 +190,8 @@ async def do_strategy_result(
         if symbol in trading_data.target_prices
         else None,
     )
+
+    return True
 
 
 async def do_strategy_all(
@@ -255,7 +285,7 @@ async def backtest_main(
 
     await create_db_connection()
 
-    data_loader = DataLoader(scale)
+    data_loader = DataLoader()  # DataLoader(scale)
     trade_api = tradeapi.REST(
         key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
     )
@@ -284,7 +314,7 @@ async def backtest_main(
         config.market_open = day_start
         config.market_close = day_end
         current_time = day_start
-        data_loader = DataLoader()
+        # data_loader = DataLoader()
         while current_time < day_end:
             symbols = await do_scanners(current_time, scanners, symbols)
             trading_data.positions = {
