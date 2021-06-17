@@ -313,6 +313,20 @@ async def get_sector_tickers(sector: str) -> List[str]:
             return [record[0] for record in records if record[0]]
 
 
+async def get_sectors_tickers(sectors: List[str]) -> List[str]:
+    async with config.db_conn_pool.acquire() as conn:
+        async with conn.transaction():
+            q = f"""
+                    SELECT symbol
+                    FROM ticker_data
+                    WHERE sector in ({str(sectors)[1:-1]})
+                """
+
+            records = await conn.fetch(q)
+
+    return [record[0] for record in records if record[0]]
+
+
 async def get_industry_tickers(industry: str) -> List[str]:
     async with config.db_conn_pool.acquire() as conn:
         records = await conn.fetch(
@@ -324,7 +338,20 @@ async def get_industry_tickers(industry: str) -> List[str]:
             industry,
         )
 
-        return [record[0] for record in records if record[0]]
+    return [record[0] for record in records if record[0]]
+
+
+async def get_industries_tickers(industries: List[str]) -> List[str]:
+    async with config.db_conn_pool.acquire() as conn:
+        q = f"""
+                SELECT symbol
+                FROM ticker_data
+                WHERE industry in ({str(industries)[1:-1]})
+            """
+
+        records = await conn.fetch(q)
+
+    return [record[0] for record in records if record[0]]
 
 
 async def get_market_sectors() -> List[str]:

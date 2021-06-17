@@ -10,8 +10,8 @@ from liualgotrader.common.tlog import tlog
 async def create_db_connection(dsn: str = None) -> None:
     config.db_conn_pool = await asyncpg.create_pool(
         dsn=dsn or config.dsn,
-        min_size=10,
-        max_size=50,
+        min_size=2,
+        max_size=40,
     )
 
     tlog("db connection pool initialized")

@@ -33,6 +33,7 @@ def get_series_trend(series: pd.Series) -> Tuple[float, SeriesTrendType]:
         return 0, SeriesTrendType.UNKNOWN
 
     try:
+        np.seterr(all="raise")
         slope, _, _, _, _ = linregress(np.arange(len(series)), series)
         slope = round(slope, 3)
     except FloatingPointError:

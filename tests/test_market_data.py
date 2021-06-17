@@ -3,10 +3,10 @@ import asyncio
 import pytest
 
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.market_data import (get_industry_tickers,
+from liualgotrader.common.market_data import (get_industries_tickers,
                                               get_market_industries,
                                               get_market_sectors,
-                                              get_sector_tickers)
+                                              get_sectors_tickers)
 
 
 @pytest.fixture
@@ -41,9 +41,8 @@ async def test_get_market_sectors():
 async def test_get_market_sectors_symbols():
     sector_list = await get_market_sectors()
 
-    for sector in sector_list:
-        l = await get_sector_tickers(sector)
-        print(f"{sector}-> {l}")
+    l = await get_sectors_tickers(sector_list)
+    print(f"sectors_tickers {l}")
 
     return True
 
@@ -52,9 +51,7 @@ async def test_get_market_sectors_symbols():
 @pytest.mark.devtest
 async def test_get_market_industries_symbols():
     industries_list = await get_market_industries()
-
-    for industry in industries_list:
-        l = await get_industry_tickers(industry)
-        print(f"{industry}-> {l}")
+    l = await get_industries_tickers(industries_list)
+    print(l)
 
     return True
