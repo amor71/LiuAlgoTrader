@@ -346,14 +346,14 @@ async def update_partially_filled_order(
 
 
 async def update_filled_order(strategy: Strategy, order: Order) -> None:
-    qty = int(order.filled_qty)
+    qty = float(order.filled_qty)
     new_qty = qty - abs(trading_data.partial_fills.get(order.symbol, 0))
     if order.side == "sell":
-        qty *= -1
+        qty *= -1.0
 
     tlog(f"update_filled_order new qty {new_qty} for {order}")
     trading_data.positions[order.symbol] = trading_data.positions.get(
-        order.symbol, 0
+        order.symbol, 0.0
     ) - trading_data.partial_fills.get(order.symbol, 0)
     trading_data.partial_fills[order.symbol] = 0
     trading_data.positions[order.symbol] += qty
