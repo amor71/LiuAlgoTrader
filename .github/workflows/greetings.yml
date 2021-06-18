@@ -1,0 +1,16 @@
+name: Greetings
+
+on: [pull_request, issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: 'Thank you for joining LiuAlgoTrader community and submitting your first issue. Feel free to check out Liu community: https://gitter.im/LiuAlgoTrader/community'
+        pr-message: 'Your first Pull Request! This is so exciting! thank you!'
