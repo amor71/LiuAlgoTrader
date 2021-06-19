@@ -8,7 +8,6 @@ from typing import Awaitable, Dict, List
 
 import pandas as pd
 import pytz
-import websockets
 from alpaca_trade_api.rest import REST, URL, TimeFrame
 from alpaca_trade_api.stream import Stream
 

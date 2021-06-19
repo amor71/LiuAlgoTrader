@@ -8,16 +8,15 @@ black==21.6b0
 pylint==2.8.3
 flake8==3.9.2
 Cython==0.29.23
-alpaca-trade-api==1.2.1
+alpaca-trade-api==1.2.2
 google-cloud-logging==2.4.0
-therapist==2.1.1
+therapist==2.1.2
 jupyter==1.0.0
 asyncpg==0.23.0
 pygit2==1.4.0
 pytest==6.2.4
 pytest-asyncio==0.15.1
 pytest-cov==2.12.1
-websockets==9.1
 nb-clean==2.0.2
 matplotlib==3.4.2
 tabulate==0.8.9
@@ -26,7 +25,7 @@ sphinx-autodoc-typehints==1.12.0
 setuptools==57.0.0
 wheel==0.36.2
 twine==3.4.1
-streamlit==0.82.0
+streamlit==0.83.0
 stockstats==0.3.2
 nest_asyncio==1.5.1
 nbqa==0.12.0
