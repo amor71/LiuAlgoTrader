@@ -51,6 +51,9 @@ async def trades(batch_id: str) -> None:
         ]
     )
     for index, row in trades_data.iterrows():
+        if row.price == 0:
+            continue
+
         delta = float(
             row["price"]
             * row["qty"]
