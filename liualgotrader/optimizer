@@ -18,8 +18,10 @@ import parsedatetime.parsedatetime as pdt
 
 from liualgotrader.common import config
 from liualgotrader.common.types import TimeScale
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.hyperparameter import Hyperparameter, Hyperparameters
+from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader import enhanced_backtest
 
 
@@ -80,7 +82,11 @@ def dateFromString(s: str) -> date:
 
 
 def save_optimizer_session(optimizer_session_id: str, batch_id: str):
-    
+    if not asyncio.get_event_loop().is_closed():
+        asyncio.get_event_loop().close()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    loop.run_until_complete(OptimizerRun.save(optimizer_session_id, batch_id))
 
 
 def backtest_iteration(
@@ -135,9 +141,13 @@ def optimize(
     config: Dict,
 ):
     optimizer_session_id = str(uuid.uuid4())
-    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     tlog(f"optimizer session_id {optimizer_session_id} starting")
-    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    if not asyncio.get_event_loop().is_closed():
+        asyncio.get_event_loop().close()
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(create_db_connection())
     for parameters in iter(hyperparameters):
         backtest_iteration(
             optimizer_session_id=optimizer_session_id,
