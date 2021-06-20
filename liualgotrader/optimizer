@@ -36,23 +36,22 @@ def create_parameters(parameters: Dict) -> Hyperparameters:
 
     for strategy in parameters["strategies"]:
         for name in parameters["strategies"][strategy]:
-            if parameters["strategies"][strategy][name]["type"] == "int":
-                try:
-                    params.append(
-                        Hyperparameter(
-                            f"strategies.{strategy}.{name}",
-                            int,
-                            parameters["strategies"][strategy][name]["min"],
-                            parameters["strategies"][strategy][name]["max"],
-                        )
-                    )
-                except Exception as e:
-                    tlog(f"Exception {e}")
-                    raise
-            else:
+            if parameters["strategies"][strategy][name]["type"] != "int":
                 raise Exception(
                     f"Hyper-parameter of type {parameters['strategies'][strategy][name]['type']} not supported"
                 )
+            try:
+                params.append(
+                    Hyperparameter(
+                        f"strategies.{strategy}.{name}",
+                        int,
+                        parameters["strategies"][strategy][name]["min"],
+                        parameters["strategies"][strategy][name]["max"],
+                    )
+                )
+            except Exception as e:
+                tlog(f"Exception {e}")
+                raise
     tlog(f"created {len(params)} hyper-parameters")
     return Hyperparameters(params)
 
