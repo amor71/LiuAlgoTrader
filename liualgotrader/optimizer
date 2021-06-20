@@ -23,6 +23,12 @@ from liualgotrader.common.hyperparameter import Hyperparameter, Hyperparameters
 from liualgotrader import enhanced_backtest
 
 
+def show_usage():
+    print(
+        f"usage:\n{sys.argv[0]}  [--concurrency=<int> DEFAULT 1]",
+    )
+
+
 def create_parameters(parameters: Dict) -> Hyperparameters:
     params = []
 
@@ -73,7 +79,12 @@ def dateFromString(s: str) -> date:
     return dt
 
 
+def save_optimizer_session(optimizer_session_id: str, batch_id: str):
+    
+
+
 def backtest_iteration(
+    optimizer_session_id: str,
     start_date: date,
     end_date: date,
     config: Dict,
@@ -94,6 +105,8 @@ def backtest_iteration(
     except Exception as e:
         tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
         traceback.print_exc()
+    else:
+        save_optimizer_session(optimizer_session_id, uid)
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         print(f"new batch-id: {uid}")
@@ -121,8 +134,13 @@ def optimize(
     hyperparameters: Hyperparameters,
     config: Dict,
 ):
+    optimizer_session_id = str(uuid.uuid4())
+    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
+    tlog(f"optimizer session_id {optimizer_session_id} starting")
+    tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     for parameters in iter(hyperparameters):
         backtest_iteration(
+            optimizer_session_id=optimizer_session_id,
             start_date=start_date,
             end_date=end_date,
             config=realize(config, parameters),
@@ -130,6 +148,25 @@ def optimize(
 
 
 if __name__ == "__main__":
+
+    if len(sys.argv) > 2:
+        show_usage()
+        sys.exit(0)
+
+    concurrency: int = 1
+    try:
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            ["concurrency="],
+        )
+        for opt, arg in opts:
+            if opt in ("--concurrency"):
+                concurrency = int(arg)
+    except getopt.GetoptError as e:
+        print(f"Error parsing options:{e}\n")
+        show_usage()
+        sys.exit(0)
+
     try:
         config.build_label = pygit2.Repository("../").describe(
             describe_strategy=pygit2.GIT_DESCRIBE_TAGS

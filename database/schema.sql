@@ -328,3 +328,15 @@ ALTER TABLE trending_tickers ADD COLUMN scanner_name text NOT NULL DEFAULT 'mome
 CREATE INDEX ON trending_tickers (scanner_name);
 CREATE INDEX ON trending_tickers (create_tstamp);
 ALTER TABLE  trending_tickers ALTER COLUMN create_tstamp TYPE timestamp with time zone;
+
+
+
+CREATE TABLE IF NOT EXISTS optimizer_run (
+    optimizer_run_id serial PRIMARY KEY,
+    optimizer_session_id text NOT NULL,
+    batch_id text NOT NULL,
+    tstamp timestamp with time zone DEFAULT current_timestamp
+);
+
+CREATE INDEX ON optimizer_run(optimizer_session_id);
+
