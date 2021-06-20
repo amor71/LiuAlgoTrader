@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from pytz import timezone
-from pytz.tzinfo import DstTzInfo
+from pytz.tzinfo import DstTzInfo  # type: ignore
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore

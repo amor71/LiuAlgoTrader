@@ -7,6 +7,7 @@ import sys
 import traceback
 import uuid
 import toml
+import copy
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
 import pygit2
@@ -16,8 +17,36 @@ import parsedatetime.parsedatetime as pdt
 
 
 from liualgotrader.common import config
+from liualgotrader.common.types import TimeScale
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.hyperparameter import Hyperparameter, Hyperparameters
 from liualgotrader import enhanced_backtest
+
+
+def create_parameters(parameters: Dict) -> Hyperparameters:
+    params = []
+
+    for strategy in parameters["strategies"]:
+        for name in parameters["strategies"][strategy]:
+            if parameters["strategies"][strategy][name]["type"] == "int":
+                try:
+                    params.append(
+                        Hyperparameter(
+                            f"strategies.{strategy}.{name}",
+                            int,
+                            parameters["strategies"][strategy][name]["min"],
+                            parameters["strategies"][strategy][name]["max"],
+                        )
+                    )
+                except Exception as e:
+                    tlog(f"Exception {e}")
+                    raise
+            else:
+                raise Exception(
+                    f"Hyper-parameter of type {parameters['strategies'][strategy][name]['type']} not supported"
+                )
+    tlog(f"created {len(params)} hyper-parameters")
+    return Hyperparameters(params)
 
 
 def dateFromString(s: str) -> date:
@@ -42,6 +71,62 @@ def dateFromString(s: str) -> date:
         raise ValueError("Don't understand date '" + s + "'")
 
     return dt
+
+
+def backtest_iteration(
+    start_date: date,
+    end_date: date,
+    config: Dict,
+):
+    uid = str(uuid.uuid4())
+    try:
+        if not asyncio.get_event_loop().is_closed():
+            asyncio.get_event_loop().close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(
+            enhanced_backtest.backtest_main(
+                uid, start_date, end_date, TimeScale.day, config
+            )
+        )
+    except KeyboardInterrupt:
+        tlog("backtest() - Caught KeyboardInterrupt")
+    except Exception as e:
+        tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
+        traceback.print_exc()
+    finally:
+        print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
+        print(f"new batch-id: {uid}")
+
+
+def realize(config: Dict, parameters: tuple) -> Dict:
+    d = copy.deepcopy(config)
+
+    for parameter in parameters:
+        print(parameter)
+        name = parameter[0].split(".")
+
+        element: Dict = d
+        for i in name[:-1]:
+            element = element[i]
+        element[name[-1]] = parameter[1]
+
+    print(d)
+    return d
+
+
+def optimize(
+    start_date: date,
+    end_date: date,
+    hyperparameters: Hyperparameters,
+    config: Dict,
+):
+    for parameters in iter(hyperparameters):
+        backtest_iteration(
+            start_date=start_date,
+            end_date=end_date,
+            config=realize(config, parameters),
+        )
 
 
 if __name__ == "__main__":
@@ -76,28 +161,19 @@ if __name__ == "__main__":
 
     tlog(f"optimizer directive found in {fname}")
 
-
-    uid = str(uuid.uuid4())
     try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(
-            backtest_main(
-                uid, from_date, to_date, scale, config, scanners, strategies
-            )
-        )
-    except KeyboardInterrupt:
-        tlog("backtest() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(
-            f"backtest() - exception of type {type(e).__name__} with args {e.args}"
-        )
-        traceback.print_exc()
-    finally:
-        print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-        print(f"new batch-id: {uid}")
+        start_date = dateFromString(conf_dict["optimizer"]["start_date"])
+        end_date = dateFromString(conf_dict["optimizer"]["end_date"])
+    except Exception:
+        tlog(f"failed to load start & end dates")
+        sys.exit(0)
 
-        return uid
+    optimize(
+        start_date=start_date,
+        end_date=end_date,
+        hyperparameters=create_parameters(conf_dict["optimizer"]),
+        config=conf_dict,
+    )
+
+
 sys.exit(0)
