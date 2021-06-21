@@ -36,11 +36,8 @@ def create_parameters(parameters: Dict) -> Hyperparameters:
 
     for strategy in parameters["strategies"]:
         for name in parameters["strategies"][strategy]:
-            if parameters["strategies"][strategy][name]["type"] != "int":
-                raise Exception(
-                    f"Hyper-parameter of type {parameters['strategies'][strategy][name]['type']} not supported"
-                )
-            try:
+
+            if parameters["strategies"][strategy][name]["param_type"] == "int":
                 params.append(
                     Hyperparameter(
                         f"strategies.{strategy}.{name}",
@@ -49,9 +46,14 @@ def create_parameters(parameters: Dict) -> Hyperparameters:
                         parameters["strategies"][strategy][name]["max"],
                     )
                 )
-            except Exception as e:
-                tlog(f"Exception {e}")
-                raise
+            else:
+                params.append(
+                    Hyperparameter(
+                        f"strategies.{strategy}.{name}",
+                        **parameters["strategies"][strategy][name],
+                    )
+                )
+
     tlog(f"created {len(params)} hyper-parameters")
     return Hyperparameters(params)
 
@@ -94,6 +96,9 @@ def backtest_iteration(
     end_date: date,
     config: Dict,
 ):
+    tlog(
+        f"starting backtest with start_date={start_date}, end_date={end_date}, config={config}"
+    )
     uid = str(uuid.uuid4())
     try:
         if not asyncio.get_event_loop().is_closed():
@@ -121,7 +126,6 @@ def realize(config: Dict, parameters: tuple) -> Dict:
     d = copy.deepcopy(config)
 
     for parameter in parameters:
-        print(parameter)
         name = parameter[0].split(".")
 
         element: Dict = d
@@ -129,7 +133,6 @@ def realize(config: Dict, parameters: tuple) -> Dict:
             element = element[i]
         element[name[-1]] = parameter[1]
 
-    print(d)
     return d
 
 
@@ -147,6 +150,7 @@ def optimize(
         asyncio.get_event_loop().close()
     loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
+
     for parameters in iter(hyperparameters):
         backtest_iteration(
             optimizer_session_id=optimizer_session_id,

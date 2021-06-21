@@ -13,6 +13,14 @@ def test_hyper_param_1():
     return True
 
 
+def test_hyper_param_single():
+    p1 = Hyperparameter("p1", int, 5, 5)
+
+    print("single", next(p1))
+
+    return True
+
+
 def test_hyper_param_1_ex():
     p1 = Hyperparameter("p1", int, 5, 5)
 
