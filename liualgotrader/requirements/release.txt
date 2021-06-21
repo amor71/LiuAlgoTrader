@@ -15,7 +15,7 @@ empyrical==0.5.5
 nest_asyncio==1.5.1
 hypothesis==6.14.0
 parsedatetime==2.6
-scipy==1.6.3
+scipy==1.7.0
 polygon-api-client==0.1.11
 finnhub-python==2.4.0
 quantstats==0.0.34
