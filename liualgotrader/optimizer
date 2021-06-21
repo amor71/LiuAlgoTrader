@@ -4,6 +4,7 @@ import asyncio
 import getopt
 import os
 import sys
+import json
 import traceback
 import uuid
 import toml
@@ -12,7 +13,8 @@ from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
 import pygit2
 import pytz
-
+import multiprocessing as mp
+from time import sleep
 import parsedatetime.parsedatetime as pdt
 
 
@@ -91,13 +93,10 @@ def save_optimizer_session(optimizer_session_id: str, batch_id: str):
 
 
 def backtest_iteration(
-    optimizer_session_id: str,
-    start_date: date,
-    end_date: date,
-    config: Dict,
+    optimizer_session_id: str, start_date: date, end_date: date, config: Dict
 ):
     tlog(
-        f"starting backtest with start_date={start_date}, end_date={end_date}, config={config}"
+        f"starting backtest with start_date={start_date}, end_date={end_date} w/ configuration={config}"
     )
     uid = str(uuid.uuid4())
     try:
@@ -146,22 +145,20 @@ def optimize(
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     tlog(f"optimizer session_id {optimizer_session_id} starting")
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-    if not asyncio.get_event_loop().is_closed():
-        asyncio.get_event_loop().close()
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(create_db_connection())
-
-    for parameters in iter(hyperparameters):
-        backtest_iteration(
-            optimizer_session_id=optimizer_session_id,
-            start_date=start_date,
-            end_date=end_date,
-            config=realize(config, parameters),
-        )
+    with mp.Pool(5) as p:
+        for parameters in iter(hyperparameters):
+            p.apply_async(
+                backtest_iteration(
+                    optimizer_session_id,
+                    start_date,
+                    end_date,
+                    realize(config, parameters),
+                )
+            )
 
 
 if __name__ == "__main__":
-
+    mp.set_start_method("spawn")
     if len(sys.argv) > 2:
         show_usage()
         sys.exit(0)

@@ -49,10 +49,10 @@ class Hyperparameter:
 
             if asyncio.get_event_loop().is_closed():
                 loop = asyncio.new_event_loop()
-                loop.run_until_complete(create_db_connection())
             else:
                 loop = asyncio.get_event_loop()
 
+            loop.run_until_complete(create_db_connection())
             portfolio_id = str(uuid.uuid4())
             loop.run_until_complete(
                 Portfolio.save(
