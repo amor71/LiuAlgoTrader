@@ -7,7 +7,7 @@ from liualgotrader.common.database import create_db_connection
 from liualgotrader.models.portfolio import Portfolio
 
 
-class Hyperparameter:
+class Parameter:
     def __init__(
         self, name, param_type, initial_value=None, last_value=None, **kwargs
     ):
@@ -33,17 +33,8 @@ class Hyperparameter:
         self.value = None
         return self
 
-    def __next__(self):
-        if hasattr(self, "last_value") and self.value == self.last_value:
-            raise StopIteration
-
-        if self.param_type == int:
-            self.value = (
-                self.param_type(self.initial_value)
-                if not self.value
-                else self.value + 1
-            )
-        elif self.param_type == "portfolio":
+    def __call__(self):
+        if self.param_type == "portfolio":
             amount = getattr(self, "size")
             credit = getattr(self, "credit", 0)
 
@@ -65,14 +56,31 @@ class Hyperparameter:
             self.last_value = self.value = portfolio_id
         else:
             raise NotImplementedError(
-                f"Hyperparameter for type {self.param_type} is not implemented yet"
+                f"Parameter for type {self.param_type} is not implemented yet"
+            )
+
+        return (self.name, self.value)
+
+    def __next__(self):
+        if hasattr(self, "last_value") and self.value == self.last_value:
+            raise StopIteration
+
+        if self.param_type == int:
+            self.value = (
+                self.param_type(self.initial_value)
+                if not self.value
+                else self.value + 1
+            )
+        else:
+            raise NotImplementedError(
+                f"Parameter for type {self.param_type} is not implemented yet as iterator"
             )
 
         return (self.name, self.value)
 
 
 class Hyperparameters:
-    def __init__(self, hyperparameters: List[Hyperparameter]):
+    def __init__(self, hyperparameters: List[Parameter]):
         self.hyperparameters = hyperparameters
 
     def __iter__(self):

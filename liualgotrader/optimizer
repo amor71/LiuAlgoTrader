@@ -22,7 +22,7 @@ from liualgotrader.common import config
 from liualgotrader.common.types import TimeScale
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.hyperparameter import Hyperparameter, Hyperparameters
+from liualgotrader.common.hyperparameter import Parameter, Hyperparameters
 from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader import enhanced_backtest
 
@@ -33,7 +33,7 @@ def show_usage():
     )
 
 
-def create_parameters(parameters: Dict) -> Hyperparameters:
+def create_parameters(parameters: Dict) -> List[Parameter]:
     params = []
 
     for strategy in parameters["strategies"]:
@@ -41,7 +41,7 @@ def create_parameters(parameters: Dict) -> Hyperparameters:
 
             if parameters["strategies"][strategy][name]["param_type"] == "int":
                 params.append(
-                    Hyperparameter(
+                    Parameter(
                         f"strategies.{strategy}.{name}",
                         int,
                         parameters["strategies"][strategy][name]["min"],
@@ -50,12 +50,18 @@ def create_parameters(parameters: Dict) -> Hyperparameters:
                 )
             else:
                 params.append(
-                    Hyperparameter(
+                    Parameter(
                         f"strategies.{strategy}.{name}",
                         **parameters["strategies"][strategy][name],
                     )
                 )
 
+    tlog(f"created {len(params)} parameters")
+    return params
+
+
+def create_hyperparameters(parameters: Dict) -> Hyperparameters:
+    params = create_parameters(parameters)
     tlog(f"created {len(params)} hyper-parameters")
     return Hyperparameters(params)
 
@@ -84,12 +90,8 @@ def dateFromString(s: str) -> date:
     return dt
 
 
-def save_optimizer_session(optimizer_session_id: str, batch_id: str):
-    if not asyncio.get_event_loop().is_closed():
-        asyncio.get_event_loop().close()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    loop.run_until_complete(OptimizerRun.save(optimizer_session_id, batch_id))
+async def save_optimizer_session(optimizer_session_id: str, batch_id: str):
+    await OptimizerRun.save(optimizer_session_id, batch_id)
 
 
 def backtest_iteration(
@@ -115,7 +117,7 @@ def backtest_iteration(
         tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
         traceback.print_exc()
     else:
-        save_optimizer_session(optimizer_session_id, uid)
+        loop.run_until_complete(save_optimizer_session(optimizer_session_id, uid))
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         print(f"new batch-id: {uid}")
@@ -139,26 +141,39 @@ def optimize(
     start_date: date,
     end_date: date,
     hyperparameters: Hyperparameters,
+    parameters: List[Parameter],
     config: Dict,
 ):
     optimizer_session_id = str(uuid.uuid4())
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
     tlog(f"optimizer session_id {optimizer_session_id} starting")
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
-    with mp.Pool(5) as p:
-        for parameters in iter(hyperparameters):
-            p.apply_async(
-                backtest_iteration(
-                    optimizer_session_id,
-                    start_date,
-                    end_date,
-                    realize(config, parameters),
-                )
-            )
+
+    processes = []
+    for hyperparameter in iter(hyperparameters):
+        print(hyperparameter)
+        parameters_values = (x() for x in parameters)
+        p = mp.Process(
+            target=backtest_iteration,
+            args=(
+                optimizer_session_id,
+                start_date,
+                end_date,
+                realize(realize(config, hyperparameter), parameters_values),
+            ),
+        )
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+
+    print("done.")
 
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
+    mp.set_start_method("fork")
+
     if len(sys.argv) > 2:
         show_usage()
         sys.exit(0)
@@ -218,9 +233,11 @@ if __name__ == "__main__":
     optimize(
         start_date=start_date,
         end_date=end_date,
-        hyperparameters=create_parameters(conf_dict["optimizer"]),
+        hyperparameters=create_hyperparameters(
+            conf_dict["optimizer"]["hyperparameters"]
+        ),
+        parameters=create_parameters(conf_dict["optimizer"]["parameters"]),
         config=conf_dict,
     )
 
-
-sys.exit(0)
+    sys.exit(0)
