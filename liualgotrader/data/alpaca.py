@@ -1,6 +1,7 @@
 import asyncio
 import json
 import queue
+import time
 import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
@@ -63,14 +64,22 @@ class AlpacaData(DataAPI):
             if scale == TimeScale.day
             else None
         )
-        data = self.alpaca_rest_client.get_bars(
-            symbol=symbol,
-            timeframe=t,
-            start=_start,
-            end=_end,
-            limit=10000,
-            adjustment="raw",
-        ).df
+
+        while True:
+            try:
+                data = self.alpaca_rest_client.get_bars(
+                    symbol=symbol,
+                    timeframe=t,
+                    start=_start,
+                    end=_end,
+                    limit=10000,
+                    adjustment="raw",
+                ).df
+            except Exception as e:
+                tlog(f"[ERROR] failed to load {symbol} with {e}. retrying")
+                time.sleep(10)
+            else:
+                break
         data = data.tz_convert("America/New_York")
         data["vwap"] = None
         data["average"] = None
@@ -131,7 +140,7 @@ class AlpacaStream(StreamingAPI):
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
             tlog(
-                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
             )
             raise
         except Exception as e:

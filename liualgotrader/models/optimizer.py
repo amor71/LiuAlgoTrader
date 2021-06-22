@@ -15,7 +15,7 @@ class OptimizerRun:
             async with con.transaction():
                 await con.execute(
                     """
-                        INSERT INTO optimizer_run (optimizer_session_id, batch_id,)
+                        INSERT INTO optimizer_run (optimizer_session_id, batch_id)
                         VALUES ($1, $2)
                     """,
                     optimizer_session_id,

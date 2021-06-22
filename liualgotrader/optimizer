@@ -150,8 +150,9 @@ def optimize(
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
     processes = []
+    concurrency = 4
+
     for hyperparameter in iter(hyperparameters):
-        print(hyperparameter)
         parameters_values = (x() for x in parameters)
         p = mp.Process(
             target=backtest_iteration,
@@ -165,8 +166,10 @@ def optimize(
         processes.append(p)
         p.start()
 
-    for p in processes:
-        p.join()
+        if len(processes) == concurrency:
+            for p in processes:
+                p.join()
+            processes = []
 
     print("done.")
 
