@@ -34,31 +34,30 @@ class Parameter:
         return self
 
     def __call__(self):
-        if self.param_type == "portfolio":
-            amount = getattr(self, "size")
-            credit = getattr(self, "credit", 0)
-
-            if asyncio.get_event_loop().is_closed():
-                loop = asyncio.new_event_loop()
-            else:
-                loop = asyncio.get_event_loop()
-
-            loop.run_until_complete(create_db_connection())
-            portfolio_id = str(uuid.uuid4())
-            loop.run_until_complete(
-                Portfolio.save(
-                    portfolio_id=portfolio_id,
-                    portfolio_size=amount,
-                    credit=credit,
-                    parameters={},
-                )
-            )
-            self.last_value = self.value = portfolio_id
-        else:
+        if self.param_type != "portfolio":
             raise NotImplementedError(
                 f"Parameter for type {self.param_type} is not implemented yet"
             )
 
+        amount = getattr(self, "size")
+        credit = getattr(self, "credit", 0)
+
+        if asyncio.get_event_loop().is_closed():
+            loop = asyncio.new_event_loop()
+        else:
+            loop = asyncio.get_event_loop()
+
+        loop.run_until_complete(create_db_connection())
+        portfolio_id = str(uuid.uuid4())
+        loop.run_until_complete(
+            Portfolio.save(
+                portfolio_id=portfolio_id,
+                portfolio_size=amount,
+                credit=credit,
+                parameters={},
+            )
+        )
+        self.last_value = self.value = portfolio_id
         return (self.name, self.value)
 
     def __next__(self):
