@@ -90,12 +90,18 @@ def dateFromString(s: str) -> date:
     return dt
 
 
-async def save_optimizer_session(optimizer_session_id: str, batch_id: str):
-    await OptimizerRun.save(optimizer_session_id, batch_id)
+async def save_optimizer_session(
+    optimizer_session_id: str, batch_id: str, hypers: Hyperparameters
+):
+    await OptimizerRun.save(optimizer_session_id, batch_id, str(hypers))
 
 
 def backtest_iteration(
-    optimizer_session_id: str, start_date: date, end_date: date, config: Dict
+    optimizer_session_id: str,
+    start_date: date,
+    end_date: date,
+    config: Dict,
+    hypers: Hyperparameters,
 ):
     tlog(
         f"starting backtest with start_date={start_date}, end_date={end_date} w/ configuration={config}"
@@ -117,7 +123,9 @@ def backtest_iteration(
         tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
         traceback.print_exc()
     else:
-        loop.run_until_complete(save_optimizer_session(optimizer_session_id, uid))
+        loop.run_until_complete(
+            save_optimizer_session(optimizer_session_id, uid, hypers)
+        )
     finally:
         print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         print(f"new batch-id: {uid}")
@@ -161,6 +169,7 @@ def optimize(
                 start_date,
                 end_date,
                 realize(realize(config, hyperparameter), parameters_values),
+                hyperparameter,
             ),
         )
         processes.append(p)

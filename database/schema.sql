@@ -340,3 +340,5 @@ CREATE TABLE IF NOT EXISTS optimizer_run (
 
 CREATE INDEX ON optimizer_run(optimizer_session_id);
 
+
+ALTER TABLE optimizer_run ADD COLUMN parameters text NOT NULL DEFAULT('');

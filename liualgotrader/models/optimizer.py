@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import asyncpg
 
@@ -9,26 +9,25 @@ from liualgotrader.common.database import create_db_connection
 class OptimizerRun:
     @classmethod
     async def save(
-        cls,
-        optimizer_session_id: str,
-        batch_id: str,
+        cls, optimizer_session_id: str, batch_id: str, parameters: str
     ):
         async with config.db_conn_pool.acquire() as con:
             async with con.transaction():
                 await con.execute(
                     """
-                        INSERT INTO optimizer_run (optimizer_session_id, batch_id)
-                        VALUES ($1, $2)
+                        INSERT INTO optimizer_run (optimizer_session_id, batch_id, parameters)
+                        VALUES ($1, $2, $3)
                     """,
                     optimizer_session_id,
                     batch_id,
+                    parameters,
                 )
 
     @classmethod
-    async def get_portfolio_ids(
+    async def get_portfolio_ids_parameters(
         cls,
         optimizer_session_id: str,
-    ) -> List[str]:
+    ) -> List[Tuple[str, str]]:
         try:
             pool = config.db_conn_pool
         except AttributeError:
@@ -39,7 +38,7 @@ class OptimizerRun:
             recrods = await con.fetch(
                 """
                     SELECT 
-                        p.portfolio_id
+                        p.portfolio_id, o.parameters
                     FROM 
                         optimizer_run as o, portfolio_batch_ids as p
                     WHERE
@@ -49,4 +48,4 @@ class OptimizerRun:
                 optimizer_session_id,
             )
 
-        return [row[0] for row in recrods]
+        return [(row[0], row[1]) for row in recrods]
