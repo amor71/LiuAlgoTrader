@@ -483,9 +483,14 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
     _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
 
-    account_id, initial_account_size = loop.run_until_complete(
-        Portfolio.load_details(portfolio_id)
-    )
+    try:
+        account_id, initial_account_size = loop.run_until_complete(
+            Portfolio.load_details(portfolio_id)
+        )
+    except Exception:
+        print("ERROR loading portfolio-id, please verify id and re-run.")
+        return pd.DataFrame()
+
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
@@ -515,15 +520,16 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
 
-    portfolio_ids = loop.run_until_complete(
-        OptimizerRun.get_portfolio_ids(optimizer_run_id)
+    portfolio_ids_parameters = loop.run_until_complete(
+        OptimizerRun.get_portfolio_ids_parameters(optimizer_run_id)
     )
-
+    portfolio_ids, hypers = list(map(list, zip(*portfolio_ids_parameters)))
     df = None
     if len(portfolio_ids):
         for i in tqdm(range(len(portfolio_ids)), desc="Loading Portfolios"):
             _df = calc_portfolio_returns(portfolio_ids[i])
             _df["portfolio_id"] = portfolio_ids[i]
+            _df["configurations"] = hypers[i]
             _df.reset_index(inplace=True)
             _df = _df.set_index(["portfolio_id", "date"])
             df = pd.concat([df, _df], axis=0) if df is not None else _df
