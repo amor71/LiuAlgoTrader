@@ -266,8 +266,8 @@ async def backtest_main(
     to_date: date,
     scale: TimeScale,
     tradeplan: Dict,
-    scanners: Optional[List],
-    strategies: Optional[List],
+    scanners: Optional[List] = None,
+    strategies: Optional[List] = None,
 ) -> None:
     tlog(
         f"Starting back-test from {from_date} to {to_date} with time scale {scale}"
@@ -327,7 +327,7 @@ async def backtest_main(
                 trading_data.positions.update(
                     {
                         symbol: 0
-                        for symbol in symbols[strategy.name]
+                        for symbol in symbols.get(strategy.name, [])
                         + symbols.get("_all", [])
                         if symbol not in trading_data.positions
                     }

@@ -12,6 +12,7 @@ from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
 from liualgotrader.models.accounts import Accounts
+from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.trading.trader_factory import trader_factory
 
@@ -471,7 +472,7 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
     df = loop.run_until_complete(Accounts.get_transactions(account_id))
     df = df.groupby(df.index.date).sum()
     df.iloc[0].amount += initial_cash
-    r = pd.date_range(start=df.index.min(), end=df.index.max())
+    r = pd.date_range(start=df.index.min(), end=df.index.max(), name="date")
     df.reindex(r).fillna(method="ffill")
     df["cash"] = df.amount.cumsum()
     df.index.rename("date", inplace=True)
@@ -497,7 +498,9 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 
     cash_df = get_cash(account_id, initial_account_size)
     symbols = trades.symbol.unique().tolist()
-    for i in tqdm(range(len(symbols))):
+    for i in tqdm(
+        range(len(symbols)), desc=f"loading portfolio {portfolio_id}"
+    ):
         symbol = symbols[i]
         symbol_trades = trades[trades.symbol == symbol].sort_values(
             by="client_time"
@@ -507,3 +510,22 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     td = td.fillna(method="ffill")
     td["totals"] = td["equity"] + td["cash"]
     return pd.DataFrame(td, columns=["equity", "cash", "totals"])
+
+
+def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+
+    portfolio_ids = loop.run_until_complete(
+        OptimizerRun.get_portfolio_ids(optimizer_run_id)
+    )
+
+    df = None
+    if len(portfolio_ids):
+        for i in tqdm(range(len(portfolio_ids)), desc="Loading Portfolios"):
+            _df = calc_portfolio_returns(portfolio_ids[i])
+            _df["portfolio_id"] = portfolio_ids[i]
+            _df.reset_index(inplace=True)
+            _df = _df.set_index(["portfolio_id", "date"])
+            df = pd.concat([df, _df], axis=0) if df is not None else _df
+
+    return df

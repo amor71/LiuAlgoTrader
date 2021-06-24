@@ -319,7 +319,7 @@ class SymbolData:
 
         if type(timestamp) == pd.Timestamp:
             _start = timestamp.to_pydatetime() - timedelta(
-                days=6 if self.scale == TimeScale.minute else 500
+                days=6 if self.scale == TimeScale.minute else 100
             )
             _end = timestamp.to_pydatetime() + timedelta(days=1)
         elif type(timestamp) == int:
@@ -337,11 +337,11 @@ class SymbolData:
                     second=0, microsecond=0
                 ) + timedelta(days=1 + timestamp)
             _start = _end - timedelta(
-                days=6 if self.scale == TimeScale.minute else 500
+                days=6 if self.scale == TimeScale.minute else 100
             )
         else:
             _start = timestamp - timedelta(
-                days=6 if self.scale == TimeScale.minute else 500
+                days=6 if self.scale == TimeScale.minute else 100
             )
             _end = timestamp + timedelta(days=1)
 
@@ -381,13 +381,13 @@ class SymbolData:
                 _start = (
                     end
                     - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 500
+                        days=7 if self.scale == TimeScale.minute else 100
                     )
                 ).date()
                 _end = end.date()
             else:
                 _start = end - timedelta(
-                    days=7 if self.scale == TimeScale.minute else 500
+                    days=7 if self.scale == TimeScale.minute else 100
                 )
                 _end = end
 
@@ -400,7 +400,7 @@ class SymbolData:
 
             new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
 
-            end -= timedelta(days=7 if self.scale == TimeScale.minute else 500)
+            end -= timedelta(days=7 if self.scale == TimeScale.minute else 100)
 
         # new_df = new_df[~new_df.index.duplicated(keep="first")]
         self.symbol_data = pd.concat(

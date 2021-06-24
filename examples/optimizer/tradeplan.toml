@@ -1,0 +1,25 @@
+# This is a TOML configuration file.
+bypass_market_schedule = false
+portfolio_value = 25000
+
+[strategies]
+
+[strategies.TrendFollow]
+debug = true
+filename = "/Users/amichayoren/dev/trades/strats/trendfollow.py"
+index = 'SP500'
+portfolio_id = "2b94a5c6-4ccf-480c-91cd-71cdeacf158c"
+rank_days = 90
+rebalance_rate = "daily"
+reinvest = true
+stock_count = 10
+
+[optimizer]
+end_date = '2021-06-19'
+start_date = '2021-01-01'
+
+[optimizer.parameters.strategies.TrendFollow]
+portfolio_id = {param_type = 'portfolio', size = 10000, credit = 1000}
+
+[optimizer.hyperparameters.strategies.TrendFollow]
+stock_count = {param_type = 'int', min = 5, max = 15}

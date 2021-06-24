@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from pytz import timezone
-from pytz.tzinfo import DstTzInfo
+from pytz.tzinfo import DstTzInfo  # type: ignore
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -42,18 +42,11 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
                     )
                 )
 
-            if scanner.recurrence:
-                try:
-                    await asyncio.sleep(scanner.recurrence.total_seconds())
-                    tlog(f"scanner {scanner.name} re-running")
-                except asyncio.CancelledError:
-                    tlog(
-                        f"scanner_runner({scanner.name}) cancelled during sleep, closing scanner task"
-                    )
-                    break
-            else:
+            if not scanner.recurrence:
                 break
 
+            await asyncio.sleep(scanner.recurrence.total_seconds())
+            tlog(f"scanner {scanner.name} re-running")
     except asyncio.CancelledError:
         tlog(
             f"scanner_runner() cancelled, closing scanner task {scanner.name}"

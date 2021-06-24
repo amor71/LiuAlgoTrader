@@ -3,6 +3,17 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.3.10           | **Major Release**                            |
+|                  |                                              |
+|                  | 1. Release `optimizer` application for       |
+|                  |    hyper-parameters optimization,            |
+|                  | 2. Notebook for optimization session         |
+|                  |    review and selection of parameters,       |
+|                  | 3. Deployment & Installation fixes,          |
+|                  |    transition to travis-ci.com, cleanup      |
+|                  |    to pytests,                               |
+|                  | 4. Bug-fixes and code improvements.          |
++------------------+----------------------------------------------+
 | 0.2.00           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. Add support for Account managment,        |
