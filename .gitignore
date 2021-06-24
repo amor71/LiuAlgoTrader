@@ -2,6 +2,7 @@
 /.mypy_cache/
 /.ipynb_checkpoints/
 /.libgit2-master/
+/..hypothesis/
 /creds/
 /wip/
 /legacy/
