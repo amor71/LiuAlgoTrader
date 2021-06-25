@@ -2,6 +2,7 @@ from datetime import datetime
 
 import hypothesis.strategies as st
 import pandas as pd
+import pytest
 import pytz
 from hypothesis import given, settings
 from hypothesis.extra.pandas import indexes, series
@@ -25,6 +26,7 @@ from liualgotrader.fincalcs.trends import SeriesTrendType, get_series_trend
         dtype=float,
     ),
 )
+@pytest.mark.devtest
 def test_get_series_trend(serie: pd.Series):
     print(serie)
     r, t = get_series_trend(serie)
