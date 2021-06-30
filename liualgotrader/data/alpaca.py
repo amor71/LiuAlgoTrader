@@ -65,6 +65,7 @@ class AlpacaData(DataAPI):
             else None
         )
 
+        retry_count = 3
         while True:
             try:
                 data = self.alpaca_rest_client.get_bars(
@@ -76,10 +77,19 @@ class AlpacaData(DataAPI):
                     adjustment="raw",
                 ).df
             except Exception as e:
-                tlog(f"[ERROR] failed to load {symbol} with {e}. retrying")
+                if not retry_count:
+                    raise ValueError(
+                        f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
+                    )
+
+                tlog(
+                    f"[ERROR] failed to load {symbol} between {_start} and {_end}. Exception {type(e).__name__} with {e}. retrying"
+                )
                 time.sleep(10)
             else:
                 break
+            finally:
+                retry_count -= 1
         data = data.tz_convert("America/New_York")
         data["vwap"] = None
         data["average"] = None
