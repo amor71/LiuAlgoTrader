@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 from datetime import date, timedelta
 from typing import Dict, Tuple
@@ -299,72 +300,36 @@ def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
 def symobl_trade_analytics(
     symbol_df: pd.DataFrame, open_price: float, plt
 ) -> Tuple[pd.DataFrame, float]:
-    delta = 0.0
-    profit = 0.0
 
-    operations = []
-    deltas = []
-    profits = []
-    times = []
-    prices = []
-    qtys = []
-    indicators = []
-    target_price = []
-    stop_price = []
-    daily_change = []
-    precent_vwap = []
-    algo_names = []
+    d = copy.deepcopy(symbol_df).drop(
+        columns=[
+            "trade_id",
+            "algo_run_id",
+            "symbol",
+            "tstamp",
+            "expire_tstamp",
+            "batch_id",
+            "start_time",
+        ]
+    )
+
+    d["trade"] = symbol_df.apply(
+        lambda row: row.price
+        * row.qty
+        * (1 if row.operation == "sell" and row.qty > 0 else -1),
+        axis=1,
+    )
+    d["balance"] = d.trade.cumsum()
+
     for _, row in symbol_df.iterrows():
-        delta = (
-            row["price"]
-            * row["qty"]
-            * (1 if row["operation"] == "sell" and row["qty"] > 0 else -1)
-        )
-        profit += float(delta)
         plt.scatter(
-            row["client_time"].to_pydatetime(),
+            row["client_time"],
             row["price"],
             c="g" if row["operation"] == "buy" else "r",
             s=100,
         )
-        algo_names.append(row["algo_name"])
-        deltas.append(round(delta, 2))
-        profits.append(round(profit, 2))
-        operations.append(row["operation"])
-        times.append(pd.to_datetime(row["client_time"]))
-        prices.append(row["price"])
-        qtys.append(row["qty"])
-        indicator = json.loads(row.indicators)
-        indicators.append(indicator)
-        target_price.append(row["target_price"])
-        stop_price.append(row["stop_price"])
-        daily_change.append(
-            f"{round(100.0 * (float(row['price']) - open_price) / open_price, 2)}%"
-        )
-        precent_vwap.append(
-            f"{round(100.0 * (indicator['buy']['avg'] - open_price) / open_price, 2)}%"
-            if "buy" in indicator
-            and indicator["buy"]
-            and "avg" in indicator["buy"]
-            else ""
-        )
 
-    d = {
-        "balance": profits,
-        "trade": deltas,
-        "algo": algo_names,
-        "operation": operations,
-        "at": times,
-        "price": prices,
-        "qty": qtys,
-        "daily change": daily_change,
-        "vwap": precent_vwap,
-        "indicators": indicators,
-        "target price": target_price,
-        "stop price": stop_price,
-    }
-
-    return pd.DataFrame(d), profit
+    return d, d.trade.sum()
 
 
 def calc_symbol_trades_returns(

@@ -1,0 +1,3 @@
+[submodule "sge-markets/web-site"]
+	path = sge-markets/web-site
+	url = https://github.com/victoriadrake/hugo-theme-sam.git
