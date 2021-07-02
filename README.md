@@ -54,7 +54,7 @@ and follow the installation wizard instructions. The wizard will walk you
 through the configuration of environment variables, setup of a local 
 dockerized PostgreSQL and pre-populate with test data. 
  
-
+**Note** for [WINDOWS](https://liualgotrader.readthedocs.io/en/latest/Troubleshooting.html#q-can-i-run-liu-on-windows) users
 ### Try the samples
 
 LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experience of the framework. Follow the post-installation instructions, and try to back-test a specific day.   

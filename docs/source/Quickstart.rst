@@ -21,6 +21,10 @@ Prerequisite
 Touch & Go
 ----------
 
+**NOTE** for Windows_ users
+
+.. _Windows: https://liualgotrader.readthedocs.io/en/latest/Troubleshooting.html#q-can-i-run-liu-on-windows
+
 **Step 1**: install LiuAlgoTrader
 
 .. code-block:: bash

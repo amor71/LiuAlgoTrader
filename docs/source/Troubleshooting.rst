@@ -1,6 +1,59 @@
 Installation FAQ
 ================
 
+
+Q : Can I Run Liu on Windows?
+-----------------------------
+
+I have a Windows-based environment. Can I use `LiuAlgoTrader`?
+ 
+Answer
+******
+ 
+Yes. While `LiuAlgoTrader` is developed & tested on macOS and Linux (Debian), Liu can run on Windows with few minor adaptations.
+ 
+**Database Prerequisites**
+ 
+LiuAlgoTrader uses PostgreSQL as a database. Liu installation wizard installs and configures a local PostgreSQL
+using docker-compose. Postgres official docker image is based on Linux, and to run it on Windows machines,
+you need to make sure you can run Linux images on your Windows.
+ 
+You will need to search online to allow Linux containers on your Windows machine; there are ample 
+resources online. Note that depending on your Windows distribution, your hardware may be required to support Hyper-V.
+ 
+To sum up, before installing Liu on your Windows, you need to make sure:
+ 
+1. Docker engine is installed and configured,
+2. Docker compose installed and configured,
+3. Your environment supports Linux containers
+ 
+**Trading Setup**
+ 
+It is OK to use Windows to develop strategies, but it is recommended to use Linux once you're ready to
+move past back-testing. It is also recommended for the `production` environment to use a
+dedicated PostgreSQL setup (local, hosted, or managed) vs. running in the Dockerized background.
+ 
+**Running Liu applications**
+ 
+`pip install liualgotrader` installs 4 executables scripts (a.k.a applications): **liu**, **trader**, **backtester** and **optimizer**.
+On Windows (unlike Linux), it is not possible to execute the application by typing its name. You need to type `py <path>\liu`.
+Where <path> depends on your local setup.
+ 
+For example, assuming you have Python 3.9.x installed on your Windows machine, use to below steps to
+create a dedicated `virtual environment` for Liu:
+ 
+ .. code-block:: bash
+
+    py -m venv liu
+    liu\Scripts\activate
+    pip install liualgotrader
+    py liu\Scripts\liu quickstart
+    
+Good Luck!
+ 
+
+
+
 Q : How to install on Ubuntu?
 -----------------------------
 

@@ -3,6 +3,9 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.3.16           | Added Windows installation FAQ, code         |
+|                  | cleanup, minor improvements & fixes.         |
++------------------+----------------------------------------------+
 | 0.3.10           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. Release `optimizer` application for       |
