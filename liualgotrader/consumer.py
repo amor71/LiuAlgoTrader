@@ -354,7 +354,7 @@ async def update_filled_order(strategy: Strategy, order: Order) -> None:
     tlog(f"update_filled_order new qty {new_qty} for {order}")
     trading_data.positions[order.symbol] = trading_data.positions.get(
         order.symbol, 0.0
-    ) - trading_data.partial_fills.get(order.symbol, 0)
+    ) - trading_data.partial_fills.get(order.symbol, 0.0)
     trading_data.partial_fills[order.symbol] = 0
     trading_data.positions[order.symbol] += qty
 
@@ -911,7 +911,7 @@ async def create_strategies(
             spec = importlib.util.spec_from_file_location(
                 "module.name", strategy_details["filename"]
             )
-            custom_strategy_module = importlib.util.module_from_spec(spec)
+            custom_strategy_module = importlib.util.module_from_spec(spec)  # type: ignore
             spec.loader.exec_module(custom_strategy_module)  # type: ignore
             class_name = strategy_name
 

@@ -105,7 +105,9 @@ class AlpacaTrader(Trader):
     def get_position(self, symbol: str) -> float:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
-        return self.alpaca_rest_client.get_position(symbol)
+        pos = self.alpaca_rest_client.get_position(symbol)
+
+        return float(pos.qty) if pos.side == "long" else -1.0 * float(pos.qty)
 
     async def get_order(self, order_id: str):
         if not self.alpaca_rest_client:

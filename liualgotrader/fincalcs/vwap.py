@@ -3,7 +3,6 @@ from datetime import datetime
 import pandas as pd
 from pandas import DataFrame as df
 from pandas import Timestamp as ts
-from tabulate import tabulate
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -35,14 +34,6 @@ def add_daily_vwap(minute_data: df, debug=False) -> bool:
         lambda x: (x["close"] + x["high"] + x["low"]) / 3, axis=1
     )
 
-    if debug:
-        tlog(
-            f"\n{tabulate(minute_data[-110:-100], headers='keys', tablefmt='psql')}"
-        )
-        tlog(
-            f"\n{tabulate(minute_data[-10:], headers='keys', tablefmt='psql')}"
-        )
-
     return True
 
 
@@ -66,13 +57,5 @@ def anchored_vwap(
     df["av"] = df["volume"][start_time_index:].cumsum()
 
     df["average"] = df["apv"] / df["av"]
-
-    if debug:
-        tlog(
-            f"\n{tabulate(df.average[start_time_index:][-15:], headers='keys', tablefmt='psql')}"
-        )
-        tlog(
-            f"\n{tabulate(df.average[start_time_index:][:15], headers='keys', tablefmt='psql')}"
-        )
 
     return df.average[start_time_index:]
