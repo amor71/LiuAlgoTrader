@@ -743,12 +743,11 @@ async def do_strategies(
                 symbol=symbol,
                 what=what,
             )
-        else:
-            if what.get("reject", False):
-                if s.name not in rejects:
-                    rejects[s.name] = [symbol]
-                else:
-                    rejects[s.name].append(symbol)
+        elif what.get("reject", False):
+            if s.name not in rejects:
+                rejects[s.name] = [symbol]
+            else:
+                rejects[s.name].append(symbol)
 
 
 async def handle_aggregate(
@@ -849,13 +848,12 @@ async def queue_consumer(
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
-                else:
-                    if not await handle_data_queue_msg(
-                        data, trader, data_loader
-                    ):
-                        while not queue.empty():
-                            _ = queue.get()
-                        tlog("cleaned queue")
+                elif not await handle_data_queue_msg(
+                    data, trader, data_loader
+                ):
+                    while not queue.empty():
+                        _ = queue.get()
+                    tlog("cleaned queue")
 
             except Empty:
                 await asyncio.sleep(0)

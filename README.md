@@ -95,7 +95,7 @@ Would you like to help improve & evolve LiuAlgoTrader?
 Do you have a suggestion, comment, idea for improvement or 
 a have a wish-list item? Please read our
 [Contribution Document](https://github.com/amor71/LiuAlgoTrader/blob/master/CONTRIBUTING.md) or 
-email me at  amichay@sgeltd.com
+email me at  amor71@sgeltd.com
 
 ## Contributors
 
