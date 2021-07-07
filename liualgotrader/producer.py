@@ -29,9 +29,40 @@ from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
-data_channels: List = []
 queue_id_hash: Dict[str, int]
 symbol_strategy: Dict = {}
+
+
+def get_new_symbols_and_queues(
+    symbols_details: Dict, queues: List[MNQueue], num_consumer_processes: int
+) -> List[str]:
+    global symbol_strategy
+
+    new_symbols: List = []
+    for symbol_details in symbols_details:
+        if symbol_details["symbol"] not in symbols:
+            new_symbols.append(symbol_details["symbol"])
+            symbol_strategy[symbol_details["symbol"]] = symbol_details[
+                "target_strategy_name"
+            ]
+            streaming_factory().get_instance().queues[
+                symbol_details["symbol"]
+            ] = queues[
+                random.SystemRandom().randint(0, num_consumer_processes - 1)
+            ]
+
+    return new_symbols
+
+
+async def subscribe_new_symbols(new_symbols: List[str]):
+    await streaming_factory().get_instance().subscribe(
+        new_symbols,
+        [
+            WSEventType.SEC_AGG,
+            WSEventType.MIN_AGG,
+            WSEventType.TRADE,
+        ],
+    )
 
 
 async def scanner_input(
@@ -40,47 +71,24 @@ async def scanner_input(
     num_consumer_processes: int,
 ) -> None:
     tlog("scanner_input() task starting ")
-    global data_channels
-    global queue_id_hash
-    global symbol_strategy
     global symbols
 
     while True:
         try:
             symbols_details = scanner_queue.get(timeout=1)
             if symbols_details:
-                symbols_details = json.loads(symbols_details)
-                new_symbols: List = []
                 new_channels: List = []
-                for symbol_details in symbols_details:
-                    if symbol_details["symbol"] not in symbols:
-                        new_symbols.append(symbol_details["symbol"])
-                        symbol_strategy[
-                            symbol_details["symbol"]
-                        ] = symbol_details["target_strategy_name"]
-                        streaming_factory().get_instance().queues[
-                            symbol_details["symbol"]
-                        ] = queues[
-                            random.SystemRandom().randint(
-                                0, num_consumer_processes - 1
-                            )
-                        ]
-
-                if len(new_symbols):
-                    await streaming_factory().get_instance().subscribe(
-                        new_symbols,
-                        [
-                            WSEventType.SEC_AGG,
-                            WSEventType.MIN_AGG,
-                            WSEventType.TRADE,
-                        ],
+                if len(
+                    new_symbols := get_new_symbols_and_queues(
+                        symbols_details=json.loads(symbols_details),
+                        queues=queues,
+                        num_consumer_processes=num_consumer_processes,
                     )
-                    symbols += new_symbols
-                    data_channels += new_channels
-
+                ):
+                    await subscribe_new_symbols(new_symbols)
                     trending_db = TrendingTickers(config.batch_id)
                     await trending_db.save(new_symbols)
-
+                    symbols += new_symbols
                     tlog(
                         f"added {len(new_symbols)}:{new_symbols} TOTAL: {len(symbols)}"
                     )
@@ -116,7 +124,6 @@ async def run(
     queues: List[MNQueue],
     qm: QueueMapper,
 ) -> None:
-    global data_channels
     global queue_id_hash
 
     ps = streaming_factory()(qm)

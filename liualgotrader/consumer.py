@@ -851,9 +851,10 @@ async def queue_consumer(
                 elif not await handle_data_queue_msg(
                     data, trader, data_loader
                 ):
-                    while not queue.empty():
-                        _ = queue.get()
-                    tlog("cleaned queue")
+                    pass
+                    # while not queue.empty():
+                    #    _ = queue.get()
+                    # tlog("cleaned queue")
 
             except Empty:
                 await asyncio.sleep(0)
