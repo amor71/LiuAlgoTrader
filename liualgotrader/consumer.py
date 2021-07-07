@@ -469,7 +469,7 @@ async def handle_transaction(
 
     await aggregate_bar_data(data_loader, data, ts)
 
-    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=10):  # type: ignore
+    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=30):  # type: ignore
         tlog(f"T$ {symbol} too out of sync w {time_diff}")
         return False
     elif (
