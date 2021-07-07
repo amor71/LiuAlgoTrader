@@ -6,7 +6,7 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from queue import Empty
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import pygit2
@@ -688,6 +688,39 @@ async def execute_strategy_result(
         )
 
 
+async def do_strategy(
+    strategy: Strategy,
+    symbol: str,
+    shortable: bool,
+    position: float,
+    data_loader: DataLoader,
+    trader: Trader,
+    minute_history: df,
+    now: pd.Timestamp,
+    portfolio_value: Optional[float],
+) -> bool:
+    do, what = await strategy.run(
+        symbol=symbol,
+        shortable=shortable,
+        position=position,
+        minute_history=minute_history,
+        now=now,
+        portfolio_value=portfolio_value,
+    )
+
+    if do:
+        await execute_strategy_result(
+            strategy=strategy,
+            trader=trader,
+            data_loader=data_loader,
+            symbol=symbol,
+            what=what,
+        )
+    elif what.get("reject", False):
+        return False
+    return True
+
+
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -707,7 +740,6 @@ async def do_strategies(
 
         if s.name in rejects and symbol in rejects[s.name]:
             continue
-
         try:
             skip = await s.should_run_all()
         except Exception:
@@ -716,8 +748,8 @@ async def do_strategies(
             if skip:
                 continue
         try:
-
-            do, what = await s.run(
+            if not await do_strategy(
+                strategy=s,
                 symbol=symbol,
                 shortable=shortable[symbol],
                 position=position,
@@ -726,7 +758,14 @@ async def do_strategies(
                     second=0, microsecond=0
                 ),
                 portfolio_value=config.portfolio_value,
-            )
+                data_loader=data_loader,
+                trader=trader,
+            ):
+                if s.name not in rejects:
+                    rejects[s.name] = [symbol]
+                else:
+                    rejects[s.name].append(symbol)
+
         except Exception:
             traceback.print_exc()
             exc_info = sys.exc_info()
@@ -734,20 +773,6 @@ async def do_strategies(
             for line in lines:
                 tlog(f"{line}")
             del exc_info
-
-        if do:
-            await execute_strategy_result(
-                strategy=s,
-                trader=trader,
-                data_loader=data_loader,
-                symbol=symbol,
-                what=what,
-            )
-        elif what.get("reject", False):
-            if s.name not in rejects:
-                rejects[s.name] = [symbol]
-            else:
-                rejects[s.name].append(symbol)
 
 
 async def handle_aggregate(
