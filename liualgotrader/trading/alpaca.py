@@ -136,7 +136,7 @@ class AlpacaTrader(Trader):
                 "Failed to authenticate Alpaca RESTful client"
             )
 
-    async def run(self) -> Optional[asyncio.Task]:
+    async def run(self) -> asyncio.Task:
         if not self.running_task:
             tlog("starting Alpaca listener")
             self.running_task = asyncio.create_task(
