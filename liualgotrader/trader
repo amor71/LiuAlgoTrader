@@ -5,6 +5,8 @@ Trading strategy runner
 """
 
 import multiprocessing as mp
+import mnqueues as mnq
+from mnqueues.gcp_monitor import GCPMonitor
 import os
 import sys
 import time
@@ -213,7 +215,10 @@ if __name__ == "__main__":
             num_consumer_processes = calc_num_consumer_processes()
             tlog(f"Starting {num_consumer_processes} consumer processes")
 
-            queues: List[mp.Queue] = [mp.Queue() for i in range(num_consumer_processes)]
+            m = GCPMonitor("liu")
+            queues: List[mnq.MNQueue] = [
+                mnq.MNQueue(m) for i in range(num_consumer_processes)
+            ]
             q_id_hash = {}
             symbol_by_queue = {}
             for symbol in symbols:

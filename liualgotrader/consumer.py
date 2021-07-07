@@ -5,7 +5,6 @@ import os
 import sys
 import traceback
 from datetime import date, datetime, timedelta
-from multiprocessing import Queue
 from queue import Empty
 from typing import Any, Dict, List
 
@@ -13,6 +12,7 @@ import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.rest import APIError
+from mnqueues import MNQueue
 from pandas import DataFrame as df
 from pytz import timezone
 
@@ -838,7 +838,7 @@ async def handle_data_queue_msg(
 
 
 async def queue_consumer(
-    queue: Queue, data_loader: DataLoader, trader: Trader
+    queue: MNQueue, data_loader: DataLoader, trader: Trader
 ) -> None:
     tlog("queue_consumer() starting")
     try:
@@ -952,7 +952,7 @@ async def create_strategies(
 
 
 async def consumer_async_main(
-    queue: Queue,
+    queue: MNQueue,
     symbols: List[str],
     unique_id: str,
     strategies_conf: Dict,
@@ -1082,7 +1082,7 @@ async def load_current_positions(
 
 
 def consumer_main(
-    queue: Queue,
+    queue: MNQueue,
     symbols: List[str],
     unique_id: str,
     conf: Dict,
