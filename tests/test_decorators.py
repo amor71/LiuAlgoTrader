@@ -1,0 +1,43 @@
+import asyncio
+from datetime import date
+
+import nest_asyncio
+import pandas as pd
+import pytest
+
+from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.decorators import retry, timeit
+from liualgotrader.trading.trader_factory import trader_factory
+
+nest_asyncio.apply()
+
+
+@pytest.fixture
+def event_loop():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_db_connection())
+    yield loop
+    loop.close()
+
+
+async def reconnect_trader():
+    trader = trader_factory()()
+    return await trader.reconnect()
+
+
+@retry(5, ConnectionError, reconnect_trader)
+@timeit
+async def get_trading_days(trader, start_date):
+    return trader.get_trading_days(start_date)
+
+
+@pytest.mark.devtest
+@pytest.mark.asyncio
+async def test_trader_calendar() -> bool:
+    trader = trader_factory()()
+
+    td = await get_trading_days(
+        trader=trader, start_date=date(year=2021, month=1, day=1)
+    )
+    print(td)
+    return True

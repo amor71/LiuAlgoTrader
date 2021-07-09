@@ -125,29 +125,22 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
 
             await asyncio.sleep(60.0)
 
-    except Exception:
-        traceback.print_exc()
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        for line in lines:
-            tlog(f"{line}")
-        del exc_info
-
     except asyncio.CancelledError:
         tlog("periodic_runner() cancelled")
     except KeyboardInterrupt:
         tlog("periodic_runner() - Caught KeyboardInterrupt")
+    except Exception as e:
+        traceback.print_exc()
+        tlog(f"[EXCEPTION] periodic_runner: {e}")
 
     tlog("periodic_runner() task completed")
 
 
-async def liquidator(trader: Trader) -> None:
-    tlog("liquidator() task starting")
-
+async def liquidator_sleep(trader: Trader) -> bool:
     try:
         to_market_close = trader.get_time_market_close()
         if not to_market_close:
-            return
+            return False
         else:
             to_market_close -= timedelta(minutes=15)
 
@@ -156,35 +149,38 @@ async def liquidator(trader: Trader) -> None:
 
     except asyncio.CancelledError:
         tlog("liquidator() cancelled during sleep")
+        return False
     except KeyboardInterrupt:
         tlog("liquidator() - Caught KeyboardInterrupt")
+        return False
+    else:
+        return True
+
+
+async def liquidator_loop():
+    for symbol, position in trading_data.positions.items():
+        tlog(f"liquidator() -> checking {symbol}")
+        if (
+            position != 0
+            and trading_data.last_used_strategy[symbol].type
+            == StrategyType.DAY_TRADE
+        ):
+            await liquidate(
+                symbol,
+                int(position),
+                trader,
+            )
+
+
+async def liquidator(trader: Trader) -> None:
+    tlog("liquidator() task starting")
+
+    if not await liquidator_sleep(trader):
+        return
 
     tlog("liquidator() -> starting to liquidate positions")
     try:
-        for symbol in trading_data.positions:
-            tlog(f"liquidator() -> checking {symbol}")
-            if (
-                trading_data.positions[symbol] != 0
-                and trading_data.last_used_strategy[symbol].type
-                == StrategyType.DAY_TRADE
-            ):
-                retry = 5
-                while retry:
-                    try:
-                        await liquidate(
-                            symbol,
-                            int(trading_data.positions[symbol]),
-                            trader,
-                        )
-                        break
-                    except ConnectionError:
-                        await trader.reconnect()
-                        await asyncio.sleep(1)
-                        retry -= 1
-            else:
-                tlog(
-                    f"liquidator(): {symbol} {trading_data.positions[symbol]} {trading_data.last_used_strategy[symbol].type} {trading_data.last_used_strategy[symbol].name}"
-                )
+        await liquidator_loop()
     except asyncio.CancelledError:
         tlog("liquidator() cancelled")
     except KeyboardInterrupt:
