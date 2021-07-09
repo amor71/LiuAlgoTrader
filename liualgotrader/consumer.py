@@ -51,6 +51,22 @@ def get_position(trader: Trader, symbol: str) -> float:
         return 0
 
 
+async def execute_run_all_results(
+    strategy: Strategy,
+    run_all_results: Dict[str, Dict],
+    trader: Trader,
+    data_loader: DataLoader,
+):
+    for symbol, what in run_all_results.items():
+        await execute_strategy_result(
+            strategy=strategy,
+            trader=trader,
+            data_loader=data_loader,
+            symbol=symbol,
+            what=what,
+        )
+
+
 async def do_strategy_all(
     data_loader: DataLoader,
     trader: Trader,
@@ -59,33 +75,24 @@ async def do_strategy_all(
 ):
     try:
         now = datetime.now(nyc)
+        symbols_position = {
+            symbol: trading_data.positions[symbol]
+            if symbol in trading_data.positions
+            else get_position(trader, symbol)
+            for symbol in symbols
+        }
         do = await strategy.run_all(
-            symbols_position={
-                symbol: trading_data.positions[symbol]
-                if symbol in trading_data.positions
-                else get_position(trader, symbol)
-                for symbol in symbols
-            },
+            symbols_position=symbols_position,
             now=now,
             portfolio_value=config.portfolio_value,
             backtesting=True,
             data_loader=data_loader,
         )
-        for symbol, what in do.items():
-            await execute_strategy_result(
-                strategy=strategy,
-                trader=trader,
-                data_loader=data_loader,
-                symbol=symbol,
-                what=what,
-            )
+        await execute_run_all_results(strategy, do, trader, data_loader)
 
     except Exception as e:
         traceback.print_exc()
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        tlog(f"[Exception] {now} {strategy}->{e}:{lines}")
-        del exc_info
+        tlog(f"[Exception] {now} {strategy}->{e}")
 
         raise
 
