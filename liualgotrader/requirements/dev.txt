@@ -20,7 +20,7 @@ pytest-cov==2.12.1
 nb-clean==2.0.2
 matplotlib==3.4.2
 tabulate==0.8.9
-sphinx==4.0.2
+sphinx==4.1.0
 sphinx-autodoc-typehints==1.12.0
 setuptools==57.1.0
 wheel==0.36.2
