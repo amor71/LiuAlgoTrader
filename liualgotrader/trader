@@ -215,7 +215,11 @@ if __name__ == "__main__":
             num_consumer_processes = calc_num_consumer_processes()
             tlog(f"Starting {num_consumer_processes} consumer processes")
 
-            m = GCPMonitor("liu")
+            m = (
+                GCPMonitor(conf_dict["gcp_monitor_measure_prefix"])
+                if "gcp_monitor_measure_prefix" in conf_dict
+                else None
+            )
             queues: List[mnq.MNQueue] = [
                 mnq.MNQueue(m) for i in range(num_consumer_processes)
             ]
