@@ -42,6 +42,6 @@ bandit==1.7.0
 finnhub-python==2.4.0
 pandas==1.3.0
 quantstats==0.0.34
-tqdm==4.61.1
+tqdm==4.61.2
 
 
