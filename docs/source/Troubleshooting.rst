@@ -64,14 +64,13 @@ Answer
 
 **STEP 1** : Install docker engine (Skip if already installed and running)
 
+Follow the instructions for Docker_ installation. Then
+
+.. _Docker: https://docs.docker.com/engine/install/ubuntu/
+
+
 .. code-block:: bash
 
-    $ sudo apt update
-    $ sudo apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-    $ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-    $ sudo add-apt-repository \ "deb [arch=amd64] https://download.docker.com/linux/ubuntu \ $(lsb_release -cs) stable"
-    $ sudo apt-get update
-    $ sudo apt install docker-ce -y
     $ sudo usermod -aG docker $USER
 
 After successful completetion of the above steps, you should logout and login.
@@ -98,8 +97,8 @@ After successful completetion of the above steps, you should logout and login.
 .. code-block:: bash
 
     $ python3.9 -m venv liu
-    $ source liu//bin/activate
-    (liu) $ mkdir liu ; cd liu
+    $ source liu/bin/activate
+    (liu) $ mkdir liu-dev ; cd liu-dev
     (liu) $ pip install liualgotrader
 
 
