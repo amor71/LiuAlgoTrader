@@ -8,17 +8,15 @@ from liualgotrader.models.portfolio import Portfolio
 
 
 class Parameter:
-    def __init__(
-        self, name, param_type, initial_value=None, last_value=None, **kwargs
-    ):
+    def __init__(self, name, param_type, min=None, max=None, **kwargs):
         self.name = name
         self.param_type = param_type
 
-        if initial_value:
-            self.initial_value = initial_value
+        if min:
+            self.initial_value = min
 
-        if last_value:
-            self.last_value = last_value
+        if max:
+            self.last_value = max
 
         self.value = None
 
@@ -64,11 +62,19 @@ class Parameter:
         if hasattr(self, "last_value") and self.value == self.last_value:
             raise StopIteration
 
-        if self.param_type == int:
+        if self.param_type in ("int", int):
             self.value = (
-                self.param_type(self.initial_value)
+                int(self.initial_value) if not self.value else self.value + 1
+            )
+        elif self.param_type in (float, "float"):
+            if not hasattr(self, "delta"):
+                raise AttributeError(
+                    f"midding `delta` parameter for hyper-parameter {self.name}"
+                )
+            self.value = (
+                float(self.initial_value)
                 if not self.value
-                else self.value + 1
+                else self.value + self.delta
             )
         else:
             raise NotImplementedError(

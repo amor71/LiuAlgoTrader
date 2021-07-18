@@ -7,6 +7,7 @@
 [![Tested with Hypothesis](https://img.shields.io/badge/hypothesis-tested-brightgreen.svg)](https://hypothesis.readthedocs.io/)
 [![Gitter](https://badges.gitter.im/LiuAlgoTrader/community.svg)](https://gitter.im/LiuAlgoTrader/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Sourcery](https://img.shields.io/badge/Sourcery-enabled-brightgreen)](https://sourcery.ai)
+[![codecov](https://codecov.io/gh/amor71/LiuAlgoTrader/branch/master/graph/badge.svg?token=RIDO1ODHNQ)](https://codecov.io/gh/amor71/LiuAlgoTrader)
 ## Introduction
 
 **LiuAlgoTrader** is a scalable, multi-process ML-ready framework
