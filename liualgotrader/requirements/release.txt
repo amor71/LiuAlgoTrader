@@ -9,7 +9,7 @@ asyncpg==0.23.0
 pygit2==1.6.1
 matplotlib==3.4.2
 tabulate==0.8.9
-streamlit==0.84.0
+streamlit==0.84.1
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
