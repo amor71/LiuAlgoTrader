@@ -20,4 +20,6 @@ finnhub-python==2.4.0
 quantstats==0.0.34
 mnqueues
 tqdm==4.61.2
+toml
+
 

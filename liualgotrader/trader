@@ -18,6 +18,7 @@ from math import ceil
 from typing import List
 import pygit2
 import toml
+import copy
 from pytz import timezone
 import alpaca_trade_api as tradeapi
 from liualgotrader.common import config
@@ -167,7 +168,8 @@ if __name__ == "__main__":
     )
     fname = f"{folder}{config.configuration_filename}"
     try:
-        conf_dict = toml.load(fname)
+        conf_dict = copy.deepcopy(toml.load(fname))
+        print(conf_dict)
         tlog(f"loaded configuration file from {fname}")
     except FileNotFoundError:
         tlog(f"[ERROR] could not locate tradeplan file {fname}")

@@ -7,7 +7,7 @@ import sys
 import json
 import traceback
 import uuid
-import toml
+
 import copy
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Optional
@@ -23,8 +23,8 @@ from liualgotrader.common.types import TimeScale
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.hyperparameter import Parameter, Hyperparameters
-from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader import enhanced_backtest
+from liualgotrader.backtesting.optimizer import backtest_iteration
 
 
 def motd(filename: str, version: str) -> None:
@@ -89,47 +89,6 @@ def dateFromString(s: str) -> date:
     return dt
 
 
-async def save_optimizer_session(
-    optimizer_session_id: str, batch_id: str, hypers: Hyperparameters
-):
-    await OptimizerRun.save(optimizer_session_id, batch_id, str(hypers))
-
-
-def backtest_iteration(
-    optimizer_session_id: str,
-    start_date: date,
-    end_date: date,
-    config: Dict,
-    hypers: Hyperparameters,
-):
-    tlog(
-        f"starting backtest with start_date={start_date}, end_date={end_date} w/ configuration={config}"
-    )
-    uid = str(uuid.uuid4())
-    try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        loop.run_until_complete(
-            enhanced_backtest.backtest_main(
-                uid, start_date, end_date, TimeScale.day, config
-            )
-        )
-    except KeyboardInterrupt:
-        tlog("backtest() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(f"backtest() - exception of type {type(e).__name__} with args {e.args}")
-        traceback.print_exc()
-    else:
-        loop.run_until_complete(
-            save_optimizer_session(optimizer_session_id, uid, hypers)
-        )
-    finally:
-        print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-        print(f"new batch-id: {uid}")
-
-
 def realize(config: Dict, parameters: tuple) -> Dict:
     d = copy.deepcopy(config)
 
@@ -149,7 +108,7 @@ def optimize(
     end_date: date,
     hyperparameters: Hyperparameters,
     parameters: List[Parameter],
-    config: Dict,
+    conf_dict: Dict,
     concurrency: int,
 ):
     optimizer_session_id = str(uuid.uuid4())
@@ -167,7 +126,7 @@ def optimize(
                 optimizer_session_id,
                 start_date,
                 end_date,
-                realize(realize(config, hyperparameter), parameters_values),
+                realize(realize(conf_dict, hyperparameter), parameters_values),
                 hyperparameter,
             ),
         )
@@ -182,8 +141,21 @@ def optimize(
     print("done.")
 
 
+def load_configuration(filename: str) -> Dict:
+    try:
+        import toml
+
+        conf_dict = toml.load(filename)
+        tlog(f"loaded configuration file from {filename}")
+    except FileNotFoundError:
+        tlog(f"[ERROR] could not locate tradeplan file {filename}")
+        sys.exit(0)
+
+    return conf_dict
+
+
 if __name__ == "__main__":
-    mp.set_start_method("fork")
+    mp.set_start_method("spawn")
 
     if len(sys.argv) > 2:
         show_usage()
@@ -213,7 +185,6 @@ if __name__ == "__main__":
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     config.filename = os.path.basename(__file__)
-
     motd(filename=config.filename, version=config.build_label)
     tlog(f"using concurrency {concurrency}")
     folder = (
@@ -222,13 +193,7 @@ if __name__ == "__main__":
         else f"{config.tradeplan_folder}/"
     )
     fname = f"{folder}{config.configuration_filename}"
-    try:
-        conf_dict = toml.load(fname)
-        tlog(f"loaded configuration file from {fname}")
-    except FileNotFoundError:
-        tlog(f"[ERROR] could not locate tradeplan file {fname}")
-        sys.exit(0)
-    conf_dict = toml.load(config.configuration_filename)
+    conf_dict = load_configuration(fname)
 
     if "optimizer" not in conf_dict:
         tlog(f"optimizer directive not found in {fname}. aborting.")
@@ -250,7 +215,7 @@ if __name__ == "__main__":
             conf_dict["optimizer"]["hyperparameters"]
         ),
         parameters=create_parameters(conf_dict["optimizer"]["parameters"]),
-        config=conf_dict,
+        conf_dict=conf_dict,
         concurrency=concurrency,
     )
 
