@@ -357,7 +357,7 @@ if __name__ == "__main__":
                     )
                     exit(0)
                 amount = float(sys.argv[3])
-                
+
                 credit = 0.0
                 opts, args = getopt.getopt(
                     sys.argv[4:],
@@ -376,7 +376,8 @@ if __name__ == "__main__":
                             exit(0)
 
                 create_portfolio(amount, credit)
-        except Exception:
+        except Exception as e:
+            print(f"[ERROR] {e}")
             show_usage()
     else:
         show_usage()

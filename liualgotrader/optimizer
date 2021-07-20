@@ -48,23 +48,12 @@ def create_parameters(parameters: Dict) -> List[Parameter]:
 
     for strategy in parameters["strategies"]:
         for name in parameters["strategies"][strategy]:
-
-            if parameters["strategies"][strategy][name]["param_type"] == "int":
-                params.append(
-                    Parameter(
-                        f"strategies.{strategy}.{name}",
-                        int,
-                        parameters["strategies"][strategy][name]["min"],
-                        parameters["strategies"][strategy][name]["max"],
-                    )
+            params.append(
+                Parameter(
+                    f"strategies.{strategy}.{name}",
+                    **parameters["strategies"][strategy][name],
                 )
-            else:
-                params.append(
-                    Parameter(
-                        f"strategies.{strategy}.{name}",
-                        **parameters["strategies"][strategy][name],
-                    )
-                )
+            )
 
     tlog(f"created {len(params)} parameters")
     return params
