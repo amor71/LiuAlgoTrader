@@ -321,12 +321,12 @@ ON
 
 ALTER TABLE portfolio DROP COLUMN stock_count;
 ALTER TABLE portfolio ADD COLUMN account_id int REFERENCES accounts(account_id);
-CREATE INDEX ON portfolio(account_id);
+CREATE INDEX IF NOT EXISTS portfolio_idx ON portfolio(account_id);
 
 
 ALTER TABLE trending_tickers ADD COLUMN scanner_name text NOT NULL DEFAULT 'momentum';
-CREATE INDEX ON trending_tickers (scanner_name);
-CREATE INDEX ON trending_tickers (create_tstamp);
+CREATE INDEX  IF NOT EXISTS trending_tickers_scanner_idx ON trending_tickers (scanner_name);
+CREATE INDEX IF NOT EXISTS  trending_tickers_tstamp_idx ON trending_tickers (create_tstamp);
 ALTER TABLE  trending_tickers ALTER COLUMN create_tstamp TYPE timestamp with time zone;
 
 
@@ -338,7 +338,7 @@ CREATE TABLE IF NOT EXISTS optimizer_run (
     tstamp timestamp with time zone DEFAULT current_timestamp
 );
 
-CREATE INDEX ON optimizer_run(optimizer_session_id);
+CREATE INDEX IF NOT EXISTS  optimizer_run_idx ON optimizer_run(optimizer_session_id);
 
 
 ALTER TABLE optimizer_run ADD COLUMN parameters text NOT NULL DEFAULT('');
