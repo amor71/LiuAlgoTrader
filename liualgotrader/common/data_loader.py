@@ -439,6 +439,9 @@ class DataLoader:
 
         self.scale = scale
 
+    def exist(self, symbol: str) -> bool:
+        return symbol in self.data
+
     def __getattr__(self, attr):
         return self.__getitem__(attr)
 

@@ -5,14 +5,14 @@ import os
 import sys
 import traceback
 from datetime import date, datetime, timedelta
-from multiprocessing import Queue
 from queue import Empty
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import pygit2
 from alpaca_trade_api.entity import Order
 from alpaca_trade_api.rest import APIError
+from mnqueues import MNQueue
 from pandas import DataFrame as df
 from pytz import timezone
 
@@ -51,6 +51,22 @@ def get_position(trader: Trader, symbol: str) -> float:
         return 0
 
 
+async def execute_run_all_results(
+    strategy: Strategy,
+    run_all_results: Dict[str, Dict],
+    trader: Trader,
+    data_loader: DataLoader,
+):
+    for symbol, what in run_all_results.items():
+        await execute_strategy_result(
+            strategy=strategy,
+            trader=trader,
+            data_loader=data_loader,
+            symbol=symbol,
+            what=what,
+        )
+
+
 async def do_strategy_all(
     data_loader: DataLoader,
     trader: Trader,
@@ -59,33 +75,24 @@ async def do_strategy_all(
 ):
     try:
         now = datetime.now(nyc)
+        symbols_position = {
+            symbol: trading_data.positions[symbol]
+            if symbol in trading_data.positions
+            else get_position(trader, symbol)
+            for symbol in symbols
+        }
         do = await strategy.run_all(
-            symbols_position={
-                symbol: trading_data.positions[symbol]
-                if symbol in trading_data.positions
-                else get_position(trader, symbol)
-                for symbol in symbols
-            },
+            symbols_position=symbols_position,
             now=now,
             portfolio_value=config.portfolio_value,
             backtesting=True,
             data_loader=data_loader,
         )
-        for symbol, what in do.items():
-            await execute_strategy_result(
-                strategy=strategy,
-                trader=trader,
-                data_loader=data_loader,
-                symbol=symbol,
-                what=what,
-            )
+        await execute_run_all_results(strategy, do, trader, data_loader)
 
     except Exception as e:
         traceback.print_exc()
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        tlog(f"[Exception] {now} {strategy}->{e}:{lines}")
-        del exc_info
+        tlog(f"[Exception] {now} {strategy}->{e}")
 
         raise
 
@@ -118,29 +125,22 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
 
             await asyncio.sleep(60.0)
 
-    except Exception:
-        traceback.print_exc()
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        for line in lines:
-            tlog(f"{line}")
-        del exc_info
-
     except asyncio.CancelledError:
         tlog("periodic_runner() cancelled")
     except KeyboardInterrupt:
         tlog("periodic_runner() - Caught KeyboardInterrupt")
+    except Exception as e:
+        traceback.print_exc()
+        tlog(f"[EXCEPTION] periodic_runner: {e}")
 
     tlog("periodic_runner() task completed")
 
 
-async def liquidator(trader: Trader) -> None:
-    tlog("liquidator() task starting")
-
+async def liquidator_sleep(trader: Trader) -> bool:
     try:
         to_market_close = trader.get_time_market_close()
         if not to_market_close:
-            return
+            return False
         else:
             to_market_close -= timedelta(minutes=15)
 
@@ -149,35 +149,38 @@ async def liquidator(trader: Trader) -> None:
 
     except asyncio.CancelledError:
         tlog("liquidator() cancelled during sleep")
+        return False
     except KeyboardInterrupt:
         tlog("liquidator() - Caught KeyboardInterrupt")
+        return False
+    else:
+        return True
+
+
+async def liquidator_loop():
+    for symbol, position in trading_data.positions.items():
+        tlog(f"liquidator() -> checking {symbol}")
+        if (
+            position != 0
+            and trading_data.last_used_strategy[symbol].type
+            == StrategyType.DAY_TRADE
+        ):
+            await liquidate(
+                symbol,
+                int(position),
+                trader,
+            )
+
+
+async def liquidator(trader: Trader) -> None:
+    tlog("liquidator() task starting")
+
+    if not await liquidator_sleep(trader):
+        return
 
     tlog("liquidator() -> starting to liquidate positions")
     try:
-        for symbol in trading_data.positions:
-            tlog(f"liquidator() -> checking {symbol}")
-            if (
-                trading_data.positions[symbol] != 0
-                and trading_data.last_used_strategy[symbol].type
-                == StrategyType.DAY_TRADE
-            ):
-                retry = 5
-                while retry:
-                    try:
-                        await liquidate(
-                            symbol,
-                            int(trading_data.positions[symbol]),
-                            trader,
-                        )
-                        break
-                    except ConnectionError:
-                        await trader.reconnect()
-                        await asyncio.sleep(1)
-                        retry -= 1
-            else:
-                tlog(
-                    f"liquidator(): {symbol} {trading_data.positions[symbol]} {trading_data.last_used_strategy[symbol].type} {trading_data.last_used_strategy[symbol].name}"
-                )
+        await liquidator_loop()
     except asyncio.CancelledError:
         tlog("liquidator() cancelled")
     except KeyboardInterrupt:
@@ -427,7 +430,7 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
     for s in trading_data.strategies:
         if s.algo_run.run_id == algo_run_id:
             trading_data.last_used_strategy[symbol] = s
-            tlog(f"found strategy {str(s)}")
+            tlog(f"found strategy {str(s)} for symbol {symbol}")
             break
 
     if event == "partial_fill" and symbol in trading_data.last_used_strategy:
@@ -469,7 +472,7 @@ async def handle_transaction(
 
     await aggregate_bar_data(data_loader, data, ts)
 
-    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=10):  # type: ignore
+    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=30):  # type: ignore
         tlog(f"T$ {symbol} too out of sync w {time_diff}")
         return False
     elif (
@@ -556,6 +559,11 @@ async def aggregate_bar_data(
     data_loader: DataLoader, data: Dict, ts: pd.Timestamp
 ) -> None:
     symbol = data["symbol"]
+
+    if not data_loader.exist(symbol):
+        print(f"loading data for {symbol}...")
+        data_loader[symbol][-1]
+
     try:
         current = data_loader[symbol].loc[ts]
     except KeyError:
@@ -688,6 +696,39 @@ async def execute_strategy_result(
         )
 
 
+async def do_strategy(
+    strategy: Strategy,
+    symbol: str,
+    shortable: bool,
+    position: float,
+    data_loader: DataLoader,
+    trader: Trader,
+    minute_history: df,
+    now: pd.Timestamp,
+    portfolio_value: Optional[float],
+) -> bool:
+    do, what = await strategy.run(
+        symbol=symbol,
+        shortable=shortable,
+        position=position,
+        minute_history=minute_history,
+        now=now,
+        portfolio_value=portfolio_value,
+    )
+
+    if do:
+        await execute_strategy_result(
+            strategy=strategy,
+            trader=trader,
+            data_loader=data_loader,
+            symbol=symbol,
+            what=what,
+        )
+    elif what.get("reject", False):
+        return False
+    return True
+
+
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -707,7 +748,6 @@ async def do_strategies(
 
         if s.name in rejects and symbol in rejects[s.name]:
             continue
-
         try:
             skip = await s.should_run_all()
         except Exception:
@@ -716,8 +756,8 @@ async def do_strategies(
             if skip:
                 continue
         try:
-
-            do, what = await s.run(
+            if not await do_strategy(
+                strategy=s,
                 symbol=symbol,
                 shortable=shortable[symbol],
                 position=position,
@@ -726,7 +766,14 @@ async def do_strategies(
                     second=0, microsecond=0
                 ),
                 portfolio_value=config.portfolio_value,
-            )
+                data_loader=data_loader,
+                trader=trader,
+            ):
+                if s.name not in rejects:
+                    rejects[s.name] = [symbol]
+                else:
+                    rejects[s.name].append(symbol)
+
         except Exception:
             traceback.print_exc()
             exc_info = sys.exc_info()
@@ -734,20 +781,6 @@ async def do_strategies(
             for line in lines:
                 tlog(f"{line}")
             del exc_info
-
-        if do:
-            await execute_strategy_result(
-                strategy=s,
-                trader=trader,
-                data_loader=data_loader,
-                symbol=symbol,
-                what=what,
-            )
-        elif what.get("reject", False):
-            if s.name not in rejects:
-                rejects[s.name] = [symbol]
-            else:
-                rejects[s.name].append(symbol)
 
 
 async def handle_aggregate(
@@ -838,7 +871,7 @@ async def handle_data_queue_msg(
 
 
 async def queue_consumer(
-    queue: Queue, data_loader: DataLoader, trader: Trader
+    queue: MNQueue, data_loader: DataLoader, trader: Trader
 ) -> None:
     tlog("queue_consumer() starting")
     try:
@@ -848,12 +881,8 @@ async def queue_consumer(
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
-                elif not await handle_data_queue_msg(
-                    data, trader, data_loader
-                ):
-                    while not queue.empty():
-                        _ = queue.get()
-                    tlog("cleaned queue")
+                else:
+                    await handle_data_queue_msg(data, trader, data_loader)
 
             except Empty:
                 await asyncio.sleep(0)
@@ -952,7 +981,7 @@ async def create_strategies(
 
 
 async def consumer_async_main(
-    queue: Queue,
+    queue: MNQueue,
     symbols: List[str],
     unique_id: str,
     strategies_conf: Dict,
@@ -1082,7 +1111,7 @@ async def load_current_positions(
 
 
 def consumer_main(
-    queue: Queue,
+    queue: MNQueue,
     symbols: List[str],
     unique_id: str,
     conf: Dict,

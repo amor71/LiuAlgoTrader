@@ -10,9 +10,10 @@ import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
 from queue import Empty, Full
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
+from mnqueues import MNQueue
 from pytz import timezone
 from pytz.tzinfo import DstTzInfo
 
@@ -28,58 +29,66 @@ from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
 symbols: List[str]
-data_channels: List = []
 queue_id_hash: Dict[str, int]
 symbol_strategy: Dict = {}
 
 
+def get_new_symbols_and_queues(
+    symbols_details: Dict, queues: List[MNQueue], num_consumer_processes: int
+) -> List[str]:
+    global symbol_strategy
+
+    new_symbols: List = []
+    for symbol_details in symbols_details:
+        if symbol_details["symbol"] not in symbols:
+            new_symbols.append(symbol_details["symbol"])
+            symbol_strategy[symbol_details["symbol"]] = symbol_details[
+                "target_strategy_name"
+            ]
+            streaming_factory().get_instance().queues[
+                symbol_details["symbol"]
+            ] = queues[
+                random.SystemRandom().randint(0, num_consumer_processes - 1)
+            ]
+
+    return new_symbols
+
+
+async def subscribe_new_symbols(new_symbols: List[str]):
+    await streaming_factory().get_instance().subscribe(
+        new_symbols,
+        [
+            WSEventType.SEC_AGG,
+            WSEventType.MIN_AGG,
+            WSEventType.TRADE,
+        ],
+    )
+
+
 async def scanner_input(
     scanner_queue: Queue,
-    queues: List[Queue],
+    queues: List[MNQueue],
     num_consumer_processes: int,
 ) -> None:
     tlog("scanner_input() task starting ")
-    global data_channels
-    global queue_id_hash
-    global symbol_strategy
     global symbols
 
     while True:
         try:
             symbols_details = scanner_queue.get(timeout=1)
             if symbols_details:
-                symbols_details = json.loads(symbols_details)
-                new_symbols: List = []
                 new_channels: List = []
-                for symbol_details in symbols_details:
-                    if symbol_details["symbol"] not in symbols:
-                        new_symbols.append(symbol_details["symbol"])
-                        symbol_strategy[
-                            symbol_details["symbol"]
-                        ] = symbol_details["target_strategy_name"]
-                        streaming_factory().get_instance().queues[
-                            symbol_details["symbol"]
-                        ] = queues[
-                            random.SystemRandom().randint(
-                                0, num_consumer_processes - 1
-                            )
-                        ]
-
-                if len(new_symbols):
-                    await streaming_factory().get_instance().subscribe(
-                        new_symbols,
-                        [
-                            WSEventType.SEC_AGG,
-                            WSEventType.MIN_AGG,
-                            WSEventType.TRADE,
-                        ],
+                if len(
+                    new_symbols := get_new_symbols_and_queues(
+                        symbols_details=json.loads(symbols_details),
+                        queues=queues,
+                        num_consumer_processes=num_consumer_processes,
                     )
-                    symbols += new_symbols
-                    data_channels += new_channels
-
+                ):
+                    await subscribe_new_symbols(new_symbols)
                     trending_db = TrendingTickers(config.batch_id)
                     await trending_db.save(new_symbols)
-
+                    symbols += new_symbols
                     tlog(
                         f"added {len(new_symbols)}:{new_symbols} TOTAL: {len(symbols)}"
                     )
@@ -112,10 +121,9 @@ async def trade_run(qm: QueueMapper) -> None:
 
 
 async def run(
-    queues: List[Queue],
+    queues: List[MNQueue],
     qm: QueueMapper,
 ) -> None:
-    global data_channels
     global queue_id_hash
 
     ps = streaming_factory()(qm)
@@ -128,8 +136,10 @@ async def run(
 
 
 async def teardown_task(
-    to_market_close: timedelta, tasks: List[asyncio.Task]
+    to_market_close: Optional[timedelta], tasks: List[asyncio.Task]
 ) -> None:
+    if not to_market_close:
+        return
     tlog("producer teardown_task() starting")
     if not config.market_close:
         tlog(
@@ -179,7 +189,7 @@ process main
 
 
 async def producer_async_main(
-    queues: List[Queue],
+    queues: List[MNQueue],
     scanner_queue: Queue,
     num_consumer_processes: int,
 ):
@@ -188,6 +198,9 @@ async def producer_async_main(
     await run(queues=queues, qm=qm)
 
     at = AlpacaTrader(qm)
+
+    if not at.get_time_market_close():
+        return
     trade_updates_task = await at.run()
 
     scanner_input_task = asyncio.create_task(
@@ -213,7 +226,7 @@ async def producer_async_main(
 
 def producer_main(
     unique_id: str,
-    queues: List[Queue],
+    queues: List[MNQueue],
     current_symbols: List[str],
     current_queue_id_hash: Dict[str, int],
     market_close: datetime,
