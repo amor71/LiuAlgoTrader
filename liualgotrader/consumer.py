@@ -424,6 +424,7 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
     tlog(
         f"trade update without order for {symbol} data={data} with event {event}"
     )
+    return True
 
     algo_run_id = await NewTrade.get_latest_algo_run_id(symbol=symbol)
     tlog(f"found algo_run_id {algo_run_id}")
