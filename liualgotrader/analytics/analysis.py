@@ -157,6 +157,8 @@ async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = p.batch_id AND
             p.portfolio_id = '{portfolio_id}' AND
+            price > 0.0 AND 
+            stop_price is not null AND
             t.expire_tstamp is null 
         ORDER BY symbol, tstamp
     """
@@ -373,7 +375,7 @@ def calc_symbol_trades_returns(
             t1 = t2
             t2 = None
 
-    if qty and t1:
+    if qty and t1 is not None:
         for i in range(t1, len(daily_returns.index)):
             value = (
                 qty
