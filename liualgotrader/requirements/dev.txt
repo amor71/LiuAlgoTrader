@@ -45,6 +45,8 @@ quantstats==0.0.34
 tqdm==4.61.2
 mnqueues
 toml
+sphinxcontrib-htmlhelp
+sphinxcontrib-serializinghtml
 
 
 
