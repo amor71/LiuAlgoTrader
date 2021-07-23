@@ -692,9 +692,7 @@ async def execute_strategy_result(
             ).replace(second=0, microsecond=0)
 
     except APIError as e:
-        tlog(
-            f"Exception APIError with {e} from {what}, checking if order filled"
-        )
+        tlog(f"Exception APIError with {e} from {what}")
 
 
 async def do_strategy(

@@ -229,17 +229,19 @@ class AlpacaTrader(Trader):
         data.__dict__["_raw"]["EV"] = "trade_update"
         data.__dict__["_raw"]["symbol"] = symbol
         try:
-            cls.get_instance().queues[symbol].put(
-                data.__dict__["_raw"], timeout=1
-            )
+            # cls.get_instance().queues[symbol].put(
+            #    data.__dict__["_raw"], timeout=1
+            # )
+            for q in cls.get_instance().queues.get_allqueues():
+                q.put(data.__dict__["_raw"], timeout=1)
         except queue.Full as f:
             tlog(
                 f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
             )
             raise
-        except AssertionError:
-            for q in cls.get_instance().queues.get_allqueues():
-                q.put(data.__dict__["_raw"], timeout=1)
+        # except AssertionError:
+        #    for q in cls.get_instance().queues.get_allqueues():
+        #        q.put(data.__dict__["_raw"], timeout=1)
         except Exception as e:
             tlog(f"[EXCEPTION] process_message(): exception {e}")
             traceback.print_exc()

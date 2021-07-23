@@ -388,6 +388,23 @@ def calc_symbol_trades_returns(
             daily_returns.loc[daily_returns.index[i], "equity"] += value
 
 
+def calc_symbol_state(
+    symbol: str,
+    symbol_trades: pd.DataFrame,
+    data_loader: DataLoader,
+) -> Tuple[float, float]:
+    t1 = t2 = None
+    qty: float = 0
+    eastern = timezone("US/Eastern")
+    for _, row in symbol_trades.iterrows():
+        if row.operation == "buy":
+            qty += row.qty
+        elif row.operation == "sell":
+            qty -= row.qty
+
+    return qty, data_loader[symbol].close[-1]
+
+
 def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
     portfolio = loop.run_until_complete(Portfolio.load_by_batch_id(batch_id))
@@ -502,3 +519,45 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
             df = pd.concat([df, _df], axis=0) if df is not None else _df
 
     return df
+
+
+def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
+
+    try:
+        account_id, initial_account_size = loop.run_until_complete(
+            Portfolio.load_details(portfolio_id)
+        )
+    except Exception:
+        print("ERROR loading portfolio-id, please verify id and re-run.")
+        return pd.DataFrame()
+
+    data_loader = DataLoader()
+    trades = load_trades_by_portfolio(portfolio_id)
+    start_date = trades.client_time.min().date()
+    end_date = trades.client_time.max().date()
+    trader = trader_factory()()
+
+    cash_df = get_cash(account_id, initial_account_size)
+    symbols = trades.symbol.unique().tolist()
+    rows = []
+    for i in tqdm(
+        range(len(symbols)), desc=f"loading portfolio {portfolio_id}"
+    ):
+        symbol = symbols[i]
+        symbol_trades = trades[trades.symbol == symbol].sort_values(
+            by="client_time"
+        )
+        qty, last_price = calc_symbol_state(symbol, symbol_trades, data_loader)
+        rows.append(
+            {
+                "symbol": symbol,
+                "qty": qty,
+                "price": last_price,
+                "total": qty * last_price,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    return df.loc[df.qty > 0]
