@@ -174,3 +174,51 @@ async def test_negative_add_transaction2() -> bool:
         )
 
     return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_clear_balance() -> bool:
+    print("test_clear_balance")
+    balance = 1234.0
+    account_id = await Accounts.create(
+        balance=balance,
+        allow_negative=True,
+        credit_line=2000.0,
+    )
+    print(f"new account_id:{account_id}")
+    if balance != await Accounts.get_balance(account_id):
+        raise AssertionError("get_balance() did not return the expect value")
+
+    print(f"balance {balance}")
+
+    await Accounts.clear_balance(account_id)
+    if 0.0 != await Accounts.get_balance(account_id):
+        raise AssertionError("clear balance failed")
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_clear_transactions() -> bool:
+    print("test_clear_transactions")
+    balance = 100.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=True, credit_line=5000.0
+    )
+    amount = 1000.0
+    await Accounts.add_transaction(account_id, -amount)
+    if balance - amount != await Accounts.get_balance(account_id):
+        raise AssertionError(
+            "test_clear_transactions(): get_balance() did not return the expect value"
+        )
+
+    await Accounts.clear_account_transactions(account_id)
+    _df = await Accounts.get_transactions(account_id)
+    if not _df.empty:
+        raise AssertionError(
+            "test_clear_transactions(): failed to clear account_transactions"
+        )
+
+    return True

@@ -108,4 +108,53 @@ class Accounts:
             """
 
         df = await fetch_as_dataframe(q, account_id)
-        return df.set_index("tstamp", drop=True)
+        return (
+            df.set_index("tstamp", drop=True).sort_index()
+            if not df.empty
+            else df
+        )
+
+    @classmethod
+    async def clear_balance(cls, account_id: int, new_balance: float):
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                try:
+                    await con.execute(
+                        """
+                            UPDATE  
+                                accounts
+                            SET
+                                balance = $2
+                            WHERE
+                                account_id = $1
+                        """,
+                        account_id,
+                        new_balance,
+                    )
+                except Exception as e:
+                    tlog(
+                        f"[EXCEPTION] clear_balance() failed with {e} current balance={await cls.get_balance(account_id)}"
+                    )
+                    raise
+
+    @classmethod
+    async def clear_account_transactions(cls, account_id: int):
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            async with con.transaction():
+                try:
+                    await con.execute(
+                        """
+                            DELETE FROM  
+                                account_transactions
+                            WHERE
+                                account_id = $1
+                        """,
+                        account_id,
+                    )
+                except Exception as e:
+                    tlog(
+                        f"[EXCEPTION] clear_account_transactions() failed with {e} current balance={await cls.get_balance(account_id)}"
+                    )
+                    raise

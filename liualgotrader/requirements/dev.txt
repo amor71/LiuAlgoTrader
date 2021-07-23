@@ -47,6 +47,7 @@ mnqueues
 toml
 sphinxcontrib-htmlhelp
 sphinxcontrib-serializinghtml
+fire
 
 
 
