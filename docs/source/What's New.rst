@@ -3,6 +3,11 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.3.19           | 1. New CLI for portfolio managment,          |
+|                  | 2. New notebook for portfolio trades,        |
+|                  | 3. Revised documentation,                    |
+|                  | 4. minor fixes.                              |
++------------------+----------------------------------------------+
 | 0.3.18           | fixes for portfolio analysis                 |
 +------------------+----------------------------------------------+
 | 0.3.16           | Added Windows installation FAQ, code         |
