@@ -20,6 +20,8 @@ and it will automatically optimize for best performance for either.
 
 LiuAlgoTrader uses Alpaca.Markets brokerage APIs for trading, and can use either Alpaca or Polygon.io for stocks' data. The framework is evolving to support additional brokers and data-providers.
 
+LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
+
 ## See LiuAlgoTrader in Action
 
 LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool. 

@@ -60,7 +60,53 @@ Parallel execution
 Similarly to the `trader` application, the `optimizer` also supports multi-processing execution to optimize run times. By default the `optimizer` executes 4 process, however that may be changed by speciying the `--concurrency` parameter.
 
 
+Portfolio
+---------
+
+The Portfolio app, uses Google Fire_ infrastructure for CLI development. 
+
+.. _Fire: https://github.com/google/python-fire
 
 
+The application provides means for creating portfolios, displaying current portfolio status in a neat table, displaying the cash account transactions, as well as a re-processing tool. 
+
+Usage
+*****
+
+To see the diffent commands of the `portfolio` application, type: 
+
+.. code-block:: bash
+
+    portfolio --help
+
+
+Create Portfolio
+****************
+
+To create a new portfolio, type:
+
+.. code-block:: bash
+
+    portfolio create <portfolio cash amount> <credit line>
+
+For example, running the below creates a new portfolio, with a cash account of $10,000 and a credit line of $1,000.
+
+.. code-block:: bash
+
+    portfolio create 10000 1000
+
+
+Re-processing
+*************
+
+The cash account is updated with every trade. Normally, there will not be a need to re-calculate the cash requests from the account. In some cases, however, where manual intervension is required, it may be helpful to re-caculate the cash transaction.
+
+**WARNING**: This operation is not reversible ! 
+
+To create a recalculate portfolio, type:
+
+.. code-block:: bash
+
+    portfolio recalc <portfolio-id> 
 
 
