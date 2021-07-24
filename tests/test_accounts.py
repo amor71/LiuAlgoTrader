@@ -193,7 +193,7 @@ async def test_clear_balance() -> bool:
     print(f"balance {balance}")
 
     await Accounts.clear_balance(account_id)
-    if 0.0 != await Accounts.get_balance(account_id):
+    if await Accounts.get_balance(account_id) != 0.0:
         raise AssertionError("clear balance failed")
 
     return True
