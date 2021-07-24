@@ -133,7 +133,8 @@ async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
         WHERE 
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = '{batch_id}' AND
-            t.expire_tstamp is null 
+            t.expire_tstamp is null AND 
+            price != 0.0 
         ORDER BY symbol, tstamp
     """
     df: pd.DataFrame = await fetch_as_dataframe(query)
