@@ -21,5 +21,6 @@ quantstats==0.0.34
 mnqueues
 tqdm==4.61.2
 toml
+fire
 
 

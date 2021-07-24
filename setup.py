@@ -49,5 +49,7 @@ setuptools.setup(
         "liualgotrader/market_miner",
         "liualgotrader/backtester",
         "liualgotrader/liu",
+        "liualgotrader/optimizer",
+        "liualgotrader/portfolio",
     ],
 )

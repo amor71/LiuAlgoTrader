@@ -19,6 +19,7 @@ LiuAlgoTrader is made of the following components:
 - **backtester**: re-running past trading sessions, back-testing strategies,
 - **market_miner**: application for collecting market data and run market off-hours calculations & strategies,
 - **optimizer**: application for optimizing strategies' hyper-parameters. 
+- **portfolio**: application for managing & tracking portfolios. 
 
 AND
 
@@ -43,7 +44,7 @@ sessions w/ LiuAlgoTrader.
    Trading
    Backtesting 
    Off-market
-   Optimizer
+   Additional apps
    Analysis
    Examples
    How to Contribute

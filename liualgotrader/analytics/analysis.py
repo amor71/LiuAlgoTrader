@@ -133,7 +133,8 @@ async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
         WHERE 
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = '{batch_id}' AND
-            t.expire_tstamp is null 
+            t.expire_tstamp is null AND 
+            price != 0.0 
         ORDER BY symbol, tstamp
     """
     df: pd.DataFrame = await fetch_as_dataframe(query)
@@ -539,7 +540,6 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     end_date = trades.client_time.max().date()
     trader = trader_factory()()
 
-    cash_df = get_cash(account_id, initial_account_size)
     symbols = trades.symbol.unique().tolist()
     rows = []
     for i in tqdm(
@@ -560,4 +560,21 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
         )
 
     df = pd.DataFrame(rows)
-    return df.loc[df.qty > 0]
+    return df.loc[df.qty > 0].round(2)
+
+
+def get_portfolio_cash(portfolio_id: str) -> pd.DataFrame:
+    loop = asyncio.get_event_loop()
+    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
+
+    try:
+        account_id, _ = loop.run_until_complete(
+            Portfolio.load_details(portfolio_id)
+        )
+    except Exception:
+        print("ERROR loading portfolio-id, please verify id and re-run.")
+        return pd.DataFrame()
+
+    return loop.run_until_complete(
+        Accounts.get_transactions(account_id)
+    ).round(2)
