@@ -20,7 +20,7 @@ finnhub-python==2.4.0
 quantstats==0.0.34
 mnqueues==0.0.21
 tqdm==4.61.2
-toml
+toml==0.10.2
 fire
 
 
