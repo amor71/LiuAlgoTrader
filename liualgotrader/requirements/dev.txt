@@ -46,7 +46,7 @@ tqdm==4.61.2
 mnqueues==0.0.21
 toml==0.10.2
 sphinxcontrib-htmlhelp==2.0.0
-sphinxcontrib-serializinghtml
+sphinxcontrib-serializinghtml==1.1.5
 fire
 
 
