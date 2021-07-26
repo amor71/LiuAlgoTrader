@@ -5,7 +5,7 @@ urllib3==1.26.6
 numpy==1.21.1
 mypy==0.910
 black==21.7b0
-pylint==2.9.3
+pylint==2.9.5
 flake8==3.9.2
 Cython==0.29.24
 alpaca-trade-api==1.2.3
