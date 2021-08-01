@@ -185,10 +185,10 @@ async def do_strategy_result(
         str(now),
         trading_data.stop_prices[symbol]
         if symbol in trading_data.stop_prices
-        else None,
+        else 0.0,
         trading_data.target_prices[symbol]
         if symbol in trading_data.target_prices
-        else None,
+        else 0.0,
     )
 
     return True

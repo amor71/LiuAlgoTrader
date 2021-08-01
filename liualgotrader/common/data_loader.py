@@ -153,8 +153,16 @@ class SymbolData:
 
             try:
                 return self.data.symbol_data.iloc[
-                    self.data.symbol_data.index.get_loc(key, method="ffill")
+                    self.data.symbol_data.sort_index().index.get_loc(
+                        key, method="ffill"
+                    )
                 ][self.name]
+
+            except ValueError:
+                tlog(
+                    f"[EXCEPTION] ValueError {key},{repr(key)},{type(key)} {self.data.symbol_data.index[-760:]}"
+                )
+                raise
             except KeyError:
                 self.data.fetch_data_timestamp(key)
                 return self.data.symbol_data.index.get_loc(
@@ -252,6 +260,9 @@ class SymbolData:
     def _get_index(self, index: datetime, method: str = "ffill") -> int:
         try:
             return self.symbol_data.index.get_loc(index, method=method)
+        except ValueError:
+            tlog(f"[EXCEPTION] ValueError {index},{self.symbol_data.index}")
+            raise
         except KeyError:
             self.fetch_data_timestamp(index)
             return self.symbol_data.index.get_loc(index, method="nearest")

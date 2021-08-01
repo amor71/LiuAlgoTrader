@@ -73,7 +73,6 @@ def create(account_size: float, credit_line: float):
 def trades(portfolio_id):
     """Display portfolio trades"""
     portfolio = analysis.load_trades_by_portfolio(portfolio_id)
-
     portfolio = (
         portfolio[["tstamp", "symbol", "operation", "qty", "price"]]
         .set_index("tstamp")

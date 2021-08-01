@@ -158,8 +158,8 @@ async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = p.batch_id AND
             p.portfolio_id = '{portfolio_id}' AND
-            price > 0.0 AND 
-            stop_price is not null AND
+            price != 0.0 AND 
+            target_price is not null AND
             t.expire_tstamp is null 
         ORDER BY symbol, tstamp
     """
@@ -343,7 +343,9 @@ def calc_symbol_trades_returns(
 ):
     t1 = t2 = None
     qty: int = 0
-    eastern = timezone("US/Eastern")
+    eastern = timezone(
+        "US/Eastern",
+    )
     for _, row in symbol_trades.iterrows():
         if t1 is None:
             t1 = daily_returns.index.get_loc(str(row.client_time.date()))
@@ -357,7 +359,7 @@ def calc_symbol_trades_returns(
                     * data_loader[symbol].close[
                         eastern.localize(
                             daily_returns.index[i].to_pydatetime()
-                        ).replace(hour=9, minute=30)
+                        ).replace(hour=9, minute=30, second=0, microsecond=0)
                     ]
                 )
                 daily_returns.loc[
@@ -383,7 +385,7 @@ def calc_symbol_trades_returns(
                 * data_loader[symbol].close[
                     eastern.localize(
                         daily_returns.index[i].to_pydatetime()
-                    ).replace(hour=9, minute=30)
+                    ).replace(hour=9, minute=30, second=0, microsecond=0)
                 ]
             )
             daily_returns.loc[daily_returns.index[i], "equity"] += value
@@ -478,6 +480,9 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
+
+    if trades.empty:
+        return pd.DataFrame()
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
     trader = trader_factory()()
@@ -513,6 +518,10 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
     if len(portfolio_ids):
         for i in tqdm(range(len(portfolio_ids)), desc="Loading Portfolios"):
             _df = calc_portfolio_returns(portfolio_ids[i])
+
+            if _df.empty:
+                continue
+
             _df["portfolio_id"] = portfolio_ids[i]
             _df["configurations"] = hypers[i]
             _df.reset_index(inplace=True)
