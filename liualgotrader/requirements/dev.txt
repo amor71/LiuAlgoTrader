@@ -47,7 +47,7 @@ mnqueues==0.0.22
 toml==0.10.2
 sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml==1.1.5
-fire
+fire==0.4.0
 
 
 
