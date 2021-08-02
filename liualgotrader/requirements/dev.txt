@@ -28,7 +28,7 @@ twine==3.4.2
 streamlit==0.85.1
 stockstats==0.3.2
 nest_asyncio==1.5.1
-nbqa==0.13.1
+nbqa==1.1.0
 pre-commit==2.13.0
 empyrical==0.5.5
 sklearn==0.0
