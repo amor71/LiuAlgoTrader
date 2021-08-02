@@ -45,7 +45,7 @@ quantstats==0.0.34
 tqdm==4.62.0
 mnqueues==0.0.22
 toml==0.10.2
-sphinxcontrib-htmlhelp
+sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml
 fire
 
