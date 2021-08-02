@@ -153,9 +153,7 @@ class SymbolData:
 
             try:
                 return self.data.symbol_data.iloc[
-                    self.data.symbol_data.sort_index().index.get_loc(
-                        key, method="ffill"
-                    )
+                    self.data.symbol_data.index.get_loc(key, method="ffill")
                 ][self.name]
 
             except ValueError:
@@ -380,7 +378,7 @@ class SymbolData:
                 "average",
                 "count",
             ]
-        )
+        ).sort_index()
 
     def fetch_data_range(self, start: datetime, end: datetime) -> None:
         if self.scale not in (TimeScale.minute, TimeScale.day):
@@ -431,7 +429,7 @@ class SymbolData:
                 "average",
                 "count",
             ]
-        )
+        ).sort_index()
 
     def __repr__(self):
         return str(self.symbol_data)
