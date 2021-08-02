@@ -21,6 +21,6 @@ quantstats==0.0.34
 mnqueues==0.0.22
 tqdm==4.62.0
 toml==0.10.2
-fire
+fire==0.4.0
 
 
