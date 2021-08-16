@@ -5,7 +5,7 @@ urllib3==1.26.6
 numpy==1.21.2
 alpaca-trade-api==1.2.3
 google-cloud-logging==2.6.0
-asyncpg==0.23.0
+asyncpg==0.24.0
 pygit2==1.6.1
 matplotlib==3.4.2
 tabulate==0.8.9
