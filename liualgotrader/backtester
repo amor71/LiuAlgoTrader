@@ -36,7 +36,6 @@ from liualgotrader import enhanced_backtest
 def dateFromString(s: str) -> date:
     c = pdt.Calendar()
     result, what = c.parse(s)
-
     dt = None
 
     # what was returned (see http://code-bear.com/code/parsedatetime/docs/)
@@ -138,7 +137,7 @@ if __name__ == "__main__":
             sys.exit(0)
     elif sys.argv[1] == "from":
         from_date = dateFromString(sys.argv[2])
-
+        tlog(f"selected {sys.argv[2]} applied {from_date}")
         try:
             scanners: Optional[List] = None
             strategies: Optional[List] = None

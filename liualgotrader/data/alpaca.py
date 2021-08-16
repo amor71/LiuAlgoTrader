@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from multiprocessing import Queue
 from typing import Awaitable, Dict, List
 
+import numpy as np
 import pandas as pd
 import pytz
 from alpaca_trade_api.rest import REST, URL, TimeFrame
@@ -91,16 +92,28 @@ class AlpacaData(DataAPI):
             finally:
                 retry_count -= 1
         data = data.tz_convert("America/New_York")
-        data["vwap"] = None
-        data["average"] = None
-        data["count"] = None
 
         if data.empty:
             raise ValueError(
                 f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
             )
 
-        return data
+        data["average"] = data.vwap
+        data["count"] = data.trade_count
+        data["vwap"] = np.NaN
+
+        return data[
+            [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "count",
+                "average",
+                "vwap",
+            ]
+        ]
 
 
 class AlpacaStream(StreamingAPI):
@@ -109,7 +122,7 @@ class AlpacaStream(StreamingAPI):
             base_url=URL(config.alpaca_base_url),
             key_id=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
-            data_feed="sip",  # config.alpaca_data_feed,
+            data_feed=config.alpaca_data_feed,
         )
 
         if not self.alpaca_ws_client:
@@ -139,11 +152,13 @@ class AlpacaStream(StreamingAPI):
                 "close": msg.close,
                 "high": msg.high,
                 "low": msg.low,
-                "start": int(msg.timestamp // 1000000),
+                "timestamp": pd.to_datetime(
+                    msg.timestamp, utc=True
+                ).astimezone(nytz),
                 "volume": msg.volume,
-                "count": 0.0,
+                "count": msg.trade_count,
                 "vwap": 0.0,
-                "average": 0.0,
+                "average": msg.vwap,
                 "totalvolume": None,
                 "EV": "AM",
             }
@@ -165,13 +180,21 @@ class AlpacaStream(StreamingAPI):
             event = {
                 "symbol": msg.symbol,
                 "price": msg.price,
+                "open": msg.price,
+                "close": msg.price,
+                "high": msg.price,
+                "low": msg.price,
                 "timestamp": pd.to_datetime(msg.timestamp),
                 "volume": msg.size,
                 "exchange": msg.exchange,
                 "conditions": msg.conditions,
                 "tape": msg.tape,
+                "average": None,
+                "count": 1,
+                "vwap": None,
                 "EV": "T",
             }
+
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
             tlog(

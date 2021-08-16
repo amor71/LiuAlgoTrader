@@ -91,7 +91,7 @@ if __name__ == "__main__":
         conf_dict = toml.load(config.miner_configuration_filename)
     except FileNotFoundError:
         tlog(
-            f"[ERROR] could not locate market_miner configuration file {config.configuration_filename}"
+            f"[ERROR] could not locate market_miner configuration file {config.miner_configuration_filename}"
         )
         sys.exit(0)
 

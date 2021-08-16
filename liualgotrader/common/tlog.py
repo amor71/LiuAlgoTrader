@@ -2,9 +2,9 @@ import os
 import sys
 from datetime import datetime
 
-from google.cloud import logging
-
 try:
+    from google.cloud import logging
+
     logger = logging.Client().logger("trader")
 except Exception:
     logger = None

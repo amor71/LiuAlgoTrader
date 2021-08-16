@@ -6,6 +6,7 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from queue import Empty
+from random import randint
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -456,50 +457,6 @@ async def handle_trade_update(data: Dict) -> bool:
         return await handle_trade_update_wo_order(data)
 
 
-async def handle_transaction(
-    symbol: str, data: Dict, trader: Trader, data_loader: DataLoader
-) -> bool:
-    ts = pd.to_datetime(
-        data["timestamp"].replace(second=0, microsecond=0, nanosecond=0)
-    )
-
-    data["open"] = data["price"]
-    data["high"] = data["price"]
-    data["low"] = data["price"]
-    data["close"] = data["price"]
-    data["average"] = None
-    data["count"] = None
-    data["vwap"] = None
-
-    await aggregate_bar_data(data_loader, data, ts)
-
-    if (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=30):  # type: ignore
-        tlog(f"T$ {symbol} too out of sync w {time_diff}")
-        return False
-    elif (
-        datetime.now(tz=timezone("America/New_York")).replace(
-            second=0, microsecond=0
-        )
-        > ts
-    ):
-        return True
-    if (
-        time_tick.get(symbol)
-        and data["timestamp"].replace(microsecond=0) == time_tick[symbol]
-    ):
-        return True
-
-    time_tick[symbol] = data["timestamp"].replace(microsecond=0)
-
-    return await handle_aggregate(
-        trader=trader,
-        data_loader=data_loader,
-        symbol=symbol,
-        ts=time_tick[symbol],
-        data=data,
-    )
-
-
 async def handle_quote(data: Dict) -> bool:
     if "askprice" not in data or "bidprice" not in data:
         return True
@@ -562,7 +519,7 @@ async def aggregate_bar_data(
     symbol = data["symbol"]
 
     if not data_loader.exist(symbol):
-        print(f"loading data for {symbol}...")
+        # print(f"loading data for {symbol}...")
         data_loader[symbol][-1]
 
     try:
@@ -828,44 +785,37 @@ async def handle_data_queue_msg(
     global symbol_data_error
     global rejects
 
+    ts = pd.to_datetime(
+        data["timestamp"].replace(second=0, microsecond=0, nanosecond=0)
+    )
     symbol = data["symbol"]
     shortable[symbol] = True  # ToDO
 
-    if data["EV"] == "T":
-        return await handle_transaction(symbol, data, trader, data_loader)
-    elif data["EV"] == "Q":
-        return await handle_quote(data)
+    await aggregate_bar_data(data_loader, data, ts)
 
-    elif data["EV"] in ("A", "AM"):
-        original_ts = ts = pd.Timestamp(
-            data["start"], tz="America/New_York", unit="ms"
-        )
-        ts = ts.replace(second=0, microsecond=0)
+    if data["EV"] != "AM" and (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=30):  # type: ignore
+        if randint(1, 10) == 1:  # nosec
+            tlog(f"{data['EV']} {symbol} too out of sync w {time_diff}")
+        return False
 
-        await aggregate_bar_data(data_loader, data, pd.to_datetime(ts))
+    if (
+        time_tick.get(symbol)
+        and data["timestamp"].replace(microsecond=0, nanosecond=0)
+        == time_tick[symbol]
+    ):
+        return True
 
-        if data["EV"] == "A":
-            if (time_diff := datetime.now(tz=timezone("America/New_York")) - original_ts) > timedelta(seconds=10):  # type: ignore
-                tlog(f"A$ {symbol} too out of sync w {time_diff}")
-                return False
-            elif (
-                datetime.now(tz=timezone("America/New_York")).replace(
-                    second=0, microsecond=0
-                )
-                > ts
-            ):
-                return True
-        elif data["EV"] == "AM":
-            return True
+    time_tick[symbol] = data["timestamp"].replace(microsecond=0, nanosecond=0)
 
-        return await handle_aggregate(
+    asyncio.create_task(
+        handle_aggregate(
             trader=trader,
             data_loader=data_loader,
             symbol=symbol,
-            ts=original_ts,
+            ts=time_tick[symbol],
             data=data,
         )
-
+    )
     return True
 
 
