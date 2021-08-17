@@ -5,8 +5,8 @@ Additional apps
 Optimizer
 ---------
 
-The `optimizer` application is a tool for back-testing strategies, in parallel, while using different parameters. 
-The optimizer helps selecting the best performing hyper-parameters for any strategy.
+The `optimizer` application is a tool for backtesting strategy with different parameters in parallel.
+`optimizer` helps select the best hyper-parameters for a strategy.
 
 How-To
 ******
@@ -17,16 +17,16 @@ To use the `optimizer` application, a new section should be added to the `tradep
   :language: python
   :linenos:
 
-* Note the [optimizer] section added to the tradeplan.toml file,
-* start_date & end_date specify the time-window for backtesting, 
+* Note the [optimizer] section is added to the tradeplan.toml file,
+* `start_date` & `end_date` specify the time-window for backtesting,
 * The `optimizer` always runs in daily time-scale,
 
 
-Params and Hypers
-*****************
+Parameters and Hyper-parameters
+*******************************
 
 The `optimizer` application supports two different 
-types of configuration-space constructs: Parmeter and Hyper-Parameters.
+types of configuration-space constructs: Parmeters and Hyper-Parameters.
 
 Parameters are meta-instructions for generating configurations for strategies,
 that are calculated per back-testing step. In contrast, Hyper-Parameters is a 
@@ -57,11 +57,11 @@ performance of the different configurations.
 
 Parallel execution
 ******************
-Similarly to the `trader` application, the `optimizer` also supports multi-processing execution to optimize run times. By default the `optimizer` executes 4 process, however that may be changed by speciying the `--concurrency` parameter.
+Similar to `trader` application, `optimizer` supports multi-processing execution to optimize run times. By default the `optimizer` executes 4 process, however that may be changed by specifying the `--concurrency` parameter.
 
 
 Portfolio
----------
+*********
 
 The Portfolio app, uses Google Fire_ infrastructure for CLI development. 
 
