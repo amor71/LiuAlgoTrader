@@ -534,9 +534,9 @@ async def aggregate_bar_data(
             data["low"],
             data["close"],
             data["volume"],
+            data["vwap"],
             data["average"],
             data["count"],
-            data["vwap"],
         ]
     else:
         new_data = [
@@ -545,9 +545,9 @@ async def aggregate_bar_data(
             min(data["low"], current["low"]),
             data["close"],
             current["volume"] + data["volume"],
-            data["average"] or current["average"],
-            data["count"] or current["count"],
             data["vwap"] or current["vwap"],
+            data["average"] or current["average"],
+            data["count"] + current["count"],
         ]
     try:
         data_loader[symbol].loc[ts] = new_data

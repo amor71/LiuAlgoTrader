@@ -198,7 +198,7 @@ class AlpacaStream(StreamingAPI):
             cls.get_instance().queues[msg.symbol].put(event, timeout=1)
         except queue.Full as f:
             tlog(
-                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
             )
             raise
         except Exception as e:
