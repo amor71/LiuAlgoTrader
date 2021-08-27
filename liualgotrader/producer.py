@@ -90,7 +90,7 @@ async def scanner_input(
                     await trending_db.save(new_symbols)
                     symbols += new_symbols
                     tlog(
-                        f"added {len(new_symbols)}:{new_symbols} TOTAL: {len(symbols)}"
+                        f"added {len(new_symbols)}:{new_symbols[:20]}..{new_symbols[-20:]} TOTAL: {len(symbols)}"
                     )
                     await asyncio.sleep(1)
 

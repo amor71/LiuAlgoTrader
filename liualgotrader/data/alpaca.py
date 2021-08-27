@@ -14,6 +14,7 @@ from alpaca_trade_api.rest import REST, URL, TimeFrame
 from alpaca_trade_api.stream import Stream
 
 from liualgotrader.common import config
+from liualgotrader.common.list_utils import chunks
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import (QueueMapper, TimeScale, WSConnectState,
                                         WSEventType)
@@ -214,20 +215,27 @@ class AlpacaStream(StreamingAPI):
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
+        tlog(f"Starting subscription for {len(symbols)} symbols")
+
         for event in events:
-            if event == WSEventType.SEC_AGG:
-                tlog(f"event {event} not implemented in Alpaca")
-            elif event == WSEventType.MIN_AGG:
-                self.alpaca_ws_client._data_ws._running = False
-                self.alpaca_ws_client.subscribe_bars(
-                    AlpacaStream.bar_handler, *symbols
-                )
-            elif event == WSEventType.TRADE:
-                self.alpaca_ws_client.subscribe_trades(
-                    AlpacaStream.trades_handler, *symbols
-                )
-            elif event == WSEventType.QUOTE:
-                self.alpaca_ws_client.subscribe_quotes(
-                    AlpacaStream.quotes_handler, *symbols
-                )
+            for syms in chunks(symbols, 1000):
+                print(syms)
+                if event == WSEventType.SEC_AGG:
+                    tlog(f"event {event} not implemented in Alpaca")
+                elif event == WSEventType.MIN_AGG:
+                    self.alpaca_ws_client._data_ws._running = False
+                    self.alpaca_ws_client.subscribe_bars(
+                        AlpacaStream.bar_handler, *syms
+                    )
+                elif event == WSEventType.TRADE:
+                    self.alpaca_ws_client.subscribe_trades(
+                        AlpacaStream.trades_handler, *syms
+                    )
+                elif event == WSEventType.QUOTE:
+                    self.alpaca_ws_client.subscribe_quotes(
+                        AlpacaStream.quotes_handler, *syms
+                    )
+
+                asyncio.sleep(1)
+
         return True
