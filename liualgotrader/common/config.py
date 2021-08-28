@@ -21,6 +21,7 @@ data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR"
 
 # Performance & Debugging
 trace_enabled = bool(os.getenv("LIU_TRACE_ENABLED", 0))
+debug_enabled = bool(os.getenv("LIU_DEBUG_ENABLED", 0))
 
 #
 # Broker

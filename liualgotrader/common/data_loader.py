@@ -173,7 +173,8 @@ class SymbolData:
                     return self._getitem_slice(key)
                 return self._getitem(key)
             except Exception:
-                traceback.print_exc()
+                if config.debug_enabled:
+                    traceback.print_exc()
                 raise
 
         def __getattr__(self, attr):
@@ -318,8 +319,9 @@ class SymbolData:
                 return self.symbol_data.iloc[
                     self.symbol_data.index.get_loc(key, method="ffill")
                 ]
-        except Exception:
-            traceback.print_exc()
+        except Exception as e:
+            if config.debug_enabled:
+                traceback.print_exc()
             raise
 
     def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:

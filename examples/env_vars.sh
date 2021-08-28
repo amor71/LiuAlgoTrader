@@ -29,5 +29,8 @@ export NUM_CONSUMERS=4
 # Where to look for tradeplan.toml
 export TRADEPLAN_DIR=.
 
-# Enable tracing of messages, using OpenTelemetry, enabled = 1, disabled = 0
-export LIU_TRACE_ENABLED=1
+# Enable tracing, using OpenTelemetry, enabled = 1, disabled = 0 (DEFAULT)
+export LIU_TRACE_ENABLED=0
+
+# Enable debugging,  enabled = 1, disabled = 0 (DEFAULT)
+export LIU_DEBUG_ENABLED=0

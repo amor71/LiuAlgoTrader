@@ -5,6 +5,7 @@ import time
 import traceback
 from datetime import date, datetime, timedelta
 from multiprocessing import Queue
+from random import randint
 from typing import Awaitable, Dict, List
 
 import numpy as np
@@ -67,7 +68,7 @@ class AlpacaData(DataAPI):
             else None
         )
 
-        retry_count = 3
+        retry_count = 2
         while True:
             try:
                 data = self.alpaca_rest_client.get_bars(
@@ -87,7 +88,7 @@ class AlpacaData(DataAPI):
                 tlog(
                     f"[ERROR] failed to load {symbol} between {_start} and {_end}. Exception {type(e).__name__} with {e}. retrying"
                 )
-                time.sleep(10)
+                time.sleep(1)
             else:
                 break
             finally:
@@ -173,11 +174,19 @@ class AlpacaStream(StreamingAPI):
             tlog(
                 f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
             )
-            traceback.print_exc()
+            if config.debug_enabled:
+                traceback.print_exc()
 
     @classmethod
     async def trades_handler(cls, msg):
         try:
+            ts = pd.to_datetime(msg.timestamp)
+            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(seconds=10):  # type: ignore
+                if randint(1, 100) == 1:  # nosec
+                    tlog(
+                        f"Received trade for {msg.symbol} too out of sync w {time_diff}"
+                    )
+
             event = {
                 "symbol": msg.symbol,
                 "price": msg.price,
@@ -185,7 +194,7 @@ class AlpacaStream(StreamingAPI):
                 "close": msg.price,
                 "high": msg.price,
                 "low": msg.price,
-                "timestamp": pd.to_datetime(msg.timestamp),
+                "timestamp": ts,
                 "volume": msg.size,
                 "exchange": msg.exchange,
                 "conditions": msg.conditions,
@@ -196,7 +205,8 @@ class AlpacaStream(StreamingAPI):
                 "EV": "T",
             }
 
-            cls.get_instance().queues[msg.symbol].put(event, timeout=1)
+            cls.get_instance().queues[msg.symbol].put(event, block=False)
+
         except queue.Full as f:
             tlog(
                 f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
@@ -206,7 +216,8 @@ class AlpacaStream(StreamingAPI):
             tlog(
                 f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
             )
-            traceback.print_exc()
+            if config.debug_enabled:
+                traceback.print_exc()
 
     @classmethod
     async def quotes_handler(cls, msg):
@@ -217,9 +228,9 @@ class AlpacaStream(StreamingAPI):
     ) -> bool:
         tlog(f"Starting subscription for {len(symbols)} symbols")
 
-        for event in events:
-            for syms in chunks(symbols, 1000):
-                print(syms)
+        for syms in chunks(symbols, 1000):
+            tlog(f"\tsubscribe {len(syms)}/{len(symbols)}")
+            for event in events:
                 if event == WSEventType.SEC_AGG:
                     tlog(f"event {event} not implemented in Alpaca")
                 elif event == WSEventType.MIN_AGG:
@@ -236,6 +247,7 @@ class AlpacaStream(StreamingAPI):
                         AlpacaStream.quotes_handler, *syms
                     )
 
-                asyncio.sleep(1)
+            await asyncio.sleep(1)
 
+        tlog(f"Completed subscription for {len(symbols)} symbols")
         return True

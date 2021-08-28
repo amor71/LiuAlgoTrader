@@ -20,6 +20,7 @@ from pytz import timezone
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.decorators import trace
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
@@ -92,7 +93,8 @@ async def do_strategy_all(
         await execute_run_all_results(strategy, do, trader, data_loader)
 
     except Exception as e:
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
         tlog(f"[Exception] {now} {strategy}->{e}")
 
         raise
@@ -131,7 +133,8 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
     except KeyboardInterrupt:
         tlog("periodic_runner() - Caught KeyboardInterrupt")
     except Exception as e:
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
         tlog(f"[EXCEPTION] periodic_runner: {e}")
 
     tlog("periodic_runner() task completed")
@@ -595,7 +598,8 @@ async def order_inflight(symbol, existing_order, original_ts, trader) -> bool:
 
         return True
     except AttributeError:
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
         tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
 
     return False
@@ -685,6 +689,7 @@ async def do_strategy(
     return True
 
 
+@trace
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -730,15 +735,18 @@ async def do_strategies(
                 else:
                     rejects[s.name].append(symbol)
 
-        except Exception:
-            traceback.print_exc()
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"{line}")
-            del exc_info
+        except Exception as e:
+            tlog(f"[EXCEPTION] in do_strategies() : {e}")
+            if config.debug_enabled:
+                traceback.print_exc()
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"{line}")
+                del exc_info
 
 
+@trace
 async def handle_aggregate(
     trader: Trader,
     data_loader: DataLoader,
@@ -778,6 +786,7 @@ async def handle_aggregate(
     return True
 
 
+@trace
 async def handle_data_queue_msg(
     data: Dict, trader: Trader, data_loader: DataLoader
 ) -> bool:
@@ -793,8 +802,8 @@ async def handle_data_queue_msg(
 
     await aggregate_bar_data(data_loader, data, ts)
 
-    if data["EV"] != "AM" and (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=30):  # type: ignore
-        if randint(1, 10) == 1:  # nosec
+    if data["EV"] != "AM" and (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=15):  # type: ignore
+        if randint(1, 100) == 1:  # nosec
             tlog(f"{data['EV']} {symbol} too out of sync w {time_diff}")
         return False
 
@@ -819,6 +828,7 @@ async def handle_data_queue_msg(
     return True
 
 
+@trace
 async def queue_consumer(
     queue: MNQueue, data_loader: DataLoader, trader: Trader
 ) -> None:
@@ -846,12 +856,6 @@ async def queue_consumer(
                 tlog(
                     f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args} inside loop"
                 )
-                exc_info = sys.exc_info()
-                lines = traceback.format_exception(*exc_info)
-                for line in lines:
-                    tlog(f"error: {line}")
-                traceback.print_exception(*exc_info)
-                del exc_info
 
     except asyncio.CancelledError:
         tlog("queue_consumer() cancelled ")
@@ -859,12 +863,13 @@ async def queue_consumer(
         tlog(
             f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
         )
-        exc_info = sys.exc_info()
-        lines = traceback.format_exception(*exc_info)
-        for line in lines:
-            tlog(f"error: {line}")
-        traceback.print_exception(*exc_info)
-        del exc_info
+        if config.debug_enabled:
+            exc_info = sys.exc_info()
+            lines = traceback.format_exception(*exc_info)
+            for line in lines:
+                tlog(f"error: {line}")
+            traceback.print_exception(*exc_info)
+            del exc_info
     finally:
         tlog("queue_consumer() task done.")
 
@@ -906,7 +911,8 @@ async def create_strategies(
             tlog(
                 f"[Error]exception of type {type(e).__name__} with args {e.args}"
             )
-            traceback.print_exc()
+            if config.debug_enabled:
+                traceback.print_exc()
             exit(0)
 
     loaded = 0
@@ -945,12 +951,13 @@ async def consumer_async_main(
             tlog(
                 f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
             )
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"error: {line}")
-            traceback.print_exception(*exc_info)
-            del exc_info
+            if config.debug_enabled:
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
 
     trader = trader_factory()()
     config.market_open, config.market_close = trader.get_market_schedule()
@@ -1051,7 +1058,8 @@ async def load_current_positions(
             except ValueError:
                 pass
             except Exception as e:
-                traceback.print_exc()
+                if config.debug_enabled:
+                    traceback.print_exc()
                 tlog(
                     f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )

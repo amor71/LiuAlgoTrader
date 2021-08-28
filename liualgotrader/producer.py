@@ -103,12 +103,13 @@ async def scanner_input(
             tlog(
                 f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
             )
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"error: {line}")
-            traceback.print_exception(*exc_info)
-            del exc_info
+            if config.debug_enabled:
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
 
     tlog("scanner_input() task completed")
 
@@ -177,7 +178,8 @@ async def teardown_task(
 
     except Exception as e:
         tlog(f"[ERROR] Exception {e}")
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
 
     finally:
         tlog("teardown_task() done.")
@@ -272,6 +274,7 @@ def producer_main(
         tlog(
             f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
 
     tlog("*** producer_main() completed ***")

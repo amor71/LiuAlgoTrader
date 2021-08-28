@@ -386,6 +386,21 @@ async def index_data(index: str) -> df:
     raise NotImplementedError(f"index {index} not supported yet")
 
 
+async def sp500_historical_constituents(date):
+    table = pd.read_html(
+        "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    )
+    symbols = table[0].Symbol.to_list()
+    changes = table[1]
+    changes["date"] = changes.Date.apply(
+        lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
+    )
+    changes = changes.loc[changes.date > date]
+    added = changes.Added.dropna().Ticker.to_list()
+    removed = changes.Removed.dropna().Ticker.to_list()
+    return list(set(symbols) - set(added)) + removed
+
+
 async def index_history(index: str, days: int) -> df:
     if index == "SP500":
         start = (

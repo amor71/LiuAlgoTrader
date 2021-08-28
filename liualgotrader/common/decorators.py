@@ -2,7 +2,15 @@ import asyncio
 import time
 from typing import Coroutine
 
+from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+
+if config.trace_enabled:
+    from liualgotrader.common.tracer import get_tracer
+
+    tracer = get_tracer()
+else:
+    tracer = None
 
 
 def timeit(func):
@@ -22,24 +30,20 @@ def timeit(func):
     return helper
 
 
-def retry(retry_times, exception, retry_func):
-    def inner_decorator(func):
-        async def process(func, *args, **params):
-            if asyncio.iscoroutinefunction(func):
-                return await func(*args, **params)
-            else:
-                return func(*args, **params)
+def trace(func):
+    async def process(func, *args, **params):
+        return await func(*args, **params)
 
-        async def helper(*args, **params):
-            retry_times = 5
-            while retry_times:
-                try:
-                    return await process(func, *args, **params)
-                except exception:
-                    await retry_func()
-                    asyncio.sleep(1)
-                    retry_times -= 1
+    async def helper(*args, **params):
+        loop = asyncio.get_event_loop()
+        if tracer:
+            with tracer.start_as_current_span(
+                str(func.__name__)
+            ) as current_span:
+                result = await process(func, *args, **params)
+        else:
+            result = await process(func, *args, **params)
 
-        return helper
+        return result
 
-    return inner_decorator
+    return helper

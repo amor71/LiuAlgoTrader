@@ -244,4 +244,5 @@ class AlpacaTrader(Trader):
         #        q.put(data.__dict__["_raw"], timeout=1)
         except Exception as e:
             tlog(f"[EXCEPTION] process_message(): exception {e}")
-            traceback.print_exc()
+            if config.debug_enabled:
+                traceback.print_exc()
