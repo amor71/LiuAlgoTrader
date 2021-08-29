@@ -5,10 +5,10 @@ This section explains the concepts and architecture of `LiuAlgoTrader` framework
 
 Building Blocks
 ---------------
-The framework executes two type of components in parallel: Scanners and Strategies.
+The framework executes two components in parallel: Scanners and Strategies.
 
-* Scanners, or stock screeners as they are called by some platforms, a run periodically by the framework to search the stock universe for stocks that adhere to criteria of choice. Users can easily create and deploy scanners, with only few lines of Python code. Scanners notify the framework when it's time to `subscribe` for a specific stock events. Events may be per second or per minute price changes, quotes or trades.
-* Strategies receive stock event updates, for stocks selected by the scanners. Strategies analyse the stock movement, and use a wide range of indicators to decide if it's time to buy or sell an equity. A Strategy may act on a single stock movement, or on movement in a collection of stocks. A Strategy may also elect to `reject` a stock, leading to `unsubscribe` from further events. The framework support both long and short buying to equities. The framework is designed to allow hundreds of concurrent stocks being constantly acted upon by numerous strategies to make up a portfolio. Scanner may decide to address stock events only to a specific strategy, or to all running strategies.
+* Scanners, or stock screeners as called by some platforms, is run periodically to search for stocks from the stock universe that adhere to criteria of choice. Users can easily create and deploy scanners, with only few lines of Python code. Scanners determines the time to `subscribe` for events of a specific stock. Events could be price changes, quotes or trades in a predefined window, e.g. per second/ per minute.
+* Strategies receive stock events from stocks selected by the scanners and then analyse the stock movement by a wide range of indicators to decide the action on the selected equities. A Strategy may act on movement of a single stock or a collection of stocks. A Strategy could also `reject` a stock and `unsubscribe` for its further events. The framework supports both long and short positions to equities. The framework is designed to be capable of concurrently handling hundreds of stocks as a portfolio with numerous strategies. Scanner could decide to address stock events with a specific strategy or all strategies.
 
 Data Propagation 
 ----------------
@@ -17,36 +17,35 @@ Data Propagation
 Data is either loaded directly from a data-providers, 
 or updated in real-time using web-sockets.
 
-* `DataLoader()` class introduces a DataFrame like interface to load existing data from a data providers, or updating data from web-sockets,
+* `DataLoader()` class introduces a DataFrame-like interface to load data from a data providers, or updating data from web-sockets,
 * `StreamingAPI()` and `DataAPI()` are abstract classes for integrating data-providers (there are implemented connectors for both Alpaca and Polygon), 
-* `data_loader_factory()` instantiate implemetation for StreamingAPI and DataAPI, based on the selected data-providers,
-* `Trader()` is a base-class for integration Broker APIs (currently only Alpaca is supported),
+* `data_loader_factory()` instantiates implementation for `StreamingAPI()` and `DataAPI()`, based on the selected data-providers,
+* `Trader()` is a base-class for integration Broker APIs (only Alpaca is currently supported),
 
 Usage Fundamentals
 ------------------
 
-The framework exposes three `base classes` for scanners, strategy and miner. The first two are for basic trading activities, while miners can we used for more advanced off-market calculations.
-The framework comes equiped with a generic scanner, though it is recommended to be used as a reference point only.
+The framework consists of 3 `base classes`: `Scanner`, `Strategy` and `Miner`. `Scanner` and `Strategy` are for basic trading activities, while `Miner` are for advanced off-market calculations.
+The framework comes with a generic `Scanner`, though we recommend to treat it as a reference.
 
 When using the framework, you will likely create a Python file with your scanners, each inheriting from the Scanner base-class, and one or more Python files for strategies that inherit from the Strategy base-class. Once you get your building blocks in place, you use the `tradeplan.toml` file to instruct the framework which scanners & strategies to instantiate, and the select the configuration parameters that will be passed for each.
 
-All your trading actions are stored to a database, and all trades are automatically analyzed at the end of the trading session. You can then use a multitude of notebooks for further analyze and improve the performance on your algo trading strategies.
+All your trading actions are stored in a database, and all trades are automatically analyzed at the end of a trading session. You can then use a multitude of notebooks for further analyze and improve the performance on your algo trading strategies.
 
 Hands-free framework
 --------------------
 
-`LiuAlgoTrader` is designed to be a (near) high throughput & scalable framework, that optimizes the underlying hardware.
+`LiuAlgoTrader` is designed to be a (nearly) high throughput & scalable framework, that optimizes at utilizing the underlying hardware.
 
-It is designed to be hands-free framework
-for strategy developers, elevating the need to worry about
-communication disconnects or understanding low level
-considerations.
+It is designed to be a hands-free framework
+for strategy developers without the need to worry about
+low-level considerations such as connection issues.
 
 
 High Level Architecture
 -----------------------
 
-Polygon.io, Alpaca and the other real-time stock data
+Polygon.io, Alpaca and other real-time stock data
 providers are using WebSockets_ to send data. In most cases
 data providers become impatient when posted data is not
 collected by the intended recipient on a timely manner.
@@ -57,7 +56,7 @@ data provider, and several consumer processes are handling
 the algorithmic decision making and make API calls to initiate
 trades.
 
-The below diagram visualizes the high-level flows & system components
+Below diagram visualizes the high-level call flow & system components
 
 
 .. image:: /images/liu-hld.png
@@ -75,12 +74,12 @@ inter-process lightweight threading (The framework works w/ 3.8 and above).
 This architecture provides high throughput which maximizes the hardware
 capabilities.
 
-A *link* between the producer a consumer is maintained over
+A *link* between a producer and a consumer is maintained by
 a Python multi-processing Queue. Each consumer has a designated cross-process Queue and a
 pre-defined list of stocks that the process is tracking.
-The producer's role is to receive updates over the WebSocket,
+The producer's role is to receive updates from the WebSocket,
 post them into the relevant consumer's Queue, and return to
-process the next incoming message.
+process the next message.
 
 Each consumer reads events from the Queue, parses them the
 calls the strategies selected in the `tradeplan` configuration
