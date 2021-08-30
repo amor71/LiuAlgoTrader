@@ -32,7 +32,7 @@ nbqa==1.1.0
 pre-commit==2.14.1
 empyrical==0.5.5
 sklearn==0.0
-plotly==5.2.1
+plotly==5.2.2
 hypothesis==6.15.0
 torch==1.9.0
 parsedatetime==2.6
