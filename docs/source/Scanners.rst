@@ -3,8 +3,8 @@
 Scanners
 ========
 
-As explained in the `Concepts` section, scanners scan the stock universe for stocks of interest.
-When the `trader` application starts, it reads the `tradeplan.toml` file, looks at the **[[scanners]]** section to identify which scanners needs to be instantiated and executed. Scanners are initially executed by the order of appearance in the `tradeplan` file. The framework comes equipped with a generic, momentum scanner, but it should mostly be used as a reference when designing your own scanners.
+As explained in the `Concepts` section, scanners filter stocks of interest from the stock universe.
+When the `trader` application starts, it reads the `tradeplan.toml` file and looks at the **[[scanners]]** section to identify the classes of scanners to be instantiated and executed. They are executed by the order of appearance in the `tradeplan` file. The framework comes with a generic, momentum scanner, but it is advised to be used as a reference for designing your own scanners.
 
 Some configuration parameters are generic to all scanners, and some may be specific for your own scanner.
 
@@ -20,7 +20,7 @@ share your profits, if there are any).
 Developing a Scanner
 --------------------
 
-When developing your scanner, you will first need to import the Scanner base-class:
+When developing your scanner, you first need to import base-class `Scanner`:
 
 .. code-block:: python
 
@@ -29,8 +29,8 @@ When developing your scanner, you will first need to import the Scanner base-cla
 
 Creating a scanner involves:
 
-1. Declaring a class object, inherited from  the`Scanner` base_ class,
-2. Overwrite both the `__init__()` and `run()` functions. __init__() is called during initialization, and is passed the configuration parameters from the `tradeplan.toml` file. The `run()` is called when the framework is ready to execute the scanner.
+1. Declare a class object that is inherited from base-class `Scanner`,
+2. Overwrite both the `__init__()` and `run()` methods. `__init__()` is called during initialization, and is passed the configuration parameters from the `tradeplan.toml` file. The `run()` is called when the framework is ready to execute the scanner.
 
 .. _base:
     https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/scanners/base.py
@@ -55,14 +55,14 @@ A Generic implementation for the `__init__()` function:
 The run() function
 ******************
 
-The `run()` function is the heart of the Scanner. The skeleton implementation:
+The `run()` method is at the heart of the Scanner. The skeleton implementation:
 
 .. code-block:: python
 
     async def run(self, back_time: datetime = None) -> List[str]:
 
 
-The run() function returns the list to stock symbol which the framework needs to start tracking. back_time is used by the `backtester` to simulate past time-stamps allowing for the scanner developer to test various scenarios before deployment.
+The run() function returns a list of stock symbols which the framework needs to track. back_time is used by the `backtester` to simulate past time-stamps, allowing developer to test various scenarios before deployment.
 
 .. code-block:: python
 
@@ -73,9 +73,9 @@ Holds the generic interface for querying the stock universe.
 Using DataLoader() class
 ************************
 
-The DataLoader() class is core for writing scanners (as well as strategies). The Class provides a wrapper on top of `pandas` DataFrame() class, which also automatically downloads data. 
+The DataLoader() class is core for writing scanners (as well as strategies). The class wraps on top of `pandas.DataFrame()` class which supports automatically downloading data.
 
-For example, to load recent `ohlc` data for Apple Inc all you have to do is:
+For example, to load recent `ohlc` data for Apple Inc all you can do:
 
 .. code-block:: python
 
@@ -83,10 +83,10 @@ For example, to load recent `ohlc` data for Apple Inc all you have to do is:
 
 Notes:
 
-1. Data will be loaded based on the time-scale (min/hour/day) configured by the LiuAlgoTrader framework. During trading you can expect per-minute time-scale, during back-testing you can select which time-frame should be used,
-2. Data is loaded from the data-providers configured in the `DATA_CONNECTOR` environment variables, the framework cannonizes column names and gurrenties to include atlease open-high-low-close data, as well as volume. Different data providers may include additional details (such as VWAP, average, count and more),
+1. Data will be loaded based on the time-scale (min/hour/day) configured by the LiuAlgoTrader framework. During trading you can expect per-minute time-scale, during back-testing you can select your desired time-frame,
+2. Data is loaded from the data-providers configured in the `DATA_CONNECTOR` environment variable, the framework canonizes column names and guarantees to include at least open-high-low-close data, as well as volume. Different data providers may include additional details (such as VWAP, average, count and more),
 3. Calling `self.data_loader.symbol_data` grants direct access to the `DataFrame` class,
-4. Calling `self.data_loader.data_api` grants access to the instance of the `DataAPI` class, that provides an abstraction for the different data-providers. Using this class, the scanner can get list of avalible / tradeable symbols. For more detais, check the implementation of the momenutum_ scanner.
+4. Calling `self.data_loader.data_api` grants access to the instance of the `DataAPI` class, that provides an abstraction for the different data-providers. Using this class, the scanner can get a list of available / tradable symbols. For more details, check the implementation of the momenutum_ scanner.
 
 .. _momenutum:
     https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/scanners/momentum.py#L82
@@ -98,9 +98,9 @@ Behind the scenes
 *****************
 As a developer, I hate 'magic' that happens without my understanding, hence it's important for me to detail the inner workings of the framework. All scanners run inside a dedicated process. When the process is executed, it receives the scanner portion of the configuration files, and creates an `asyncio` task per scanner. In fact, it's up to the scanners to make sure they play along nicely and not starve each other with overly long calculations.
 
-The scanner task, wraps the scanner object, it executes the `run()` function, retrieves the list of picked stocks and transmits them over a Queue to the `producer` process. The task, would then `sleep()` for the duration of the `recurrence` parameter (or just run once, if that parameter is not present).
+The scanner task, wraps the scanner object, it executes the `run()` method to determine a list of filtered stocks and transmits them over a Queue to the `producer` process. The task, would then `sleep()` for the duration of the `recurrence` parameter (or just run once, if that parameter is not present).
 
-The producer would receive the list of picked symbols, it will register them for events on the `Polygon.io` data-stream, and will persist to the database the timestamp of receiving a picked stock. This data is then used by the `backtester` application to replicate the real conditions presented to a Strategy.
+Once the producer receives a list of selected symbols, it will register them for events on the `Polygon.io` data-stream, and persist them to the database the timestamp of receiving a picked stock. This data is then used by the `backtester` application to replicate the real conditions presented to a Strategy.
 
 Example
 *******
@@ -112,7 +112,7 @@ An example of *my_scanner.py*:
   :linenos:
 
 
-Configuring the custom scanner in the *tradeplan* TOML file is as easy:
+Configuring the custom scanner in the *tradeplan* TOML file is as easy as:
 
 .. code-block:: none
 
