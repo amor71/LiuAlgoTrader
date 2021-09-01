@@ -516,6 +516,7 @@ async def handle_quote(data: Dict) -> bool:
     return True
 
 
+@trace
 async def aggregate_bar_data(
     data_loader: DataLoader, data: Dict, ts: pd.Timestamp
 ) -> None:

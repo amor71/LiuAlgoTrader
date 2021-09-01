@@ -30,20 +30,20 @@ def timeit(func):
     return helper
 
 
-def trace(func):
-    async def process(func, *args, **params):
-        return await func(*args, **params)
+def trace(arg1):
+    async def trace_inner(func):
+        async def helper(*args, **params):
+            loop = asyncio.get_event_loop()
+            if tracer:
+                with tracer.start_as_current_span(
+                    str(func.__name__)
+                ) as current_span:
+                    result = await func(*args, **params)
+            else:
+                result = await func(*args, **params)
 
-    async def helper(*args, **params):
-        loop = asyncio.get_event_loop()
-        if tracer:
-            with tracer.start_as_current_span(
-                str(func.__name__)
-            ) as current_span:
-                result = await process(func, *args, **params)
-        else:
-            result = await process(func, *args, **params)
+            return result
 
-        return result
+        return helper
 
-    return helper
+    return trace_inner

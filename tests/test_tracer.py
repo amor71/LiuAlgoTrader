@@ -16,7 +16,7 @@ def event_loop():
     yield loop
 
 
-@trace
+@trace(1)
 async def part1():
     print("part1")
     await asyncio.sleep(0.025)
@@ -24,7 +24,7 @@ async def part1():
     await part2()
 
 
-@trace
+@trace(1)
 async def part2():
     print("part2")
     await asyncio.sleep(0.025)
@@ -32,13 +32,13 @@ async def part2():
     asyncio.create_task(part3())
 
 
-@trace
+@trace(1)
 async def part3():
     print("part3")
     await asyncio.sleep(0.025)
 
 
-@trace
+@trace(1)
 async def part2_1():
     print("part2_1")
     await asyncio.sleep(0.025)
@@ -46,7 +46,7 @@ async def part2_1():
     await part2_2()
 
 
-@trace
+@trace(1)
 async def part2_2():
     print("part2_2")
     await asyncio.sleep(0.025)
@@ -54,13 +54,13 @@ async def part2_2():
     asyncio.create_task(part2_3())
 
 
-@trace
+@trace(1)
 async def part2_3():
     print("part2_3")
     await asyncio.sleep(0.025)
 
 
-@trace
+@trace(1)
 async def part3_1():
     print("part3_1")
     await asyncio.sleep(0.025)
@@ -68,7 +68,7 @@ async def part3_1():
     await part3_2()
 
 
-@trace
+@trace(1)
 async def part3_2():
     print("part3_2")
     await asyncio.sleep(0.025)
@@ -76,13 +76,13 @@ async def part3_2():
     asyncio.create_task(part3_3())
 
 
-@trace
+@trace(1)
 async def part3_3():
     print("part3_3")
     await asyncio.sleep(0.025)
 
 
-@trace
+@trace(1)
 async def part4_1():
     print("part4_1")
     await asyncio.sleep(0.025)
@@ -90,7 +90,7 @@ async def part4_1():
     asyncio.create_task(part4_2())
 
 
-@trace
+@trace(1)
 async def part4_2():
     print("part4_2")
     await asyncio.sleep(0.025)
@@ -98,7 +98,7 @@ async def part4_2():
     asyncio.create_task(part4_3())
 
 
-@trace
+@trace(1)
 async def part4_3():
     print("part4_3")
     await asyncio.sleep(0.025)
@@ -111,7 +111,7 @@ async def part5_1():
     await part5_2()
 
 
-@trace
+@trace(1)
 async def part5_2():
     print("part5_2", flush=True)
     await asyncio.sleep(0.025)
@@ -119,7 +119,7 @@ async def part5_2():
     asyncio.create_task(part5_3())
 
 
-@trace
+@trace(1)
 async def part5_3():
     print("part5_3", flush=True)
     await asyncio.sleep(0.025)

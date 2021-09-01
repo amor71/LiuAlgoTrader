@@ -77,7 +77,7 @@ class AlpacaData(DataAPI):
                     start=_start,
                     end=_end,
                     limit=10000,
-                    adjustment="raw",
+                    adjustment="all",
                 ).df
             except Exception as e:
                 if not retry_count:
