@@ -96,11 +96,11 @@ Notes:
 
 Behind the scenes
 *****************
-As a developer, I hate 'magic' that happens without my understanding, hence it's important for me to detail the inner workings of the framework. All scanners run inside a dedicated process. When the process is executed, it receives the scanner portion of the configuration files, and creates an `asyncio` task per scanner. In fact, it's up to the scanners to make sure they play along nicely and not starve each other with overly long calculations.
+As a developer, I hate 'magic' that happens without my understanding, hence it's important for me to detail the inner workings of the framework. All scanners run inside a dedicated process. When the process is executed, it reads the configuration files specific to the scanners, and creates an `asyncio` task per scanner. In fact, it's up to the scanners to make sure they play along nicely and not starve each other with overly long calculations.
 
-The scanner task, wraps the scanner object, it executes the `run()` method to determine a list of filtered stocks and transmits them over a Queue to the `producer` process. The task, would then `sleep()` for the duration of the `recurrence` parameter (or just run once, if that parameter is not present).
+The scanner task is to execute the `run()` method to determine a list of filtered stocks and transmits them over a Queue to the `producer` process. The task would then `sleep()` for the duration of the `recurrence` parameter (or just run once, if that parameter is not present).
 
-Once the producer receives a list of selected symbols, it will register them for events on the `Polygon.io` data-stream, and persist them to the database the timestamp of receiving a picked stock. This data is then used by the `backtester` application to replicate the real conditions presented to a Strategy.
+Once the producer receives a list of selected symbols, it will register them for events on the `Polygon.io` data-stream, and persist them in database with the timestamp of receiving the selected stocks. This data are then used by the `backtester` application to replicate the real conditions presented to a strategy.
 
 Example
 *******
@@ -112,7 +112,7 @@ An example of *my_scanner.py*:
   :linenos:
 
 
-Configuring the custom scanner in the *tradeplan* TOML file is as easy as:
+Configuring a custom scanner in the *tradeplan* TOML file is as easy as:
 
 .. code-block:: none
 
@@ -123,8 +123,8 @@ Configuring the custom scanner in the *tradeplan* TOML file is as easy as:
             my_arg1 = 30000
             my_arg2 = 3.5
 
-While executing, the **trader** application will look for *my_scanner.py*,
-instantiate the `MyScaner` class, and call it with the arguments defined
+Upon execution, **trader** application will look for *my_scanner.py* and
+instantiate the `MyScaner` class, and then call it with the arguments defined
 in the `tradeplan` configuration file, while adding the trade-api object.
 
 Advanced
@@ -138,7 +138,7 @@ Normally, the producer subscribes to all Polygon.io available events per picked 
 
     events = ["second", "minute", "trade", "quote"]
 
-Lastly, if configuration parameter `test_scanners` is set to `true`. The `trader` appliction will only execute the scanners w/o running strategies to assist in the debugging process of a new scanner.
+Lastly, if configuration parameter `test_scanners` is set to `true`. The `trader` application will only execute the scanners without running strategies for debugging purpose.
 
 
 
@@ -170,9 +170,9 @@ properties:
 | max_share_price  | maximum stock price                           |
 +------------------+-----------------------------------------------+
 | from_market_open | number of minutes to wait, since market open  |
-|                  | before starting to scan from relevant stocks  |
+|                  | before scanning for relevant stocks           |
 +------------------+-----------------------------------------------+
-| max_symbols      | max number of symbols to scan for             |
+| max_symbols      | maximum number of symbols to scan for         |
 +------------------+-----------------------------------------------+
 | recurrence       | frequency of re-running scanner, if not       |
 |                  | present, run only once                        |
@@ -180,4 +180,4 @@ properties:
 
 **Notes**
 
-- Unless otherwise specified, the trader applications scans & trades a limited number of stocks, however that limitation may be overwritten using **LIU_MAX_SYMBOLS** env variable.
+- Unless specified, the trader applications scans & trades a limited number of stocks, however that limitation can be overwritten by **LIU_MAX_SYMBOLS** env variable.
