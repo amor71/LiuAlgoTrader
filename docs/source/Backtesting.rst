@@ -7,7 +7,7 @@
    <br />
 
 This section describes LiuAlgoTrader back-testing capabilities. 
-The framrwork comes equiped with two sets of tools: 
+The framework is equipped with two sets of tools:
 basic browser-based UI (using `streamlit`) and more advanced 
 command-line tool coupled with `jupter notebook(s)` for analysis.
 
@@ -25,13 +25,13 @@ Liu approach to back-testing
 ----------------------------
 
 While the framework was designed for high-performance real-time trading 
-with dynamic scanning of the stock universe, the framework comes equiped with 
+with dynamic scanning from the stock universe, the framework is equipped with
 a full stack of back-testing features. 
 
-LiuAlgoTrader framework provides two different approaches to back-testiמg:
+LiuAlgoTrader framework provides two different approaches to back-testing:
 
-- Given a day-trading session (which is representaed by a `batch-id` UUID), replay the trading session on the scanned stocks, minute-by-minute while executing modified versions of the strategies. This is a very useful approach to debug & improve strategies while comparing results to a base-line. The replay can be narrowed to only traded stocks (from the corum of scanned stocks), or even focus on a specific stock. The original day-trading session can be on a paper-account, or a live trading session,
-- Run strategies over long period of time, on fixed scanners (e.g. similar to how Zipline operates). Back-testing can be done on minute-by-minute or daily resolution,
+- Given a day-trading session (which is represented by a `batch-id` UUID), replay the trading session on the scanned stocks, minute-by-minute while executing modified versions of the strategies. This is a very useful approach to debug & improve strategies while comparing results to a base-line. The replay can be narrowed to only traded stocks (from the scanned stocks), or even focus on a specific stock. The original day-trading session can be on a paper-account, or a live trading session,
+- Run strategies over long period of time, on fixed scanners (e.g. similar to how Zipline operates). Back-testing can be done on minute or daily resolution,
 
 Picking the right back-testing tools
 ************************************
@@ -41,31 +41,31 @@ stocks and select stocks for trading. Strategies receive feeds of the selected
 stocks and decide how to act upon them. Swing-trading on the other hand do not 
 act on second, or even minute resolutions. Back-testing entire trading days, 
 second by second on the entire stock universe can be done, however it requires 
-downloading of massive amounts of data, and computation power and is 
-not avaliable out of the box w/ the provided momenum scanner. For more details 
+downloading massive amounts of data, and computation power and is
+not available out of the box with the provided momentum scanner. For more details
 on how to customize scanners to achieve such behavior, see the `Scanners` 
 documentation page. 
 
  
 Perfecting a day-trading strategy can be done by running LiuAlgoTrader framework 
-on a paper-account, followed by back-testing using thereplay approach. Such back-testing sessions allow improving strategies, 
+on a paper-account, followed by back-testing using the replay approach. Such back-testing sessions allow improving strategies,
 but are less effective on scanners.  
 
-Swing-trading on selected stocks can be effectivly done while back-testing 
+Swing-trading on selected stocks can be effectively done while back-testing
 strategies over long period of data. For swing-trading it is less effective to
 replay a specific trading-session, since the bigger picture matter more. 
 
-Back-testing for Swing-trading is avaliable out of the box, and does not require
-specliazed scanners or hardware.
+Back-testing for Swing-trading is avalaible out of the box, and does not require
+specialized scanners or hardware.
 
 Word of caution
 ***************
 
 Day-trading is hard, perfecting day-trading algorithms is harder.
-When replaying a day-trading session try to me minded to over-fitting and 
-**hindsight bias**. Make it a habbit to always re-run strategy modifications 
+When replaying a day-trading session try to be aware of over-fitting and
+**hindsight bias**. Make it a habit to always re-run strategy modifications
 on a large number of day-trading sessions, and avoid making alterations 
-to fit a specific less-successful trading day. The more you day-trade on a
+to fit to a specific less-successful trading day. The more you day-trade on a
 paper-account, the more data you collect, which in turn make the back-testing 
 more effective. Last but not least, make small incremental changes, each time 
 on a single parameter and progress slowly.
@@ -74,7 +74,7 @@ on a single parameter and progress slowly.
 *backtester* for Day-Trading
 ----------------------------
 
-This sub-section focus on the tools for re-running past trading sessions on 
+This sub-section focuses on the tools for re-running past trading sessions on
 revised strategies.
 
 The tool comes in two 'favours': command-line tool and a browser-based UI 
@@ -86,8 +86,8 @@ the `backtester` application runs on per-minute data.
 
 Prerequisites
 *************
-1. Installed and configured Liu Algo Tradring Framework.
-2. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section,
+1. Installed and configured Liu Algo Trading Framework.
+2. An existing *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section,
 3. [Optional] The batch-id (UUID) of a trade session to replay.
 
 Command-line tool
@@ -100,7 +100,7 @@ To run the `backtester` application type:
     backtester
 
 Displays a high-level description of the tool, and it's different parameters. 
-The version you will be running might include more options then the below:
+The version you are running might include more options than what is shown below:
 
 .. image:: /images/backtester1.png
     :width: 800
@@ -109,7 +109,7 @@ The version you will be running might include more options then the below:
 
 
 If you had run a `trader` session  (or have used `liu quickstart` wizard) the
-database should should hold at least one batch-id.
+database should hold at least one batch-id.
 
 To get a list of previous trading sessions, run:
 
@@ -130,8 +130,8 @@ When running a back-test session, it's possible to
 re-run strategies on all symbols selected by the scanners
 for that trading session, or limit the back-test session
 only to stocks actually traded by strategies on that
-specific batch-id. To limit the back-test session to
-actually traded symbols use the `--strict` command-line option.
+specific batch-id. Use the `--strict` command-line option to limit the back-test session to
+traded symbols.
 
 
 Below is a sample output of a running `backtester batch`:
@@ -145,7 +145,7 @@ Below is a sample output of a running `backtester batch`:
 |br|
 **Notes**:
 
-1. A backtest session creates a new `batch-id`. This is helpful when running analysis of a backtest session. See the Analysis section for more details.
+1. A back-test session creates a new `batch-id`. This is helpful when running analysis of a backtest session. See the Analysis section for more details.
 2. Strategies running in a backtesting session are marked with `BACKTEST` environment when logging trades, this is helpful to distinguish between backtest trades, paper and live trades when querying the database.
 3. When the `backtester` application starts, it lists all the stocks picked by the scanners during the trading session.
 4. `backtester` re-runs each session, by loading per-minute candles for the stock trading session (up to one week back). This reply simulates per-minute trading, vs. per-second trading during `trader` execution (though, the `trader` application can also be configured to execute strategies per minute and not per secord).
@@ -282,12 +282,12 @@ Understanding command-line parameters
 |                | take longer to run, but may be more realistic         |
 |                | for your strategy.                                    |
 +----------------+-------------------------------------------------------+
-| scanners       | Comma-seperated list of scanner names to used in      |
+| scanners       | Comma-separated list of scanner names to be used in   |
 |                | the back-testing session. The scanner names are       |
-|                | taken from the `tradeplan.toml` file. if not          |
-|                | specified all scanners will be tried.                 |
+|                | read from the `tradeplan.toml` file. if not           |
+|                | specified all scanners will be executed.              |
 +----------------+-------------------------------------------------------+
-| strats         | Comma-seperated list of strategy names to used in     |
+| strats         | Comma-separated list of strategy names to be used in  |
 |                | the back-testing session. The strategy names are      |
 |                | taken from the `tradeplan.toml` file. if not          |
 |                | specified all strategies will be executed.            |
