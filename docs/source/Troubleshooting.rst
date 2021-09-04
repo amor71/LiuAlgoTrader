@@ -36,18 +36,18 @@ dedicated PostgreSQL setup (local, hosted, or managed) vs. running in the Docker
 **Running Liu applications**
  
 `pip install liualgotrader` installs 4 executables scripts (a.k.a applications): **liu**, **trader**, **backtester** and **optimizer**.
-On Windows (unlike Linux), it is not possible to execute the application by typing its name. You need to type `py <path>\liu`.
+On Windows (unlike Linux), it is not possible to execute the application by typing its name. You need to type `python <path>\liu`.
 Where <path> depends on your local setup.
  
-For example, assuming you have Python 3.9.x installed on your Windows machine, use to below steps to
+For example, assuming you have Python 3.9.x installed on your Windows machine, follow the steps bellow to
 create a dedicated `virtual environment` for Liu:
  
  .. code-block:: bash
 
-    py -m venv liu
+    python -m venv liu
     liu\Scripts\activate
     pip install liualgotrader
-    py liu\Scripts\liu quickstart
+    python liu\Scripts\liu quickstart
     
 Good Luck!
  
@@ -73,7 +73,7 @@ Follow the instructions for Docker_ installation. Then
 
     $ sudo usermod -aG docker $USER
 
-After successful completetion of the above steps, you should logout and login.
+After successful completion of the above steps, you should logout and login.
 
 **STEP 2**: Install docker-compose (Skip if already installed and working)
 
