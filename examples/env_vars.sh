@@ -12,7 +12,7 @@ export POLYGON_API_KEY=""
 
 # Alpaca Credentials, note base URL needs to be changed
 # when switching to LIVE account
-export ALPACA_BASEURL="https://paper-api.alpaca.markets"
+export APCA_API_BASE_URL="https://paper-api.alpaca.markets"
 export APCA_API_KEY_ID=""
 export APCA_API_SECRET_KEY=""
 
