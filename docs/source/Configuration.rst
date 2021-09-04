@@ -29,7 +29,7 @@ Additional parameters
 *********************
 
 LiuAlgoTrader is a multi-processing framework with
-producer-consumer design pattern. There is a
+producer-consumers design pattern. There is a
 process for interacting with the data-stream
 providers (e.g `Polygon.io`), a process for scanning
 & picking stocks, and other processes specific to consumers.

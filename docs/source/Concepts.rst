@@ -50,7 +50,7 @@ providers provide data via WebSockets_. In most cases
 data providers become impatient when posted data is not timely
 collected by the intended recipient.
 
-LiuAlgoTrader implements a **producer-consumer
+LiuAlgoTrader implements a **producer-consumers
 design pattern**, where a single (or multiple) producer process interacts with the
 data provider, and multiple consumer processes are handling
 the algorithmic decision making and initiate trades via API calls.
