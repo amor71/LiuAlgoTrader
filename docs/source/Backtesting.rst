@@ -99,8 +99,8 @@ To run the `backtester` application type:
 
     backtester
 
-Displays a high-level description of the tool, and it's different parameters. 
-The version you are running might include more options than what is shown below:
+Displays a high-level description of the tool, and it has different parameters.
+The version you are running might have more options than what is shown below:
 
 .. image:: /images/backtester1.png
     :width: 800
@@ -145,11 +145,11 @@ Below is a sample output of a running `backtester batch`:
 |br|
 **Notes**:
 
-1. A back-test session creates a new `batch-id`. This is helpful when running analysis of a backtest session. See the Analysis section for more details.
-2. Strategies running in a backtesting session are marked with `BACKTEST` environment when logging trades, this is helpful to distinguish between backtest trades, paper and live trades when querying the database.
+1. A back-test session creates a new `batch-id`. This is helpful when running analysis of a back-test session. See the Analysis section for more details.
+2. Strategies running in a back-testing session are marked with `BACKTEST` environment when logging trades, this is helpful to distinguish between backtest trades, paper and live trades when querying the database.
 3. When the `backtester` application starts, it lists all the stocks picked by the scanners during the trading session.
-4. `backtester` re-runs each session, by loading per-minute candles for the stock trading session (up to one week back). This reply simulates per-minute trading, vs. per-second trading during `trader` execution (though, the `trader` application can also be configured to execute strategies per minute and not per secord).
-5.  `backtester` supports a debug mode, per symbol. The debug flag is passed to the implementation for `Strategy.run()`, allowing more verbose logging during backtesting.
+4. `backtester` re-runs each session, by loading per-minute candles for the stock trading session (up to one week back). This replay simulates per-minute trading, vs. per-second trading during `trader` execution (though the `trader` application can also be configured to execute strategies per minute and not per second).
+5.  `backtester` supports a debug mode, per symbol. The debug flag is passed to the implementation for `Strategy.run()`, allowing more verbose logging during back-testing.
 
 Understanding command-line parameters
 *************************************
@@ -166,8 +166,8 @@ Understanding command-line parameters
 |                | to include several --symbol parameters in a single    |
 |                | `backtester` application execution.                   |
 +----------------+-------------------------------------------------------+
-| strict         | This option, limits the back-tested symbol to         |
-|                | symbol that were actually traded during a session.    |
+| strict         | This option limits the back-tested symbols to         |
+|                | those that were actually traded during a session.     |
 |                | The option is helpful to speed up back-test run       |
 |                | during initial strategy development or improvement    |
 |                | session.                                              |
@@ -176,17 +176,17 @@ Understanding command-line parameters
 |                | in the back-tested `tradeplan`. The option is less    |
 |                | relevant for tradeplans with multiple trade windows.  |
 +----------------+-------------------------------------------------------+
-| debug          | When a sybmol is select for debug, then the debug     |
-|                | flag will be passed as True for the strategy          |
-|                | `run()` function. Based on the strategy implementation|
-|                | additional logging may be provided.                   |
+| debug          | When a symbol is selected for debugging, pass this    |
+|                | flag as `True` for the `Strategy.run()` method.       |
+|                | Based on the strategy implementation,                 |
+|                | additional log may be provided.                       |
 +----------------+-------------------------------------------------------+
 
 
 Browser-base tool
 *****************
 
-If you used `liu quickstart` wizard, or watched the intro video_ you've already seen
+If you used `liu quickstart` wizard or watched the intro video_, you've already seen
 the browser based tool in action.
 
 .. _video: https://youtu.be/rVwFCbHsbIY
@@ -204,42 +204,42 @@ Once the browser opens, it would look like:
     :align: left
     :alt: *backtester* streamlit start sample
 
-The browser-based UI supports two types on back-testing sessions:
+The browser-based UI supports two types of back-testing sessions:
 
 1. Re-running strategies for a specific trading session. Similarly to the command-line tool,
-2. Re-run strategies on a past date, **even if no past trading session took place on that date**. This capability is not yet exposed on the command-line tool.
+2. Re-running strategies on a past date, **even if no past trading session took place on that date**. This capability is not yet exposed on the command-line tool.
 
 **IMPORTANT NOTES**
 
-1. When selecting the "`back-test against the whole day`" option , **scanners** will be called w/ a `back-time` schedule (vs. real-time),
+1. When selecting the "`back-test against the whole day`" option , **scanners** will be called with a `back-time` schedule (vs. real-time),
 2. Scanners are expected to support running in `back_time` mode (see scanners section).
-3. The built-in scanner supports back-time mode - if no data exists in the database for that specific date, the framework would load OHLC data for all traded stock on the select date, and the day before. Please note that this process may take between long minutes to couple of hours (on-time) depending on your network connection & equipment.
-4. Instead of having the scanners trigger loading of data, it is advised to use the `market_miner` tool to pre-load data in off-hours before running a back-test session on a day without any data.
+3. The built-in scanner supports back-time mode - if no data exists in the database for that specific date, the framework would download OHLC data for all traded stock on the select date, and the day before. Please note that this process may take between minutes to couple of hours (on-time) depending on your network connection & equipment.
+4. Instead of having the scanners trigger downloading of data, it is advised to use the `market_miner` tool to pre-load data in off-hours before running a back-test session on a day without any data.
 
 To see an example of the tool, refer back to `liu quickstart` guide.
 
 Analysis using the browser based tool
 *************************************
 
-While the brwoser-based tool is less configurable than the 
+While the browser-based tool is less configurable than the
 command-line alternative, it does include a basic analysis 
-tool for visualizng day-trading sessions. Select the `analyer` 
+tool for visualizng day-trading sessions. Select the `analyzer`
 app on the app selector drop-box and enter a batch-id to visualize. 
 
-IF you have used `liu quickstart` before, you should have the 
-batch-id "2398380c-5146-4b58-843a-a50c458c8071" avaliable in your 
+Id you have used `liu quickstart` before, you should have the
+batch-id "2398380c-5146-4b58-843a-a50c458c8071" available in your
 database. 
 
 *backtester* for Swing-Trading
 ------------------------------
 
-Back-testing over large period of time, is simple to execute. Once run a new `batch-id` is generated, allowing analysis for the strategy behaviour. 
+Back-testing over large period of time is simple to execute. Once it is run a new `batch-id` will be generated, allowing analysis for the strategy behaviour.
 
 
 Prerequisites
 *************
-1. Installed and configured Liu Algo Tradring Framework,
-2. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
+1. Installed and configured Liu Algo Trading Framework,
+2. An existing *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
 
 How-To Use
 **********
@@ -258,7 +258,7 @@ would generate output similar to:
     :align: left
     :alt: *backtester* backtester period
 
-Once ran, both the browser-based UI (w/ `streamlit`) can be used to analyze the trading session, or any of the analysis notebook(s) explained in the Analysis documentation section:
+Once run, both the browser-based UI (with `streamlit`) and any of the analysis notebook(s) explained in the Analysis documentation section can be used to analyze the trading session:
 
 .. image:: /images/streamlit-2.png
     :width: 800
@@ -276,7 +276,7 @@ Understanding command-line parameters
 |                | The `to` date will be included in the back-testing    |
 |                | session. If not specified, `today` is being used.     |
 +----------------+-------------------------------------------------------+
-| scale          | The time-scale for running the backtest.              |
+| scale          | The time-scale for running the back-test.             |
 |                | Allowed values are: day or minute. If not specified   |
 |                | day will be used. Keep in mind that minute will       |
 |                | take longer to run, but may be more realistic         |
