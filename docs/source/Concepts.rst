@@ -265,7 +265,7 @@ The main database tables are as follows:
 +---------------------+-----------------------------------------------+
 | gain_loss           | Tracks of per symbol and per algo_run         |
 |                     | profit & loss, measured as percentage and     |
-|                     |  absolute value.                              |
+|                     | absolute value.                               |
 +---------------------+-----------------------------------------------+
 | trade_analysis      | Tracks of per trade, the r_units,             |
 |                     | profit & loss, measured as percentage and     |
