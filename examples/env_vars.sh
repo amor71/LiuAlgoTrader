@@ -19,8 +19,6 @@ export APCA_API_SECRET_KEY=""
 # "sip" for PRO subscriptions, "iex" for free
 export alpaca_data_feed="iex" 
 
-# max number of symbols to trade in parallel
-export LIU_MAX_SYMBOLS=440
 
 # lock number of CPUs & consumer processes to use
 export CPU_FACTOR=4

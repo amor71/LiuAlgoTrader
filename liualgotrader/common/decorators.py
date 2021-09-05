@@ -1,11 +1,14 @@
 import asyncio
 import time
-from typing import Coroutine
+from typing import Coroutine, Dict, Optional
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 
 if config.trace_enabled:
+    from opentelemetry.trace.propagation.tracecontext import \
+        TraceContextTextMapPropagator
+
     from liualgotrader.common.tracer import get_tracer
 
     tracer = get_tracer()
@@ -30,19 +33,28 @@ def timeit(func):
     return helper
 
 
-def trace(arg1):
-    async def trace_inner(func):
+def trace(carrier: Optional[Dict]):
+    def trace_inner(func):
         async def helper(*args, **params):
             loop = asyncio.get_event_loop()
-            if tracer:
-                with tracer.start_as_current_span(
-                    str(func.__name__)
-                ) as current_span:
-                    result = await func(*args, **params)
-            else:
-                result = await func(*args, **params)
+            if tracer and config.trace_enabled:
 
-            return result
+                if not bool(carrier):
+                    with tracer.start_as_current_span(str(func.__name__)):
+                        TraceContextTextMapPropagator().inject(carrier=carrier)
+                        params["carrier"] = carrier
+                        return await func(*args, **params)
+                else:
+                    ctx = TraceContextTextMapPropagator().extract(
+                        carrier=carrier
+                    )
+                    with tracer.start_as_current_span(
+                        str(func.__name__), context=ctx
+                    ):
+                        params["carrier"] = carrier
+                        return await func(*args, **params)
+
+            return await func(*args, **params)
 
         return helper
 

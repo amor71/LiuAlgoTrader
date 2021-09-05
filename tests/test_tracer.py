@@ -8,6 +8,9 @@ from liualgotrader.common import config
 config.debug_enabled = True
 
 from liualgotrader.common.decorators import trace
+from liualgotrader.common.tracer import get_tracer
+
+tracer = get_tracer()
 
 
 @pytest.fixture
@@ -16,29 +19,23 @@ def event_loop():
     yield loop
 
 
-@trace(1)
-async def part1():
-    print("part1")
-    await asyncio.sleep(0.025)
-
-    await part2()
+async def part1(duration=0.025, carrier=None):
+    print("part1", duration)
+    await asyncio.sleep(duration)
+    await trace(carrier)(part2)()
 
 
-@trace(1)
-async def part2():
-    print("part2")
-    await asyncio.sleep(0.025)
-
-    asyncio.create_task(part3())
+async def part2(duration=0.025, carrier=None):
+    print("part2", duration)
+    await asyncio.sleep(duration)
+    asyncio.create_task(trace(carrier)(part3)(duration=0.075))
 
 
-@trace(1)
-async def part3():
-    print("part3")
-    await asyncio.sleep(0.025)
+async def part3(duration=0.025, carrier=None):
+    print("part3", duration)
+    await asyncio.sleep(duration)
 
 
-@trace(1)
 async def part2_1():
     print("part2_1")
     await asyncio.sleep(0.025)
@@ -46,7 +43,6 @@ async def part2_1():
     await part2_2()
 
 
-@trace(1)
 async def part2_2():
     print("part2_2")
     await asyncio.sleep(0.025)
@@ -54,35 +50,30 @@ async def part2_2():
     asyncio.create_task(part2_3())
 
 
-@trace(1)
 async def part2_3():
     print("part2_3")
     await asyncio.sleep(0.025)
 
 
-@trace(1)
-async def part3_1():
+async def part3_1(carrier=None):
     print("part3_1")
     await asyncio.sleep(0.025)
 
-    await part3_2()
+    await trace(carrier)(part3_2)()
 
 
-@trace(1)
-async def part3_2():
+async def part3_2(carrier=None):
     print("part3_2")
     await asyncio.sleep(0.025)
 
-    asyncio.create_task(part3_3())
+    asyncio.create_task(trace(carrier)(part3_3)())
 
 
-@trace(1)
-async def part3_3():
+async def part3_3(carrier=None):
     print("part3_3")
-    await asyncio.sleep(0.025)
+    await asyncio.sleep(0.1)
 
 
-@trace(1)
 async def part4_1():
     print("part4_1")
     await asyncio.sleep(0.025)
@@ -90,7 +81,6 @@ async def part4_1():
     asyncio.create_task(part4_2())
 
 
-@trace(1)
 async def part4_2():
     print("part4_2")
     await asyncio.sleep(0.025)
@@ -98,7 +88,6 @@ async def part4_2():
     asyncio.create_task(part4_3())
 
 
-@trace(1)
 async def part4_3():
     print("part4_3")
     await asyncio.sleep(0.025)
@@ -111,7 +100,6 @@ async def part5_1():
     await part5_2()
 
 
-@trace(1)
 async def part5_2():
     print("part5_2", flush=True)
     await asyncio.sleep(0.025)
@@ -119,7 +107,6 @@ async def part5_2():
     asyncio.create_task(part5_3())
 
 
-@trace(1)
 async def part5_3():
     print("part5_3", flush=True)
     await asyncio.sleep(0.025)
@@ -128,43 +115,28 @@ async def part5_3():
 @pytest.mark.asyncio
 async def test_trace_basic():
     print("start test_trace_basic")
+    config.trace_enabled = True
     for _ in range(10):
-        await part1()
+        await trace(carrier={})(part1)()
+
+    await asyncio.sleep(1)
     print("end test_trace_basic")
 
 
 @pytest.mark.asyncio
-async def test_trace_parallel():
-    print("start test_trace_parallel")
+async def test_trace_basic_no_trace():
+    print("start test_trace_basic_no_trace")
+    config.trace_enabled = False
     for _ in range(10):
-        await part1()
-        await part2_1()
-    print("end test_trace_parallel")
+        await trace(carrier={})(part1)()
+    print("end test_trace_basic_no_trace")
 
 
 @pytest.mark.asyncio
 async def test_trace_from_task():
     print("start test_trace_from_task")
+    config.trace_enabled = True
     for _ in range(10):
-        asyncio.create_task(part3_1())
-    await asyncio.sleep(0.1)
+        asyncio.create_task(trace({})(part3_1)())
+    await asyncio.sleep(1)
     print("end test_trace_from_task")
-
-
-@pytest.mark.asyncio
-async def test_trace_from_task_2():
-    print("start test_trace_from_task_2")
-    for _ in range(10):
-        asyncio.create_task(part4_1())
-    await asyncio.sleep(0.1)
-    print("end test_trace_from_task_2")
-
-
-@pytest.mark.asyncio
-async def test_trace_from_task_3():
-    print("start test_trace_from_task_3")
-    for _ in range(10):
-        asyncio.create_task(part5_1())
-
-    await asyncio.sleep(0.1)
-    print("end test_trace_from_task_3")

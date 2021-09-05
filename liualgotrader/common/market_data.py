@@ -23,6 +23,10 @@ from liualgotrader.models.ticker_snapshot import TickerSnapshot
 volume_today: Dict[str, int] = {}
 quotes: Dict[str, df] = {}
 
+m_and_a_data = pd.read_csv(
+    "https://raw.githubusercontent.com/amor71/LiuAlgoTrader/master/database/market_m_a_data.csv"
+).set_index("date")
+
 
 def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
 
@@ -387,6 +391,7 @@ async def index_data(index: str) -> df:
 
 
 async def sp500_historical_constituents(date):
+    tlog(f"loading sp500 constituents for {date}")
     table = pd.read_html(
         "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     )

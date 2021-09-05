@@ -516,9 +516,8 @@ async def handle_quote(data: Dict) -> bool:
     return True
 
 
-@trace
 async def aggregate_bar_data(
-    data_loader: DataLoader, data: Dict, ts: pd.Timestamp
+    data_loader: DataLoader, data: Dict, ts: pd.Timestamp, carrier=None
 ) -> None:
     symbol = data["symbol"]
 
@@ -690,7 +689,6 @@ async def do_strategy(
     return True
 
 
-@trace
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -747,13 +745,13 @@ async def do_strategies(
                 del exc_info
 
 
-@trace
 async def handle_aggregate(
     trader: Trader,
     data_loader: DataLoader,
     symbol: str,
     ts: pd.Timestamp,
     data: Dict,
+    carrier=None,
 ) -> bool:
     # Next, check for existing orders for the stock
     if symbol in trading_data.open_orders and await order_inflight(
@@ -787,9 +785,8 @@ async def handle_aggregate(
     return True
 
 
-@trace
 async def handle_data_queue_msg(
-    data: Dict, trader: Trader, data_loader: DataLoader
+    data: Dict, trader: Trader, data_loader: DataLoader, carrier=None
 ) -> bool:
     global shortable
     global symbol_data_error
@@ -801,7 +798,7 @@ async def handle_data_queue_msg(
     symbol = data["symbol"]
     shortable[symbol] = True  # ToDO
 
-    await aggregate_bar_data(data_loader, data, ts)
+    await trace(carrier)(aggregate_bar_data)(data_loader, data, ts)
 
     if data["EV"] != "AM" and (time_diff := datetime.now(tz=timezone("America/New_York")) - data["timestamp"]) > timedelta(seconds=15):  # type: ignore
         if randint(1, 100) == 1:  # nosec
@@ -818,7 +815,7 @@ async def handle_data_queue_msg(
     time_tick[symbol] = data["timestamp"].replace(microsecond=0, nanosecond=0)
 
     asyncio.create_task(
-        handle_aggregate(
+        trace(carrier)(handle_aggregate)(
             trader=trader,
             data_loader=data_loader,
             symbol=symbol,
@@ -829,7 +826,6 @@ async def handle_data_queue_msg(
     return True
 
 
-@trace
 async def queue_consumer(
     queue: MNQueue, data_loader: DataLoader, trader: Trader
 ) -> None:
@@ -842,7 +838,9 @@ async def queue_consumer(
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(data)
                 else:
-                    await handle_data_queue_msg(data, trader, data_loader)
+                    await trace({})(handle_data_queue_msg)(
+                        data, trader, data_loader
+                    )
 
             except Empty:
                 await asyncio.sleep(0)

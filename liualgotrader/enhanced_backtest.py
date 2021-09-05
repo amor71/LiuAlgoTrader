@@ -201,7 +201,11 @@ async def do_strategy_all(
 ):
     try:
         do = await strategy.run_all(
-            symbols_position=trading_data.positions,
+            symbols_position={
+                symbol: trading_data.positions[symbol]
+                for symbol in trading_data.positions
+                if trading_data.positions[symbol] != 0
+            },
             now=now.to_pydatetime(),
             portfolio_value=portfolio_value,
             backtesting=True,

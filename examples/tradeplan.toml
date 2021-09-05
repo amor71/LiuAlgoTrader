@@ -33,8 +33,6 @@ from_market_open = 15
 
 # recurrence = 5
 
-# max_symbols = 440
-
 # target_strategy_name = "MyStrategy"
 
 # trading strategies, can have several *strategy* blocks
