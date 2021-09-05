@@ -4,7 +4,7 @@ deprecated==1.2.12
 urllib3==1.26.6
 numpy==1.21.2
 mypy==0.910
-black==21.7b0
+black==21.8b0
 pylint==2.10.2
 flake8==3.9.2
 Cython==0.29.24
@@ -29,11 +29,11 @@ streamlit==0.87.0
 stockstats==0.3.2
 nest_asyncio==1.5.1
 nbqa==1.1.0
-pre-commit==2.14.0
+pre-commit==2.14.1
 empyrical==0.5.5
 sklearn==0.0
-plotly==5.2.1
-hypothesis==6.15.0
+plotly==5.2.2
+hypothesis==6.17.1
 torch==1.9.0
 parsedatetime==2.6
 scipy==1.7.1
