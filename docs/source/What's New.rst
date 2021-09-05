@@ -6,7 +6,7 @@ What's New
 | 0.3.21           | 1. Significant performance improvements,     |
 |                  | 2. Bug fixes,                                |
 +------------------+----------------------------------------------+
-| 0.3.19           | 1. New CLI for portfolio managment,          |
+| 0.3.19           | 1. New CLI for portfolio management,         |
 |                  | 2. New notebook for portfolio trades,        |
 |                  | 3. Revised documentation,                    |
 |                  | 4. minor fixes.                              |
