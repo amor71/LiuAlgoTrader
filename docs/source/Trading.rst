@@ -6,7 +6,7 @@
 
    <br />
 
-LiuAlgoTrader exposes three applications and a set of
+LiuAlgoTrader has three applications and a set of
 analysis notebooks.
 
 The applications are:
@@ -34,14 +34,14 @@ also won't share your profits, if there are any).
 --------
 
 The trader application is the main application in
-the LiuAlgoTrading package and it run algorithmic
+the LiuAlgoTrading package and it runs algorithmic
 trading using the Alpaca Markets APIs.
 
 Prerequisites
 *************
-1. Installed & configured `PostgreSQL` instance, hosting a database w/ LiuAlgoTrader schema,
+1. Installed & configured `PostgreSQL` instance, hosting a database with LiuAlgoTrader schema,
 2. Ensuring environment variables are properly set including Alpaca Market API credentials, and the database DSN,
-3. An exiting *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
+3. An existing *tradeplan.toml* at the folder where the trader application is executed. For more details on how to setup the trade plan configuration file, see  `How to Configure` section.
 
 Trading session
 ***************
@@ -51,17 +51,16 @@ of the execution of the  `trader` application, as well
 as at the end of the session.
 
 All trades done during a trade session (and based on the
-tradeplan defined in the `tradeplan.toml` file) are
-associated to the `batch-id`. This is important when
-analysing a trading day, or backtesting. When you backtest,
+`tradeplan` defined in the `tradeplan.toml` file) are
+associated to a `batch-id`. This is important when
+analysing a trading day, or back-testing. When you back-test,
 you re-run a batch-id, simulating market condition while
 applying changes to the strategies being used.
 
 **Note**: If a trading session is interrupted, the next run of
-the `trader` application will review all current open
-positions, and if such exist, and are found in an earlier
-session, the trades done at the earlier session will be
-`relocated` to the new session - this is done in order to
+the `trader` application will check for current open
+positions. If they exist, the trades done at the earlier session will be
+relocated to the new session - this is done in order to
 simplify trade session analysis. See the Analysis section
 for more information.
 
@@ -94,7 +93,7 @@ An expected beginning of execution should look like:
 **Notes**
 
 - Normally the *trader* application should be run before the start of the trading day, or during the trading day.
-- When trying to run the *trader* on a none trading day, or after the trading day ended, the *trader* application will present an error message indicating the next open of the trading day.
+- When trying to run the *trader* on a null trading day, or after the end of the trading day, the *trader* application will present an error message indicating the next opening of the trading day.
 - It is possible to by-pass the trading-day limitations (very useful when debugging custom scanners or trade strategies), by adding to the *tradeplan.toml* file:
 
 .. code-block:: bash
@@ -105,26 +104,26 @@ Understanding *trader* output and Logging
 *****************************************
 
 The *trader* application writes output to STDOUT
-(standard output), however, it will also send
-logging to `google-cloud-logging` if those are
-configured. To learn more on how to configure
+(standard output). It will also send
+logging to `google-cloud-logging` if configured.
+To learn more about how to configure
 this feature read
 the `How to Install & Setup` section.
 
 The *trader* application uses a producer-consumers
 design patterns. In other words, when executed the
-scanners would run according to the tradeplan
-specifications, and then a single producer process
+scanners would run according to the specifications in `tradeplan`,
+and then a single producer process
 will spawn and a collection of consumer processes.
 To understand the inner workings
-read the `Understanding what's under the hood` section.
+read the `Concepts` section.
 
 The *trader* application writes log outs in sections
 to help troubleshooting and for better readability.
 
 - The first section presents the filename being executed (`trader` in most cases) followed by a unique-id (GUID) which represents the trading session. Each time the `trader` application is run, a new batch-id will be created. To understand more read the `How to analyze your trades` section.
-- The second section displays non-secure environment variables that may affect the trading beviour. You should see the DSN (database connection string) properly displayed, and when you don't that's normally a sign that the env variables were not properly set.
-- The third section displays the location of the trade-plan file, and parsing of the trade-plan header. A basic validation of the trade-plan file is done during that point and error messages will be presented for crudely format erros.
+- The second section displays non-secure environment variables that may affect the trading behaviour. You should see the DSN (database connection string) properly displayed, and when you don't that's normally a sign that the env variables were not properly set.
+- The third section displays the location of the `tradeplan` file and parses its header. A basic validation of the `tradeplan` file is done during that point and error messages will be presented for crude formatting.
 - The fourth section normally displays the scanner execution. For more details on scanners read the `Scanners` section.
 - The fifth and last section displays the strategies execution. For more details on strategies read the `Strategies` section.
 
@@ -132,7 +131,7 @@ to help troubleshooting and for better readability.
 Liquidation
 ***********
 
-15 minutes before end of the trading-day
+15 minutes before the end of the trading-day
 LiuAlgoTrader will start closing positions,
 you need to be aware of this behaviour if you
 build custom strategies for end-of-day.

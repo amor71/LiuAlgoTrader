@@ -31,7 +31,7 @@ Touch & Go
 
    pip install liualgotrader
 
-Having issues installation? Check out the installation FAQ_
+Having issues on installation? Check out the installation FAQ_
 
 .. _FAQ: https://liualgotrader.readthedocs.io/en/latest/Troubleshooting.html
 
@@ -42,8 +42,8 @@ Having issues installation? Check out the installation FAQ_
    liu quickstart
 
 Follow the installation wizard instructions. The wizard will walk you
-through the configuration of environment variables, setup of a local
-dockerized PostgreSQL and pre-populate with test data:
+through the configuration of environment variables, setup of a locally
+dockerized PostgreSQL that is pre-populated with test data:
 
 .. image:: /images/liu-wizard.png
     :width: 800
@@ -56,7 +56,7 @@ First time use
 
 LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experience of the framework. Follow the post-installation instructions, and try to back-test a specific day.
 
-if you follow the installation till the end, the wizard will direct you how to run the back-test UI:
+if you follow the installation till the end, the wizard will walk you through how to run the back-test UI:
 
 .. code-block:: bash
 
@@ -75,15 +75,15 @@ Select the `Analyzer` app on the upper-right drop-down and enter
 
 `Voila!`
 ^^^^^^^^
-You should be now seeing a pre-loaded session from your local database.
+You should see a pre-loaded session from your local database.
 You're all set now.
 
 **NOTE**
 
-back-testing a whole day, unlike back-testing a specific trading session
-requires downloading of data from Polygon.io into your local database. This is done one time, per date, and may take few minutes to an hour depending on your connection type.
+Unlike back-testing a specific trading session, back-testing a whole day
+requires downloading data from Polygon.io into your local database. This is done once, per date, and may take minutes to an hour depending on your connection type.
 
 What's Next?
 ------------
 
-Read through the rest of the documentation, starting with the 'Getting Started' section. Understand the framework concepts, create your on strategies and run a trading session with LiuAlgoTrading Framework.
+Read through the rest of the documentation, starting with the 'Getting Started' section. Understand the framework concepts, create your own strategies and run a trading session.

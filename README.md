@@ -109,6 +109,7 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 - Chris [crowforc3](https://github.com/crawforc3)
 - [TheSnoozer](https://github.com/TheSnoozer)
 - [Aditya Gupta](https://github.com/adi0x90)
+- [Alex Lau](https://github.com/riven314)
 
 
 

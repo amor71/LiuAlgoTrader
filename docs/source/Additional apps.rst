@@ -5,8 +5,8 @@ Additional apps
 Optimizer
 ---------
 
-The `optimizer` application is a tool for back-testing strategies, in parallel, while using different parameters. 
-The optimizer helps selecting the best performing hyper-parameters for any strategy.
+The `optimizer` application is a tool for back-testing strategy with different parameters in parallel.
+`optimizer` helps select the best hyper-parameters for a strategy.
 
 How-To
 ******
@@ -17,20 +17,20 @@ To use the `optimizer` application, a new section should be added to the `tradep
   :language: python
   :linenos:
 
-* Note the [optimizer] section added to the tradeplan.toml file,
-* start_date & end_date specify the time-window for backtesting, 
+* Note the [optimizer] section is added to the `tradeplan.toml` file,
+* `start_date` & `end_date` specify the time-window for back-testing,
 * The `optimizer` always runs in daily time-scale,
 
 
-Params and Hypers
-*****************
+Parameters and Hyper-parameters
+*******************************
 
 The `optimizer` application supports two different 
-types of configuration-space constructs: Parmeter and Hyper-Parameters.
+types of configuration-space constructs: Parameters and Hyper-Parameters.
 
 Parameters are meta-instructions for generating configurations for strategies,
 that are calculated per back-testing step. In contrast, Hyper-Parameters is a 
-configuration space spanning a product of all possible values for each Hyper-Parameter. 
+configuration space spanning a product of all possible values for each Hyper-Parameter.
 
 Usage
 *****
@@ -41,39 +41,39 @@ To run the `optimizer` application, simply type:
 
     optimizer
 
-The application will read the `tradeplan.toml` file and spawn process for backtesting the different configurations. 
+The application will read the `tradeplan.toml` file and spawn process for back-testing the different configurations.
 
 Model
 *****
-Each `optimizer` execution generates a UUID representing a unique exeuction identification. 
-Each back-test will generate it's own `batch-id`. 
-The relationship between the optimizer execution id, batch-ids and the hyper parameters configurations
+Each `optimizer` execution generates a UUID representing a unique execution identification.
+Each back-test will generate its own `batch-id`.
+The relationship between the optimizer execution id, batch-ids and the hyper-parameters configurations
 is stored in the **OPTIMIZER_RUN** database table.
 
 Analysis
 ********
-A dedicated Jupter Notebook (see the `analysis` section) allows loading and comparing
-performance of the different configurations.
+A dedicated Jupyter Notebook (see the `analysis` section) allows loading and comparing
+performance of different configurations.
 
 Parallel execution
 ******************
-Similarly to the `trader` application, the `optimizer` also supports multi-processing execution to optimize run times. By default the `optimizer` executes 4 process, however that may be changed by speciying the `--concurrency` parameter.
+Similar to `trader` application, `optimizer` supports multi-processing execution to optimize run times. By default the `optimizer` executes 4 processes, however that may be changed by specifying the `--concurrency` parameter.
 
 
 Portfolio
----------
+*********
 
-The Portfolio app, uses Google Fire_ infrastructure for CLI development. 
+The Portfolio app uses Google Fire_ infrastructure for CLI development.
 
 .. _Fire: https://github.com/google/python-fire
 
 
-The application provides means for creating portfolios, displaying current portfolio status in a neat table, displaying the cash account transactions, as well as a re-processing tool. 
+The application provides means to creating portfolios, summarizing current portfolio status in a neat table, displaying the cash account transactions, as well as a re-processing tool.
 
 Usage
 *****
 
-To see the diffent commands of the `portfolio` application, type: 
+To see the different commands of the `portfolio` application, type:
 
 .. code-block:: bash
 
@@ -99,11 +99,11 @@ For example, running the below creates a new portfolio, with a cash account of $
 Re-processing
 *************
 
-The cash account is updated with every trade. Normally, there will not be a need to re-calculate the cash requests from the account. In some cases, however, where manual intervension is required, it may be helpful to re-caculate the cash transaction.
+The cash account is updated with every trade. Normally, there will not be a need to re-calculate the cash requests from the account. In some cases, however, where manual intervention is required, it may be helpful to re-calculate the cash transaction.
 
-**WARNING**: This operation is not reversible ! 
+**WARNING**: This operation is irreversible!
 
-To create a recalculate portfolio, type:
+To create a recalculated portfolio, type:
 
 .. code-block:: bash
 

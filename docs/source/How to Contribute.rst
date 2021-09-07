@@ -13,9 +13,14 @@ Contributors
 
 Special thanks to the below individuals for their comments, reviews and suggestions:
 
+- Alex Lau riven314_
+
+.. _riven314: https://github.com/riven314
+
 - Shlomi Kushchi shlomikushchi_
 
 .. _shlomikushchi: https://github.com/shlomikushchi
+
 
 - Venkat Y vinmestmant_
 
