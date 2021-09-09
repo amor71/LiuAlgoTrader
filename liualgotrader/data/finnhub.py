@@ -1,11 +1,6 @@
-import asyncio
 import io
-import json
-import queue
-import traceback
 from datetime import date, datetime, timedelta
-from multiprocessing import Queue
-from typing import Awaitable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 import pytz
@@ -13,12 +8,9 @@ import requests
 from finnhub import Client
 
 from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import (QueueMapper, TimeScale, WSConnectState,
-                                        WSEventType)
+from liualgotrader.common.types import TimeScale
 from liualgotrader.data import static
 from liualgotrader.data.data_base import DataAPI
-from liualgotrader.data.streaming_base import StreamingAPI
 
 NY = "America/New_York"
 nytz = pytz.timezone(NY)

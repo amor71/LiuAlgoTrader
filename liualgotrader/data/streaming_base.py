@@ -1,4 +1,4 @@
-from typing import Awaitable, Dict, List
+from typing import List
 
 from liualgotrader.common.types import QueueMapper, WSEventType
 

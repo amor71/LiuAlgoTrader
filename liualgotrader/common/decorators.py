@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Coroutine, Dict, Optional
+from typing import Dict, Optional
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -36,7 +36,6 @@ def timeit(func):
 def trace(carrier: Optional[Dict]):
     def trace_inner(func):
         async def helper(*args, **params):
-            loop = asyncio.get_event_loop()
             if tracer and config.trace_enabled:
 
                 if not bool(carrier):

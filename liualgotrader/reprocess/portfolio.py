@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 
 import pytz
 
@@ -9,7 +8,6 @@ from liualgotrader.models.portfolio import Portfolio
 
 
 async def _calc_account_transactions(portfolio_id: str, account_id: int):
-    loop = asyncio.get_event_loop()
     _df = load_trades_by_portfolio(portfolio_id)
     local = pytz.timezone("UTC")
     for _, row in _df.iterrows():

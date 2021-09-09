@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.decorators import retry, timeit
+from liualgotrader.common.decorators import timeit
 from liualgotrader.trading.trader_factory import trader_factory
 
 nest_asyncio.apply()
@@ -25,7 +25,6 @@ async def reconnect_trader():
     return await trader.reconnect()
 
 
-@retry(5, ConnectionError, reconnect_trader)
 @timeit
 async def get_trading_days(trader, start_date):
     return trader.get_trading_days(start_date)

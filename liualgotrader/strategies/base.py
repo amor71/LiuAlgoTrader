@@ -1,8 +1,6 @@
 """Base Class for Strategies"""
-import asyncio
 import importlib
 import traceback
-from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -178,11 +176,11 @@ class Strategy(object):
         """implementing key-store retrival"""
         if key in self.global_var:
             return self.global_var[key]
-        else:
-            self.global_var[key] = (
-                val := await KeyStore.load(key, self.name, context)
-            )
-            return val
+
+        self.global_var[key] = (
+            val := await KeyStore.load(key, self.name, context)
+        )
+        return val
 
     async def set_global_var(self, key, value, context):
         """implementing key-store storing"""
@@ -221,7 +219,9 @@ class Strategy(object):
             )
             await s.create()
         except FileNotFoundError as e:
-            tlog(f"[Error] file not found `{strategy_details['filename']}`")
+            tlog(
+                f"[EXCEPTION] {e} : file not found `{strategy_details['filename']}`"
+            )
             exit(0)
         except Exception as e:
             tlog(

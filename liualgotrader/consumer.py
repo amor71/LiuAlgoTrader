@@ -1,10 +1,8 @@
 import asyncio
-import importlib.util
-import json
 import os
 import sys
 import traceback
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from queue import Empty
 from random import randint
 from typing import Any, Dict, List, Optional
@@ -21,10 +19,8 @@ from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import trace
-from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import TimeScale
-from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
-                                                    TRADE_CONDITIONS)
+from liualgotrader.common.tlog import tlog, tlog_exception
+from liualgotrader.fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
@@ -119,7 +115,8 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
                     for symbol in trading_data.last_used_strategy
                     if trading_data.last_used_strategy[symbol] == s
                 ]
-                await do_strategy_all(
+
+                await trace({})(do_strategy_all)(
                     trader=trader,
                     data_loader=data_loader,
                     strategy=s,
@@ -161,7 +158,7 @@ async def liquidator_sleep(trader: Trader) -> bool:
         return True
 
 
-async def liquidator_loop():
+async def liquidator_loop(trader: Trader):
     for symbol, position in trading_data.positions.items():
         tlog(f"liquidator() -> checking {symbol}")
         if (
@@ -184,7 +181,7 @@ async def liquidator(trader: Trader) -> None:
 
     tlog("liquidator() -> starting to liquidate positions")
     try:
-        await liquidator_loop()
+        await liquidator_loop(trader)
     except asyncio.CancelledError:
         tlog("liquidator() cancelled")
     except KeyboardInterrupt:
@@ -194,7 +191,7 @@ async def liquidator(trader: Trader) -> None:
 
 
 async def teardown_task(trader: Trader, tasks: List[asyncio.Task]) -> None:
-    tlog(f"consumer-teardown_task() - starting ")
+    tlog("consumer-teardown_task() - starting ")
 
     if not config.market_close:
         tlog(
@@ -430,27 +427,6 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
     )
     return True
 
-    algo_run_id = await NewTrade.get_latest_algo_run_id(symbol=symbol)
-    tlog(f"found algo_run_id {algo_run_id}")
-    for s in trading_data.strategies:
-        if s.algo_run.run_id == algo_run_id:
-            trading_data.last_used_strategy[symbol] = s
-            tlog(f"found strategy {str(s)} for symbol {symbol}")
-            break
-
-    if event == "partial_fill" and symbol in trading_data.last_used_strategy:
-        await update_partially_filled_order(
-            trading_data.last_used_strategy[symbol], Order(data["order"])
-        )
-    elif event == "fill" and symbol in trading_data.last_used_strategy:
-        await update_filled_order(
-            trading_data.last_used_strategy[symbol], Order(data["order"])
-        )
-    elif event in ("canceled", "rejected"):
-        trading_data.partial_fills.pop(symbol, None)
-
-    return True
-
 
 async def handle_trade_update(data: Dict) -> bool:
     symbol = data["symbol"]
@@ -530,7 +506,7 @@ async def aggregate_bar_data(
     except KeyError:
         current = None
 
-    if current is None:
+    if current is None or data["EV"] == "AM":
         new_data = [
             data["open"],
             data["high"],
@@ -689,6 +665,15 @@ async def do_strategy(
     return True
 
 
+async def _filter_strategies(symbol: str) -> List:
+    return [
+        s
+        for s in trading_data.strategies
+        if not await s.should_run_all()
+        and symbol not in rejects.get(s.name, [])
+    ]
+
+
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -696,25 +681,11 @@ async def do_strategies(
     position: float,
     now: pd.Timestamp,
     data: Dict,
+    carrier=None,
 ) -> None:
     # run strategies
-    for s in trading_data.strategies:
-        if (
-            "symbol_strategy" in data
-            and data["symbol_strategy"]
-            and s.name != data["symbol_strategy"]
-        ):
-            continue
-
-        if s.name in rejects and symbol in rejects[s.name]:
-            continue
-        try:
-            skip = await s.should_run_all()
-        except Exception:
-            skip = False
-        finally:
-            if skip:
-                continue
+    strategies = await _filter_strategies(symbol)
+    for s in strategies:
         try:
             if not await do_strategy(
                 strategy=s,
@@ -737,12 +708,7 @@ async def do_strategies(
         except Exception as e:
             tlog(f"[EXCEPTION] in do_strategies() : {e}")
             if config.debug_enabled:
-                traceback.print_exc()
-                exc_info = sys.exc_info()
-                lines = traceback.format_exception(*exc_info)
-                for line in lines:
-                    tlog(f"{line}")
-                del exc_info
+                tlog_exception("do_strategies()")
 
 
 async def handle_aggregate(
@@ -773,7 +739,7 @@ async def handle_aggregate(
     ):
         await liquidate(symbol, symbol_position, trader)
     else:
-        await do_strategies(
+        await trace(carrier)(do_strategies)(
             trader=trader,
             data_loader=data_loader,
             symbol=symbol,
@@ -813,16 +779,15 @@ async def handle_data_queue_msg(
         return True
 
     time_tick[symbol] = data["timestamp"].replace(microsecond=0, nanosecond=0)
-
-    asyncio.create_task(
-        trace(carrier)(handle_aggregate)(
-            trader=trader,
-            data_loader=data_loader,
-            symbol=symbol,
-            ts=time_tick[symbol],
-            data=data,
-        )
+    await trace(carrier)(handle_aggregate)(
+        trader=trader,
+        data_loader=data_loader,
+        symbol=symbol,
+        ts=time_tick[symbol],
+        data=data,
+        carrier=None,
     )
+
     return True
 
 
@@ -880,56 +845,22 @@ async def create_strategies(
     data_loader: DataLoader,
     strategies_conf: Dict,
 ) -> int:
-    strategy_types = []
+    loaded = 0
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
-        tlog(f"strategy {strategy_name} selected")
-
-        if strategy_details.get("off_hours", False):
-            tlog(f"{strategy_name} if off-hours, skipping during market hours")
-        try:
-            spec = importlib.util.spec_from_file_location(
-                "module.name", strategy_details["filename"]
-            )
-            custom_strategy_module = importlib.util.module_from_spec(spec)  # type: ignore
-            spec.loader.exec_module(custom_strategy_module)  # type: ignore
-            class_name = strategy_name
-
-            custom_strategy = getattr(custom_strategy_module, class_name)
-
-            if not issubclass(custom_strategy, Strategy):
-                tlog(f"strategy must inherit from class {Strategy.__name__}")
-                exit(0)
-            strategy_details.pop("filename", None)
-            strategy_types += [(custom_strategy, strategy_details)]
-
-        except FileNotFoundError as e:
-            tlog(f"[Error] file not found `{strategy_details['filename']}`")
-            exit(0)
-        except Exception as e:
-            tlog(
-                f"[Error]exception of type {type(e).__name__} with args {e.args}"
-            )
-            if config.debug_enabled:
-                traceback.print_exc()
-            exit(0)
-
-    loaded = 0
-    for strategy_tuple in strategy_types:
-        strategy_type = strategy_tuple[0]
-        strategy_details = strategy_tuple[1]
-        s = strategy_type(
-            batch_id=batch_id, data_loader=data_loader, **strategy_details
+        s = await Strategy.get_strategy(
+            batch_id=batch_id,
+            strategy_name=strategy_name,
+            strategy_details=strategy_details,
+            data_loader=data_loader,
         )
-        tlog(f"instantiated {s.name}")
-        if await s.create():
-            trading_data.strategies.append(s)
-            if symbols:
-                loaded += await load_current_positions(
-                    trading_api=trader,
-                    symbols=symbols,
-                    strategy=s,
-                )
+        trading_data.strategies.append(s)
+        if symbols:
+            loaded += await load_current_positions(
+                trading_api=trader,
+                symbols=symbols,
+                strategy=s,
+            )
 
     return loaded
 

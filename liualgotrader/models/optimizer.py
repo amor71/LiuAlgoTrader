@@ -1,7 +1,5 @@
 from typing import List, Tuple
 
-import asyncpg
-
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 
@@ -29,10 +27,9 @@ class OptimizerRun:
         optimizer_session_id: str,
     ) -> List[Tuple[str, str]]:
         try:
-            pool = config.db_conn_pool
+            _ = config.db_conn_pool
         except AttributeError:
             await create_db_connection()
-            pool = config.db_conn_pool
 
         async with config.db_conn_pool.acquire() as con:
             recrods = await con.fetch(

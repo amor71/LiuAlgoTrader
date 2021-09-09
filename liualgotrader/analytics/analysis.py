@@ -1,6 +1,5 @@
 import asyncio
 import copy
-import json
 from datetime import date, timedelta
 from typing import Dict, Tuple
 
@@ -287,20 +286,20 @@ def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
     config.market_open = day_to_analyze.replace(
         hour=9, minute=30, second=0, microsecond=0
     )
-    trades_anlytics = pd.DataFrame()
+    trades_analytics = pd.DataFrame()
     trades["client_time"] = pd.to_datetime(trades["client_time"], utc=True)
-    trades_anlytics["symbol"] = trades.symbol.unique()
-    trades_anlytics["revenues"] = trades_anlytics["symbol"].apply(
+    trades_analytics["symbol"] = trades.symbol.unique()
+    trades_analytics["revenues"] = trades_analytics["symbol"].apply(
         lambda x: calc_batch_revenue(x, trades, batch_id)
     )
-    trades_anlytics["count"] = trades_anlytics["symbol"].apply(
+    trades_analytics["count"] = trades_analytics["symbol"].apply(
         lambda x: count_trades(x, trades, batch_id)
     )
 
-    return trades_anlytics
+    return trades_analytics
 
 
-def symobl_trade_analytics(
+def symbol_trade_analytics(
     symbol_df: pd.DataFrame, open_price: float, plt
 ) -> Tuple[pd.DataFrame, float]:
 
@@ -396,9 +395,7 @@ def calc_symbol_state(
     symbol_trades: pd.DataFrame,
     data_loader: DataLoader,
 ) -> Tuple[float, float]:
-    t1 = t2 = None
     qty: float = 0
-    eastern = timezone("US/Eastern")
     for _, row in symbol_trades.iterrows():
         if row.operation == "buy":
             qty += row.qty
@@ -545,9 +542,6 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
 
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
-    start_date = trades.client_time.min().date()
-    end_date = trades.client_time.max().date()
-    trader = trader_factory()()
 
     symbols = trades.symbol.unique().tolist()
     rows = []

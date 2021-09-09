@@ -1,10 +1,8 @@
 import json
 import queue
-import time
 import traceback
-from datetime import date, timedelta
-from multiprocessing import Queue
-from typing import Awaitable, Dict, List, Optional
+from datetime import date
+from typing import Dict, List
 
 import pandas as pd
 from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient
@@ -173,9 +171,9 @@ class PolygonStream(StreamingAPI):
                 cls.handle_event(event)
 
     @classmethod
-    def on_error(ws, error):
+    def on_error(cls, ws, error):
         tlog(f"[ERROR] on_error(): {error}")
 
     @classmethod
-    def on_close(ws):
-        tlog(f"[INFO] on_close() called")
+    def on_close(cls, ws, close_status_code, close_msg):
+        tlog(f"[INFO] on_close() called with {close_status_code, close_msg}")

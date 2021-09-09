@@ -1,12 +1,9 @@
 import asyncio
-import json
 import queue
-import time
 import traceback
 from datetime import date, datetime, timedelta
-from multiprocessing import Queue
 from random import randint
-from typing import Awaitable, Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -17,8 +14,7 @@ from alpaca_trade_api.stream import Stream
 from liualgotrader.common import config
 from liualgotrader.common.list_utils import chunks
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import (QueueMapper, TimeScale, WSConnectState,
-                                        WSEventType)
+from liualgotrader.common.types import QueueMapper, TimeScale, WSEventType
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.streaming_base import StreamingAPI
 
@@ -42,6 +38,22 @@ class AlpacaData(DataAPI):
 
         return self.alpaca_rest_client.list_assets()
 
+    def _localize_start_end(self, start: date, end: date) -> Tuple[str, str]:
+        return (
+            nytz.localize(
+                datetime.combine(start, datetime.min.time())
+            ).isoformat(),
+            (
+                nytz.localize(
+                    datetime.now().replace(microsecond=0)
+                ).isoformat()
+                if end >= date.today()
+                else nytz.localize(
+                    datetime.combine(end, datetime.min.time())
+                ).isoformat()
+            ),
+        )
+
     def get_symbol_data(
         self,
         symbol: str,
@@ -49,14 +61,8 @@ class AlpacaData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        _start = nytz.localize(
-            datetime.combine(start, datetime.min.time())
-        ).isoformat()
-        _end = (
-            nytz.localize(datetime.now().replace(microsecond=0)).isoformat()
-            if end >= date.today()
-            else end
-        )
+        _start, _end = self._localize_start_end(start, end)
+
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
@@ -68,38 +74,26 @@ class AlpacaData(DataAPI):
             else None
         )
 
-        retry_count = 2
-        while True:
-            try:
-                data = self.alpaca_rest_client.get_bars(
-                    symbol=symbol,
-                    timeframe=t,
-                    start=_start,
-                    end=_end,
-                    limit=10000,
-                    adjustment="all",
-                ).df
-            except Exception as e:
-                if not retry_count:
-                    raise ValueError(
-                        f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
-                    )
-
-                tlog(
-                    f"[ERROR] failed to load {symbol} between {_start} and {_end}. Exception {type(e).__name__} with {e}. retrying"
-                )
-                time.sleep(1)
-            else:
-                break
-            finally:
-                retry_count -= 1
-        data = data.tz_convert("America/New_York")
-
-        if data.empty:
+        try:
+            data = self.alpaca_rest_client.get_bars(
+                symbol=symbol,
+                timeframe=t,
+                start=_start,
+                end=_end,
+                limit=10000,
+                adjustment="all",
+            ).df
+        except Exception as e:
             raise ValueError(
-                f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
+                f"[EXCEPTION] {e} for {symbol} has no data for {_start} to {_end} w {scale.name}"
             )
+        else:
+            if data.empty:
+                raise ValueError(
+                    f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
+                )
 
+        data = data.tz_convert("America/New_York")
         data["average"] = data.vwap
         data["count"] = data.trade_count
         data["vwap"] = np.NaN

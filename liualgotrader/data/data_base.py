@@ -4,7 +4,7 @@ from typing import Awaitable, Dict, List
 
 import pandas as pd
 
-from liualgotrader.common.types import TimeScale, WSEventType
+from liualgotrader.common.types import TimeScale
 
 
 class DataAPI(metaclass=ABCMeta):

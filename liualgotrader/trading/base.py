@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from liualgotrader.common.exceptions import MarketClosedToday
 from liualgotrader.common.types import QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
 
@@ -29,36 +28,36 @@ class Trader:
     def get_market_schedule(
         self,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        pass
+        ...
 
     def get_trading_days(
         self, start_date: date, end_date: date = date.today()
     ) -> pd.DataFrame:
-        pass
+        ...
 
     def is_market_open_today(self) -> bool:
-        pass
+        ...
 
     def get_time_market_close(self) -> Optional[timedelta]:
-        pass
+        ...
 
     def get_position(self, symbol: str) -> float:
-        pass
+        ...
 
     async def reconnect(self):
-        pass
+        ...
 
     async def get_tradeable_symbols(self) -> List[str]:
-        pass
+        ...
 
     async def get_shortable_symbols(self) -> List[str]:
-        pass
+        ...
 
     async def is_shortable(self, symbol) -> bool:
-        pass
+        ...
 
     async def is_order_completed(self, order) -> Tuple[bool, float]:
-        pass
+        ...
 
     async def submit_order(
         self,
@@ -77,19 +76,19 @@ class Trader:
         trail_price: str = None,
         trail_percent: str = None,
     ):
-        pass
+        ...
 
     async def get_order(self, order_id: str):
-        pass
+        ...
 
     async def cancel_order(self, order_id: str):
-        pass
+        ...
 
     async def run(self) -> Optional[asyncio.Task]:
-        pass
+        ...
 
     async def close(self):
-        pass
+        ...
 
     @classmethod
     def get_instance(cls):

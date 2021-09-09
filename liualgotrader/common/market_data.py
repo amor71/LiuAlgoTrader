@@ -1,24 +1,18 @@
 import io
 import time
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import requests
-from alpaca_trade_api.common import get_polygon_credentials
-from asyncpg.pool import Pool
 from pandas import DataFrame as df
-from pandas import Timestamp
-from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
-from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
-from liualgotrader.models.ticker_snapshot import TickerSnapshot
 
 volume_today: Dict[str, int] = {}
 quotes: Dict[str, df] = {}
@@ -26,67 +20,6 @@ quotes: Dict[str, df] = {}
 m_and_a_data = pd.read_csv(
     "https://raw.githubusercontent.com/amor71/LiuAlgoTrader/master/database/market_m_a_data.csv"
 ).set_index("date")
-
-
-def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
-
-    tlog(f"Loading {len(symbols)} tickers historic data from Finnhub")
-    nyc = timezone(NY := "America/New_York")
-    _from = datetime.today().astimezone(nyc) - timedelta(days=30)
-    _from = _from.replace(hour=9, minute=29, second=0, microsecond=0)
-    _to = datetime.now(nyc)
-
-    minute_history: Dict[str, df] = {}
-    with requests.Session() as s:
-        try:
-            c = 0
-            for symbol in symbols:
-                retry = True
-                while retry:
-                    retry = False
-
-                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=1&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
-                    r = s.get(url)
-
-                    if r.status_code == 200:
-                        response = r.json()
-                        if response["s"] != "no_data":
-                            _data = {
-                                "close": response["c"],
-                                "open": response["o"],
-                                "high": response["h"],
-                                "low": response["l"],
-                                "volume": response["v"],
-                            }
-
-                            _df = df(
-                                _data,
-                                index=[
-                                    Timestamp(item, tz=NY, unit="s")
-                                    for item in response["t"]
-                                ],
-                            )
-                            c += 1
-                            _df["vwap"] = 0.0
-                            _df["average"] = 0.0
-                            minute_history[symbol] = _df
-                            tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} ({c}/{len(symbols)})"
-                            )
-                    elif r.status_code == 429:
-                        tlog(
-                            f"{symbols.index(symbol)}/{len(symbols)} API limit: ({r.text})"
-                        )
-                        time.sleep(30)
-                        retry = True
-                    else:
-                        tlog(f"[ERROR] {r.status_code}, {r.text}")
-
-        except KeyboardInterrupt:
-            tlog("KeyboardInterrupt")
-            pass
-
-    return minute_history
 
 
 def get_historical_data_from_poylgon_for_symbols(
@@ -135,8 +68,7 @@ def get_historical_data_from_polygon_by_range(
                         ).df
                         break
 
-                    except Exception as e:
-
+                    except Exception:
                         retry -= 1
 
                 if _df is None or not len(_df):
@@ -240,66 +172,13 @@ def get_historical_daily_from_polygon_by_range(
                         else _df
                     )
                     break
-                except Exception as e:
+                except Exception:
                     retry -= 1
-                    continue
 
     except KeyboardInterrupt:
         tlog("KeyboardInterrupt")
 
     return _minute_history
-
-
-def get_historical_data_from_polygon(
-    api: tradeapi, symbols: List[str], max_tickers: int
-) -> Dict[str, df]:
-    """get ticker history"""
-
-    tlog(f"Loading max {max_tickers} tickers w/ highest volume from Polygon")
-    minute_history: Dict[str, df] = {}
-    c = 0
-    exclude_symbols = []
-    try:
-        for symbol in symbols:
-            if symbol not in minute_history:
-                retry_counter = 5
-                while retry_counter > 0:
-                    try:
-                        if c < max_tickers:
-                            _df = api.polygon.historic_agg_v2(
-                                symbol,
-                                1,
-                                "minute",
-                                _from=str(date.today() - timedelta(days=10)),
-                                to=str(date.today() + timedelta(days=1)),
-                            ).df
-                            _df["vwap"] = 0.0
-                            _df["average"] = 0.0
-
-                            minute_history[symbol] = _df
-                            tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c+1}/{max_tickers}"
-                            )
-                            c += 1
-                            break
-
-                        exclude_symbols.append(symbol)
-                        break
-                    except (
-                        requests.exceptions.HTTPError,
-                        requests.exceptions.ConnectionError,
-                    ):
-                        retry_counter -= 1
-                        if retry_counter == 0:
-                            exclude_symbols.append(symbol)
-    except KeyboardInterrupt:
-        tlog("KeyboardInterrupt")
-
-    for x in exclude_symbols:
-        symbols.remove(x)
-
-    tlog(f"Total number of symbols for trading {len(symbols)}")
-    return minute_history
 
 
 async def get_sector_tickers(sector: str) -> List[str]:
@@ -432,8 +311,8 @@ def latest_stock_price(data_api: tradeapi, symbol: str) -> float:
     ).df.close.tolist()
 
     if not len(vals):
-        raise Exception(
-            f"Cant load {symbol} details for {str(date.today()-timedelta(days=5))} till {str(date.today())}"
+        raise ValueError(
+            f"Cant load {symbol} details for {date.today()-timedelta(days=5)} till {date.today()}"
         )
 
     return vals[-1]
