@@ -431,27 +431,6 @@ async def handle_trade_update_wo_order(data: Dict) -> bool:
     )
     return True
 
-    algo_run_id = await NewTrade.get_latest_algo_run_id(symbol=symbol)
-    tlog(f"found algo_run_id {algo_run_id}")
-    for s in trading_data.strategies:
-        if s.algo_run.run_id == algo_run_id:
-            trading_data.last_used_strategy[symbol] = s
-            tlog(f"found strategy {str(s)} for symbol {symbol}")
-            break
-
-    if event == "partial_fill" and symbol in trading_data.last_used_strategy:
-        await update_partially_filled_order(
-            trading_data.last_used_strategy[symbol], Order(data["order"])
-        )
-    elif event == "fill" and symbol in trading_data.last_used_strategy:
-        await update_filled_order(
-            trading_data.last_used_strategy[symbol], Order(data["order"])
-        )
-    elif event in ("canceled", "rejected"):
-        trading_data.partial_fills.pop(symbol, None)
-
-    return True
-
 
 async def handle_trade_update(data: Dict) -> bool:
     symbol = data["symbol"]
