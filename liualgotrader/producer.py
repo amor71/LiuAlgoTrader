@@ -65,35 +65,46 @@ async def subscribe_new_symbols(new_symbols: List[str]):
     )
 
 
+async def scanners_iteration(
+    scanner_queue: Queue,
+    queues: List[MNQueue],
+    num_consumer_processes: int,
+):
+    global symbols
+    symbols_details = scanner_queue.get(timeout=1)
+
+    new_channels: List = []
+    if len(
+        new_symbols := get_new_symbols_and_queues(
+            symbols_details=json.loads(symbols_details),
+            queues=queues,
+            num_consumer_processes=num_consumer_processes,
+        )
+    ):
+        await subscribe_new_symbols(new_symbols)
+        trending_db = TrendingTickers(config.batch_id)
+        await trending_db.save(new_symbols)
+        symbols += new_symbols
+        tlog(
+            f"added {len(new_symbols)}:{new_symbols[:20]}..{new_symbols[-20:]} TOTAL: {len(symbols)}"
+        )
+        await asyncio.sleep(1)
+
+
 async def scanner_input(
     scanner_queue: Queue,
     queues: List[MNQueue],
     num_consumer_processes: int,
 ) -> None:
     tlog("scanner_input() task starting ")
-    global symbols
 
     while True:
         try:
-            symbols_details = scanner_queue.get(timeout=1)
-            if symbols_details:
-                new_channels: List = []
-                if len(
-                    new_symbols := get_new_symbols_and_queues(
-                        symbols_details=json.loads(symbols_details),
-                        queues=queues,
-                        num_consumer_processes=num_consumer_processes,
-                    )
-                ):
-                    await subscribe_new_symbols(new_symbols)
-                    trending_db = TrendingTickers(config.batch_id)
-                    await trending_db.save(new_symbols)
-                    symbols += new_symbols
-                    tlog(
-                        f"added {len(new_symbols)}:{new_symbols[:20]}..{new_symbols[-20:]} TOTAL: {len(symbols)}"
-                    )
-                    await asyncio.sleep(1)
-
+            await scanners_iteration(
+                scanner_queue=scanner_queue,
+                queues=queues,
+                num_consumer_processes=num_consumer_processes,
+            )
         except Empty:
             await asyncio.sleep(30)
         except asyncio.CancelledError:

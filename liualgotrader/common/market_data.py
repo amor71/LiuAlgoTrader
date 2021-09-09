@@ -84,7 +84,6 @@ def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
 
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
-            pass
 
     return minute_history
 
@@ -432,8 +431,8 @@ def latest_stock_price(data_api: tradeapi, symbol: str) -> float:
     ).df.close.tolist()
 
     if not len(vals):
-        raise Exception(
-            f"Cant load {symbol} details for {str(date.today()-timedelta(days=5))} till {str(date.today())}"
+        raise ValueError(
+            f"Cant load {symbol} details for {date.today()-timedelta(days=5)} till {date.today()}"
         )
 
     return vals[-1]
