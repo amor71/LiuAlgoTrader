@@ -4,7 +4,7 @@ import sys
 import traceback
 from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple
 
 import alpaca_trade_api as tradeapi
 import nest_asyncio
@@ -324,48 +324,50 @@ class SymbolData:
                 traceback.print_exc()
             raise
 
-    def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
-        if self.scale not in (TimeScale.minute, TimeScale.day):
-            return
+    def _convert_timestamp(
+        self, timestamp: pd.Timestamp
+    ) -> Tuple[datetime, datetime]:
+        return (
+            timestamp.to_pydatetime()
+            - timedelta(days=6 if self.scale == TimeScale.minute else 100),
+            timestamp.to_pydatetime() + timedelta(days=1),
+        )
 
-        if type(timestamp) == pd.Timestamp:
-            _start = timestamp.to_pydatetime() - timedelta(
-                days=6 if self.scale == TimeScale.minute else 100
-            )
-            _end = timestamp.to_pydatetime() + timedelta(days=1)
-        elif type(timestamp) == int:
-            if self.scale == TimeScale.minute:
-                if not len(self.symbol_data):
-                    _end = datetime.now(tz=nyc).replace(
-                        second=0, microsecond=0
-                    ) + timedelta(minutes=1 + timestamp)
-                else:
-                    _end = self.symbol_data.index[-1] + timedelta(
-                        minutes=1 + timestamp
-                    )
-            elif self.scale == TimeScale.day:
+    def _convert_int(
+        self, timestamp: pd.Timestamp
+    ) -> Tuple[datetime, datetime]:
+        if self.scale == TimeScale.minute:
+            if not len(self.symbol_data):
                 _end = datetime.now(tz=nyc).replace(
                     second=0, microsecond=0
-                ) + timedelta(days=1 + timestamp)
-            _start = _end - timedelta(
-                days=6 if self.scale == TimeScale.minute else 100
-            )
-        else:
-            _start = timestamp - timedelta(
-                days=6 if self.scale == TimeScale.minute else 100
-            )
-            _end = timestamp + timedelta(days=1)
+                ) + timedelta(minutes=1 + timestamp)
+            else:
+                _end = self.symbol_data.index[-1] + timedelta(
+                    minutes=1 + timestamp
+                )
+        elif self.scale == TimeScale.day:
+            _end = datetime.now(tz=nyc).replace(
+                second=0, microsecond=0
+            ) + timedelta(days=1 + timestamp)
 
+        return (
+            _end
+            - timedelta(days=6 if self.scale == TimeScale.minute else 100),
+            _end,
+        )
+
+    def _fetch_data_range(self, start, end):
         _df = self.data_api.get_symbol_data(
             self.symbol,
-            start=_start.date() if type(_start) != date else _start,
-            end=_end.date() if type(_end) != date else _end,
+            start=start.date() if type(start) != date else start,
+            end=end.date() if type(end) != date else end,
             scale=self.scale,
         )
 
         self.symbol_data = pd.concat(
             [self.symbol_data, _df], sort=True
         ).drop_duplicates()
+
         self.symbol_data = self.symbol_data.loc[
             ~self.symbol_data.index.duplicated(keep="first")
         ]
@@ -382,10 +384,21 @@ class SymbolData:
             ]
         ).sort_index()
 
-    def fetch_data_range(self, start: datetime, end: datetime) -> None:
-        if self.scale not in (TimeScale.minute, TimeScale.day):
-            return
+    def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
+        if type(timestamp) == pd.Timestamp:
+            _start, _end = self._convert_timestamp(timestamp)
 
+        elif type(timestamp) == int:
+            _start, _end = self._convert_int(timestamp)
+        else:
+            _start = timestamp - timedelta(
+                days=6 if self.scale == TimeScale.minute else 100
+            )
+            _end = timestamp + timedelta(days=1)
+
+        self._fetch_data_range(_start, _end)
+
+    def fetch_data_range(self, start: datetime, end: datetime) -> None:
         new_df = pd.DataFrame()
         while end >= start:
             if type(end) == pd.Timestamp:
@@ -413,7 +426,6 @@ class SymbolData:
 
             end -= timedelta(days=7 if self.scale == TimeScale.minute else 100)
 
-        # new_df = new_df[~new_df.index.duplicated(keep="first")]
         self.symbol_data = pd.concat(
             [new_df, self.symbol_data], sort=True
         ).drop_duplicates()
