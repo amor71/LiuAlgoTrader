@@ -1,6 +1,6 @@
 iso8601==0.1.16
 requests==2.26.0
-deprecated==1.2.12
+deprecated==1.2.13
 urllib3==1.26.6
 numpy==1.21.2
 alpaca-trade-api==1.2.3
@@ -9,7 +9,7 @@ asyncpg==0.24.0
 pygit2==1.6.1
 matplotlib==3.4.3
 tabulate==0.8.9
-streamlit==0.87.0
+streamlit==0.88.0
 stockstats==0.3.2
 empyrical==0.5.5
 nest_asyncio==1.5.1
@@ -18,7 +18,7 @@ scipy==1.7.1
 polygon-api-client==0.1.11
 finnhub-python==2.4.3
 quantstats==0.0.34
-mnqueues==0.0.29
+mnqueues==0.0.30
 tqdm==4.62.2
 toml==0.10.2
 fire==0.4.0
