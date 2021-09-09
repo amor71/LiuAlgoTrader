@@ -28,66 +28,6 @@ m_and_a_data = pd.read_csv(
 ).set_index("date")
 
 
-def get_historical_data_from_finnhub(symbols: List[str]) -> Dict[str, df]:
-
-    tlog(f"Loading {len(symbols)} tickers historic data from Finnhub")
-    nyc = timezone(NY := "America/New_York")
-    _from = datetime.today().astimezone(nyc) - timedelta(days=30)
-    _from = _from.replace(hour=9, minute=29, second=0, microsecond=0)
-    _to = datetime.now(nyc)
-
-    minute_history: Dict[str, df] = {}
-    with requests.Session() as s:
-        try:
-            c = 0
-            for symbol in symbols:
-                retry = True
-                while retry:
-                    retry = False
-
-                    url = f"{config.finnhub_base_url}/stock/candle?symbol={symbol}&resolution=1&from={_from.strftime('%s')}&to={_to.strftime('%s')}&token={config.finnhub_api_key}"
-                    r = s.get(url)
-
-                    if r.status_code == 200:
-                        response = r.json()
-                        if response["s"] != "no_data":
-                            _data = {
-                                "close": response["c"],
-                                "open": response["o"],
-                                "high": response["h"],
-                                "low": response["l"],
-                                "volume": response["v"],
-                            }
-
-                            _df = df(
-                                _data,
-                                index=[
-                                    Timestamp(item, tz=NY, unit="s")
-                                    for item in response["t"]
-                                ],
-                            )
-                            c += 1
-                            _df["vwap"] = 0.0
-                            _df["average"] = 0.0
-                            minute_history[symbol] = _df
-                            tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} ({c}/{len(symbols)})"
-                            )
-                    elif r.status_code == 429:
-                        tlog(
-                            f"{symbols.index(symbol)}/{len(symbols)} API limit: ({r.text})"
-                        )
-                        time.sleep(30)
-                        retry = True
-                    else:
-                        tlog(f"[ERROR] {r.status_code}, {r.text}")
-
-        except KeyboardInterrupt:
-            tlog("KeyboardInterrupt")
-
-    return minute_history
-
-
 def get_historical_data_from_poylgon_for_symbols(
     api: tradeapi, symbols: List[str], start_date: date, end_date: date
 ) -> Dict[str, df]:
