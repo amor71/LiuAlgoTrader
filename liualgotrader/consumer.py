@@ -119,7 +119,8 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
                     for symbol in trading_data.last_used_strategy
                     if trading_data.last_used_strategy[symbol] == s
                 ]
-                await do_strategy_all(
+
+                await trace({})(do_strategy_all)(
                     trader=trader,
                     data_loader=data_loader,
                     strategy=s,
@@ -696,6 +697,7 @@ async def do_strategies(
     position: float,
     now: pd.Timestamp,
     data: Dict,
+    carrier=None,
 ) -> None:
     # run strategies
     for s in trading_data.strategies:
@@ -773,7 +775,7 @@ async def handle_aggregate(
     ):
         await liquidate(symbol, symbol_position, trader)
     else:
-        await do_strategies(
+        await trace(carrier)(do_strategies)(
             trader=trader,
             data_loader=data_loader,
             symbol=symbol,
@@ -813,16 +815,15 @@ async def handle_data_queue_msg(
         return True
 
     time_tick[symbol] = data["timestamp"].replace(microsecond=0, nanosecond=0)
-
-    asyncio.create_task(
-        trace(carrier)(handle_aggregate)(
-            trader=trader,
-            data_loader=data_loader,
-            symbol=symbol,
-            ts=time_tick[symbol],
-            data=data,
-        )
+    await trace(carrier)(handle_aggregate)(
+        trader=trader,
+        data_loader=data_loader,
+        symbol=symbol,
+        ts=time_tick[symbol],
+        data=data,
+        carrier=None,
     )
+
     return True
 
 
