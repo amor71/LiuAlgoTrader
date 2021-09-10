@@ -22,5 +22,5 @@ mnqueues==0.0.30
 tqdm==4.62.2
 toml==0.10.2
 fire==0.4.0
-
+opentelemetry-exporter-gcp-trace
 

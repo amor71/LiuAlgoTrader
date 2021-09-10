@@ -7,7 +7,7 @@ from typing import Dict
 import liualgotrader
 from liualgotrader import enhanced_backtest
 from liualgotrader.common import config
-from liualgotrader.common.hyperparameter import Hyperparameters, Parameter
+from liualgotrader.common.hyperparameter import Hyperparameters
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.models.optimizer import OptimizerRun

@@ -27,7 +27,6 @@ from liualgotrader.consumer import consumer_main
 from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
 from liualgotrader.analytics import consolidate
-from liualgotrader.common.data_loader import DataLoader
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
@@ -119,12 +118,16 @@ def calc_num_consumer_processes() -> int:
     if config.num_consumers > 0:
         return config.num_consumers
 
-    num_cpus = os.cpu_count()
+    num_cpu = os.cpu_count()
 
+    if not num_cpu:
+        raise AssertionError(
+            "Can't automatically detect number of CPU, use fixed configuration"
+        )
     load_avg = sum(os.getloadavg()) / 3
 
     tlog(
-        f"15-min load_avg:{load_avg}, num_cpus:{num_cpus}, proc_factor:{config.proc_factor}"
+        f"15-min load_avg:{load_avg}, num_cpu:{num_cpu}, proc_factor:{config.proc_factor}"
     )
     if not load_avg:
         load_avg = 1.0
@@ -132,8 +135,8 @@ def calc_num_consumer_processes() -> int:
     return max(
         1,
         ceil(
-            num_cpus / min(load_avg, 1.0) * config.proc_factor
-            if num_cpus > 0
+            num_cpu / min(load_avg, 1.0) * config.proc_factor
+            if num_cpu > 0
             else config.proc_factor / min(load_avg, 1.0)
         ),
     )
@@ -238,12 +241,7 @@ if __name__ == "__main__":
             consumers = [
                 mp.Process(
                     target=consumer_main,
-                    args=(
-                        queues[i],
-                        symbol_by_queue[i] if i in symbol_by_queue else None,
-                        uid,
-                        conf_dict,
-                    ),
+                    args=(queues[i], symbol_by_queue.get(i), uid, conf_dict),
                 )
                 for i in range(num_consumer_processes)
             ]

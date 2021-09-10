@@ -2,7 +2,7 @@ import asyncio
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import alpaca_trade_api as tradeapi
 import pandas as pd
@@ -201,7 +201,11 @@ async def do_strategy_all(
 ):
     try:
         do = await strategy.run_all(
-            symbols_position=trading_data.positions,
+            symbols_position={
+                symbol: trading_data.positions[symbol]
+                for symbol in trading_data.positions
+                if trading_data.positions[symbol] != 0
+            },
             now=now.to_pydatetime(),
             portfolio_value=portfolio_value,
             backtesting=True,
@@ -260,6 +264,51 @@ async def do_strategy(
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
 
+async def backtest_day(day, scanners, symbols, strategies, scale):
+    day_start = day.date.replace(
+        hour=day.open.hour,
+        minute=day.open.minute,
+        tzinfo=timezone("America/New_York"),
+    )
+    day_end = day.date.replace(
+        hour=day.close.hour,
+        minute=day.close.minute,
+        tzinfo=timezone("America/New_York"),
+    )
+
+    config.market_open = day_start
+    config.market_close = day_end
+    current_time = day_start
+    while current_time < day_end:
+        symbols = await do_scanners(current_time, scanners, symbols)
+        trading_data.positions = {
+            symbol: trading_data.positions[symbol]
+            for symbol in trading_data.positions
+            if trading_data.positions[symbol] != 0
+        }
+
+        for strategy in strategies:
+            trading_data.positions.update(
+                {
+                    symbol: 0
+                    for symbol in symbols.get(strategy.name, [])
+                    + symbols.get("_all", [])
+                    if symbol not in trading_data.positions
+                }
+            )
+
+            strategy_symbols = list(
+                set(symbols.get("_all", [])).union(
+                    set(symbols.get(strategy.name, []))
+                )
+            )
+            await do_strategy(
+                data_loader, current_time, strategy, strategy_symbols
+            )
+
+        current_time += timedelta(seconds=scale.value)
+
+
 async def backtest_main(
     uid: str,
     from_date: date,
@@ -300,49 +349,7 @@ async def backtest_main(
     calendars = trade_api.get_calendar(str(from_date), str(to_date))
     symbols: Dict = {}
     for day in calendars:
-        day_start = day.date.replace(
-            hour=day.open.hour,
-            minute=day.open.minute,
-            tzinfo=timezone("America/New_York"),
-        )
-        day_end = day.date.replace(
-            hour=day.close.hour,
-            minute=day.close.minute,
-            tzinfo=timezone("America/New_York"),
-        )
-
-        config.market_open = day_start
-        config.market_close = day_end
-        current_time = day_start
-        # data_loader = DataLoader()
-        while current_time < day_end:
-            symbols = await do_scanners(current_time, scanners, symbols)
-            trading_data.positions = {
-                symbol: trading_data.positions[symbol]
-                for symbol in trading_data.positions
-                if trading_data.positions[symbol] != 0
-            }
-
-            for strategy in strategies:
-                trading_data.positions.update(
-                    {
-                        symbol: 0
-                        for symbol in symbols.get(strategy.name, [])
-                        + symbols.get("_all", [])
-                        if symbol not in trading_data.positions
-                    }
-                )
-
-                strategy_symbols = list(
-                    set(symbols.get("_all", [])).union(
-                        set(symbols.get(strategy.name, []))
-                    )
-                )
-                await do_strategy(
-                    data_loader, current_time, strategy, strategy_symbols
-                )
-
-            current_time += timedelta(seconds=scale.value)
+        await backtest_day(day, scanners, symbols, strategies, scale)
 
 
 def backtest(

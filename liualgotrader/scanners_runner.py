@@ -1,5 +1,4 @@
 import asyncio
-import importlib.util
 import json
 import multiprocessing as mp
 import os
@@ -8,7 +7,6 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from pytz import timezone
-from pytz.tzinfo import DstTzInfo  # type: ignore
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -104,7 +102,7 @@ async def create_scanners(
                     scanners_conf[scanner_name],
                 )
             )
-            tlog(f"instantiated momentum scanner")
+            tlog("instantiated momentum scanner")
         else:
             tlog(f"custom scanner {scanner_name} selected")
             scanners.append(

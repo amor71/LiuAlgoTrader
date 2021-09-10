@@ -1,29 +1,21 @@
 #!/usr/bin/env python
 
-import asyncio
 import getopt
 import os
 import sys
-import json
-import traceback
 import uuid
 
 import copy
-from datetime import datetime, timedelta, date
-from typing import List, Dict, Optional
+from datetime import datetime, date
+from typing import List, Dict
 import pygit2
-import pytz
 import multiprocessing as mp
-from time import sleep
 import parsedatetime.parsedatetime as pdt
 
 
 from liualgotrader.common import config
-from liualgotrader.common.types import TimeScale
-from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.hyperparameter import Parameter, Hyperparameters
-from liualgotrader import enhanced_backtest
 from liualgotrader.backtesting.optimizer import backtest_iteration
 
 
@@ -126,7 +118,7 @@ def optimize(
                 optimizer_session_id,
                 start_date,
                 end_date,
-                realize(realize(conf_dict, hyperparameter), parameters_values),
+                realize(realize(conf_dict, hyperparameter), parameters_values),  # type: ignore
                 hyperparameter,
             ),
         )
@@ -141,7 +133,7 @@ def optimize(
     print("done.")
 
 
-def load_configuration(filename: str) -> Dict:
+def load_configuration(filename: str):
     try:
         import toml
 
@@ -165,7 +157,7 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            ["c"],
+            "c",
             ["concurrency="],
         )
         for opt, arg in opts:
@@ -205,7 +197,7 @@ if __name__ == "__main__":
         start_date = dateFromString(conf_dict["optimizer"]["start_date"])
         end_date = dateFromString(conf_dict["optimizer"]["end_date"])
     except Exception:
-        tlog(f"failed to load start & end dates")
+        tlog("failed to load start & end dates")
         sys.exit(0)
 
     optimize(

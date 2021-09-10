@@ -70,7 +70,9 @@ class Scanner(metaclass=ABCMeta):
                     **scanner_details,
                 )
         except FileNotFoundError as e:
-            tlog(f"[Error] file not found `{scanner_details['filename']}`")
+            tlog(
+                f"[EXCEPTION] {e} : file not found `{scanner_details['filename']}`"
+            )
             exit(0)
         except Exception as e:
             tlog(

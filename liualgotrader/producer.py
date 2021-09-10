@@ -9,16 +9,12 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from queue import Empty, Full
+from queue import Empty
 from typing import Dict, List, Optional
 
-import alpaca_trade_api as tradeapi
 from mnqueues import MNQueue
-from pytz import timezone
-from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import QueueMapper, WSEventType
@@ -65,35 +61,44 @@ async def subscribe_new_symbols(new_symbols: List[str]):
     )
 
 
+async def scanners_iteration(
+    scanner_queue: Queue,
+    queues: List[MNQueue],
+    num_consumer_processes: int,
+):
+    global symbols
+    symbols_details = scanner_queue.get(timeout=1)
+    if len(
+        new_symbols := get_new_symbols_and_queues(
+            symbols_details=json.loads(symbols_details),
+            queues=queues,
+            num_consumer_processes=num_consumer_processes,
+        )
+    ):
+        await subscribe_new_symbols(new_symbols)
+        trending_db = TrendingTickers(config.batch_id)
+        await trending_db.save(new_symbols)
+        symbols += new_symbols
+        tlog(
+            f"added {len(new_symbols)}:{new_symbols[:20]}..{new_symbols[-20:]} TOTAL: {len(symbols)}"
+        )
+        await asyncio.sleep(1)
+
+
 async def scanner_input(
     scanner_queue: Queue,
     queues: List[MNQueue],
     num_consumer_processes: int,
 ) -> None:
     tlog("scanner_input() task starting ")
-    global symbols
 
     while True:
         try:
-            symbols_details = scanner_queue.get(timeout=1)
-            if symbols_details:
-                new_channels: List = []
-                if len(
-                    new_symbols := get_new_symbols_and_queues(
-                        symbols_details=json.loads(symbols_details),
-                        queues=queues,
-                        num_consumer_processes=num_consumer_processes,
-                    )
-                ):
-                    await subscribe_new_symbols(new_symbols)
-                    trending_db = TrendingTickers(config.batch_id)
-                    await trending_db.save(new_symbols)
-                    symbols += new_symbols
-                    tlog(
-                        f"added {len(new_symbols)}:{new_symbols} TOTAL: {len(symbols)}"
-                    )
-                    await asyncio.sleep(1)
-
+            await scanners_iteration(
+                scanner_queue=scanner_queue,
+                queues=queues,
+                num_consumer_processes=num_consumer_processes,
+            )
         except Empty:
             await asyncio.sleep(30)
         except asyncio.CancelledError:
@@ -103,12 +108,13 @@ async def scanner_input(
             tlog(
                 f"Exception in scanner_input(): exception of type {type(e).__name__} with args {e.args}"
             )
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"error: {line}")
-            traceback.print_exception(*exc_info)
-            del exc_info
+            if config.debug_enabled:
+                exc_info = sys.exc_info()
+                lines = traceback.format_exception(*exc_info)
+                for line in lines:
+                    tlog(f"error: {line}")
+                traceback.print_exception(*exc_info)
+                del exc_info
 
     tlog("scanner_input() task completed")
 
@@ -177,7 +183,8 @@ async def teardown_task(
 
     except Exception as e:
         tlog(f"[ERROR] Exception {e}")
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
 
     finally:
         tlog("teardown_task() done.")
@@ -272,6 +279,7 @@ def producer_main(
         tlog(
             f"producer_main() - exception of type {type(e).__name__} with args {e.args}"
         )
-        traceback.print_exc()
+        if config.debug_enabled:
+            traceback.print_exc()
 
     tlog("*** producer_main() completed ***")

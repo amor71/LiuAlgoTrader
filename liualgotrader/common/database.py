@@ -1,5 +1,3 @@
-from typing import Dict
-
 import asyncpg
 import pandas as pd
 
@@ -19,9 +17,8 @@ async def create_db_connection(dsn: str = None) -> None:
 
 async def fetch_as_dataframe(query: str, *args) -> pd.DataFrame:
     try:
-        if config.db_conn_pool:
-            pass
-    except AttributeError:
+        config.db_conn_pool
+    except (NameError, AttributeError):
         await create_db_connection()
 
     async with config.db_conn_pool.acquire() as con:
