@@ -1,7 +1,6 @@
 import asyncio
 import os
 import sys
-import traceback
 from datetime import datetime, timedelta
 from queue import Empty
 from random import randint
@@ -70,6 +69,7 @@ async def do_strategy_all(
     trader: Trader,
     strategy: Strategy,
     symbols: List[str],
+    carrier=None,
 ):
     try:
         now = datetime.now(nyc)
@@ -90,7 +90,7 @@ async def do_strategy_all(
 
     except Exception as e:
         if config.debug_enabled:
-            traceback.print_exc()
+            tlog_exception("do_strategy_all")
         tlog(f"[Exception] {now} {strategy}->{e}")
 
         raise
@@ -131,7 +131,7 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
         tlog("periodic_runner() - Caught KeyboardInterrupt")
     except Exception as e:
         if config.debug_enabled:
-            traceback.print_exc()
+            tlog_exception("periodic_runner")
         tlog(f"[EXCEPTION] periodic_runner: {e}")
 
     tlog("periodic_runner() task completed")
@@ -575,7 +575,7 @@ async def order_inflight(symbol, existing_order, original_ts, trader) -> bool:
         return True
     except AttributeError:
         if config.debug_enabled:
-            traceback.print_exc()
+            tlog_exception("order_inflight")
         tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
 
     return False
@@ -828,12 +828,7 @@ async def queue_consumer(
             f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
         )
         if config.debug_enabled:
-            exc_info = sys.exc_info()
-            lines = traceback.format_exception(*exc_info)
-            for line in lines:
-                tlog(f"error: {line}")
-            traceback.print_exception(*exc_info)
-            del exc_info
+            tlog_exception("queue_consumer")
     finally:
         tlog("queue_consumer() task done.")
 
@@ -882,12 +877,7 @@ async def consumer_async_main(
                 f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
             )
             if config.debug_enabled:
-                exc_info = sys.exc_info()
-                lines = traceback.format_exception(*exc_info)
-                for line in lines:
-                    tlog(f"error: {line}")
-                traceback.print_exception(*exc_info)
-                del exc_info
+                tlog_exception("consumer_async_main")
 
     trader = trader_factory()()
     config.market_open, config.market_close = trader.get_market_schedule()
@@ -989,7 +979,7 @@ async def load_current_positions(
                 pass
             except Exception as e:
                 if config.debug_enabled:
-                    traceback.print_exc()
+                    tlog_exception("load_current_positions")
                 tlog(
                     f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
                 )

@@ -264,7 +264,7 @@ async def do_strategy(
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
 
-async def backtest_day(day, scanners, symbols, strategies, scale):
+async def backtest_day(day, scanners, symbols, strategies, scale, data_loader):
     day_start = day.date.replace(
         hour=day.open.hour,
         minute=day.open.minute,
@@ -349,7 +349,9 @@ async def backtest_main(
     calendars = trade_api.get_calendar(str(from_date), str(to_date))
     symbols: Dict = {}
     for day in calendars:
-        await backtest_day(day, scanners, symbols, strategies, scale)
+        await backtest_day(
+            day, scanners, symbols, strategies, scale, data_loader
+        )
 
 
 def backtest(
