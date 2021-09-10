@@ -510,7 +510,7 @@ async def aggregate_bar_data(
     except KeyError:
         current = None
 
-    if current is None:
+    if current is None or data["EV"] == "AM":
         new_data = [
             data["open"],
             data["high"],
@@ -850,56 +850,22 @@ async def create_strategies(
     data_loader: DataLoader,
     strategies_conf: Dict,
 ) -> int:
-    strategy_types = []
+    loaded = 0
     for strategy_name in strategies_conf:
         strategy_details = strategies_conf[strategy_name]
-        tlog(f"strategy {strategy_name} selected")
-
-        if strategy_details.get("off_hours", False):
-            tlog(f"{strategy_name} if off-hours, skipping during market hours")
-        try:
-            spec = importlib.util.spec_from_file_location(
-                "module.name", strategy_details["filename"]
-            )
-            custom_strategy_module = importlib.util.module_from_spec(spec)  # type: ignore
-            spec.loader.exec_module(custom_strategy_module)  # type: ignore
-            class_name = strategy_name
-
-            custom_strategy = getattr(custom_strategy_module, class_name)
-
-            if not issubclass(custom_strategy, Strategy):
-                tlog(f"strategy must inherit from class {Strategy.__name__}")
-                exit(0)
-            strategy_details.pop("filename", None)
-            strategy_types += [(custom_strategy, strategy_details)]
-
-        except FileNotFoundError as e:
-            tlog(f"[Error] file not found `{strategy_details['filename']}`")
-            exit(0)
-        except Exception as e:
-            tlog(
-                f"[Error]exception of type {type(e).__name__} with args {e.args}"
-            )
-            if config.debug_enabled:
-                traceback.print_exc()
-            exit(0)
-
-    loaded = 0
-    for strategy_tuple in strategy_types:
-        strategy_type = strategy_tuple[0]
-        strategy_details = strategy_tuple[1]
-        s = strategy_type(
-            batch_id=batch_id, data_loader=data_loader, **strategy_details
+        s = await Strategy.get_strategy(
+            batch_id=batch_id,
+            strategy_name=strategy_name,
+            strategy_details=strategy_details,
+            data_loader=data_loader,
         )
-        tlog(f"instantiated {s.name}")
-        if await s.create():
-            trading_data.strategies.append(s)
-            if symbols:
-                loaded += await load_current_positions(
-                    trading_api=trader,
-                    symbols=symbols,
-                    strategy=s,
-                )
+        trading_data.strategies.append(s)
+        if symbols:
+            loaded += await load_current_positions(
+                trading_api=trader,
+                symbols=symbols,
+                strategy=s,
+            )
 
     return loaded
 
