@@ -21,7 +21,7 @@ from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import trace
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
                                                     TRADE_CONDITIONS)
@@ -669,6 +669,15 @@ async def do_strategy(
     return True
 
 
+async def _filter_strategies(symbol: str) -> List:
+    return [
+        s
+        for s in trading_data.strategies
+        if not await s.should_run_all()
+        and symbol not in rejects.get(s.name, [])
+    ]
+
+
 async def do_strategies(
     trader: Trader,
     data_loader: DataLoader,
@@ -679,12 +688,7 @@ async def do_strategies(
     carrier=None,
 ) -> None:
     # run strategies
-    strategies = [
-        s
-        for s in trading_data.strategies
-        if not await s.should_run_all()
-        and symbol not in rejects.get(s.name, [])
-    ]
+    strategies = await _filter_strategies(symbol)
     for s in strategies:
         try:
             if not await do_strategy(
@@ -708,12 +712,7 @@ async def do_strategies(
         except Exception as e:
             tlog(f"[EXCEPTION] in do_strategies() : {e}")
             if config.debug_enabled:
-                traceback.print_exc()
-                exc_info = sys.exc_info()
-                lines = traceback.format_exception(*exc_info)
-                for line in lines:
-                    tlog(f"{line}")
-                del exc_info
+                tlog_exception("do_strategies()")
 
 
 async def handle_aggregate(

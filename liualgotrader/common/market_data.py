@@ -189,58 +189,6 @@ def get_historical_daily_from_polygon_by_range(
     return _minute_history
 
 
-def get_historical_data_from_polygon(
-    api: tradeapi, symbols: List[str], max_tickers: int
-) -> Dict[str, df]:
-    """get ticker history"""
-
-    tlog(f"Loading max {max_tickers} tickers w/ highest volume from Polygon")
-    minute_history: Dict[str, df] = {}
-    c = 0
-    exclude_symbols = []
-    try:
-        for symbol in symbols:
-            if symbol not in minute_history:
-                retry_counter = 5
-                while retry_counter > 0:
-                    try:
-                        if c < max_tickers:
-                            _df = api.polygon.historic_agg_v2(
-                                symbol,
-                                1,
-                                "minute",
-                                _from=str(date.today() - timedelta(days=10)),
-                                to=str(date.today() + timedelta(days=1)),
-                            ).df
-                            _df["vwap"] = 0.0
-                            _df["average"] = 0.0
-
-                            minute_history[symbol] = _df
-                            tlog(
-                                f"loaded {len(minute_history[symbol].index)} agg data points for {symbol} {c+1}/{max_tickers}"
-                            )
-                            c += 1
-                            break
-
-                        exclude_symbols.append(symbol)
-                        break
-                    except (
-                        requests.exceptions.HTTPError,
-                        requests.exceptions.ConnectionError,
-                    ):
-                        retry_counter -= 1
-                        if retry_counter == 0:
-                            exclude_symbols.append(symbol)
-    except KeyboardInterrupt:
-        tlog("KeyboardInterrupt")
-
-    for x in exclude_symbols:
-        symbols.remove(x)
-
-    tlog(f"Total number of symbols for trading {len(symbols)}")
-    return minute_history
-
-
 async def get_sector_tickers(sector: str) -> List[str]:
     async with config.db_conn_pool.acquire() as conn:
         async with conn.transaction():
