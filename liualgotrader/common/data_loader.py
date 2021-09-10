@@ -1,6 +1,4 @@
 # type: ignore
-import asyncio
-import sys
 import traceback
 from datetime import date, datetime, timedelta
 from enum import Enum

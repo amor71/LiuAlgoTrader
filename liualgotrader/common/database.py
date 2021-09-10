@@ -1,5 +1,3 @@
-from typing import Dict
-
 import asyncpg
 import pandas as pd
 

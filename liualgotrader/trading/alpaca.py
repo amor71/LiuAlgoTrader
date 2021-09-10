@@ -1,5 +1,4 @@
 import asyncio
-import json
 import queue
 import traceback
 from datetime import date, datetime, timedelta
@@ -11,7 +10,6 @@ from alpaca_trade_api.stream import Stream
 from pytz import timezone
 
 from liualgotrader.common import config
-from liualgotrader.common.exceptions import MarketClosedToday
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import QueueMapper
 from liualgotrader.trading.base import Trader

@@ -1,10 +1,8 @@
 import json
 import queue
-import time
 import traceback
-from datetime import date, timedelta
-from multiprocessing import Queue
-from typing import Awaitable, Dict, List, Optional
+from datetime import date
+from typing import Dict, List
 
 import pandas as pd
 from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient

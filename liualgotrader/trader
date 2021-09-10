@@ -27,7 +27,6 @@ from liualgotrader.consumer import consumer_main
 from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
 from liualgotrader.analytics import consolidate
-from liualgotrader.common.data_loader import DataLoader
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:

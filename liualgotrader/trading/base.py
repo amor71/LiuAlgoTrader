@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from liualgotrader.common.exceptions import MarketClosedToday
 from liualgotrader.common.types import QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
 

@@ -9,16 +9,12 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from queue import Empty, Full
+from queue import Empty
 from typing import Dict, List, Optional
 
-import alpaca_trade_api as tradeapi
 from mnqueues import MNQueue
-from pytz import timezone
-from pytz.tzinfo import DstTzInfo
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import QueueMapper, WSEventType
@@ -72,8 +68,6 @@ async def scanners_iteration(
 ):
     global symbols
     symbols_details = scanner_queue.get(timeout=1)
-
-    new_channels: List = []
     if len(
         new_symbols := get_new_symbols_and_queues(
             symbols_details=json.loads(symbols_details),

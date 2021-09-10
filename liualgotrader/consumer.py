@@ -1,10 +1,8 @@
 import asyncio
-import importlib.util
-import json
 import os
 import sys
 import traceback
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from queue import Empty
 from random import randint
 from typing import Any, Dict, List, Optional
@@ -22,9 +20,7 @@ from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import trace
 from liualgotrader.common.tlog import tlog, tlog_exception
-from liualgotrader.common.types import TimeScale
-from liualgotrader.fincalcs.data_conditions import (QUOTE_SKIP_CONDITIONS,
-                                                    TRADE_CONDITIONS)
+from liualgotrader.fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
@@ -162,7 +158,7 @@ async def liquidator_sleep(trader: Trader) -> bool:
         return True
 
 
-async def liquidator_loop():
+async def liquidator_loop(trader: Trader):
     for symbol, position in trading_data.positions.items():
         tlog(f"liquidator() -> checking {symbol}")
         if (
@@ -185,7 +181,7 @@ async def liquidator(trader: Trader) -> None:
 
     tlog("liquidator() -> starting to liquidate positions")
     try:
-        await liquidator_loop()
+        await liquidator_loop(trader)
     except asyncio.CancelledError:
         tlog("liquidator() cancelled")
     except KeyboardInterrupt:
@@ -195,7 +191,7 @@ async def liquidator(trader: Trader) -> None:
 
 
 async def teardown_task(trader: Trader, tasks: List[asyncio.Task]) -> None:
-    tlog(f"consumer-teardown_task() - starting ")
+    tlog("consumer-teardown_task() - starting ")
 
     if not config.market_close:
         tlog(

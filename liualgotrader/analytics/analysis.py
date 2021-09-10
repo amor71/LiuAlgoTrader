@@ -1,6 +1,5 @@
 import asyncio
 import copy
-import json
 from datetime import date, timedelta
 from typing import Dict, Tuple
 
@@ -396,9 +395,7 @@ def calc_symbol_state(
     symbol_trades: pd.DataFrame,
     data_loader: DataLoader,
 ) -> Tuple[float, float]:
-    t1 = t2 = None
     qty: float = 0
-    eastern = timezone("US/Eastern")
     for _, row in symbol_trades.iterrows():
         if row.operation == "buy":
             qty += row.qty
@@ -545,9 +542,6 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
 
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
-    start_date = trades.client_time.min().date()
-    end_date = trades.client_time.max().date()
-    trader = trader_factory()()
 
     symbols = trades.symbol.unique().tolist()
     rows = []

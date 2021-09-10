@@ -9,7 +9,6 @@ import getopt
 import asyncio
 import uuid
 from liualgotrader.common import config
-import os
 from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.common.database import create_db_connection
@@ -290,7 +289,7 @@ def quickstart():
         else:
             print("2. run the env-vars script ('source env_vars.sh'),")
         print(
-            f"3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py`"
+            "3.`streamlit run https://raw.github.com/amor71/LiuAlgoTrader/master/analysis/backtester_ui.py`"
         )
         if restore_sample_db:
             print("4. On the app selection select the 'analyzer` app")

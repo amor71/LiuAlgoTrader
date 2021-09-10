@@ -1,12 +1,9 @@
 import asyncio
-import json
 import queue
-import time
 import traceback
 from datetime import date, datetime, timedelta
-from multiprocessing import Queue
 from random import randint
-from typing import Awaitable, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -17,8 +14,7 @@ from alpaca_trade_api.stream import Stream
 from liualgotrader.common import config
 from liualgotrader.common.list_utils import chunks
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import (QueueMapper, TimeScale, WSConnectState,
-                                        WSEventType)
+from liualgotrader.common.types import QueueMapper, TimeScale, WSEventType
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.streaming_base import StreamingAPI
 
@@ -89,7 +85,7 @@ class AlpacaData(DataAPI):
             ).df
         except Exception as e:
             raise ValueError(
-                f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
+                f"[EXCEPTION] {e} for {symbol} has no data for {_start} to {_end} w {scale.name}"
             )
         else:
             if data.empty:

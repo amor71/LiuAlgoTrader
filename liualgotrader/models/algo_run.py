@@ -81,7 +81,6 @@ class AlgoRun:
     async def get_batch_ids(
         cls, pool: Pool = None, start_date: date = date(2019, 1, 1)
     ) -> DataFrame:
-        rc: Dict = {}
         if not pool:
             pool = config.db_conn_pool
         async with pool.acquire() as con:
@@ -104,7 +103,6 @@ class AlgoRun:
         nax_batches: int = 30,
         start_date: date = date(2019, 1, 1),
     ) -> List:
-        rc: Dict = {}
         if not pool:
             pool = config.db_conn_pool
         async with pool.acquire() as con:
