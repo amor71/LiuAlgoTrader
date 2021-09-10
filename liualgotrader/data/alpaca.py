@@ -153,7 +153,7 @@ class AlpacaStream(StreamingAPI):
                 ).astimezone(nytz),
                 "volume": msg.volume,
                 "count": msg.trade_count,
-                "vwap": 0.0,
+                "vwap": None,
                 "average": msg.vwap,
                 "totalvolume": None,
                 "EV": "AM",

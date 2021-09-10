@@ -1,3 +1,6 @@
+"""
+Run scanners periodically, and pump newly scanned symbols to the Producer process
+"""
 import asyncio
 import json
 import multiprocessing as mp

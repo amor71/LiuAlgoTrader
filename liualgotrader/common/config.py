@@ -20,8 +20,8 @@ env: str
 data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "alpaca")]  # type: ignore
 
 # Performance & Debugging
-trace_enabled = bool(os.getenv("LIU_TRACE_ENABLED", 0))
-debug_enabled = bool(os.getenv("LIU_DEBUG_ENABLED", 0))
+trace_enabled = bool(int(os.getenv("LIU_TRACE_ENABLED", 0)))
+debug_enabled = bool(int(os.getenv("LIU_DEBUG_ENABLED", 0)))
 
 #
 # Broker
@@ -35,7 +35,7 @@ market_open: datetime
 market_close: datetime
 
 # total number of tickers to follow
-total_tickers = int(os.getenv("LIU_MAX_SYMBOLS", "100"))
+total_tickers = 9000
 
 #
 # Shared data

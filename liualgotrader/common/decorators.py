@@ -9,7 +9,7 @@ if config.trace_enabled:
     from opentelemetry.trace.propagation.tracecontext import \
         TraceContextTextMapPropagator
 
-    from liualgotrader.common.tracer import get_tracer
+    from liualgotrader.common.tracer import get_tracer  # type: ignore
 
     tracer = get_tracer()
 else:

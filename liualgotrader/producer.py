@@ -1,5 +1,5 @@
 """
-Get Market data from Polygon and pump to consumers
+Get Market data from Data Providers and pump to consumers
 """
 import asyncio
 import json
