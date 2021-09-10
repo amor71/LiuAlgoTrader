@@ -143,6 +143,7 @@ starting
 """
 
 
+
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
     mp.set_start_method("spawn")
@@ -237,15 +238,11 @@ if __name__ == "__main__":
             consumers = [
                 mp.Process(
                     target=consumer_main,
-                    args=(
-                        queues[i],
-                        symbol_by_queue[i] if i in symbol_by_queue else None,
-                        uid,
-                        conf_dict,
-                    ),
+                    args=(queues[i], symbol_by_queue.get(i), uid, conf_dict),
                 )
                 for i in range(num_consumer_processes)
             ]
+
             for p in consumers:
                 # p.daemon = True
                 p.start()

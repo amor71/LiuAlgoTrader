@@ -176,11 +176,10 @@ class Strategy(object):
         """implementing key-store retrival"""
         if key in self.global_var:
             return self.global_var[key]
-        else:
-            self.global_var[key] = (
-                val := await KeyStore.load(key, self.name, context)
-            )
-            return val
+        self.global_var[key] = (
+            val := await KeyStore.load(key, self.name, context)
+        )
+        return val
 
     async def set_global_var(self, key, value, context):
         """implementing key-store storing"""
