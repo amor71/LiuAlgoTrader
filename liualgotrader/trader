@@ -37,7 +37,6 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog(f"{filename} {version} starting")
     tlog(f"unique id: {unique_id}")
     tlog(f"DSN: {config.dsn}")
-    tlog(f"MAX SYMBOLS: {config.total_tickers}")
     tlog("----------------------------------------------------------")
     tlog("----------------------------------------------------------")
 

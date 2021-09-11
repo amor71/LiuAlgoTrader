@@ -35,7 +35,7 @@ market_open: datetime
 market_close: datetime
 
 # total number of tickers to follow
-total_tickers = int(os.getenv("LIU_MAX_SYMBOLS", "100"))
+total_tickers = 9000
 
 #
 # Shared data
