@@ -3,6 +3,13 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.3.25           | 1. Introduce Tracing & Performance           |
+|                  |    Monitoring,                               |
+|                  | 2. Improving SP500 historical data,          |
+|                  | 3. Improve logging and introducing           |
+|                  |    trace-back logging,                       |
+|                  | 4. Code quality improvements & refactoring   |
++------------------+----------------------------------------------+
 | 0.3.22           | Revised documentation                        |
 +------------------+----------------------------------------------+
 | 0.3.21           | 1. Significant performance improvements,     |
