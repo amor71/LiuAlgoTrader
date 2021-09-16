@@ -869,13 +869,14 @@ async def create_strategies(
             strategy_details=strategy_details,
             data_loader=data_loader,
         )
-        trading_data.strategies.append(s)
-        if symbols:
-            loaded += await load_current_positions(
-                trading_api=trader,
-                symbols=symbols,
-                strategy=s,
-            )
+        if s:
+            trading_data.strategies.append(s)
+            if symbols:
+                loaded += await load_current_positions(
+                    trading_api=trader,
+                    symbols=symbols,
+                    strategy=s,
+                )
 
     return loaded
 

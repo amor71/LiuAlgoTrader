@@ -217,7 +217,7 @@ class Strategy(object):
                 data_loader=data_loader,
                 **strategy_details,
             )
-            await s.create()
+            success = await s.create()
         except FileNotFoundError as e:
             tlog(
                 f"[EXCEPTION] {e} : file not found `{strategy_details['filename']}`"
@@ -230,4 +230,4 @@ class Strategy(object):
             traceback.print_exc()
             exit(0)
         else:
-            return s
+            return s if success else None
