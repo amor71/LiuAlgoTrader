@@ -48,7 +48,7 @@ toml==0.10.2
 sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml==1.1.5
 fire==0.4.0
-opentelemetry-exporter-gcp-trace
+opentelemetry-exporter-gcp-trace==1.0.0
 types-requests
 types-pytz
 
