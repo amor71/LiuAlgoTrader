@@ -242,7 +242,7 @@ def quickstart():
     print()
     print("Would you like to download & view samples? [Y]/n:")
     i = input()
-    samples = not len(i) or i.lower in ("y", "yes")
+    samples = not len(i) or i.lower() in ("y", "yes")
     sample_location = None
     if samples:
         pwd = pathlib.Path().absolute()
