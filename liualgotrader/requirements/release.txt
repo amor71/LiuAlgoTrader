@@ -1,7 +1,7 @@
 iso8601==0.1.16
 requests==2.26.0
 deprecated==1.2.13
-urllib3==1.26.6
+urllib3==1.26.7
 numpy==1.21.2
 alpaca-trade-api==1.2.3
 google-cloud-logging==2.6.0
