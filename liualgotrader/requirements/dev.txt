@@ -50,6 +50,6 @@ sphinxcontrib-serializinghtml==1.1.5
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.0.0
 types-requests==2.25.9
-types-pytz
+types-pytz==2021.1.2
 
 
