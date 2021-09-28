@@ -355,7 +355,7 @@ class SymbolData:
 
         self.fetch_data_range(_start, _end)
     
-    def fetch_data_range(self: date, start: date, end) -> None:
+    def fetch_data_range(self, start: date, end: date) -> None:
         dates_range = pd.date_range(start, end)
 
         days=1 if end-start == timedelta(days=1) else 5
