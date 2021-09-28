@@ -341,34 +341,6 @@ class SymbolData:
             _end,
         )
 
-    def _fetch_data_range(self, start, end):
-        _df = self.data_api.get_symbol_data(
-            self.symbol,
-            start=start.date() if type(start) != date else start,
-            end=end.date() if type(end) != date else end,
-            scale=self.scale,
-        )
-
-        self.symbol_data = pd.concat(
-            [self.symbol_data, _df], sort=True
-        ).drop_duplicates()
-
-        self.symbol_data = self.symbol_data.loc[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
-        self.symbol_data = self.symbol_data.reindex(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
-        ).sort_index()
-
     def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
         if type(timestamp) == pd.Timestamp:
             _start, _end = self._convert_timestamp(timestamp)
@@ -381,25 +353,18 @@ class SymbolData:
             )
             _end = timestamp + timedelta(days=1)
 
-        self._fetch_data_range(_start, _end)
+        self.fetch_data_range(_start, _end)
+    
+    def fetch_data_range(self: date, start: date, end) -> None:
+        dates_range = pd.date_range(start, end)
 
-    def fetch_data_range(self, start: datetime, end: datetime) -> None:
-        new_df = pd.DataFrame()
-        while end >= start:
-            if type(end) == pd.Timestamp:
-                _start = (
-                    end
-                    - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 100
-                    )
-                ).date()
-                _end = end.date()
-            else:
-                _start = end - timedelta(
-                    days=7 if self.scale == TimeScale.minute else 100
-                )
-                _end = end
+        days=1 if end-start == timedelta(days=1) else 5
 
+        for i,n in zip(dates_range, dates_range[days:]):
+            if i.date() != end:
+                _start = i.date()
+                _end = n.date() 
+            
             _df = self.data_api.get_symbol_data(
                 self.symbol,
                 start=_start,
@@ -407,16 +372,10 @@ class SymbolData:
                 scale=self.scale,
             )
 
-            new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
+            self.symbol_data = pd.concat(
+                [self.symbol_data, _df]
+            )
 
-            end -= timedelta(days=7 if self.scale == TimeScale.minute else 100)
-
-        self.symbol_data = pd.concat(
-            [new_df, self.symbol_data], sort=True
-        ).drop_duplicates()
-        self.symbol_data = self.symbol_data[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
         self.symbol_data = self.symbol_data.reindex(
             columns=[
                 "open",
@@ -428,7 +387,7 @@ class SymbolData:
                 "average",
                 "count",
             ]
-        ).sort_index()
+        ).sort_index().drop_duplicates()
 
     def __repr__(self):
         return str(self.symbol_data)
