@@ -5,7 +5,6 @@ from typing import Dict, Tuple
 import alpaca_trade_api as tradeapi
 import nest_asyncio
 import pandas as pd
-from itertools import zip_longest
 from dateutil.parser import parse as date_parser
 from pytz import timezone
 
@@ -342,6 +341,34 @@ class SymbolData:
             _end,
         )
 
+    def _fetch_data_range(self, start, end):
+        _df = self.data_api.get_symbol_data(
+            self.symbol,
+            start=start.date() if type(start) != date else start,
+            end=end.date() if type(end) != date else end,
+            scale=self.scale,
+        )
+
+        self.symbol_data = pd.concat(
+            [self.symbol_data, _df], sort=True
+        ).drop_duplicates()
+
+        self.symbol_data = self.symbol_data.loc[
+            ~self.symbol_data.index.duplicated(keep="first")
+        ]
+        self.symbol_data = self.symbol_data.reindex(
+            columns=[
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "vwap",
+                "average",
+                "count",
+            ]
+        ).sort_index()
+
     def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
         if type(timestamp) == pd.Timestamp:
             _start, _end = self._convert_timestamp(timestamp)
@@ -354,40 +381,42 @@ class SymbolData:
             )
             _end = timestamp + timedelta(days=1)
 
-        self.fetch_data_range(_start, _end)
-    
-    def fetch_data_range(self, start: date, end: date) -> None:
-        def grouper(iterable, n, fillvalue=None):
-        # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-            args = [iter(iterable)] * n
-            return zip_longest(*args, fillvalue=fillvalue)
+        self._fetch_data_range(_start, _end)
 
-        rang=2 if end-start == timedelta(days=1) else 7
-
-        date_list = [day.date() for day in pd.bdate_range(start, end)]
-        iterator = grouper(date_list, rang)
-
-        try:
-            date_list = next(iterator)
-            while True:
-                if None in date_list:
-                    date_list = list(filter(None, date_list))
-                _start, _end = (date_list[0], date_list[-1])
-
-                _df = self.data_api.get_symbol_data(
-                    self.symbol,
-                    start=_start,
-                    end=_end,
-                    scale=self.scale,
+    def fetch_data_range(self, start: datetime, end: datetime) -> None:
+        new_df = pd.DataFrame()
+        while end >= start:
+            if type(end) == pd.Timestamp:
+                _start = (
+                    end
+                    - timedelta(
+                        days=7 if self.scale == TimeScale.minute else 100
+                    )
+                ).date()
+                _end = end.date()
+            else:
+                _start = end - timedelta(
+                    days=7 if self.scale == TimeScale.minute else 100
                 )
+                _end = end
 
-                self.symbol_data = pd.concat(
-                    [self.symbol_data, _df]
-                )
-                date_list = next(iterator)
-        except StopIteration:        
-                return "iterator exceeded"
+            _df = self.data_api.get_symbol_data(
+                self.symbol,
+                start=_start,
+                end=_end,
+                scale=self.scale,
+            )
 
+            new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
+
+            end -= timedelta(days=7 if self.scale == TimeScale.minute else 100)
+
+        self.symbol_data = pd.concat(
+            [new_df, self.symbol_data], sort=True
+        ).drop_duplicates()
+        self.symbol_data = self.symbol_data[
+            ~self.symbol_data.index.duplicated(keep="first")
+        ]
         self.symbol_data = self.symbol_data.reindex(
             columns=[
                 "open",
@@ -399,8 +428,7 @@ class SymbolData:
                 "average",
                 "count",
             ]
-        ).sort_index().drop_duplicates()
-
+        ).sort_index()
 
     def __repr__(self):
         return str(self.symbol_data)
