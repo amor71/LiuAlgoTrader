@@ -5,6 +5,7 @@ from typing import Dict, Tuple
 import alpaca_trade_api as tradeapi
 import nest_asyncio
 import pandas as pd
+from itertools import zip_longest
 from dateutil.parser import parse as date_parser
 from pytz import timezone
 
@@ -356,25 +357,36 @@ class SymbolData:
         self.fetch_data_range(_start, _end)
     
     def fetch_data_range(self, start: date, end: date) -> None:
-        dates_range = pd.date_range(start, end)
+        def grouper(iterable, n, fillvalue=None):
+        # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+            args = [iter(iterable)] * n
+            return zip_longest(*args, fillvalue=fillvalue)
 
-        days=1 if end-start == timedelta(days=1) else 5
+        rang=2 if end-start == timedelta(days=1) else 7
 
-        for i,n in zip(dates_range, dates_range[days:]):
-            if i.date() != end:
-                _start = i.date()
-                _end = n.date() 
-            
-            _df = self.data_api.get_symbol_data(
-                self.symbol,
-                start=_start,
-                end=_end,
-                scale=self.scale,
-            )
+        date_list = [day.date() for day in pd.bdate_range(start, end)]
+        iterator = grouper(date_list, rang)
 
-            self.symbol_data = pd.concat(
-                [self.symbol_data, _df]
-            )
+        try:
+            date_list = next(iterator)
+            while True:
+                if None in date_list:
+                    date_list = list(filter(None, date_list))
+                _start, _end = (date_list[0], date_list[-1])
+
+                _df = self.data_api.get_symbol_data(
+                    self.symbol,
+                    start=_start,
+                    end=_end,
+                    scale=self.scale,
+                )
+
+                self.symbol_data = pd.concat(
+                    [self.symbol_data, _df]
+                )
+                date_list = next(iterator)
+        except StopIteration:        
+                return "iterator exceeded"
 
         self.symbol_data = self.symbol_data.reindex(
             columns=[
@@ -388,6 +400,7 @@ class SymbolData:
                 "count",
             ]
         ).sort_index().drop_duplicates()
+
 
     def __repr__(self):
         return str(self.symbol_data)
