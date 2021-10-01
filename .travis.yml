@@ -7,9 +7,6 @@ services:
 env:
   global:
   - DEPS_DIR=$HOME/dependencies
-  matrix:
-  - WITH_TA_LIBRARY=yes TA_INCLUDE_PATH=$DEPS_DIR/include LD_LIBRARY_PATH=$DEPS_DIR/lib
-    TA_LIBRARY_PATH=$DEPS_DIR/lib
 cache:
   directories:
   - "$DEPS_DIR"
@@ -18,8 +15,6 @@ install:
 - pip install coverage
 - pip install pytest-asyncio
 - pip install pytest-timeout
-- if [ $WITH_TA_LIBRARY = "yes" ]; then ./tools/build_talib_from_source.bash $DEPS_DIR;
-  fi
 - pip install -r liualgotrader/requirements/dev.txt
 before_script:
 - psql -c 'create database travis_ci_test;' -U postgres
