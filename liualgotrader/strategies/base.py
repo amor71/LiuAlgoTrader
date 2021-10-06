@@ -11,6 +11,7 @@ from pandas import DataFrame as df
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.keystore import KeyStore
 
@@ -29,6 +30,7 @@ class Strategy(object):
         schedule: List[Dict],
         ref_run_id: int = None,
         data_loader: DataLoader = None,
+        fractional: bool = False,
     ):
         """Strategy default initialization, should be called by all Strategy objects.
 
@@ -41,6 +43,7 @@ class Strategy(object):
                   by the platform.
         ref_run_id : Used for back-testing,
         data_loader: Passed by the framework, used like a DataFrame to access symbol data.
+        fractional: Boolean (default False) if to support fractional trading
         """
 
         self.name = name
@@ -50,10 +53,21 @@ class Strategy(object):
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
         self.schedule = schedule
         self.data_loader = data_loader
+        self.support_fractional = fractional
+        self.account_id = None
         self.global_var: Dict = {}
 
     def __repr__(self):
         return self.name
+
+    async def calc_qty(
+        self, price: float, trade_fee_percentage: float
+    ) -> float:
+        if not self.account_id:
+            raise AssertionError("account_id not set")
+        cash = await Accounts.get_balance(self.account_id)
+        price *= 1.0 + trade_fee_percentage
+        return cash / price if self.support_fractional else cash // price
 
     async def create(self) -> bool:
         """Called by the framework upon instantiation. Must always call super() implementation.
@@ -83,21 +97,25 @@ class Strategy(object):
         trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
+        fee_buy_percentage: float = 0.0,
+        fee_sell_percentage: float = 0.0,
     ) -> Dict[str, Dict]:
         """Called by the framework, periodically, if `should_run_all()` returns True. This function,
         unlike `run()` is executed once, and not per symbol.
 
-         Keyword arguments:
-         symbols_position: Dictionary, with open position (quantity) per symbol,
-         data_loader: Send by the framework, DataFrame like object to accessing symbol data,
-         now: current timestamp (may be in the past, if called by backtester),
-         portfolio_value: Sent by the framework [TO BE DEPRECATED],
-         trading_api: Sent by the framework, provides access to the Trader [TO BE DEPRECATED],
-         debug: Debug flag, used mostly in backtesting,
-         backtesting: Flag indicating if calling during backtesting session, or real-time
+        Keyword arguments:
+        symbols_position: Dictionary, with open position (quantity) per symbol,
+        data_loader: Send by the framework, DataFrame like object to accessing symbol data,
+        now: current timestamp (may be in the past, if called by backtester),
+        portfolio_value: Sent by the framework [TO BE DEPRECATED],
+        trading_api: Sent by the framework, provides access to the Trader [TO BE DEPRECATED],
+        debug: Debug flag, used mostly in backtesting,
+        backtesting: Flag indicating if calling during backtesting session, or real-time
+        fee_buy_percentage: fee to execute buy, presented as % (0-1),
+        fee_sell_percentage: fee to execute sell, presented as % (0-1),
 
-         Returns:
-         Dictionary with symbol and 'actions' (see documentation for supported actions)
+        Returns:
+        Dictionary with symbol and 'actions' (see documentation for supported actions)
         """
         return {}
 
@@ -161,13 +179,23 @@ class Strategy(object):
         )
 
     async def buy_callback(
-        self, symbol: str, price: float, qty: int, now: datetime = None
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful buy (could be partial)"""
         pass
 
     async def sell_callback(
-        self, symbol: str, price: float, qty: int, now: datetime = None
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful sell (could be partial)"""
         pass

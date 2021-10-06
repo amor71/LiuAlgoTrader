@@ -8,6 +8,7 @@ from liualgotrader.analytics import analysis
 from liualgotrader.reprocess.portfolio import account_transactions
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.models.portfolio import Portfolio
+from liualgotrader.common.types import AssetType
 
 
 def equity(portfolio_id: str):
@@ -54,17 +55,25 @@ def recalc(portfolio_id):
     account_transactions(portfolio_id)
 
 
-def create(account_size: float, credit_line: float):
+def create(account_size: float, credit_line: float, asset_type: str):
     """Create a new account"""
     portfolio_id = str(uuid.uuid4())
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_db_connection())
+
+    try:
+        asset = AssetType[asset_type]
+    except KeyError:
+        print(f"ASSET_TYPE {asset_type} not supported. aborting.")
+        return
+
     loop.run_until_complete(
         Portfolio.save(
             portfolio_id=portfolio_id,
             portfolio_size=account_size,
             credit=credit_line,
             parameters={},
+            asset_type=asset,
         )
     )
     print(f"Portfolio ID {portfolio_id} created")

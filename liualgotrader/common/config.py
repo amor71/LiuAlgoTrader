@@ -26,7 +26,7 @@ debug_enabled = bool(int(os.getenv("LIU_DEBUG_ENABLED", 0)))
 #
 # Broker
 #
-broker: BrokerType = BrokerType.alpaca
+broker: BrokerType = BrokerType[os.getenv("LIU_BROKER", "alpaca")]
 #
 # Market Schedule
 #

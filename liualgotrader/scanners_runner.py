@@ -18,8 +18,8 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
-from liualgotrader.trading.alpaca import AlpacaTrader
 from liualgotrader.trading.base import Trader
+from liualgotrader.trading.trader_factory import trader_factory
 
 nyc = timezone("America/New_York")
 
@@ -199,7 +199,7 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
         scanners_runner(
             scanners_conf,
             queue,
-            trader=(at := AlpacaTrader()),
+            trader=(at := trader_factory()()),
         ),
         name="main_task",
     )
