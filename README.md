@@ -14,11 +14,11 @@
 for effective algorithmic trading. The framework simplify development, testing,
 deployment, analysis and training algo trading strategies. The framework **automatically analyzes** trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
 
-LiuAlgoTrader can run on a laptop and 
-*hedge-on-the-go*, or run on a multi-core hosted Linux server 
-and it will automatically optimize for best performance for either. 
+The framework currently support trading and back-testing of US Equities, and back-testing Crypto strategies. The platform can be extended to support additional asset classes.
 
-LiuAlgoTrader uses Alpaca.Markets brokerage APIs for trading, and can use either Alpaca or Polygon.io for stocks' data. The framework is evolving to support additional brokers and data-providers.
+LiuAlgoTrader can run on a laptop and *hedge-on-the-go*, or run on a multi-core hosted Linux server and it will automatically optimize for best performance for either.
+
+LiuAlgoTrader uses [Alpaca.Markets](https://alpaca.markets/) brokerage APIs for trading, and can use either Alpaca or Polygon.io for stocks' data. The framework is evolving to support additional brokers and data-providers.
 
 LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
 
