@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
@@ -11,7 +12,7 @@ from pytz import timezone
 from liualgotrader.common import config, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import TimeScale
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.scanners.base import Scanner  # type: ignore
@@ -288,14 +289,23 @@ async def backtest_day(day, scanners, symbols, strategies, scale, data_loader):
         }
 
         for strategy in strategies:
-            trading_data.positions.update(
-                {
-                    symbol: 0
-                    for symbol in symbols.get(strategy.name, [])
-                    + symbols.get("_all", [])
-                    if symbol not in trading_data.positions
-                }
-            )
+            try:
+                trading_data.positions.update(
+                    {
+                        symbol: 0
+                        for symbol in symbols.get(strategy.name, [])
+                        + symbols.get("_all", [])
+                        if symbol not in trading_data.positions
+                    }
+                )
+            except TypeError as e:
+                if config.debug_enabled:
+                    tlog_exception("backtest_day")
+
+                tlog(
+                    f"[EXCEPTION] {e} (hint: check scanner(s) return list of symbols?)"
+                )
+                raise
 
             strategy_symbols = list(
                 set(symbols.get("_all", [])).union(
