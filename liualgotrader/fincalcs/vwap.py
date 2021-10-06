@@ -8,10 +8,15 @@ from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 
 
-def add_daily_vwap(minute_data: df, debug=False) -> bool:
-    back_time = ts(config.market_open)
+def add_daily_vwap(
+    minute_data: df, debug=False, back_time=None, in_place=True
+):
+    if not back_time:
+        back_time = ts(config.market_open)
 
-    print("before vwap", minute_data)
+    if debug:
+        tlog(f"before vwap {minute_data}")
+
     try:
         back_time_index = minute_data["close"].index.get_loc(
             back_time, method="nearest"
@@ -23,39 +28,26 @@ def add_daily_vwap(minute_data: df, debug=False) -> bool:
             )
         return False
 
-    minute_data["pv"] = minute_data.apply(
-        lambda x: (x["close"] + x["high"] + x["low"]) / 3 * x["volume"], axis=1
-    )
-    minute_data["apv"] = minute_data["pv"][back_time_index:].cumsum()
-    minute_data["av"] = minute_data["volume"][back_time_index:].cumsum()
+    df = minute_data if in_place else minute_data.copy()
 
-    minute_data["average"] = minute_data["apv"] / minute_data["av"]
-    minute_data["vwap"] = minute_data.apply(
-        lambda x: (x["close"] + x["high"] + x["low"]) / 3, axis=1
+    df["average"] = df.apply(
+        lambda x: (x.close + x.high + x.low) / 3.0, axis=1
     )
+    df["pv"] = df.apply(lambda x: x.average * x.volume, axis=1)
+    df["apv"] = df["pv"][back_time_index:].cumsum()
+    df["av"] = df["volume"][back_time_index:].cumsum()
+    df["vwap"] = df["apv"] / df["av"]
 
-    return True
+    return (
+        True
+        if in_place
+        else df[df.close.index.get_loc(back_time, method="nearest") :].vwap
+    )
 
 
 def anchored_vwap(
     ohlc_data: df, start_time: datetime, debug=False
 ) -> pd.Series:
-    try:
-        start_time_index = ohlc_data["close"].index.get_loc(
-            start_time, method="nearest"
-        )
-    except Exception as e:
-        if debug:
-            tlog(f"IndexError exception {e} in anchored_vwap for {ohlc_data}")
-        return pd.Series()
-
-    df = ohlc_data.copy()
-    df["pv"] = df.apply(
-        lambda x: (x["close"] + x["high"] + x["low"]) / 3 * x["volume"], axis=1
+    return add_daily_vwap(
+        ohlc_data, debug=debug, back_time=start_time, in_place=False
     )
-    df["apv"] = df["pv"][start_time_index:].cumsum()
-    df["av"] = df["volume"][start_time_index:].cumsum()
-
-    df["average"] = df["apv"] / df["av"]
-
-    return df.average[start_time_index:]
