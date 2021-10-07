@@ -11,6 +11,7 @@ from pandas import DataFrame as df
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
+from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.keystore import KeyStore
 
@@ -29,6 +30,7 @@ class Strategy(object):
         schedule: List[Dict],
         ref_run_id: int = None,
         data_loader: DataLoader = None,
+        fractional: bool = False,
     ):
         """Strategy default initialization, should be called by all Strategy objects.
 
@@ -41,6 +43,7 @@ class Strategy(object):
                   by the platform.
         ref_run_id : Used for back-testing,
         data_loader: Passed by the framework, used like a DataFrame to access symbol data.
+        fractional: Boolean (default False) if to support fractional trading
         """
 
         self.name = name
@@ -50,10 +53,19 @@ class Strategy(object):
         self.algo_run = AlgoRun(strategy_name=self.name, batch_id=batch_id)
         self.schedule = schedule
         self.data_loader = data_loader
+        self.support_fractional = fractional
+        self.account_id = None
         self.global_var: Dict = {}
 
     def __repr__(self):
         return self.name
+
+    async def calc_qty(self, price: float) -> float:
+        if not self.account_id:
+            raise AssertionError("account_id not set")
+        cash = await Accounts.get_balance(self.account_id)
+        print(cash, price, self.support_fractional)
+        return cash / price if self.support_fractional else cash // price
 
     async def create(self) -> bool:
         """Called by the framework upon instantiation. Must always call super() implementation.
