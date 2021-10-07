@@ -199,14 +199,11 @@ async def do_strategy_all(
     data_loader: DataLoader,
     now: pd.Timestamp,
     strategy: Strategy,
+    symbols: List[str],
 ):
     try:
         do = await strategy.run_all(
-            symbols_position={
-                symbol: trading_data.positions[symbol]
-                for symbol in trading_data.positions
-                if trading_data.positions[symbol] != 0
-            },
+            symbols_position={symbol: 0 for symbol in symbols},
             now=now.to_pydatetime(),
             portfolio_value=portfolio_value,
             backtesting=True,
@@ -260,7 +257,7 @@ async def do_strategy(
     global portfolio_value
 
     if await strategy.should_run_all():
-        await do_strategy_all(data_loader, now, strategy)
+        await do_strategy_all(data_loader, now, strategy, symbols)
     else:
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
@@ -312,6 +309,7 @@ async def backtest_day(day, scanners, symbols, strategies, scale, data_loader):
                     set(symbols.get(strategy.name, []))
                 )
             )
+
             await do_strategy(
                 data_loader, current_time, strategy, strategy_symbols
             )
