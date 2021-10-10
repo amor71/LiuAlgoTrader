@@ -12,6 +12,7 @@ class DataConnectorType(Enum):
 
 class BrokerType(Enum):
     alpaca = 1
+    gemini = 2
 
 
 class TimeScale(Enum):
