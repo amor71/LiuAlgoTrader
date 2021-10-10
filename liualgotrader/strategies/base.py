@@ -60,11 +60,13 @@ class Strategy(object):
     def __repr__(self):
         return self.name
 
-    async def calc_qty(self, price: float) -> float:
+    async def calc_qty(
+        self, price: float, trade_fee_percentage: float
+    ) -> float:
         if not self.account_id:
             raise AssertionError("account_id not set")
         cash = await Accounts.get_balance(self.account_id)
-        print(cash, price, self.support_fractional)
+        price *= 1.0 + trade_fee_percentage
         return cash / price if self.support_fractional else cash // price
 
     async def create(self) -> bool:
@@ -95,21 +97,25 @@ class Strategy(object):
         trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
+        fee_buy_percentage: float = 0.0,
+        fee_sell_percentage: float = 0.0,
     ) -> Dict[str, Dict]:
         """Called by the framework, periodically, if `should_run_all()` returns True. This function,
         unlike `run()` is executed once, and not per symbol.
 
-         Keyword arguments:
-         symbols_position: Dictionary, with open position (quantity) per symbol,
-         data_loader: Send by the framework, DataFrame like object to accessing symbol data,
-         now: current timestamp (may be in the past, if called by backtester),
-         portfolio_value: Sent by the framework [TO BE DEPRECATED],
-         trading_api: Sent by the framework, provides access to the Trader [TO BE DEPRECATED],
-         debug: Debug flag, used mostly in backtesting,
-         backtesting: Flag indicating if calling during backtesting session, or real-time
+        Keyword arguments:
+        symbols_position: Dictionary, with open position (quantity) per symbol,
+        data_loader: Send by the framework, DataFrame like object to accessing symbol data,
+        now: current timestamp (may be in the past, if called by backtester),
+        portfolio_value: Sent by the framework [TO BE DEPRECATED],
+        trading_api: Sent by the framework, provides access to the Trader [TO BE DEPRECATED],
+        debug: Debug flag, used mostly in backtesting,
+        backtesting: Flag indicating if calling during backtesting session, or real-time
+        fee_buy_percentage: fee to execute buy, presented as % (0-1),
+        fee_sell_percentage: fee to execute sell, presented as % (0-1),
 
-         Returns:
-         Dictionary with symbol and 'actions' (see documentation for supported actions)
+        Returns:
+        Dictionary with symbol and 'actions' (see documentation for supported actions)
         """
         return {}
 
@@ -173,13 +179,23 @@ class Strategy(object):
         )
 
     async def buy_callback(
-        self, symbol: str, price: float, qty: int, now: datetime = None
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful buy (could be partial)"""
         pass
 
     async def sell_callback(
-        self, symbol: str, price: float, qty: int, now: datetime = None
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful sell (could be partial)"""
         pass

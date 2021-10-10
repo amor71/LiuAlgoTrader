@@ -40,7 +40,7 @@ class PolygonData(DataAPI):
             raise AssertionError("Must call w/ authenticated polygon client")
 
         data = self.polygon_rest_client.stocks_equities_aggregates(
-            symbol, 1, scale.name, start, end, unadjusted=False
+            symbol, 1, scale.name, start, end, unadjusted=False, limit=50000
         )
         if not data or not hasattr(data, "results"):
             raise ValueError(

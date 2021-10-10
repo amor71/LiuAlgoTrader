@@ -268,27 +268,43 @@ Once run, both the browser-based UI (with `streamlit`) and any of the analysis n
 Understanding command-line parameters
 *************************************
 
-+----------------+-------------------------------------------------------+
-| Parameter Name | Description                                           |
-+----------------+-------------------------------------------------------+
-| to             | The last day for calculating the back-testing.        |
-|                | the date is provided in the format `YYYY-MM-DD`.      |
-|                | The `to` date will be included in the back-testing    |
-|                | session. If not specified, `today` is being used.     |
-+----------------+-------------------------------------------------------+
-| scale          | The time-scale for running the back-test.             |
-|                | Allowed values are: day or minute. If not specified   |
-|                | day will be used. Keep in mind that minute will       |
-|                | take longer to run, but may be more realistic         |
-|                | for your strategy.                                    |
-+----------------+-------------------------------------------------------+
-| scanners       | Comma-separated list of scanner names to be used in   |
-|                | the back-testing session. The scanner names are       |
-|                | read from the `tradeplan.toml` file. if not           |
-|                | specified all scanners will be executed.              |
-+----------------+-------------------------------------------------------+
-| strats         | Comma-separated list of strategy names to be used in  |
-|                | the back-testing session. The strategy names are      |
-|                | taken from the `tradeplan.toml` file. if not          |
-|                | specified all strategies will be executed.            |
-+----------------+-------------------------------------------------------+
++---------------------+-------------------------------------------------------+
+| Parameter Name      | Description                                           |
++---------------------+-------------------------------------------------------+
+| to                  | The last day for calculating the back-testing.        |
+|                     | the date is provided in the format `YYYY-MM-DD`.      |
+|                     | The `to` date will be included in the back-testing    |
+|                     | session. If not specified, `today` is being used.     |
++---------------------+-------------------------------------------------------+
+| scale               | The time-scale for running the back-test.             |
+|                     | Allowed values are: day or minute. If not specified   |
+|                     | day will be used. Keep in mind that minute will       |
+|                     | take longer to run, but may be more realistic         |
+|                     | for your strategy.                                    |
++---------------------+-------------------------------------------------------+
+| scanners            | Comma-separated list of scanner names to be used in   |
+|                     | the back-testing session. The scanner names are       |
+|                     | read from the `tradeplan.toml` file. if not           |
+|                     | specified all scanners will be executed.              |
++---------------------+-------------------------------------------------------+
+| strats              | Comma-separated list of strategy names to be used in  |
+|                     | the back-testing session. The strategy names are      |
+|                     | taken from the `tradeplan.toml` file. if not          |
+|                     | specified all strategies will be executed.            |
++---------------------+-------------------------------------------------------+
+| buy-fee-percentage  | trading fee for buying. Represented as percentage     |
+|                     | between 0 and 100. For example 0.3 is 0.3%            |
+|                     | transaction fee.                                      |
++---------------------+-------------------------------------------------------+
+| sell-fee-percentage | trading fee for buying. Represented as percentage     |
+|                     | between 0 and 100. For example 0.3 is 0.3%            |
+|                     | transaction fee.                                      |
++---------------------+-------------------------------------------------------+
+
+It is always recommanded to check the latest avaliable parameters by running
+
+.. code-block:: bash
+
+    backtester
+
+and seeing the full usage description.

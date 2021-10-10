@@ -1,8 +1,9 @@
 import json
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.types import AssetType
 from liualgotrader.models.accounts import Accounts
 
 
@@ -11,11 +12,18 @@ class Portfolio:
         self,
         portfolio_id: str,
         portfolio_size: float,
+        asset_type: AssetType,
+        account_id: Optional[int],
         parameters: Dict,
     ):
         self.portfolio_id = portfolio_id
         self.portfolio_size = portfolio_size
         self.parameters = parameters
+        self.account_id = account_id
+        self.asset_type = AssetType[str(asset_type)]
+
+    def __str__(self):
+        return f"id={self.portfolio_id} account-id={self.account_id} size={self.portfolio_size} asset_type={self.asset_type}, params={self.parameters}"
 
     @classmethod
     async def load_by_batch_id(cls, batch_id: str):
@@ -28,7 +36,7 @@ class Portfolio:
         async with pool.acquire() as con:
             data = await con.fetchrow(
                 """
-                    SELECT p.portfolio_id, p.size, p.parameters
+                    SELECT p.portfolio_id, p.size, p.assets, p.parameters
                     FROM 
                         portfolio as p, portfolio_batch_ids as b
                     WHERE
@@ -52,7 +60,7 @@ class Portfolio:
         async with pool.acquire() as con:
             data = await con.fetchrow(
                 """
-                    SELECT p.portfolio_id, p.size, p.parameters
+                    SELECT p.portfolio_id, p.size, p.assets, p.account_id, p.parameters
                     FROM 
                         portfolio as p
                     WHERE
@@ -71,6 +79,7 @@ class Portfolio:
         portfolio_size: float,
         credit: float,
         parameters: Dict,
+        asset_type: AssetType = AssetType.US_EQUITIES,
     ):
         pool = config.db_conn_pool
         async with pool.acquire() as con:
@@ -84,12 +93,13 @@ class Portfolio:
                 )
                 await con.execute(
                     """
-                        INSERT INTO portfolio (portfolio_id, size, account_id, parameters)
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO portfolio (portfolio_id, size, account_id, assets, parameters)
+                        VALUES ($1, $2, $3, $4, $5)
                     """,
                     portfolio_id,
                     portfolio_size,
                     account_id,
+                    asset_type.name,
                     json.dumps(parameters),
                 )
 
@@ -123,17 +133,3 @@ class Portfolio:
                 portfolio_id,
             )
             return result
-
-    @classmethod
-    async def load_details(cls, portfolio_id: str) -> Tuple[int, float]:
-        pool = config.db_conn_pool
-        async with pool.acquire() as con:
-            result = await con.fetchrow(
-                """
-                    SELECT account_id, size
-                    FROM portfolio
-                    WHERE portfolio_id = $1;
-                """,
-                portfolio_id,
-            )
-            return result[0], result[1]

@@ -32,6 +32,11 @@ class WSConnectState(Enum):
     AUTHENTICATED = auto()
 
 
+class AssetType(Enum):
+    US_EQUITIES = auto()
+    CRYPTO = auto()
+
+
 class QueueMapper:
     def __init__(self, queue_list: List[MNQueue] = None):
         self.queues: Dict[str, MNQueue] = {}

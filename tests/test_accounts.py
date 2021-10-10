@@ -222,3 +222,102 @@ async def test_clear_transactions() -> bool:
         )
 
     return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_check_if_enough_balance_positive_1() -> bool:
+    print("test_check_if_enough_balance_positive_1")
+
+    balance = 1000.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=False, credit_line=0.0
+    )
+
+    if await Accounts.check_if_enough_balance_to_withdraw(account_id, 500.0):
+        return True
+    else:
+        raise AssertionError(
+            "test_check_if_enough_balance_positive_1(): should have had enough balance"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_check_if_enough_balance_positive_2() -> bool:
+    print("test_check_if_enough_balance_positive_2")
+
+    balance = 1000.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=True, credit_line=500.0
+    )
+
+    if not await Accounts.check_if_enough_balance_to_withdraw(
+        account_id, 2000.0
+    ):
+        return True
+    else:
+        raise AssertionError(
+            "test_check_if_enough_balance_positive_2(): should not have had enough balance"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_check_if_enough_balance_positive_3() -> bool:
+    print("test_check_if_enough_balance_positive_3")
+
+    balance = 1000.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=True, credit_line=500.0
+    )
+    await Accounts.add_transaction(account_id, -1100)
+
+    if await Accounts.check_if_enough_balance_to_withdraw(account_id, 200.0):
+        return True
+    else:
+        raise AssertionError(
+            "test_check_if_enough_balance_positive_3(): should  have had enough balance"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_check_if_enough_balance_positive_4() -> bool:
+    print("test_check_if_enough_balance_positive_4")
+
+    balance = 1000.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=True, credit_line=500.0
+    )
+    await Accounts.add_transaction(account_id, -1100)
+
+    if not await Accounts.check_if_enough_balance_to_withdraw(
+        account_id, 600.0
+    ):
+        return True
+    else:
+        raise AssertionError(
+            "test_check_if_enough_balance_positive_4(): should not have had enough balance"
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_check_if_enough_balance_negative_1() -> bool:
+    print("test_check_if_enough_balance_negative_1")
+
+    balance = 1000.0
+    account_id = await Accounts.create(
+        balance=balance, allow_negative=True, credit_line=500.0
+    )
+    try:
+        not await Accounts.check_if_enough_balance_to_withdraw(
+            account_id, -600.0
+        )
+    except AssertionError:
+        return True
+
+    raise AssertionError(
+        "test_check_if_enough_balance_negative_1(): should have raise exception"
+    )

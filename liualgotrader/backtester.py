@@ -67,7 +67,7 @@ def show_usage():
     print(
         f"usage:\n{sys.argv[0]} batch --batch-list OR [--strict] [--symbol=SYMBOL] [--debug=SYMBOL] [--duration=<minutes>] <batch-id>",
         "\nOR"
-        f"\n{sys.argv[0]} from <start_date> [--scanners=<scanner-name,>] [--strats=<strategy-name,>] [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute",
+        f"\n{sys.argv[0]} from <start_date> [--asset=equity(DEFAULT)|crypto][--scanners=<scanner-name,>] [--strats=<strategy-name,>] [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute [--buy-fee-percentage=0.(DEFAULT)] [--sell-fee-percentage=0.(DEFAULT)]",
     )
     msg = """
     'backter' application re-runs a past trading session, or test strategies on past data. 
@@ -77,22 +77,31 @@ def show_usage():
     print(msg)
     print("options:")
     print(
-        "--batch-list\tDisplay list of trading sessions, list limited to last 30 days"
+        "batch-list\t\tDisplay list of trading sessions, list limited to last 30 days"
     )
-    print("--symbol\tRun on specific SYMBOL, bypass batch-id scanners")
+    print("symbol\t\t\tRun on specific SYMBOL, bypass batch-id scanners")
     print(
-        "--duration\tRun back-test for number of <minutes>, bypass batch-id run duration"
-    )
-    print(
-        "--debug\t\tWrite verbose debug information for symbol SYMBOL during back-testing"
+        "asset\t\t\tAsset type being traded. equity = US Equities, crypt = Crypto-currency. Asset type affects the market schedule for backtesting."
     )
     print(
-        "--strict\tRun back-test session only on same symbols traded in the original batch"
+        "duration\t\tRun back-test for number of <minutes>, bypass batch-id run duration"
     )
     print(
-        "--to\t\tdate string in the format YYYY-MM-DD, if not provided current day is selected"
+        "debug\t\t\tWrite verbose debug information for symbol SYMBOL during back-testing"
     )
-    print("--scale\t\ttime-scale for loading past data for back-test-ing")
+    print(
+        "strict\t\t\tRun back-test session only on same symbols traded in the original batch"
+    )
+    print(
+        "to\t\t\tdate string in the format YYYY-MM-DD, if not provided current day is selected"
+    )
+    print("scale\t\t\ttime-scale for loading past data for back-test-ing")
+    print(
+        "buy-fee-percentage\tBroker fees as percentage from transaction. Represented as 0-1."
+    )
+    print(
+        "sell-fee-percentage\tBroker fees as percentage from transaction. Represented as 0-1."
+    )
 
 
 def show_version(filename: str, version: str) -> None:
@@ -124,7 +133,7 @@ async def create_strategies(
                 spec = importlib.util.spec_from_file_location(
                     "module.name", strategy_details["filename"]
                 )
-                custom_strategy_module = importlib.util.module_from_spec(spec)
+                custom_strategy_module = importlib.util.module_from_spec(spec)  # type: ignore
                 spec.loader.exec_module(custom_strategy_module)  # type: ignore
                 class_name = strategy_name
                 custom_strategy = getattr(custom_strategy_module, class_name)
@@ -533,7 +542,7 @@ class BackTestDay:
                         "module.name", scanner_details["filename"]
                     )
                     custom_scanner_module = importlib.util.module_from_spec(
-                        spec
+                        spec  # type: ignore
                     )
                     spec.loader.exec_module(custom_scanner_module)  # type: ignore
                     class_name = scanner_name
