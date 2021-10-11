@@ -41,7 +41,7 @@ polygon-api-client==0.1.11
 bandit==1.7.0
 finnhub-python==2.4.5
 pandas==1.3.3
-quantstats==0.0.34
+quantstats==0.0.43
 tqdm==4.62.3
 mnqueues==0.0.32
 toml==0.10.2
