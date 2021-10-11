@@ -18,7 +18,7 @@ scipy==1.7.1
 polygon-api-client==0.1.11
 finnhub-python==2.4.5
 quantstats==0.0.43
-mnqueues==0.0.30
+mnqueues==0.0.32
 tqdm==4.62.3
 toml==0.10.2
 fire==0.4.0
