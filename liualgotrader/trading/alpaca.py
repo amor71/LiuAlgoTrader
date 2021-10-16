@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
 import pandas as pd
-from alpaca_trade_api import Order as AlpacaOrder
+from alpaca_trade_api.entity import Order as AlpacaOrder
 from alpaca_trade_api.rest import REST, URL
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
