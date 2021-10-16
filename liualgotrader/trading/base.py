@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 
-from liualgotrader.common.types import QueueMapper
+from liualgotrader.common.types import Order, QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
 
 
@@ -53,10 +53,10 @@ class Trader:
     async def get_shortable_symbols(self) -> List[str]:
         ...
 
-    async def is_shortable(self, symbol) -> bool:
+    async def is_shortable(self, symbol: str) -> bool:
         ...
 
-    async def is_order_completed(self, order) -> Tuple[bool, float]:
+    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
         ...
 
     async def submit_order(
@@ -75,13 +75,15 @@ class Trader:
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
+    ) -> Order:
+        ...
+
+    async def get_order(self, order_id: str) -> Order:
+        ...
+
+    async def cancel_order(
+        self, order_id: Optional[str], order: Optional[Order]
     ):
-        ...
-
-    async def get_order(self, order_id: str):
-        ...
-
-    async def cancel_order(self, order_id: str):
         ...
 
     async def run(self) -> Optional[asyncio.Task]:

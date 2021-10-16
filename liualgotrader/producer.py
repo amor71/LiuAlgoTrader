@@ -2,6 +2,7 @@
 Get Market data from Data Providers and pump to consumers
 """
 import asyncio
+import inspect
 import json
 import os
 import random
@@ -20,7 +21,6 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import QueueMapper, WSEventType
 from liualgotrader.data.data_factory import streaming_factory
 from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.trading.alpaca import AlpacaTrader
 from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
@@ -120,8 +120,8 @@ async def scanner_input(
 
 
 async def trade_run(qm: QueueMapper) -> None:
-    tlog("trade_run() starting using Alpaca trading ")
-    at = AlpacaTrader(qm)
+    at = trader_factory()(qm)
+    tlog(f"trade_run() starting using {at} trading")
     await at.run()
     tlog("trade_run() completed")
 
@@ -204,7 +204,7 @@ async def producer_async_main(
     qm = QueueMapper(queue_list=queues)
     await run(queues=queues, qm=qm)
 
-    at = AlpacaTrader(qm)
+    at = trader_factory()(qm)
 
     if not at.get_time_market_close():
         return
@@ -221,10 +221,16 @@ async def producer_async_main(
         )
     )
 
-    await asyncio.gather(
-        trade_updates_task,
+    async_tasks_to_gather = [
         scanner_input_task,
         tear_down,
+    ]
+
+    if inspect.iscoroutinefunction(trade_updates_task):
+        async_tasks_to_gather.append(trade_updates_task)
+
+    await asyncio.gather(
+        *async_tasks_to_gather,
         return_exceptions=True,
     )
 

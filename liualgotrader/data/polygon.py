@@ -127,6 +127,7 @@ class PolygonStream(StreamingAPI):
 
     @classmethod
     def handle_event(cls, event: Dict):
+        print("event:", event)
         try:
             event["EV"] = event["ev"]
             if "s" in event:

@@ -5,13 +5,14 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
 import pandas as pd
+from alpaca_trade_api import Order as AlpacaOrder
 from alpaca_trade_api.rest import REST, URL
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import QueueMapper
+from liualgotrader.common.types import Order, QueueMapper, Trade
 from liualgotrader.trading.base import Trader
 
 nyc = timezone("America/New_York")
@@ -69,12 +70,12 @@ class AlpacaTrader(Trader):
             self.market_open = self.market_close = None
         super().__init__(qm)
 
-    async def is_order_completed(self, order) -> Tuple[bool, float]:
+    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        status = self.alpaca_rest_client.get_order(order_id=order.id)
-        if status.filled_qty == order.qty:
+        status = self.alpaca_rest_client.get_order(order_id=order.order_id)
+        if status.filled_qty == status.qty:
             return True, float(status.filled_avg_price)
 
         return False, 0.0
@@ -107,10 +108,35 @@ class AlpacaTrader(Trader):
 
         return float(pos.qty) if pos.side == "long" else -1.0 * float(pos.qty)
 
-    async def get_order(self, order_id: str):
+    def to_order(self, alpaca_order: AlpacaOrder) -> Order:
+        event = (
+            Order.EventType.canceled
+            if alpaca_order.status in ["canceled", "expired", "replaced"]
+            else Order.EventType.pending
+            if alpaca_order.status in ["pending_cancel", "pending_replace"]
+            else Order.EventType.fill
+            if alpaca_order.status == "filled"
+            else Order.EventType.partial_fill
+            if alpaca_order.status == "partially_filled"
+            else Order.EventType.other
+        )
+        return Order(
+            order_id=alpaca_order.id,
+            symbol=alpaca_order.symbol,
+            event=event,
+            price=alpaca_order.limit_price,
+            side=Order.FillSide[alpaca_order.side],
+            filled_qty=alpaca_order.filled_qty,
+            remaining_amount=alpaca_order.qty - alpaca_order.filled_qty,
+            submitted_at=alpaca_order.submitted_at,
+            avg_execution_price=alpaca_order.filled_avg_price,
+        )
+
+    async def get_order(self, order_id: str) -> Order:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
-        return self.alpaca_rest_client.get_order(order_id)
+
+        return self.to_order(self.alpaca_rest_client.get_order(order_id))
 
     def is_market_open_today(self) -> bool:
         return self.market_open is not None
@@ -178,10 +204,14 @@ class AlpacaTrader(Trader):
             and asset.easy_to_borrow is not False
         )
 
-    async def cancel_order(self, order_id: str):
+    async def cancel_order(
+        self, order_id: Optional[str], order: Optional[Order]
+    ):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
+        if order:
+            order_id = order.order_id
         self.alpaca_rest_client.cancel_order(order_id)
 
     async def submit_order(
@@ -200,11 +230,11 @@ class AlpacaTrader(Trader):
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
-    ):
+    ) -> Order:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        return self.alpaca_rest_client.submit_order(
+        o = self.alpaca_rest_client.submit_order(
             symbol,
             str(qty),
             side,
@@ -220,6 +250,8 @@ class AlpacaTrader(Trader):
             trail_price,
             trail_percent,
         )
+
+        return self.to_order(o)
 
     @classmethod
     async def trade_update_handler(cls, data):
