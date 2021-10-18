@@ -10,6 +10,7 @@ class DataConnectorType(Enum):
     polygon = 1
     alpaca = 2
     finnhub = 3
+    gemini = 4
 
 
 class BrokerType(Enum):
