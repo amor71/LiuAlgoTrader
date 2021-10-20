@@ -213,9 +213,7 @@ async def backtest_symbol(
     start_time = scanner_start_time
     if start_time.second > 0:
         start_time = start_time.replace(second=0, microsecond=0)
-    print(
-        f"--> back-testing {symbol} from {str(start_time)} duration {duration}"
-    )
+    print(f'--> back-testing {symbol} from {start_time} duration {duration}')
     if debug_symbol:
         print("--> using DEBUG mode")
 
@@ -528,7 +526,7 @@ class BackTestDay:
                             "max_symbols", config.total_tickers
                         ),
                     )
-                    tlog(f"instantiated momentum scanner")
+                    tlog('instantiated momentum scanner')
                 except KeyError as e:
                     tlog(
                         f"Error {e} in processing of scanner configuration {scanner_details}"
