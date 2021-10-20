@@ -82,7 +82,7 @@ class Trader:
         ...
 
     async def cancel_order(
-        self, order_id: Optional[str], order: Optional[Order]
+        self, order_id: Optional[str] = None, order: Optional[Order] = None
     ):
         ...
 

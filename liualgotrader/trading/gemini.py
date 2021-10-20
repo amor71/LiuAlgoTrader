@@ -117,7 +117,7 @@ class GeminiTrader(Trader):
             else Order.EventType.partial_fill,
             filled_qty=float(trade_dict["fill"]["amount"]),
             trade_fee=float(trade_dict["fill"]["fee"]),
-            filled_avg_price=float(trade_dict["avg_execution_price"]),
+            filled_avg_price=float(trade_dict["avg_execution_price"] or 0.0),
             liquidity=trade_dict["fill"]["liquidity"],
             updated_at=pd.Timestamp(
                 ts_input=trade_dict["timestampms"], unit="ms", tz="UTC"
@@ -265,7 +265,7 @@ class GeminiTrader(Trader):
             payload = {"request": endpoint}
             headers = self._generate_ws_headers(payload)
             self.ws = websocket.WebSocketApp(
-                f"{self.base_websocket}{endpoint}?eventTypeFilter=cancel_rejected&eventTypeFilter=cancelled&eventTypeFilter=rejected&eventTypeFilter=fill&eventTypeFilter=closed&heartbeat=trueheartbeat=true",
+                f"{self.base_websocket}{endpoint}?eventTypeFilter=cancel_rejected&eventTypeFilter=cancelled&eventTypeFilter=rejected&eventTypeFilter=fill&eventTypeFilter=closed&heartbeat=true",
                 on_message=self.on_message,
                 on_error=self.on_error,
                 on_close=self.on_close,
@@ -306,7 +306,7 @@ class GeminiTrader(Trader):
         return False
 
     async def cancel_order(
-        self, order_id: Optional[str], order: Optional[Order]
+        self, order_id: Optional[str] = None, order: Optional[Order] = None
     ):
         if order:
             _order_id = order.order_id

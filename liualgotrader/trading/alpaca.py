@@ -2,11 +2,11 @@ import asyncio
 import queue
 import traceback
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 from alpaca_trade_api.entity import Order as AlpacaOrder
-from alpaca_trade_api.rest import REST, URL
+from alpaca_trade_api.rest import REST, URL, Entity
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
 
@@ -76,7 +76,7 @@ class AlpacaTrader(Trader):
 
         status = self.alpaca_rest_client.get_order(order_id=order.order_id)
         if status.filled_qty == status.qty:
-            return True, float(status.filled_avg_price)
+            return True, float(status.filled_avg_price or 0.0)
 
         return False, 0.0
 
@@ -124,10 +124,11 @@ class AlpacaTrader(Trader):
             order_id=alpaca_order.id,
             symbol=alpaca_order.symbol,
             event=event,
-            price=alpaca_order.limit_price,
+            price=float(alpaca_order.limit_price or 0.0),
             side=Order.FillSide[alpaca_order.side],
-            filled_qty=alpaca_order.filled_qty,
-            remaining_amount=alpaca_order.qty - alpaca_order.filled_qty,
+            filled_qty=float(alpaca_order.filled_qty),
+            remaining_amount=float(alpaca_order.qty)
+            - float(alpaca_order.filled_qty),
             submitted_at=alpaca_order.submitted_at,
             avg_execution_price=alpaca_order.filled_avg_price,
         )
@@ -205,7 +206,7 @@ class AlpacaTrader(Trader):
         )
 
     async def cancel_order(
-        self, order_id: Optional[str], order: Optional[Order]
+        self, order_id: Optional[str] = None, order: Optional[Order] = None
     ):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
@@ -254,16 +255,56 @@ class AlpacaTrader(Trader):
         return self.to_order(o)
 
     @classmethod
+    def _trade_from_dict(cls, trade_dict: Entity) -> Optional[Trade]:
+        if trade_dict.event == "new":
+            return None
+
+        print(trade_dict)
+        return Trade(
+            order_id=trade_dict.order["id"],
+            symbol=trade_dict.order["symbol"],
+            event=Order.EventType.canceled
+            if trade_dict.event
+            in ["canceled", "suspended", "expired", "cancel_rejected"]
+            else Order.EventType.rejected
+            if trade_dict.event == "rejected"
+            else Order.EventType.fill
+            if trade_dict.event == "fill"
+            else Order.EventType.partial_fill
+            if trade_dict.event == "partial_fill"
+            else Order.EventType.other,
+            filled_qty=float(trade_dict.order["filled_qty"]),
+            trade_fee=0.0,
+            filled_avg_price=float(
+                trade_dict.order["filled_avg_price"] or 0.0
+            ),
+            liquidity="",
+            updated_at=pd.Timestamp(
+                ts_input=trade_dict.order["updated_at"],
+                unit="ms",
+                tz="US/Eastern",
+            ),
+            side=Order.FillSide[trade_dict.order["side"]],
+        )
+
+    @classmethod
     async def trade_update_handler(cls, data):
-        symbol = data.__dict__["_raw"]["order"]["symbol"]
-        data.__dict__["_raw"]["EV"] = "trade_update"
-        data.__dict__["_raw"]["symbol"] = symbol
         try:
             # cls.get_instance().queues[symbol].put(
             #    data.__dict__["_raw"], timeout=1
             # )
+            trade = cls._trade_from_dict(data)
+            if not trade:
+                return
+
+            to_send = {
+                "EV": "trade_update",
+                "symbol": "symbol",
+                "trade": trade.__dict__,
+            }
             for q in cls.get_instance().queues.get_allqueues():
-                q.put(data.__dict__["_raw"], timeout=1)
+                q.put(to_send, timeout=1)
+
         except queue.Full as f:
             tlog(
                 f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."

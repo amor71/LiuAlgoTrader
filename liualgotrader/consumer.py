@@ -301,7 +301,7 @@ async def save(
 
     await db_trade.save(
         config.db_conn_pool,
-        now,
+        str(now),
         trading_data.stop_prices[symbol]
         if symbol in trading_data.stop_prices
         else 0.0,
@@ -337,7 +337,7 @@ async def update_partially_filled_order(
     filled_avg_price: float,
 ) -> None:
     new_qty: float = filled_qty - abs(
-        trading_data.partial_fills.get(symbol, 0)
+        trading_data.partial_fills.get(symbol, 0.0)
     )
     if side == Order.FillSide.sell:
         filled_qty *= -1
@@ -348,7 +348,7 @@ async def update_partially_filled_order(
     trading_data.partial_fills[symbol] = filled_qty
     trading_data.positions[symbol] += filled_qty
 
-    do_callbacks(
+    await do_callbacks(
         symbol=symbol,
         strategy=strategy,
         filled_qty=filled_qty,
@@ -365,7 +365,7 @@ async def update_filled_order(
     filled_avg_price: float,
     updated_at: pd.Timestamp,
 ) -> None:
-    new_qty = filled_qty - abs(trading_data.partial_fills.get(symbol, 0))
+    new_qty = filled_qty - abs(trading_data.partial_fills.get(symbol, 0.0))
     if side == Order.FillSide.sell:
         filled_qty *= -1.0
 
@@ -373,7 +373,7 @@ async def update_filled_order(
     trading_data.positions[symbol] = trading_data.positions.get(
         symbol, 0.0
     ) - trading_data.partial_fills.get(symbol, 0.0)
-    trading_data.partial_fills[symbol] = 0
+    trading_data.partial_fills[symbol] = 0.0
     trading_data.positions[symbol] += filled_qty
 
     try:
@@ -387,13 +387,13 @@ async def update_filled_order(
     await save(
         symbol,
         new_qty,
-        str(side),
+        side.name,
         filled_avg_price,
         indicators,
         updated_at,
     )
 
-    do_callbacks(symbol, strategy, filled_qty, side, filled_avg_price)
+    await do_callbacks(symbol, strategy, filled_qty, side, filled_avg_price)
 
     trading_data.open_orders.pop(symbol)
     trading_data.open_order_strategy.pop(symbol)
@@ -567,7 +567,7 @@ async def order_inflight(
             already_completed, _ = await trader.is_order_completed(order)
             if already_completed:
                 tlog(
-                    f"order_id {existing_order.id} for {symbol} already filled {order}"  # type: ignore
+                    f"order_id {existing_order.order_id} for {symbol} already filled {order}"  # type: ignore
                 )
                 await update_filled_order(
                     symbol=symbol,
@@ -593,7 +593,7 @@ async def order_inflight(
                 tlog(
                     f"Cancel order id {existing_order.order_id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                 )
-                await trader.cancel_order(existing_order.id)  # type: ignore
+                await trader.cancel_order(order_id=existing_order.order_id)
                 trading_data.open_orders.pop(symbol)
 
         return True
