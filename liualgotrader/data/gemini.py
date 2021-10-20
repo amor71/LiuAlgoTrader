@@ -188,7 +188,7 @@ class GeminiStream(StreamingAPI):
 
     async def run(self):
         if not self.running_task:
-            endpoint = "/v1/marketdata/BTCUSD"  # ToDo: need support all symbols in an efficient way
+            endpoint = "/v1/marketdata/BTCUSD"  # TODO need support all symbols in an efficient way
             payload = {"request": endpoint}
             headers = self._generate_ws_headers(payload)
             self.ws = websocket.WebSocketApp(
@@ -287,4 +287,4 @@ class GeminiStream(StreamingAPI):
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
-        return True  # ToDo: handle all symbols and event types
+        return True  # TODO Gemini - handle all symbols and event types
