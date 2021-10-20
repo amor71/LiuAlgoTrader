@@ -3,7 +3,7 @@ from liualgotrader.common.types import DataConnectorType
 from liualgotrader.data.alpaca import AlpacaData, AlpacaStream
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.finnhub import FinnhubData
-from liualgotrader.data.gemini import GeminiData
+from liualgotrader.data.gemini import GeminiData, GeminiStream
 from liualgotrader.data.polygon import PolygonData, PolygonStream
 
 
@@ -27,5 +27,7 @@ def streaming_factory(connector: DataConnectorType = None):
         return PolygonStream
     elif _connector == DataConnectorType.alpaca:
         return AlpacaStream
+    elif _connector == DataConnectorType.gemini:
+        return GeminiStream
     else:
         raise Exception(f"unsupported streaming provider {_connector}")

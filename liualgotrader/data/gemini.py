@@ -61,8 +61,9 @@ class GeminiData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        print(symbol, start, end, scale)
-
+        tlog(
+            f"GEMINI start loading {symbol} from {start} to {end} w scale {scale}"
+        )
         start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
         end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
         start_ts, end_ts = (
@@ -80,8 +81,7 @@ class GeminiData(DataAPI):
         )
         endpoint = f"/v1/trades/{symbol}"
         returned_df: pd.DataFrame = pd.DataFrame()
-        start = datetime(1970, 1, 1, tzinfo=utctz)  # Unix epoch start time
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             loop = asyncio.get_event_loop()
             futures = [
                 loop.run_in_executor(
@@ -105,9 +105,12 @@ class GeminiData(DataAPI):
                 _df = _df.set_index(_df.timestamp).sort_index()
 
                 _df["s"] = _df.timestamp.apply(
-                    lambda x: datetime.fromtimestamp(x).astimezone(utctz)
+                    lambda x: pd.Timestamp(
+                        datetime.fromtimestamp(x).astimezone(utctz)
+                    )
                 )
                 _df["amount"] = pd.to_numeric(_df.amount)
+                _df["price"] = pd.to_numeric(_df.price)
                 _df = _df[["s", "price", "amount"]].set_index("s")
 
                 rule = "T" if scale == TimeScale.minute else "D"
@@ -134,6 +137,9 @@ class GeminiData(DataAPI):
                         ~returned_df.index.duplicated(keep="first")
                     ]
 
+        tlog(
+            f"GEMINI completed loading {symbol} from {start} to {end} w scale {scale}"
+        )
         return returned_df
 
     def get_symbol_data(
@@ -182,7 +188,7 @@ class GeminiStream(StreamingAPI):
 
     async def run(self):
         if not self.running_task:
-            endpoint = "/v1/marketdata/BTCUSD"
+            endpoint = "/v1/marketdata/BTCUSD"  # ToDo: need support all symbols in an efficient way
             payload = {"request": endpoint}
             headers = self._generate_ws_headers(payload)
             self.ws = websocket.WebSocketApp(
@@ -219,7 +225,11 @@ class GeminiStream(StreamingAPI):
         for event in msg["events"]:
             if event["type"] == "trade":
                 cls.trades_handler(
-                    datetime.fromtimestamp(msg["timestamp"]).astimezone(utctz),
+                    pd.Timestamp(
+                        datetime.fromtimestamp(msg["timestamp"]).astimezone(
+                            utctz
+                        )
+                    ),
                     event,
                 )
 
@@ -257,19 +267,16 @@ class GeminiStream(StreamingAPI):
             }
 
             cls.get_instance().queues["BTCUSD"].put(event, block=False)
-            print(
-                timestamp,
-                datetime.now(timezone.utc),
-                time_diff,
-                event,
-                cls.get_instance().queues["BTCUSD"],
-            )
 
         except queue.Full as f:
             tlog(
                 f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
             )
             raise
+        except AssertionError as e:
+            tlog(f"[EXCEPTION] GEMINI process_message(): {e}")
+            time.sleep(1)
+            return
         except Exception as e:
             tlog(
                 f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
@@ -280,4 +287,4 @@ class GeminiStream(StreamingAPI):
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
-        return True
+        return True  # ToDo: handle all symbols and event types

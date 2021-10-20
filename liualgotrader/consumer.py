@@ -794,9 +794,8 @@ async def handle_data_queue_msg(
 
     await trace(carrier)(aggregate_bar_data)(data_loader, data, ts)
 
-    time_diff = (
-        datetime.now(tz=timezone("America/New_York")) - data["timestamp"]
-    )
+    # timezone("America/New_York")
+    time_diff = datetime.now(tz=data["timestamp"].tz) - data["timestamp"]
     if config.trace_enabled:
         trace_elapsed_metrics("DL", time_diff)
 

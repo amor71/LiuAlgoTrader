@@ -22,7 +22,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import Order, QueueMapper, Trade
 from liualgotrader.trading.base import Trader
 
-nyc = timezone("America/New_York")
+utctz = timezone("UTC")
 
 
 class GeminiTrader(Trader):
@@ -147,10 +147,10 @@ class GeminiTrader(Trader):
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
         return (
             datetime.today().replace(
-                hour=0, minute=0, second=0, microsecond=0
+                hour=0, minute=0, second=0, microsecond=0, tzinfo=utctz
             ),
             datetime.today().replace(
-                hour=23, minute=59, second=59, microsecond=0
+                hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
             ),
         )
 
@@ -208,12 +208,9 @@ class GeminiTrader(Trader):
         return True
 
     def get_time_market_close(self) -> Optional[timedelta]:
-        return (
-            datetime.today().replace(
-                hour=23, minute=59, second=59, microsecond=0
-            )
-            - datetime.now()
-        )
+        return datetime.today().replace(
+            hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
+        ) - datetime.now().replace(tzinfo=utctz)
 
     async def reconnect(self):
         await self.close()

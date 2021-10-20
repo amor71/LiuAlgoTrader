@@ -33,6 +33,7 @@ def get_new_symbols_and_queues(
     symbols_details: Dict, queues: List[MNQueue], num_consumer_processes: int
 ) -> List[str]:
     global symbol_strategy
+    global symbols
 
     new_symbols: List = []
     for symbol_details in symbols_details:
