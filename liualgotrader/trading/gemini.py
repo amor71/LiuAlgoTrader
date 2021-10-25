@@ -86,12 +86,12 @@ class GeminiTrader(Trader):
         trade_fees: float = 0.0 + sum(float(t["fee_amount"]) for t in trades)
         return Order(
             order_id=order_data["order_id"],
-            symbol=order_data["symbol"],
+            symbol=order_data["symbol"].lower(),
             filled_qty=float(order_data["executed_amount"]),
             event=Order.EventType.canceled
             if order_data["is_cancelled"] == True
             else Order.EventType.fill
-            if order_data["remaining_amount"] == 0
+            if order_data["remaining_amount"] == "0"
             else Order.EventType.partial_fill,
             price=float(order_data["price"]),
             side=Order.FillSide.buy
@@ -107,9 +107,10 @@ class GeminiTrader(Trader):
 
     @classmethod
     def _trade_from_dict(cls, trade_dict: Dict) -> Trade:
+        tlog(f"GEMINI GOING TO SEND {trade_dict}")
         return Trade(
             order_id=trade_dict["order_id"],
-            symbol=trade_dict["symbol"],
+            symbol=trade_dict["symbol"].lower(),
             event=Order.EventType.canceled
             if trade_dict["type"] == "cancelled"
             else Order.EventType.rejected
@@ -122,11 +123,15 @@ class GeminiTrader(Trader):
             filled_qty=float(trade_dict["fill"]["amount"])
             if "fill" in trade_dict
             else 0.0,
-            trade_fee=float(trade_dict["fill"]["fee"])
+            trade_fee=float(
+                trade_dict["fill"]["fee"] if "fill" in trade_dict else 0.0
+            )
             if "fill" in trade_dict
             else 0.0,
             filled_avg_price=float(trade_dict["avg_execution_price"] or 0.0),
-            liquidity=trade_dict["fill"]["liquidity"],
+            liquidity=trade_dict["fill"]["liquidity"]
+            if "fill" in trade_dict
+            else "",
             updated_at=pd.Timestamp(
                 ts_input=trade_dict["timestampms"], unit="ms", tz="UTC"
             ),
@@ -165,9 +170,12 @@ class GeminiTrader(Trader):
     def get_trading_days(
         self, start_date: date, end_date: date = date.today()
     ) -> pd.DataFrame:
-        raise NotImplementedError("not relevant for Gemini Exchange")
+        return pd.DataFrame(
+            index=pd.date_range(start=start_date, end=end_date)
+        )
 
     def get_position(self, symbol: str) -> float:
+        symbol = symbol.lower()
         endpoint = "/v1/balances"
         url = self.base_url + endpoint
 
@@ -241,7 +249,7 @@ class GeminiTrader(Trader):
                 tlog(f"GEMINI TRADING UPDATE:{trade}")
                 to_send = {
                     "EV": "trade_update",
-                    "symbol": "symbol",
+                    "symbol": trade.symbol.lower(),
                     "trade": trade.__dict__,
                 }
                 try:
@@ -354,6 +362,7 @@ class GeminiTrader(Trader):
         trail_price: str = None,
         trail_percent: str = None,
     ) -> Order:
+        symbol = symbol.lower()
         if order_type == "market":
             raise AssertionError(
                 "GEMINI does not support market orders, use limit orders"

@@ -36,7 +36,7 @@ class Portfolio:
         async with pool.acquire() as con:
             data = await con.fetchrow(
                 """
-                    SELECT p.portfolio_id, p.size, p.assets, p.parameters
+                    SELECT p.portfolio_id, p.size, p.assets, p.account_id, p.parameters
                     FROM 
                         portfolio as p, portfolio_batch_ids as b
                     WHERE

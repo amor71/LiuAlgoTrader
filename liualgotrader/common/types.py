@@ -91,14 +91,14 @@ class QueueMapper:
 
     def __getitem__(self, key: str) -> MNQueue:
         try:
-            return self.queues[key]
+            return self.queues[key.lower()]
         except KeyError:
             raise AssertionError(f"No queue exists for symbol {key}")
 
     def __setitem__(self, key: str, newvalue: MNQueue):
         if self.queue_list and newvalue not in self.queue_list:
             raise AssertionError(f"key {key} added to unknown Queue")
-        self.queues[key] = newvalue
+        self.queues[key.lower()] = newvalue
 
     def get_allqueues(self) -> Optional[List[MNQueue]]:
         return self.queue_list

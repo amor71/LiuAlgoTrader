@@ -1,8 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 import pytest
-from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -39,16 +38,6 @@ def test_stock_current_price_range_int_minute() -> bool:
 
 
 @pytest.mark.devtest
-def test_stock_current_price_range_int_day() -> bool:
-    print("test_stock_current_price_range_int_day")
-    dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHUSD"].close[-6:-1]  # type:ignore
-    print(last_price_range)
-
-    return True
-
-
-@pytest.mark.devtest
 def test_apple_stock_daily_price() -> bool:
     print("test_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.gemini)
@@ -80,8 +69,10 @@ def test_stock_close_price_range_str_day() -> bool:
     print("test_stock_close_price_range_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[
-        "2021-10-01":"2021-10-05"  # type:ignore
-    ]  # type:ignore
+        str(date.today() - timedelta(days=20)) : str(  # type:ignore
+            date.today() - timedelta(days=10)
+        )  # type:ignore
+    ]
     print(last_price_range)
 
     return True
@@ -91,8 +82,14 @@ def test_stock_close_price_range_str_day() -> bool:
 def test_apple_close_price_range_str_minute() -> bool:
     print("test_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["UTCBSD"].close[
-        "2021-09-05 09:45:00":"2021-09-05 09:50:00"  # type:ignore
+    last_price_range = dl["BTCUSD"].close[
+        str(
+            (datetime.today() - timedelta(days=20)).replace(hour=10, minute=5)
+        ) : str(  # type:ignore
+            (datetime.today() - timedelta(days=20)).replace(
+                hour=10, minute=5
+            )  # type:ignore
+        )
     ]
     print(last_price_range)
 
@@ -103,8 +100,10 @@ def test_apple_close_price_range_str_minute() -> bool:
 def test_stock_close_price_range_str_minute_int() -> bool:
     print("test_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["UTCBSD"].close[
-        "2021-09-05 09:45:00":-1  # type:ignore
+    last_price_range = dl["BTCUSD"].close[
+        str(
+            (datetime.today() - timedelta(days=2)).replace(hour=10, minute=5)
+        ) : -1  # type:ignore
     ]  # type:ignore
     print(last_price_range)
 
@@ -115,7 +114,7 @@ def test_stock_close_price_range_str_minute_int() -> bool:
 def test_stock_price_range_int_minute() -> bool:
     print("test_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHBSD"][-5:-1]  # type:ignore
+    last_price_range = dl["ETHUSD"][-5:-1]  # type:ignore
     print(last_price_range)
 
     return True
@@ -125,7 +124,7 @@ def test_stock_price_range_int_minute() -> bool:
 def test_stock_price_range_int_day() -> bool:
     print("test_stock_price_range_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHBSD"][-5:-1]  # type:ignore
+    last_price_range = dl["ETHUSD"][-5:-1]  # type:ignore
     print(last_price_range)
 
     return True
@@ -135,27 +134,37 @@ def test_stock_price_range_int_day() -> bool:
 def test_stock_price_range_date_day() -> bool:
     print("test_stock_price_range_date_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHBSD"]["2020-10-05":"2020-10-08"]  # type:ignore
+    last_price_range = dl["ETHUSD"][
+        str(date.today() - timedelta(days=20)) : str(  # type:ignore
+            date.today() - timedelta(days=10)  # type:ignore
+        )
+    ]
     print(last_price_range)
 
     return True
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_date_int_day() -> bool:
+def test_stock_price_range_date_int_day() -> bool:
     print("test_stock_price_range_date_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHUSD"]["2021-10-05":-1]  # type:ignore
+    last_price_range = dl["ETHUSD"][
+        str(date.today() - timedelta(days=10)) : -1  # type:ignore
+    ]
     print(last_price_range)
 
     return True
 
 
 @pytest.mark.devtest
-def test_apple_price_range_date_int_min() -> bool:
+def test_stock_price_range_date_int_min() -> bool:
     print("test_stock_price_range_date_int_min")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["ETHUSD"]["2021-10-05":-1]  # type:ignore
+    last_price_range = dl["ETHUSD"][
+        (datetime.now(timezone.utc) - timedelta(days=2)).replace(
+            hour=10, minute=5
+        ) : -1  # type:ignore
+    ]  # type:ignore
     print(last_price_range)
     return True
 
@@ -164,7 +173,9 @@ def test_apple_price_range_date_int_min() -> bool:
 def test_stock_price_range_date_int_min_open() -> bool:
     print("test_stock_price_range_date_int_min_open")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["BTCUSD"]["2021-10-05":]  # type:ignore
+    last_price_range = dl["BTCUSD"][
+        str(date.today() - timedelta(days=10)) :  # type:ignore
+    ]
     print(last_price_range)
     return True
 
@@ -173,7 +184,9 @@ def test_stock_price_range_date_int_min_open() -> bool:
 def test_stock_price_open_range_date_int_min_open() -> bool:
     print("test_stock_price_close_range_date_int_min_open")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    last_price_range = dl["BTCUSD"].open["2021-10-05":]  # type:ignore
+    last_price_range = dl["BTCUSD"].open[
+        str(date.today() - timedelta(days=10)) :  # type:ignore
+    ]
     print(last_price_range)
     return True
 
@@ -195,7 +208,7 @@ def test_stock_price_open_range_date_min_open() -> bool:
     print("test_stock_price_open_range_date_min_open")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     try:
-        last_price_range = dl["UTCBSD"].open[:]  # type:ignore
+        last_price_range = dl["BTCUSD"].open[:]  # type:ignore
         print(last_price_range)
     except ValueError:
         return True
@@ -206,9 +219,9 @@ def test_stock_price_open_range_date_min_open() -> bool:
 def test_stock_price_range_date_min() -> bool:
     print("test_stock_price_range_date_min")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
-    d2 = date(year=2021, month=9, day=2)
-    last_price_range = dl["UTCBSD"][d1:d2].between_time(  # type:ignore
+    d1 = date.today() - timedelta(days=10)
+    d2 = date.today() - timedelta(days=9)
+    last_price_range = dl["BTCUSD"][d1:d2].between_time(  # type:ignore
         "9:30", "16:00"
     )  # type:ignore
     print(last_price_range)
@@ -220,9 +233,9 @@ def test_stock_price_range_date_min() -> bool:
 def test_stock_price_range_date_min_mixed() -> bool:
     print("test_stock_price_range_date_min_mixed")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
+    d1 = date.today() - timedelta(days=20)
     last_price_range = dl["ETHUSD"][
-        d1:"2021-10-02"  # type:ignore
+        d1 : str(date.today() - timedelta(days=10))  # type:ignore
     ].between_time(  # type:ignore
         "9:30", "16:00"  # type:ignore
     )  # type:ignore
@@ -236,7 +249,9 @@ def test_stock_price_range_date_day_mixed() -> bool:
     print("test_stock_price_range_date_day_mixed")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
     d1 = date(year=2021, month=9, day=1)
-    last_price_range = dl["BTCUSD"][d1:"2021-10-02"]  # type:ignore
+    last_price_range = dl["BTCUSD"][
+        d1 : date(year=2021, month=9, day=1)  # type:ignore
+    ]
     print(last_price_range)
 
     return True
@@ -249,7 +264,7 @@ def test_stock_price_open_range_date_min_mixed() -> bool:
     d1 = date(year=2021, month=9, day=1)
     last_price_range = (
         dl["ETHUSD"]
-        .open[d1:"2021-09-01"]  # type:ignore
+        .open[d1 : str(date.today() - timedelta(days=10))]  # type:ignore
         .between_time("9:30", "16:00")  # type:ignore
     )
     print(last_price_range)
@@ -262,7 +277,13 @@ def test_stock_price_open_str() -> bool:
     print("test_stock_price_open_str")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     d1 = date(year=2021, month=9, day=1)
-    last_price_range = dl["BTCUSD"].open["2021-09-02 09:45:00"]
+    last_price_range = dl["BTCUSD"].open[
+        str(
+            (datetime.today() - timedelta(days=20)).replace(  # type:ignore
+                hour=10, minute=5
+            )
+        )
+    ]
     print(last_price_range)
 
     return True
@@ -290,13 +311,19 @@ def test_get_symbols_alpaca() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_update() -> bool:
-    print("test_stock_price_open_str")
+def test_stock_price_open_str2() -> bool:
+    print("test_stock_price_open_str2")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     d1 = date(year=2021, month=2, day=1)
     last_price_range = dl["BTCUSD"][-1]
     print("after this")
-    dl["BTCUSD"].loc["2021-09-02 09:46:00"] = [
+    dl["BTCUSD"].loc[
+        str(
+            (datetime.today() - timedelta(days=20)).replace(  # type:ignore
+                hour=10, minute=5
+            )
+        )
+    ] = [
         100.0,
         100.0,
         100.0,
@@ -306,6 +333,14 @@ def test_apple_update() -> bool:
         100.0,
         100.0,
     ]
-    print(dl["BTCUSD"].loc["2021-09-02 09:46:00"])
+    print(
+        dl["BTCUSD"].loc[
+            str(
+                (datetime.today() - timedelta(days=20)).replace(  # type:ignore
+                    hour=10, minute=5, microsecond=0
+                )
+            )
+        ]
+    )
 
     return True

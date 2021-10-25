@@ -61,6 +61,7 @@ class GeminiData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
+        symbol = symbol.lower()
         tlog(
             f"GEMINI start loading {symbol} from {start} to {end} w scale {scale}"
         )
@@ -94,7 +95,7 @@ class GeminiData(DataAPI):
 
             for response in await asyncio.gather(*futures):
                 if response.status_code != 200:
-                    raise AssertionError(
+                    raise ValueError(
                         f"HTTP ERROR {response.status_code} {response.text}"
                     )
                 _df = pd.DataFrame(response.json())
@@ -149,6 +150,7 @@ class GeminiData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
+        symbol = symbol.lower()
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(
             self.aget_symbol_data(symbol, start, end, scale)
@@ -188,7 +190,7 @@ class GeminiStream(StreamingAPI):
 
     async def run(self):
         if not self.running_task:
-            endpoint = "/v1/marketdata/BTCUSD"  # TODO need support all symbols in an efficient way
+            endpoint = "/v1/marketdata/btcusd"  # TODO need support all symbols in an efficient way
             payload = {"request": endpoint}
             headers = self._generate_ws_headers(payload)
             self.ws = websocket.WebSocketApp(
@@ -248,10 +250,10 @@ class GeminiStream(StreamingAPI):
         try:
             if (time_diff := (datetime.now(timezone.utc) - timestamp)) > timedelta(seconds=2):  # type: ignore
                 # if randint(1, 100) == 1:  # nosec
-                tlog(f"received a trade for BTCUSD out of sync w {time_diff}")
+                tlog(f"received a trade for btcusd out of sync w {time_diff}")
 
             event = {
-                "symbol": "BTCUSD",
+                "symbol": "btcusd",
                 "price": float(event["price"]),
                 "open": float(event["price"]),
                 "close": float(event["price"]),
@@ -268,7 +270,7 @@ class GeminiStream(StreamingAPI):
                 "EV": "T",
             }
 
-            cls.get_instance().queues["BTCUSD"].put(event, block=False)
+            cls.get_instance().queues["btcusd"].put(event, block=False)
 
         except queue.Full as f:
             tlog(

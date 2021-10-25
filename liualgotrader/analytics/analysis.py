@@ -536,7 +536,6 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     portfolio = loop.run_until_complete(
         Portfolio.load_by_portfolio_id(portfolio_id)
     )
-
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
 
@@ -549,15 +548,21 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
         symbol_trades = trades[trades.symbol == symbol].sort_values(
             by="client_time"
         )
-        qty, last_price = calc_symbol_state(symbol, symbol_trades, data_loader)
-        rows.append(
-            {
-                "symbol": symbol,
-                "qty": qty,
-                "price": last_price,
-                "total": qty * last_price,
-            }
-        )
+        try:
+            qty, last_price = calc_symbol_state(
+                symbol, symbol_trades, data_loader
+            )
+        except Exception as e:
+            tlog(str(e))
+        else:
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "qty": qty,
+                    "price": last_price,
+                    "total": float(qty) * last_price,
+                }
+            )
 
     df = pd.DataFrame(rows)
     return df.loc[df.qty > 0].round(2)

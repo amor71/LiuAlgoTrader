@@ -62,7 +62,7 @@ async def execute_run_all_results(
             strategy=strategy,
             trader=trader,
             data_loader=data_loader,
-            symbol=symbol,
+            symbol=symbol.lower(),
             what=what,
         )
 
@@ -77,7 +77,7 @@ async def do_strategy_all(
     try:
         now = datetime.now(nyc)
         symbols_position = {
-            symbol: trading_data.positions[symbol]
+            symbol.lower(): trading_data.positions[symbol]
             if symbol in trading_data.positions
             else get_position(trader, symbol)
             for symbol in symbols
@@ -114,9 +114,9 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
                         continue
 
                 symbols = [
-                    symbol
+                    symbol.lower()
                     for symbol in trading_data.last_used_strategy
-                    if trading_data.last_used_strategy[symbol] == s
+                    if trading_data.last_used_strategy[symbol.lower()] == s
                 ]
 
                 await trace({})(do_strategy_all)(
@@ -163,6 +163,7 @@ async def liquidator_sleep(trader: Trader) -> bool:
 
 async def liquidator_loop(trader: Trader):
     for symbol, position in trading_data.positions.items():
+        symbol = symbol.lower()
         tlog(f"liquidator() -> checking {symbol}")
         if (
             position != 0
@@ -240,6 +241,7 @@ async def liquidate(
     trader: Trader,
 ) -> None:
 
+    symbol = symbol.lower()
     if symbol_position and symbol not in trading_data.open_orders:
         tlog(
             f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
@@ -290,6 +292,7 @@ async def save(
     now: str,
     trade_fee=0.0,
 ) -> None:
+    symbol = symbol.lower()
     db_trade = NewTrade(
         algo_run_id=trading_data.open_order_strategy[symbol].algo_run.run_id,
         symbol=symbol,
@@ -319,6 +322,7 @@ async def do_callbacks(
     side: Order.FillSide,
     filled_avg_price: float,
 ):
+    symbol = symbol.lower()
     if side == Order.FillSide.buy:
         trading_data.buy_indicators.pop(symbol, None)
         if strategy:
@@ -329,18 +333,17 @@ async def do_callbacks(
             await strategy.sell_callback(symbol, filled_avg_price, filled_qty)
 
 
-# TODO test issue
 async def update_partially_filled_order(
     symbol: str,
     strategy: Strategy,
     filled_qty: float,
     side: Order.FillSide,
     filled_avg_price: float,
+    updated_at: pd.Timestamp,
     trade_fee: float,
 ) -> None:
-    new_qty: float = filled_qty - abs(
-        trading_data.partial_fills.get(symbol, 0.0)
-    )
+    symbol = symbol.lower()
+    new_qty = filled_qty - abs(trading_data.partial_fills.get(symbol, 0.0))
     if side == Order.FillSide.sell:
         filled_qty *= -1
 
@@ -353,10 +356,27 @@ async def update_partially_filled_order(
     )
     trading_data.positions[symbol] += filled_qty
 
+    try:
+        indicators = {
+            "buy": trading_data.buy_indicators.get(symbol, None),
+            "sell": trading_data.sell_indicators.get(symbol, None),
+        }
+    except KeyError:
+        indicators = {}
+
+    await save(
+        symbol,
+        new_qty,
+        side.name,
+        filled_avg_price,
+        indicators,
+        updated_at,
+        trade_fee,
+    )
     await do_callbacks(
         symbol=symbol,
         strategy=strategy,
-        filled_qty=filled_qty,
+        filled_qty=new_qty,
         side=side,
         filled_avg_price=filled_avg_price,
     )
@@ -371,7 +391,8 @@ async def update_filled_order(
     updated_at: pd.Timestamp,
     trade_fee: float,
 ) -> None:
-    new_qty = filled_qty - abs(trading_data.partial_fills.get(symbol, 0.0))
+    symbol = symbol.lower()
+    new_qty = filled_qty  # filled_qty - abs(trading_data.partial_fills.get(symbol, 0.0))
     if side == Order.FillSide.sell:
         filled_qty *= -1.0
 
@@ -401,7 +422,7 @@ async def update_filled_order(
         updated_at,
         trade_fee,
     )
-
+    symbol = symbol.lower()
     await do_callbacks(symbol, strategy, filled_qty, side, filled_avg_price)
 
     trading_data.open_orders.pop(symbol)
@@ -411,7 +432,7 @@ async def update_filled_order(
 
 
 async def handle_trade_update_for_order(trade: Trade) -> bool:
-    symbol = trade.symbol
+    symbol = trade.symbol.lower()
     event = trade.event
     tlog(f"trade update for {symbol} with event {event}")
 
@@ -422,6 +443,7 @@ async def handle_trade_update_for_order(trade: Trade) -> bool:
             filled_qty=trade.filled_qty,
             filled_avg_price=trade.filled_avg_price,
             side=trade.side,
+            updated_at=trade.updated_at,
             trade_fee=trade.trade_fee,
         )
 
@@ -430,7 +452,7 @@ async def handle_trade_update_for_order(trade: Trade) -> bool:
             symbol=symbol,
             strategy=trading_data.open_order_strategy[symbol],
             filled_qty=trade.filled_qty,
-            filled_avg_price=trade.filled_qty,
+            filled_avg_price=trade.filled_avg_price,
             side=trade.side,
             updated_at=trade.updated_at,
             trade_fee=trade.trade_fee,
@@ -446,16 +468,14 @@ async def handle_trade_update_for_order(trade: Trade) -> bool:
 
 
 async def handle_trade_update_wo_order(trade: Trade) -> bool:
-    symbol = trade.symbol
+    symbol = trade.symbol.lower()
     event = trade.event
-    tlog(
-        f"trade update without order for {symbol} data={trade} with event {event}"
-    )
+    # tlog(f"trade update without order for {symbol} data={trade} with event {event}")
     return True
 
 
 async def handle_trade_update(trade: Trade) -> bool:
-    if trade.symbol in trading_data.open_orders:
+    if trade.symbol.lower() in trading_data.open_orders:
         return await handle_trade_update_for_order(trade)
     else:
         return await handle_trade_update_wo_order(trade)
@@ -467,7 +487,7 @@ async def handle_quote(data: Dict) -> bool:
     if "condition" in data and data["condition"] in QUOTE_SKIP_CONDITIONS:
         return True
 
-    symbol = data["symbol"]
+    symbol = data["symbol"].lower()
     # tlog(f"quote={data}")
     prev_ask = trading_data.voi_ask.get(symbol, None)
     prev_bid = trading_data.voi_bid.get(symbol, None)
@@ -520,7 +540,7 @@ async def handle_quote(data: Dict) -> bool:
 async def aggregate_bar_data(
     data_loader: DataLoader, data: Dict, ts: pd.Timestamp, carrier=None
 ) -> None:
-    symbol = data["symbol"]
+    symbol = data["symbol"].lower()
 
     if not data_loader.exist(symbol):
         # print(f"loading data for {symbol}...")
@@ -573,6 +593,7 @@ async def order_inflight(
     original_ts: pd.Timestamp,
     trader: Trader,
 ) -> bool:
+    symbol = symbol.lower()
     try:
         if await should_cancel_order(existing_order, original_ts):
             order = await trader.get_order(existing_order.order_id)
@@ -600,6 +621,7 @@ async def order_inflight(
                     side=order.side,
                     filled_avg_price=order.avg_execution_price,
                     filled_qty=order.filled_qty,
+                    updated_at=order.submitted_at,
                     trade_fee=order.trade_fees,
                 )
             else:
@@ -608,7 +630,7 @@ async def order_inflight(
                     f"Cancel order id {existing_order.order_id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                 )
                 await trader.cancel_order(order_id=existing_order.order_id)
-                trading_data.open_orders.pop(symbol)
+                # trading_data.open_orders.pop(symbol)
 
         return True
 
@@ -627,6 +649,7 @@ async def execute_strategy_result(
     symbol: str,
     what: Dict,
 ):
+    symbol = symbol.lower()
     try:
         if what["type"] == "limit":
             o = await trader.submit_order(
@@ -646,8 +669,11 @@ async def execute_strategy_result(
                 time_in_force="day",
             )
 
-        trading_data.open_orders[symbol] = o
-        trading_data.open_order_strategy[symbol] = strategy
+        if not o:
+            return
+
+        trading_data.open_orders[symbol.lower()] = o
+        trading_data.open_order_strategy[symbol.lower()] = strategy
 
         await save(
             symbol=symbol,
@@ -761,9 +787,10 @@ async def handle_aggregate(
     data: Dict,
     carrier=None,
 ) -> bool:
+    symbol = symbol.lower()
     # Next, check for existing orders for the stock
     if symbol in trading_data.open_orders and await order_inflight(
-        symbol, trading_data.open_orders[symbol], ts, trader
+        symbol, trading_data.open_orders[symbol.lower()], ts, trader
     ):
         return True
 
@@ -803,8 +830,8 @@ async def handle_data_queue_msg(
     ts = pd.to_datetime(
         data["timestamp"].replace(second=0, microsecond=0, nanosecond=0)
     )
-    symbol = data["symbol"]
-    shortable[symbol] = True  # ToDO
+    symbol = data["symbol"].lower()
+    shortable[symbol] = True  # TODO revisit collecting 'is shortable' data
 
     await trace(carrier)(aggregate_bar_data)(data_loader, data, ts)
 
@@ -978,6 +1005,7 @@ async def load_current_positions(
 ) -> int:
     loaded = 0
     for symbol in symbols:
+        symbol = symbol.lower()
         try:
             position = trading_api.get_position(symbol)
         except Exception as e:

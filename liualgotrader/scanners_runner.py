@@ -35,7 +35,7 @@ async def scanner_runner(scanner: Scanner, queue: mp.Queue) -> None:
                     json.dumps(
                         [
                             {
-                                "symbol": symbol,
+                                "symbol": symbol.lower(),
                                 "target_strategy_name": scanner.target_strategy_name,
                             }
                             for symbol in symbols

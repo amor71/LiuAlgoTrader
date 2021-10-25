@@ -221,9 +221,9 @@ class AlpacaStream(StreamingAPI):
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
         tlog(f"Starting subscription for {len(symbols)} symbols")
-
-        for syms in chunks(symbols, 1000):
-            tlog(f"\tsubscribe {len(syms)}/{len(symbols)}")
+        upper_symbols = [symbol.upper() for symbol in symbols]
+        for syms in chunks(upper_symbols, 1000):
+            tlog(f"\tsubscribe {len(syms)}/{len(upper_symbols)}")
             for event in events:
                 if event == WSEventType.SEC_AGG:
                     tlog(f"event {event} not implemented in Alpaca")

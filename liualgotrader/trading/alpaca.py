@@ -122,7 +122,7 @@ class AlpacaTrader(Trader):
         )
         return Order(
             order_id=alpaca_order.id,
-            symbol=alpaca_order.symbol,
+            symbol=alpaca_order.symbol.lower(),
             event=event,
             price=float(alpaca_order.limit_price or 0.0),
             side=Order.FillSide[alpaca_order.side],
@@ -181,7 +181,7 @@ class AlpacaTrader(Trader):
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
         data = self.alpaca_rest_client.list_assets()
-        return [asset.symbol for asset in data if asset.tradable]
+        return [asset.symbol.lower() for asset in data if asset.tradable]
 
     async def get_shortable_symbols(self) -> List[str]:
         if not self.alpaca_rest_client:
@@ -189,7 +189,7 @@ class AlpacaTrader(Trader):
 
         data = self.alpaca_rest_client.list_assets()
         return [
-            asset.symbol
+            asset.symbol.lower()
             for asset in data
             if asset.tradable and asset.easy_to_borrow and asset.shortable
         ]
@@ -198,7 +198,7 @@ class AlpacaTrader(Trader):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        asset = self.alpaca_rest_client.get_asset(symbol)
+        asset = self.alpaca_rest_client.get_asset(symbol.upper())
         return (
             asset.tradable is not False
             and asset.shortable is not False
@@ -237,7 +237,7 @@ class AlpacaTrader(Trader):
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
         o = self.alpaca_rest_client.submit_order(
-            symbol,
+            symbol.upper(),
             str(qty),
             side,
             order_type,
@@ -263,7 +263,7 @@ class AlpacaTrader(Trader):
         print(trade_dict)
         return Trade(
             order_id=trade_dict.order["id"],
-            symbol=trade_dict.order["symbol"],
+            symbol=trade_dict.order["symbol"].lower(),
             event=Order.EventType.canceled
             if trade_dict.event
             in ["canceled", "suspended", "expired", "cancel_rejected"]
@@ -300,7 +300,7 @@ class AlpacaTrader(Trader):
 
             to_send = {
                 "EV": "trade_update",
-                "symbol": "symbol",
+                "symbol": trade.symbol.lower(),
                 "trade": trade.__dict__,
             }
             for q in cls.get_instance().queues.get_allqueues():

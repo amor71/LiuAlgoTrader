@@ -9,6 +9,24 @@ for effective algorithmic trading. The framework is
 intended to simplify development, testing,
 deployment, backtesting and evaluating algo trading strategies.
 
+The framework currently support trading and back-testing of US Equities, and Crypto strategies.
+
+LiuAlgoTrader can run on a laptop and *hedge-on-the-go*, or run on a multi-core hosted Linux server and it will automatically optimize for best performance for either. LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
+
+LiuAlgoTrader supports:
+
+* Alpaca.Markets_  APIs for trading, and data loading & streaming,
+
+.. _alpaca.markets: https://alpaca.markets/
+
+* (**BETA**) Gemini_ Crypto Exchange APIs for trading, data loading & streaming,
+
+.. _gemini : https://www.gemini.com/
+
+* Polygon.io_ APIs for data-loading, and streaming,
+
+.. _polygon.io : https://polygon.io/
+
 LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server
 and it will optimize for best performance for either. The framework runs on Linux, Mac OS or, Windows.
@@ -39,6 +57,7 @@ sessions w/ LiuAlgoTrader.
    (Advanced) Setup
    Concepts
    Configuration
+   Crypto
    Scanners
    Strategies
    Trading

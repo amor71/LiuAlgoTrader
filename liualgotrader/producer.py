@@ -37,14 +37,11 @@ def get_new_symbols_and_queues(
 
     new_symbols: List = []
     for symbol_details in symbols_details:
-        if symbol_details["symbol"] not in symbols:
-            new_symbols.append(symbol_details["symbol"])
-            symbol_strategy[symbol_details["symbol"]] = symbol_details[
-                "target_strategy_name"
-            ]
-            streaming_factory().get_instance().queues[
-                symbol_details["symbol"]
-            ] = queues[
+        symbol = symbol_details["symbol"].lower()
+        if symbol not in symbols:
+            new_symbols.append(symbol)
+            symbol_strategy[symbol] = symbol_details["target_strategy_name"]
+            streaming_factory().get_instance().queues[symbol] = queues[
                 random.SystemRandom().randint(0, num_consumer_processes - 1)
             ]
 
@@ -136,6 +133,7 @@ async def run(
     ps = streaming_factory()(qm)
     await ps.run()
     for symbol in symbols:
+        symbol = symbol.lower()
         qm[symbol] = queues[queue_id_hash[symbol]]
     await ps.subscribe(
         symbols, [WSEventType.SEC_AGG, WSEventType.MIN_AGG, WSEventType.TRADE]

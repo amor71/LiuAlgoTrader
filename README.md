@@ -14,13 +14,15 @@
 for effective algorithmic trading. The framework simplify development, testing,
 deployment, analysis and training algo trading strategies. The framework **automatically analyzes** trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
 
-The framework currently support trading and back-testing of US Equities, and back-testing Crypto strategies. The platform can be extended to support additional asset classes.
+The framework currently support trading and back-testing of US Equities, and Crypto strategies.
 
-LiuAlgoTrader can run on a laptop and *hedge-on-the-go*, or run on a multi-core hosted Linux server and it will automatically optimize for best performance for either.
+LiuAlgoTrader can run on a laptop and *hedge-on-the-go*, or run on a multi-core hosted Linux server and it will automatically optimize for best performance for either. LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
 
-LiuAlgoTrader uses [Alpaca.Markets](https://alpaca.markets/) brokerage APIs for trading, and can use either Alpaca or Polygon.io for stocks' data. The framework is evolving to support additional brokers and data-providers.
+LiuAlgoTrader supports:
+* [Alpaca.Markets](https://alpaca.markets/) APIs for trading, and data loading & streaming,
+* (**BETA**) [Gemini Crypto Exchange](https://www.gemini.com/) APIs for trading, data loading & streaming,
+* [Polygon.io](https://polygon.io/) APIs for data-loading, and streaming,
 
-LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
 
 ## See LiuAlgoTrader in Action
 
@@ -110,12 +112,3 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 - [TheSnoozer](https://github.com/TheSnoozer)
 - [Aditya Gupta](https://github.com/adi0x90)
 - [Alex Lau](https://github.com/riven314)
-
-
-
-
-
-
-
-
-
