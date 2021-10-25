@@ -175,11 +175,12 @@ class AlpacaStream(StreamingAPI):
     async def trades_handler(cls, msg):
         try:
             ts = pd.to_datetime(msg.timestamp)
-            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(seconds=10):  # type: ignore
-                if randint(1, 100) == 1:  # nosec
-                    tlog(
-                        f"Received trade for {msg.symbol} too out of sync w {time_diff}"
-                    )
+            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(
+                seconds=10
+            ) and randint(1, 100) == 1:  # nosec
+                tlog(
+                    f"Received trade for {msg.symbol} too out of sync w {time_diff}"
+                )
 
             event = {
                 "symbol": msg.symbol,
