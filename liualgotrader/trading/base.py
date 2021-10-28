@@ -4,9 +4,11 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
 import pandas as pd
+from math import ceil
 
 from liualgotrader.common.types import QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
+from liualgotrader.common.types import TimeScale
 
 
 class Trader:
@@ -89,15 +91,29 @@ class Trader:
 
     async def close(self):
         ...
-
-    def calculate_data_range(self, symbol: str) -> Tuple[int, int]:
+    
+    def calculate_data_range(self,
+          start_date: date,
+          end_date: date, 
+          symbol: str) -> List[Optional[pd.DatetimeIndex]]:
+      
         asset = self.alpaca_rest_client.get_asset(symbol)
-
+  
         scale_factor_hours = 16 if getattr(asset, 'class') == 'us_equity' else 24
         scale_factor_minutes = scale_factor_hours * 60
+      
+        days = len(pd.bdate_range(start_date, end_date))
+        data_points = scale_factor_hours if self.scale == TimeScale.day else scale_factor_minutes
+      
+        total_data_points = days * data_points
+        max_data_points_per_load = 10000 # alpaca limit 10,000
+        periods =  ceil(total_data_points / max_data_points_per_load)
+        total_periods = 2 if periods == 1 else periods
+      
+        ranges = pd.date_range(start_date, end_date, periods=total_periods)
+      
+        return ranges
 
-        return scale_factor_hours, scale_factor_minutes
-    
     @classmethod
     def get_instance(cls):
         if not cls.__instance:
