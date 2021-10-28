@@ -90,6 +90,14 @@ class Trader:
     async def close(self):
         ...
 
+    def calculate_data_range(self, symbol: str) -> Tuple[int, int]:
+        asset = self.alpaca_rest_client.get_asset(symbol)
+
+        data_points_hours = 16 if getattr(asset, 'class') == 'us_equity' else 24
+        data_points_minutes = data_points_hours * 60
+
+        return data_points_hours, data_points_minutes
+    
     @classmethod
     def get_instance(cls):
         if not cls.__instance:
