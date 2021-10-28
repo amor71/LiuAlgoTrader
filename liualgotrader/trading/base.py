@@ -94,7 +94,7 @@ class Trader:
         asset = self.alpaca_rest_client.get_asset(symbol)
 
         scale_factor_hours = 16 if getattr(asset, 'class') == 'us_equity' else 24
-        scale_factor_minutes = data_points_hours * 60
+        scale_factor_minutes = scale_factor_hours * 60
 
         return scale_factor_hours, scale_factor_minutes
     
