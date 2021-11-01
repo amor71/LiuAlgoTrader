@@ -2,16 +2,17 @@ import asyncio
 import queue
 import traceback
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-from alpaca_trade_api.rest import REST, URL
+from alpaca_trade_api.entity import Order as AlpacaOrder
+from alpaca_trade_api.rest import REST, URL, Entity
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import QueueMapper
+from liualgotrader.common.types import Order, QueueMapper, Trade
 from liualgotrader.trading.base import Trader
 
 nyc = timezone("America/New_York")
@@ -69,13 +70,13 @@ class AlpacaTrader(Trader):
             self.market_open = self.market_close = None
         super().__init__(qm)
 
-    async def is_order_completed(self, order) -> Tuple[bool, float]:
+    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        status = self.alpaca_rest_client.get_order(order_id=order.id)
-        if status.filled_qty == order.qty:
-            return True, float(status.filled_avg_price)
+        status = self.alpaca_rest_client.get_order(order_id=order.order_id)
+        if status.filled_qty == status.qty:
+            return True, float(status.filled_avg_price or 0.0)
 
         return False, 0.0
 
@@ -107,10 +108,37 @@ class AlpacaTrader(Trader):
 
         return float(pos.qty) if pos.side == "long" else -1.0 * float(pos.qty)
 
-    async def get_order(self, order_id: str):
+    def to_order(self, alpaca_order: AlpacaOrder) -> Order:
+        event = (
+            Order.EventType.canceled
+            if alpaca_order.status in ["canceled", "expired", "replaced"]
+            else Order.EventType.pending
+            if alpaca_order.status in ["pending_cancel", "pending_replace"]
+            else Order.EventType.fill
+            if alpaca_order.status == "filled"
+            else Order.EventType.partial_fill
+            if alpaca_order.status == "partially_filled"
+            else Order.EventType.other
+        )
+        return Order(
+            order_id=alpaca_order.id,
+            symbol=alpaca_order.symbol.lower(),
+            event=event,
+            price=float(alpaca_order.limit_price or 0.0),
+            side=Order.FillSide[alpaca_order.side],
+            filled_qty=float(alpaca_order.filled_qty),
+            remaining_amount=float(alpaca_order.qty)
+            - float(alpaca_order.filled_qty),
+            submitted_at=alpaca_order.submitted_at,
+            avg_execution_price=alpaca_order.filled_avg_price,
+            trade_fees=0.0,
+        )
+
+    async def get_order(self, order_id: str) -> Order:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
-        return self.alpaca_rest_client.get_order(order_id)
+
+        return self.to_order(self.alpaca_rest_client.get_order(order_id))
 
     def is_market_open_today(self) -> bool:
         return self.market_open is not None
@@ -153,7 +181,7 @@ class AlpacaTrader(Trader):
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
         data = self.alpaca_rest_client.list_assets()
-        return [asset.symbol for asset in data if asset.tradable]
+        return [asset.symbol.lower() for asset in data if asset.tradable]
 
     async def get_shortable_symbols(self) -> List[str]:
         if not self.alpaca_rest_client:
@@ -161,7 +189,7 @@ class AlpacaTrader(Trader):
 
         data = self.alpaca_rest_client.list_assets()
         return [
-            asset.symbol
+            asset.symbol.lower()
             for asset in data
             if asset.tradable and asset.easy_to_borrow and asset.shortable
         ]
@@ -170,7 +198,7 @@ class AlpacaTrader(Trader):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        asset = self.alpaca_rest_client.get_asset(symbol)
+        asset = self.alpaca_rest_client.get_asset(symbol.upper())
         return (
             asset.tradable is not False
             and asset.shortable is not False
@@ -178,10 +206,14 @@ class AlpacaTrader(Trader):
             and asset.easy_to_borrow is not False
         )
 
-    async def cancel_order(self, order_id: str):
+    async def cancel_order(
+        self, order_id: Optional[str] = None, order: Optional[Order] = None
+    ):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
+        if order:
+            order_id = order.order_id
         self.alpaca_rest_client.cancel_order(order_id)
 
     async def submit_order(
@@ -200,12 +232,12 @@ class AlpacaTrader(Trader):
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
-    ):
+    ) -> Order:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        return self.alpaca_rest_client.submit_order(
-            symbol,
+        o = self.alpaca_rest_client.submit_order(
+            symbol.upper(),
             str(qty),
             side,
             order_type,
@@ -221,17 +253,59 @@ class AlpacaTrader(Trader):
             trail_percent,
         )
 
+        return self.to_order(o)
+
+    @classmethod
+    def _trade_from_dict(cls, trade_dict: Entity) -> Optional[Trade]:
+        if trade_dict.event == "new":
+            return None
+
+        print(trade_dict)
+        return Trade(
+            order_id=trade_dict.order["id"],
+            symbol=trade_dict.order["symbol"].lower(),
+            event=Order.EventType.canceled
+            if trade_dict.event
+            in ["canceled", "suspended", "expired", "cancel_rejected"]
+            else Order.EventType.rejected
+            if trade_dict.event == "rejected"
+            else Order.EventType.fill
+            if trade_dict.event == "fill"
+            else Order.EventType.partial_fill
+            if trade_dict.event == "partial_fill"
+            else Order.EventType.other,
+            filled_qty=float(trade_dict.order["filled_qty"]),
+            trade_fee=0.0,
+            filled_avg_price=float(
+                trade_dict.order["filled_avg_price"] or 0.0
+            ),
+            liquidity="",
+            updated_at=pd.Timestamp(
+                ts_input=trade_dict.order["updated_at"],
+                unit="ms",
+                tz="US/Eastern",
+            ),
+            side=Order.FillSide[trade_dict.order["side"]],
+        )
+
     @classmethod
     async def trade_update_handler(cls, data):
-        symbol = data.__dict__["_raw"]["order"]["symbol"]
-        data.__dict__["_raw"]["EV"] = "trade_update"
-        data.__dict__["_raw"]["symbol"] = symbol
         try:
             # cls.get_instance().queues[symbol].put(
             #    data.__dict__["_raw"], timeout=1
             # )
+            trade = cls._trade_from_dict(data)
+            if not trade:
+                return
+
+            to_send = {
+                "EV": "trade_update",
+                "symbol": trade.symbol.lower(),
+                "trade": trade.__dict__,
+            }
             for q in cls.get_instance().queues.get_allqueues():
-                q.put(data.__dict__["_raw"], timeout=1)
+                q.put(to_send, timeout=1)
+
         except queue.Full as f:
             tlog(
                 f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."

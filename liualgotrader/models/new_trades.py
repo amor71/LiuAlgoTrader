@@ -15,7 +15,7 @@ class NewTrade:
         algo_run_id: int,
         symbol: str,
         operation: str,
-        qty: int,
+        qty: float,
         price: float,
         indicators: dict,
     ):
@@ -42,6 +42,7 @@ class NewTrade:
         client_buy_time: str,
         stop_price=None,
         target_price=None,
+        trade_fee=0.0,
     ):
         async with pool.acquire() as con:
             async with con.transaction():
@@ -54,8 +55,8 @@ class NewTrade:
 
                 self.trade_id = await con.fetchval(
                     """
-                        INSERT INTO new_trades (algo_run_id, symbol, operation, qty, price, indicators, client_time, stop_price, target_price)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        INSERT INTO new_trades (algo_run_id, symbol, operation, qty, price, indicators, client_time, stop_price, target_price, trade_fee)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                         RETURNING trade_id
                     """,
                     self.algo_run_id,
@@ -67,6 +68,7 @@ class NewTrade:
                     client_buy_time,
                     stop_price,
                     target_price,
+                    trade_fee,
                 )
 
     @classmethod

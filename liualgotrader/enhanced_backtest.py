@@ -1,6 +1,9 @@
 import asyncio
+import inspect
+import sys
 import traceback
 import uuid
+from calendar import Calendar
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -11,8 +14,8 @@ from pytz import timezone
 from liualgotrader.common import config, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import TimeScale
+from liualgotrader.common.tlog import tlog, tlog_exception
+from liualgotrader.common.types import AssetType, TimeScale
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.scanners.base import Scanner  # type: ignore
 from liualgotrader.scanners_runner import create_momentum_scanner
@@ -59,6 +62,7 @@ async def create_strategies(
 ) -> List[Strategy]:
     strategies = []
     config.env = "BACKTEST"
+
     for strategy_name in conf_dict:
         if strategy_names and strategy_name not in strategy_names:
             continue
@@ -128,17 +132,23 @@ async def calculate_execution_price(
 
 
 async def do_strategy_result(
-    strategy: Strategy, symbol: str, now: datetime, what: Dict
+    strategy: Strategy,
+    symbol: str,
+    now: datetime,
+    what: Dict,
+    buy_fee_percentage: float = 0.0,
+    sell_fee_percentage: float = 0.0,
 ) -> bool:
     global portfolio_value
 
+    qty = float(what["qty"])
     sign = (
         1
         if (
             what["side"] == "buy"
-            and float(what["qty"]) > 0
+            and qty > 0
             or what["side"] == "sell"
-            and float(what["qty"]) < 0
+            and qty < 0
         )
         else -1
     )
@@ -149,13 +159,21 @@ async def do_strategy_result(
         )
 
         if what["side"] == "buy":
-            await strategy.buy_callback(
-                symbol, price, int(float(what["qty"])), now
-            )
+            fee = price * qty * buy_fee_percentage / 100.0
+
+            sig = inspect.signature(strategy.buy_callback)
+            if "trade_fee" in sig.parameters:
+                await strategy.buy_callback(symbol, price, qty, now, fee)
+            else:
+                await strategy.buy_callback(symbol, price, qty, now)
+
         elif what["side"] == "sell":
-            await strategy.sell_callback(
-                symbol, price, int(float(what["qty"])), now
-            )
+            fee = price * qty * sell_fee_percentage / 100.0
+            sig = inspect.signature(strategy.buy_callback)
+            if "trade_fee" in sig.parameters:
+                await strategy.sell_callback(symbol, price, qty, now, fee)
+            else:
+                await strategy.sell_callback(symbol, price, qty, now)
     except Exception as e:
         tlog(
             f"do_strategy_result({symbol}, {what}, {now}) failed w/ {e}. operation not executed"
@@ -163,18 +181,19 @@ async def do_strategy_result(
         return False
 
     try:
-        trading_data.positions[symbol] = trading_data.positions[
-            symbol
-        ] + sign * int(float(what["qty"]))
+        trading_data.positions[symbol] = (
+            trading_data.positions[symbol] + sign * qty
+        )
     except KeyError:
-        trading_data.positions[symbol] = sign * int(float(what["qty"]))
+        trading_data.positions[symbol] = sign * qty
+
     trading_data.buy_time[symbol] = now.replace(second=0, microsecond=0)
     trading_data.last_used_strategy[symbol] = strategy
 
     db_trade = NewTrade(
         algo_run_id=strategy.algo_run.run_id,
         symbol=symbol,
-        qty=int(float(what["qty"])),
+        qty=qty,
         operation=what["side"],
         price=price,
         indicators={},
@@ -189,6 +208,7 @@ async def do_strategy_result(
         trading_data.target_prices[symbol]
         if symbol in trading_data.target_prices
         else 0.0,
+        fee,
     )
 
     return True
@@ -199,22 +219,36 @@ async def do_strategy_all(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
 ):
     try:
-        # TODO need additional tests
-        do = await strategy.run_all(
-            symbols_position=dict(
+        sig = inspect.signature(strategy.run_all)
+        param = {
+            "symbols_position": dict(
                 {symbol: 0 for symbol in symbols}, **trading_data.positions
             ),
-            now=now.to_pydatetime(),
-            portfolio_value=portfolio_value,
-            backtesting=True,
-            data_loader=data_loader,
-        )
+            "now": now.to_pydatetime(),
+            "portfolio_value": portfolio_value,
+            "backtesting": True,
+            "data_loader": data_loader,
+        }
+        if "fee_buy_percentage" in sig.parameters:
+            param["fee_buy_percentage"] = buy_fee_percentage
+        if "fee_sell_percentage" in sig.parameters:
+            param["fee_sell_percentage"] = sell_fee_percentage
+        do = await strategy.run_all(**param)
         items = list(do.items())
         items.sort(key=lambda x: int(x[1]["side"] == "buy"))
         for symbol, what in items:
-            await do_strategy_result(strategy, symbol, now, what)
+            await do_strategy_result(
+                strategy,
+                symbol,
+                now,
+                what,
+                buy_fee_percentage,
+                sell_fee_percentage,
+            )
 
     except Exception as e:
         tlog(f"[Exception] {now} {strategy}->{e}")
@@ -234,7 +268,7 @@ async def do_strategy_by_symbol(
             do, what = await strategy.run(
                 symbol=symbol,
                 shortable=True,
-                position=int(trading_data.positions.get(symbol, 0)),
+                position=trading_data.positions.get(symbol, 0.0),
                 now=now,
                 portfolio_value=portfolio_value,
                 backtesting=True,
@@ -255,30 +289,70 @@ async def do_strategy(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
 ):
     global portfolio_value
 
     if await strategy.should_run_all():
-        await do_strategy_all(data_loader, now, strategy, symbols)
+        await do_strategy_all(
+            data_loader,
+            now,
+            strategy,
+            symbols,
+            buy_fee_percentage,
+            sell_fee_percentage,
+        )
     else:
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
 
-async def backtest_day(day, scanners, symbols, strategies, scale, data_loader):
-    day_start = day.date.replace(
-        hour=day.open.hour,
-        minute=day.open.minute,
-        tzinfo=timezone("America/New_York"),
-    )
-    day_end = day.date.replace(
-        hour=day.close.hour,
-        minute=day.close.minute,
-        tzinfo=timezone("America/New_York"),
-    )
+def get_day_start_end(asset_type, day):
+    if asset_type == AssetType.US_EQUITIES:
+        day_start = day.date.replace(
+            hour=day.open.hour,
+            minute=day.open.minute,
+            tzinfo=timezone("America/New_York"),
+        )
+        day_end = day.date.replace(
+            hour=day.close.hour,
+            minute=day.close.minute,
+            tzinfo=timezone("America/New_York"),
+        )
+    elif asset_type == AssetType.CRYPTO:
+        day_start = pd.Timestamp(
+            datetime.combine(day, datetime.min.time()),
+            tzinfo=timezone("America/New_York"),
+        )
+        day_end = pd.Timestamp(
+            datetime.combine(day, datetime.max.time()),
+            tzinfo=timezone("America/New_York"),
+        )
+    else:
+        raise AssertionError(
+            f"get_day_start_end(): asset type {asset_type} not yet supported"
+        )
 
+    return day_start, day_end
+
+
+async def backtest_day(
+    day,
+    scanners,
+    symbols,
+    strategies,
+    scale,
+    data_loader,
+    asset_type: AssetType,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
+):
+    day_start, day_end = get_day_start_end(asset_type, day)
+    print(day_start, day_end)
     config.market_open = day_start
     config.market_close = day_end
     current_time = day_start
+    prefetched: List[str] = []
     while current_time < day_end:
         symbols = await do_scanners(current_time, scanners, symbols)
         trading_data.positions = {
@@ -287,23 +361,49 @@ async def backtest_day(day, scanners, symbols, strategies, scale, data_loader):
             if trading_data.positions[symbol] != 0
         }
 
+        prefetch = [
+            item
+            for sublist in symbols.values()
+            for item in sublist
+            if item not in prefetched
+        ]
+        for symbol in prefetch:
+            tlog(f"Prefetch data for {symbol} {day_start}-{day_end}")
+            data_loader[symbol][day_start:day_end]
+            prefetched.append(symbol)
+
         for strategy in strategies:
-            trading_data.positions.update(
-                {
-                    symbol: 0
-                    for symbol in symbols.get(strategy.name, [])
-                    + symbols.get("_all", [])
-                    if symbol not in trading_data.positions
-                }
-            )
+            try:
+                trading_data.positions.update(
+                    {
+                        symbol: 0
+                        for symbol in symbols.get(strategy.name, [])
+                        + symbols.get("_all", [])
+                        if symbol not in trading_data.positions
+                    }
+                )
+            except TypeError as e:
+                if config.debug_enabled:
+                    tlog_exception("backtest_day")
+
+                tlog(
+                    f"[EXCEPTION] {e} (hint: check scanner(s) return list of symbols?)"
+                )
+                raise
 
             strategy_symbols = list(
                 set(symbols.get("_all", [])).union(
                     set(symbols.get(strategy.name, []))
                 )
             )
+
             await do_strategy(
-                data_loader, current_time, strategy, strategy_symbols
+                data_loader,
+                current_time,
+                strategy,
+                strategy_symbols,
+                buy_fee_percentage,
+                sell_fee_percentage,
             )
 
         current_time += timedelta(seconds=scale.value)
@@ -315,6 +415,9 @@ async def backtest_main(
     to_date: date,
     scale: TimeScale,
     tradeplan: Dict,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
+    asset_type: AssetType,
     scanners: Optional[List] = None,
     strategies: Optional[List] = None,
 ) -> None:
@@ -346,11 +449,28 @@ async def backtest_main(
         uid, tradeplan["strategies"], data_loader, strategies
     )
     tlog(f"instantiated {len(strategies)} strategies")
-    calendars = trade_api.get_calendar(str(from_date), str(to_date))
+    if asset_type == AssetType.US_EQUITIES:
+        calendars = trade_api.get_calendar(str(from_date), str(to_date))
+    elif asset_type == AssetType.CRYPTO:
+        calendars = [
+            t.date() for t in pd.date_range(from_date, to_date).to_list()
+        ]
+    else:
+        raise AssertionError(f"Asset type {asset_type} not supported yet")
+
     symbols: Dict = {}
+
     for day in calendars:
         await backtest_day(
-            day, scanners, symbols, strategies, scale, data_loader
+            day,
+            scanners,
+            symbols,
+            strategies,
+            scale,
+            data_loader,
+            asset_type,
+            buy_fee_percentage,
+            sell_fee_percentage,
         )
 
 
@@ -361,6 +481,9 @@ def backtest(
     config: Dict,
     scanners: Optional[List],
     strategies: Optional[List],
+    asset_type: AssetType,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
 ) -> str:
     uid = str(uuid.uuid4())
     try:
@@ -370,7 +493,16 @@ def backtest(
         asyncio.set_event_loop(asyncio.new_event_loop())
         loop.run_until_complete(
             backtest_main(
-                uid, from_date, to_date, scale, config, scanners, strategies
+                uid,
+                from_date,
+                to_date,
+                scale,
+                config,
+                buy_fee_percentage,
+                sell_fee_percentage,
+                asset_type,
+                scanners,
+                strategies,
             )
         )
     except KeyboardInterrupt:

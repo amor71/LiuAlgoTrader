@@ -342,3 +342,11 @@ CREATE INDEX IF NOT EXISTS  optimizer_run_idx ON optimizer_run(optimizer_session
 
 
 ALTER TABLE optimizer_run ADD COLUMN parameters text NOT NULL DEFAULT('');
+
+alter table new_trades alter COLUMN qty type numeric(24,10) using cast(qty as numeric);
+
+ALTER TABLE new_trades ADD COLUMN trade_fee NUMERIC(9,2) NOT NULL DEFAULT 0.0;
+
+CREATE TYPE asset_type AS ENUM ('US_EQUITIES', 'CRYPTO');
+
+ALTER TABLE portfolio ADD COLUMN assets asset_type NOT NULL DEFAULT 'US_EQUITIES';

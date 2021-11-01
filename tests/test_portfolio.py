@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.types import AssetType
 from liualgotrader.models.portfolio import Portfolio
 
 
@@ -42,4 +43,36 @@ async def test_exists_positive() -> bool:
         raise AssertionError(f"result should be True for {id}")
 
     print(result)
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_crypto_1() -> bool:
+    id: str = str(uuid.uuid4())
+    await Portfolio.save(id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
+    result = await Portfolio.exists(id)
+    if result == False:
+        raise AssertionError(f"result should be True for {id}")
+
+    print(result)
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_crypto_2() -> bool:
+    id: str = str(uuid.uuid4())
+    await Portfolio.save(id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
+    result = await Portfolio.exists(id)
+    if result == False:
+        raise AssertionError(f"result should be True for {id}")
+
+    p = await Portfolio.load_by_portfolio_id(id)
+    print(p)
+    if p.asset_type != AssetType.CRYPTO:
+        raise AssertionError("wrong asset-type")
+    if p.portfolio_size != 5000:
+        raise AssertionError("wrong size")
+
     return True

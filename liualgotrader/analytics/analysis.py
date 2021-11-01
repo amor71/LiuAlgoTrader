@@ -11,10 +11,13 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import fetch_as_dataframe
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.types import AssetType
 from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.trading.trader_factory import trader_factory
+
+AssetType
 
 est = timezone("America/New_York")
 
@@ -300,7 +303,7 @@ def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
 
 
 def symbol_trade_analytics(
-    symbol_df: pd.DataFrame, open_price: float, plt
+    symbol_df: pd.DataFrame, plt
 ) -> Tuple[pd.DataFrame, float]:
 
     d = copy.deepcopy(symbol_df).drop(
@@ -325,7 +328,7 @@ def symbol_trade_analytics(
 
     for _, row in symbol_df.iterrows():
         plt.scatter(
-            row["client_time"],
+            row["client_time"].tz_convert("US/Eastern"),
             row["price"],
             c="g" if row["operation"] == "buy" else "r",
             s=100,
@@ -341,10 +344,12 @@ def calc_symbol_trades_returns(
     data_loader: DataLoader,
 ):
     t1 = t2 = None
-    qty: int = 0
+    qty: float = 0.0
     eastern = timezone(
         "US/Eastern",
     )
+
+    symbol_trades["qty"] = symbol_trades["qty"].astype(float)
     for _, row in symbol_trades.iterrows():
         if t1 is None:
             t1 = daily_returns.index.get_loc(str(row.client_time.date()))
@@ -465,15 +470,9 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
 
 def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
-
-    try:
-        account_id, initial_account_size = loop.run_until_complete(
-            Portfolio.load_details(portfolio_id)
-        )
-    except Exception:
-        print("ERROR loading portfolio-id, please verify id and re-run.")
-        return pd.DataFrame()
+    portfolio = loop.run_until_complete(
+        Portfolio.load_by_portfolio_id(portfolio_id)
+    )
 
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
@@ -484,11 +483,15 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     end_date = trades.client_time.max().date()
     trader = trader_factory()()
 
-    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+    if portfolio.asset_type == AssetType.US_EQUITIES:
+        td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+    else:
+        td = pd.DataFrame(index=pd.date_range(start_date, end_date))
 
     td["equity"] = 0.0
 
-    cash_df = get_cash(account_id, initial_account_size)
+    cash_df = get_cash(portfolio.account_id, portfolio.portfolio_size)
+
     symbols = trades.symbol.unique().tolist()
     for i in tqdm(
         range(len(symbols)), desc=f"loading portfolio {portfolio_id}"
@@ -530,16 +533,9 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
 
 def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
-
-    try:
-        account_id, initial_account_size = loop.run_until_complete(
-            Portfolio.load_details(portfolio_id)
-        )
-    except Exception:
-        print("ERROR loading portfolio-id, please verify id and re-run.")
-        return pd.DataFrame()
-
+    portfolio = loop.run_until_complete(
+        Portfolio.load_by_portfolio_id(portfolio_id)
+    )
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
 
@@ -552,15 +548,21 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
         symbol_trades = trades[trades.symbol == symbol].sort_values(
             by="client_time"
         )
-        qty, last_price = calc_symbol_state(symbol, symbol_trades, data_loader)
-        rows.append(
-            {
-                "symbol": symbol,
-                "qty": qty,
-                "price": last_price,
-                "total": qty * last_price,
-            }
-        )
+        try:
+            qty, last_price = calc_symbol_state(
+                symbol, symbol_trades, data_loader
+            )
+        except Exception as e:
+            tlog(str(e))
+        else:
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "qty": qty,
+                    "price": last_price,
+                    "total": float(qty) * last_price,
+                }
+            )
 
     df = pd.DataFrame(rows)
     return df.loc[df.qty > 0].round(2)
@@ -568,16 +570,10 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
 
 def get_portfolio_cash(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    _ = loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
-
-    try:
-        account_id, _ = loop.run_until_complete(
-            Portfolio.load_details(portfolio_id)
-        )
-    except Exception:
-        print("ERROR loading portfolio-id, please verify id and re-run.")
-        return pd.DataFrame()
+    portfolio = loop.run_until_complete(
+        Portfolio.load_by_portfolio_id(portfolio_id)
+    )
 
     return loop.run_until_complete(
-        Accounts.get_transactions(account_id)
+        Accounts.get_transactions(portfolio.account_id)
     ).round(2)

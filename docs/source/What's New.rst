@@ -3,6 +3,13 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.00           | **Major Release**                            |
+|                  |                                              |
+|                  | 1. Extend platform to support Crypto assets  |
+|                  | 2. Support Gemini Crypto Exchange            |
+|                  | 3. Extend to support fractional quantities   |
+|                  | 4. Bug-fixes & code improvements             |
++------------------+----------------------------------------------+
 | 0.3.26           | bug-fix in strategy creation                 |
 +------------------+----------------------------------------------+
 | 0.3.25           | 1. Introduce Tracing & Performance           |

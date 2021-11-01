@@ -37,6 +37,35 @@ class Accounts:
                 return await con.fetchval(q, *params)
 
     @classmethod
+    async def check_if_enough_balance_to_withdraw(
+        cls, account_id: int, potential_withdraw: float
+    ) -> bool:
+        if potential_withdraw < 0:
+            raise AssertionError(
+                f"check_if_enough_balance(): potential transaction amount ({potential_withdraw}) can't be negative "
+            )
+
+        query = """
+            SELECT
+                balance, allow_negative, credit_line
+            FROM 
+                accounts 
+            WHERE
+                account_id = $1
+        """
+        async with config.db_conn_pool.acquire() as con:
+            row = await con.fetchrow(query, account_id)
+            if row["balance"] > potential_withdraw:
+                return True
+            elif (
+                row["allow_negative"]
+                and row["balance"] + row["credit_line"] > potential_withdraw
+            ):
+                return True
+
+        return False
+
+    @classmethod
     async def get_balance(cls, account_id: int) -> float:
         pool = config.db_conn_pool
 
