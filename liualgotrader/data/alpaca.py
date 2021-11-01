@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import pytz
+import requests
 from alpaca_trade_api.rest import REST, URL, TimeFrame
 from alpaca_trade_api.stream import Stream
 
@@ -54,6 +55,56 @@ class AlpacaData(DataAPI):
             ),
         )
 
+    def _is_crypto_symbol(self, symbol: str) -> bool:
+        return symbol.lower() in ["btcusd", "ethusd"]
+
+    def crypto_get_symbol_data(
+        self,
+        symbol: str,
+        start: str,
+        end: str,
+        timeframe: TimeFrame,
+    ) -> pd.DataFrame:
+        url = f"{config.alpaca_crypto_base_url}/{symbol}/bars"
+        response = requests.get(
+            url,
+            params={  # type:ignore
+                "start": start,
+                "end": end,
+                "limit": 10000,
+                "timeframe": "1Day" if timeframe == TimeFrame.Day else "1Min",
+            },
+            headers={
+                "APCA-API-KEY-ID": config.alpaca_api_key,
+                "APCA-API-SECRET-KEY": config.alpaca_api_secret,
+            },
+        )
+
+        if response.status_code == 200:
+            df = pd.DataFrame(response.json()["bars"])
+            df.rename(
+                columns={
+                    "o": "open",
+                    "c": "close",
+                    "h": "high",
+                    "l": "low",
+                    "v": "volume",
+                    "vw": "average",
+                    "t": "timestamp",
+                },
+                inplace=True,
+            )
+            df["timestamp"] = pd.to_datetime(df.timestamp)
+            df["trade_count"] = np.NaN
+            df["vwap"] = np.NaN
+            df = df.set_index(df.timestamp)
+            df = df[~df.index.duplicated(keep="first")]
+            return df
+
+        raise ValueError(
+            f"ALPACA CRYPTO {response.status_code} {response.text}"
+        )
+
     def get_symbol_data(
         self,
         symbol: str,
@@ -75,14 +126,20 @@ class AlpacaData(DataAPI):
         )
 
         try:
-            data = self.alpaca_rest_client.get_bars(
-                symbol=symbol,
-                timeframe=t,
-                start=_start,
-                end=_end,
-                limit=10000,
-                adjustment="all",
-            ).df
+            data = (
+                self.alpaca_rest_client.get_bars(
+                    symbol=symbol,
+                    timeframe=t,
+                    start=_start,
+                    end=_end,
+                    limit=10000,
+                    adjustment="all",
+                ).df
+                if not self._is_crypto_symbol(symbol)
+                else self.crypto_get_symbol_data(
+                    symbol=symbol, start=_start, end=_end, timeframe=t
+                )
+            )
         except Exception as e:
             raise ValueError(
                 f"[EXCEPTION] {e} for {symbol} has no data for {_start} to {_end} w {scale.name}"
@@ -175,11 +232,14 @@ class AlpacaStream(StreamingAPI):
     async def trades_handler(cls, msg):
         try:
             ts = pd.to_datetime(msg.timestamp)
-            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(seconds=10):  # type: ignore
-                if randint(1, 100) == 1:  # nosec
-                    tlog(
-                        f"Received trade for {msg.symbol} too out of sync w {time_diff}"
-                    )
+            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(
+                seconds=10
+            ) and randint(  # nosec
+                1, 100
+            ) == 1:  # nosec
+                tlog(
+                    f"Received trade for {msg.symbol} too out of sync w {time_diff}"
+                )
 
             event = {
                 "symbol": msg.symbol,
@@ -221,9 +281,9 @@ class AlpacaStream(StreamingAPI):
         self, symbols: List[str], events: List[WSEventType]
     ) -> bool:
         tlog(f"Starting subscription for {len(symbols)} symbols")
-
-        for syms in chunks(symbols, 1000):
-            tlog(f"\tsubscribe {len(syms)}/{len(symbols)}")
+        upper_symbols = [symbol.upper() for symbol in symbols]
+        for syms in chunks(upper_symbols, 1000):
+            tlog(f"\tsubscribe {len(syms)}/{len(upper_symbols)}")
             for event in events:
                 if event == WSEventType.SEC_AGG:
                     tlog(f"event {event} not implemented in Alpaca")

@@ -26,7 +26,7 @@ debug_enabled = bool(int(os.getenv("LIU_DEBUG_ENABLED", 0)))
 #
 # Broker
 #
-broker: BrokerType = BrokerType.alpaca
+broker: BrokerType = BrokerType[os.getenv("LIU_BROKER", "alpaca")]
 #
 # Market Schedule
 #
@@ -51,6 +51,7 @@ batch_id: str
 # Replace these with your API connection info from the dashboard
 polygon_api_key = os.getenv("POLYGON_API_KEY")
 alpaca_base_url = os.getenv("APCA_API_BASE_URL")
+alpaca_crypto_base_url = "https://data.alpaca.markets/v1beta1/crypto"
 alpaca_api_key = os.getenv("APCA_API_KEY_ID")
 alpaca_api_secret = os.getenv("APCA_API_SECRET_KEY")
 alpaca_data_feed = os.getenv("ALPACA_DATA_FEED", "sip")

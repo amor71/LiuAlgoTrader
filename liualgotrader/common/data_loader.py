@@ -314,7 +314,7 @@ class SymbolData:
     ) -> Tuple[datetime, datetime]:
         return (
             timestamp.to_pydatetime()
-            - timedelta(days=6 if self.scale == TimeScale.minute else 100),
+            - timedelta(days=6 if self.scale == TimeScale.minute else 10),
             timestamp.to_pydatetime() + timedelta(days=1),
         )
 
@@ -336,8 +336,7 @@ class SymbolData:
             ) + timedelta(days=1 + timestamp)
 
         return (
-            _end
-            - timedelta(days=6 if self.scale == TimeScale.minute else 100),
+            _end - timedelta(days=6 if self.scale == TimeScale.minute else 10),
             _end,
         )
 
@@ -377,7 +376,7 @@ class SymbolData:
             _start, _end = self._convert_int(timestamp)
         else:
             _start = timestamp - timedelta(
-                days=6 if self.scale == TimeScale.minute else 100
+                days=6 if self.scale == TimeScale.minute else 10
             )
             _end = timestamp + timedelta(days=1)
 
@@ -390,13 +389,13 @@ class SymbolData:
                 _start = (
                     end
                     - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 100
+                        days=7 if self.scale == TimeScale.minute else 10
                     )
                 ).date()
                 _end = end.date()
             else:
                 _start = end - timedelta(
-                    days=7 if self.scale == TimeScale.minute else 100
+                    days=7 if self.scale == TimeScale.minute else 10
                 )
                 _end = end
 
@@ -409,7 +408,7 @@ class SymbolData:
 
             new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
 
-            end -= timedelta(days=7 if self.scale == TimeScale.minute else 100)
+            end -= timedelta(days=7 if self.scale == TimeScale.minute else 10)
 
         self.symbol_data = pd.concat(
             [new_df, self.symbol_data], sort=True
