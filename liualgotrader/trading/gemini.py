@@ -51,7 +51,8 @@ class GeminiTrader(Trader):
         payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
 
         if cls.last_nonce and cls.last_nonce == payload_nonce:
-            payload_nonce = cls.last_nonce + 1
+            time.sleep(0.1)
+            payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
 
         cls.last_nonce = payload_nonce
 
