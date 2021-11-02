@@ -1,5 +1,5 @@
-**[NEW] Crypto**
-================
+**NEW Crypto**
+==============
 
 **Crypto trading is still in BETA and in active development**
 

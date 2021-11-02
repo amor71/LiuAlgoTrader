@@ -19,11 +19,11 @@ sys.path.insert(0, os.path.abspath("."))
 
 
 project = "Liu Algo Trading Framework"
-copyright = "2020, amor71"
+copyright = "2021, amor71"
 author = "amor71"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.81"
+release = "0.4.00"
 
 # -- General configuration ---------------------------------------------------
 
