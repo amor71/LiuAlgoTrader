@@ -40,7 +40,7 @@ class PolygonData(DataAPI):
             raise AssertionError("Must call w/ authenticated polygon client")
 
         data = self.polygon_rest_client.stocks_equities_aggregates(
-            symbol, 1, scale.name, start, end, unadjusted=False
+            symbol, 1, scale.name, start, end, unadjusted=False, limit=50000
         )
         if not data or not hasattr(data, "results"):
             raise ValueError(
@@ -127,6 +127,7 @@ class PolygonStream(StreamingAPI):
 
     @classmethod
     def handle_event(cls, event: Dict):
+        print("event:", event)
         try:
             event["EV"] = event["ev"]
             if "s" in event:

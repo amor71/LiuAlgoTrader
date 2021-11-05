@@ -22,6 +22,7 @@ from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.data_loader import TimeScale
+from liualgotrader.common.types import AssetType
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
@@ -143,6 +144,9 @@ if __name__ == "__main__":
             strategies: Optional[List] = None
             to_date = date.today()
             scale = TimeScale["day"]
+            buy_fee_percentage = 0.0
+            sell_fee_percentage = 0.0
+            asset_type = AssetType.US_EQUITIES
             opts, args = getopt.getopt(
                 sys.argv[3:],
                 shortopts=[],
@@ -151,6 +155,9 @@ if __name__ == "__main__":
                     "scale=",
                     "scanners=",
                     "strats=",
+                    "buy-fee-percentage=",
+                    "sell-fee-percentage=",
+                    "asset=",
                 ],
             )
             for opt, arg in opts:
@@ -160,6 +167,18 @@ if __name__ == "__main__":
                     strategies = arg.split(",")
                 elif opt in ("--to"):
                     to_date = dateFromString(arg)
+                elif opt in ("--buy-fee-percentage"):
+                    buy_fee_percentage = float(arg)
+                elif opt in ("--sell-fee-percentage"):
+                    sell_fee_percentage = float(arg)
+                elif opt in ("--asset"):
+                    if arg.lower() == "crypto":
+                        asset_type = AssetType.CRYPTO
+                    elif arg.lower() == "equity":
+                        asset_type = AssetType.US_EQUITIES
+                    else:
+                        print(f"ERROR: value {arg} not supported for parameter 'asset'")
+                        sys.exit(0)
                 elif opt in ("--scale"):
                     if arg in ("day", "minute"):
                         scale = TimeScale[arg]
@@ -180,6 +199,9 @@ if __name__ == "__main__":
             config=conf_dict,
             scanners=scanners,
             strategies=strategies,
+            asset_type=asset_type,
+            buy_fee_percentage=buy_fee_percentage,
+            sell_fee_percentage=sell_fee_percentage,
         )
     else:
         print(f"Error parsing {sys.argv[1:]}\n")

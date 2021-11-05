@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-# Database connection string
-export DSN="postgresql://momentum@localhost/tradedb"
-
-# Which data providers to use values maybe polygon/alpaca (finnhub coming soon)
+# values can be either "polygon"/"alpaca"/"gemini"/"finnhub"
 export DATA_CONNECTOR="alpaca"
+
+# which broker to use? alpaca/gemini
+export LIU_BROKER="alpaca"
 
 # Polygon API key
 export POLYGON_API_KEY=""
@@ -20,6 +20,9 @@ export APCA_API_SECRET_KEY=""
 # "sip" for PRO subscriptions, "iex" for free
 export alpaca_data_feed="sip" 
 
+# Gemini 
+export GEMINI_API_KEY=
+export GEMINI_API_SECRET=
 
 # lock number of CPUs & consumer processes to use
 export CPU_FACTOR=4

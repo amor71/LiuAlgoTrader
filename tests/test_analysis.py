@@ -1,3 +1,6 @@
+import os
+
+os.environ["DATA_CONNECTOR"] = "alpaca"
 import asyncio
 from datetime import date
 
@@ -5,7 +8,9 @@ import pandas as pd
 import pytest
 
 from liualgotrader.analytics import analysis
+from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.types import DataConnectorType
 
 # @pytest.mark.devtest
 # def test_spyreturns() -> bool:

@@ -2,9 +2,11 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import alpaca_trade_api as tradeapi
+import pandas as pd
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 #
 # common.trading_data includes global variables, cross strategies that may be
@@ -26,41 +28,46 @@ from liualgotrader.strategies.base import Strategy, StrategyType
 
 
 class MyStrategy(Strategy):
-    name = "MyStrategyForLosingMoney"
-
     def __init__(
         self,
         batch_id: str,
         schedule: List[Dict],
+        data_loader: DataLoader = None,
+        fractional: bool = False,
         ref_run_id: int = None,
         my_arg1: int = 0,
         my_arg2: bool = False,
     ):
         super().__init__(
-            name=self.name,
+            name=type(self).__name__,
+            type=StrategyType.SWING,
             batch_id=batch_id,
             ref_run_id=ref_run_id,
-            schedule=schedule,
-            type=StrategyType.DAY_TRADE,
+            schedule=[],
+            data_loader=data_loader,
         )
         self.my_arg1 = my_arg1
         self.my_arg2 = my_arg2
 
-    async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
-        """
-        This callback function is called by the trading frame work post
-        completion of the buy ask. Partial fills won't trigger the callback,
-        only the final complete will trigger this callback.
-        """
-        pass
+    async def buy_callback(
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
+    ) -> None:
+        ...
 
-    async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
-        """
-        This callback function is called by the trading frame work post
-        completion of the sell ask. Partial fills won't trigger the callback,
-        only the final complete will trigger this callback.
-        """
-        pass
+    async def sell_callback(
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
+    ) -> None:
+        ...
 
     async def create(self) -> bool:
         """
@@ -73,32 +80,20 @@ class MyStrategy(Strategy):
         tlog(f"strategy {self.name} created")
         return True
 
+    async def should_run_all(self):
+        return False
+
     async def run(
         self,
         symbol: str,
         shortable: bool,
-        position: int,
+        position: float,
         now: datetime,
-        minute_history: df,
+        minute_history: pd.DataFrame,
         portfolio_value: float = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
-        """
-        :param symbol: the symbol of the stock,
-        :param shortable: can the stock be sold short,
-        :param position: the current held position,
-        :param minute_history: DataFrame holding OLHC
-                               updated per *second*,
-        :param now: current timestamp, specially important when called
-                    from the backtester application,
-        :param portfolio_value: your total porfolio value
-        :param debug:       true / false, should be used mostly
-                            for adding more verbosity.
-        :param backtesting: true / false, which more are we running at
-        :return: False w/ {} dictionary, or True w/ order execution
-                 details (see below examples)
-        """
         current_second_data = minute_history.iloc[-1]
         tlog(f"{symbol} data: {current_second_data}")
 

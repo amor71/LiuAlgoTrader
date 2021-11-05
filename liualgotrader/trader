@@ -202,6 +202,7 @@ if __name__ == "__main__":
         symbols: List = []
 
         if "skip_existing" not in conf_dict or not conf_dict["skip_existing"]:
+            # TODO move to trader implementation, and  need to figure how to handle it per asset-type
             existing_positions = trade_api.list_positions()
 
             if len(existing_positions) == 0:
@@ -209,7 +210,7 @@ if __name__ == "__main__":
             else:
                 for position in existing_positions:
                     if position.symbol not in symbols:
-                        symbols.append(position.symbol)
+                        symbols.append(position.symbol.lower())
                         tlog(f"added existing open position in {position.symbol}")
         else:
             tlog("skipping existing open positions")

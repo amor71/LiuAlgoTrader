@@ -1,5 +1,3 @@
-.. _`How to Configure`:
-
 Configuration
 =============
 

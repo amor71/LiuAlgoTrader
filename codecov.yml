@@ -13,8 +13,15 @@ parsers:
       loop: yes
       method: no
       macro: no
+ignore:
+  - "tests/**/*"  # ignore folders and all its contents
+  - "liualgotrader/trading/base.py"
 
 comment:
   layout: "reach,diff,flags,files,footer"
   behavior: default
   require_changes: no
+
+ignore:
+  - "tests"  # ignore folders and all its contents
+  - "test_*.py"       # wildcards accepted
