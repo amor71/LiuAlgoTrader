@@ -54,3 +54,4 @@ types-requests==2.25.11
 types-pytz==2021.3.0
 
 
+websockets>=10.0 # not directly required, pinned by Snyk to avoid a vulnerability
