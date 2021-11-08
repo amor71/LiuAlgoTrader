@@ -1,15 +1,15 @@
-iso8601==0.1.16
+iso8601==1.0.0
 requests==2.26.0
 deprecated==1.2.13
 urllib3==1.26.7
-numpy==1.21.3
+numpy==1.21.4
 mypy==0.910
-black==21.9b0
+black==21.10b0
 pylint==2.11.1
 flake8==4.0.1
 Cython==0.29.24
-alpaca-trade-api==1.4.0
-google-cloud-logging==2.6.0
+alpaca-trade-api==1.4.1
+google-cloud-logging==2.7.0
 therapist==2.2.0
 jupyter==1.0.0
 asyncpg==0.24.0
@@ -22,9 +22,9 @@ matplotlib==3.4.3
 tabulate==0.8.9
 sphinx==4.2.0
 sphinx-autodoc-typehints==1.12.0
-setuptools==58.3.0
+setuptools==58.5.3
 wheel==0.37.0
-twine==3.4.2
+twine==3.5.0
 streamlit==1.1.0
 stockstats==0.3.2
 nest_asyncio==1.5.1
@@ -33,10 +33,10 @@ pre-commit==2.15.0
 empyrical==0.5.5
 sklearn==0.0
 plotly==5.3.1
-hypothesis==6.24.0
+hypothesis==6.24.2
 torch==1.10.0
 parsedatetime==2.6
-scipy==1.7.1
+scipy==1.7.2
 polygon-api-client==0.1.11
 bandit==1.7.0
 finnhub-python==2.4.5
@@ -49,7 +49,7 @@ sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml==1.1.5
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.0.0
-websocket-client
+websocket-client==1.2.1
 types-requests==2.25.11
 types-pytz==2021.3.0
 
