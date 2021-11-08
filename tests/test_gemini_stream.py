@@ -62,7 +62,7 @@ async def test_apple_sec_agg():
     print(f"subscribe result: {status}")
     if not status:
         raise AssertionError(f"Failed in gemini_stream.subscribe w/ {status}")
-    await asyncio.sleep(5 * 60)
+    await asyncio.sleep(1 * 60)
     await gemini_stream.close()
 
     stop = True

@@ -1,5 +1,5 @@
 # LiuAlgoTrader
-[![Build Status](https://travis-ci.com/amor71/LiuAlgoTrader.svg?branch=master)](https://travis-ci.com/amor71/LiuAlgoTrader)
+[![Upload Python Package](https://github.com/amor71/LiuAlgoTrader/actions/workflows/python-publish.yml/badge.svg)](https://github.com/amor71/LiuAlgoTrader/actions/workflows/python-publish.yml)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/liualgotrader)
 [![Python 3](https://pyup.io/repos/github/amor71/LiuAlgoTrader/python-3-shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
 [![Updates](https://pyup.io/repos/github/amor71/LiuAlgoTrader/shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)

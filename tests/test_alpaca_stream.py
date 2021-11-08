@@ -37,7 +37,7 @@ async def test_apple_sec_agg():
     print(f"subscribe result: {status}")
     if not status:
         raise AssertionError(f"Failed in alpaca_stream.subscribe w/ {status}")
-    await asyncio.sleep(5 * 60)
+    await asyncio.sleep(1 * 60)
     await alpaca_stream.close()
 
     return True

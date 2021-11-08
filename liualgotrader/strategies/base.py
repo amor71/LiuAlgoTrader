@@ -5,7 +5,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
@@ -14,6 +13,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.keystore import KeyStore
+from liualgotrader.trading.base import Trader
 
 
 class StrategyType(Enum):
@@ -94,7 +94,7 @@ class Strategy(object):
         data_loader: DataLoader,
         now: datetime,
         portfolio_value: float = None,
-        trading_api: tradeapi = None,
+        trader: Trader = None,
         debug: bool = False,
         backtesting: bool = False,
         fee_buy_percentage: float = 0.0,
@@ -149,34 +149,10 @@ class Strategy(object):
         return False, {}
 
     async def is_sell_time(self, now: datetime):
-        return bool(
-            (
-                any(
-                    (now - config.market_open).seconds // 60
-                    >= schedule["start"]
-                    for schedule in self.schedule
-                )
-                or (
-                    hasattr(config, "bypass_market_schedule")
-                    and config.bypass_market_schedule
-                )
-            )
-            and (config.market_close - now).seconds // 60 > 15
-        )
+        return True
 
     async def is_buy_time(self, now: datetime):
-        return bool(
-            any(
-                (schedule["duration"] + schedule["start"])
-                > (now - config.market_open).seconds // 60
-                > schedule["start"]
-                for schedule in self.schedule
-            )
-            or (
-                hasattr(config, "bypass_market_schedule")
-                and config.bypass_market_schedule
-            )
-        )
+        return True
 
     async def buy_callback(
         self,
@@ -200,20 +176,18 @@ class Strategy(object):
         """Called by Framework, upon successful sell (could be partial)"""
         pass
 
-    async def get_global_var(self, key, context):
+    async def get_global_var(self, key):
         """implementing key-store retrival"""
         if key in self.global_var:
             return self.global_var[key]
 
-        self.global_var[key] = (
-            val := await KeyStore.load(key, self.name, context)
-        )
+        self.global_var[key] = (val := await KeyStore.load(key))
         return val
 
-    async def set_global_var(self, key, value, context):
+    async def set_global_var(self, key, value):
         """implementing key-store storing"""
         self.global_var[key] = value
-        await KeyStore.save(key, value, self.name, context)
+        await KeyStore.save(key, value)
 
     @classmethod
     async def get_strategy(
@@ -250,7 +224,7 @@ class Strategy(object):
             tlog(
                 f"[EXCEPTION] {e} : file not found `{strategy_details['filename']}`"
             )
-            exit(0)
+            raise
         except Exception as e:
             tlog(
                 f"[Error]exception of type {type(e).__name__} with args {e.args}"
