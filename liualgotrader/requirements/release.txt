@@ -1,4 +1,4 @@
-iso8601==0.1.16
+iso8601==1.0.0
 requests==2.26.0
 deprecated==1.2.13
 urllib3==1.26.7
