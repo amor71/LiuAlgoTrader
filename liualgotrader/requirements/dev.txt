@@ -36,7 +36,7 @@ plotly==5.3.1
 hypothesis==6.24.2
 torch==1.10.0
 parsedatetime==2.6
-scipy==1.7.1
+scipy==1.7.2
 polygon-api-client==0.1.11
 bandit==1.7.0
 finnhub-python==2.4.5
