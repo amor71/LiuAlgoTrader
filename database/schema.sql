@@ -350,3 +350,10 @@ ALTER TABLE new_trades ADD COLUMN trade_fee NUMERIC(9,2) NOT NULL DEFAULT 0.0;
 CREATE TYPE asset_type AS ENUM ('US_EQUITIES', 'CRYPTO');
 
 ALTER TABLE portfolio ADD COLUMN assets asset_type NOT NULL DEFAULT 'US_EQUITIES';
+
+ALTER TABLE portfolio ADD COLUMN external_account_id text;
+
+ALTER TABLE portfolio ADD COLUMN broker text;
+
+ALTER TABLE portfolio ADD COLUMN auto bool NOT NULL default false;
+
