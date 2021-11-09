@@ -355,5 +355,40 @@ ALTER TABLE portfolio ADD COLUMN external_account_id text;
 
 ALTER TABLE portfolio ADD COLUMN broker text;
 
-ALTER TABLE portfolio ADD COLUMN auto bool NOT NULL default false;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE TABLE IF NOT EXISTS trade_plan (
+    trade_plan_id uuid DEFAULT uuid_generate_v4 (),
+    portfolio_id text NOT NULL REFERENCES portfolio(portfolio_id),
+    filename text NOT NULL,
+    start_date date NOT NULL,
+    strategy_name text NOT NULL,
+    parameters JSONB,
+    create_tstamp timestamp with time zone DEFAULT current_timestamp,
+    modify_tstamp timestamp with time zone,
+    expire_tstamp timestamp with time zone,
+    PRIMARY KEY (trade_plan_id)
+);
+
+CREATE  FUNCTION update_modify_tstamp_action()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.modify_tstamp = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_trade_plan_modify_tstamp
+    BEFORE UPDATE
+    ON
+        trade_plan
+    FOR EACH ROW
+EXECUTE PROCEDURE update_modify_tstamp_action();
+
+CREATE TABLE IF NOT EXISTS trade_plan_execution_audit (
+    execution_id serial PRIMARY KEY,
+    trade_plan_id uuid REFERENCES trade_plan(trade_plan_id),
+    details JSONB,
+    started_on timestamp with time zone DEFAULT current_timestamp,
+    ended_on timestamp with time zone DEFAULT current_timestamp
+);
