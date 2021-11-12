@@ -392,3 +392,5 @@ CREATE TABLE IF NOT EXISTS trade_plan_execution_audit (
     started_on timestamp with time zone DEFAULT current_timestamp,
     ended_on timestamp with time zone DEFAULT current_timestamp
 );
+
+ALTER TABLE trade_plan DROP COLUMN filename;

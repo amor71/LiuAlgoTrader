@@ -48,6 +48,24 @@ async def test_exists_positive() -> bool:
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
+async def test_balance_positive() -> bool:
+    id: str = str(uuid.uuid4())
+    await Portfolio.save(
+        id,
+        5000,
+        10,
+        {},
+    )
+    result = await Portfolio.get_portfolio_account_balance(id)
+    if result != 5000:
+        raise AssertionError("result should be 5000")
+
+    print(result)
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_crypto_1() -> bool:
     id: str = str(uuid.uuid4())
     await Portfolio.save(id, 5000, 10, {}, asset_type=AssetType.CRYPTO)

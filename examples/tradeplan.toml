@@ -1,8 +1,5 @@
 # This is a TOML configuration file.
 
-# if set to true, allow running outside market open hours
-bypass_market_schedule = true
-
 # set max portfolio_value
 # portfolio_value = 25000.0
 

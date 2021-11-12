@@ -133,3 +133,21 @@ class Portfolio:
                 portfolio_id,
             )
             return result
+
+    @classmethod
+    async def get_portfolio_account_balance(cls, portfolio_id: str) -> float:
+        pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            return await con.fetchval(
+                """
+                    SELECT
+                        balance
+                    FROM 
+                        accounts as a, portfolio as f 
+                    WHERE
+                        a.account_id = f.account_id
+                        AND portfolio_id = $1
+                """,
+                portfolio_id,
+            )

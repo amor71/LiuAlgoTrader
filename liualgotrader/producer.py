@@ -24,8 +24,8 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
-symbols: List[str]
-queue_id_hash: Dict[str, int]
+symbols: List[str] = []
+queue_id_hash: Dict[str, int] = {}
 symbol_strategy: Dict = {}
 
 
@@ -140,55 +140,6 @@ async def run(
     )
 
 
-async def teardown_task(
-    to_market_close: Optional[timedelta], tasks: List[asyncio.Task]
-) -> None:
-    if not to_market_close:
-        return
-    tlog("producer teardown_task() starting")
-    if not config.market_close:
-        tlog(
-            "we're probably in market schedule by-pass mode, exiting poylgon_producer tear-down task"
-        )
-        return
-
-    tlog(
-        f"producer tear-down task waiting for market close: {to_market_close}"
-    )
-    try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
-
-        tlog("closing Stream")
-        await streaming_factory().get_instance().close()
-        tlog("producer teardown closed streaming web-sockets")
-        await trader_factory().get_instance().close()
-        tlog("producer teardown closed trading web-sockets")
-
-        tlog("producer teardown closing tasks")
-        for task in tasks:
-            tlog(
-                f"teardown_task(): requesting task {task.get_name()} to cancel"
-            )
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                tlog("teardown_task(): task is cancelled now")
-
-        # asyncio.get_running_loop().stop()
-
-    except asyncio.CancelledError:
-        tlog("teardown_task() cancelled during sleep")
-
-    except Exception as e:
-        tlog(f"[ERROR] Exception {e}")
-        if config.debug_enabled:
-            traceback.print_exc()
-
-    finally:
-        tlog("teardown_task() done.")
-
-
 """
 process main
 """
@@ -203,26 +154,17 @@ async def producer_async_main(
     qm = QueueMapper(queue_list=queues)
     await run(queues=queues, qm=qm)
 
+    # TODO: Support multiple brokers
     at = trader_factory()(qm)
-
-    if not at.get_time_market_close():
-        return
     trade_updates_task = await at.run()
 
     scanner_input_task = asyncio.create_task(
         scanner_input(scanner_queue, queues, num_consumer_processes),
         name="scanner_input",
     )
-    tear_down = asyncio.create_task(
-        teardown_task(
-            at.get_time_market_close(),
-            [scanner_input_task, trade_updates_task],
-        )
-    )
 
     async_tasks_to_gather = [
         scanner_input_task,
-        tear_down,
     ]
 
     if inspect.iscoroutinefunction(trade_updates_task):
@@ -239,45 +181,16 @@ async def producer_async_main(
 def producer_main(
     unique_id: str,
     queues: List[MNQueue],
-    current_symbols: List[str],
-    current_queue_id_hash: Dict[str, int],
-    market_close: datetime,
     conf_dict: Dict,
     scanner_queue: Queue,
     num_consumer_processes: int,
 ) -> None:
     tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
     try:
-        config.market_close = market_close
         config.batch_id = unique_id
-        events = conf_dict.get("events", None)
-
-        if not events:
-            config.WS_DATA_CHANNELS = ["A", "AM", "T", "Q"]
-        else:
-            config.WS_DATA_CHANNELS = []
-
-            if "second" in events:
-                config.WS_DATA_CHANNELS.append("AM")
-            if "minute" in events:
-                config.WS_DATA_CHANNELS.append("A")
-            if "trade" in events:
-                config.WS_DATA_CHANNELS.append("T")
-            if "quote" in events:
-                config.WS_DATA_CHANNELS.append("Q")
-
-        tlog(
-            f"producer_main(): listening for events {config.WS_DATA_CHANNELS}"
-        )
-        global symbols
-        global queue_id_hash
-
-        symbols = current_symbols
-        queue_id_hash = current_queue_id_hash
         asyncio.run(
             producer_async_main(queues, scanner_queue, num_consumer_processes)
         )
-
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:

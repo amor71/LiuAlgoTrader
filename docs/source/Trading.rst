@@ -90,15 +90,6 @@ An expected beginning of execution should look like:
     :align: left
     :alt: *trader* output
 
-**Notes**
-
-- Normally the *trader* application should be run before the start of the trading day, or during the trading day.
-- When trying to run the *trader* on a null trading day, or after the end of the trading day, the *trader* application will present an error message indicating the next opening of the trading day.
-- It is possible to by-pass the trading-day limitations (very useful when debugging custom scanners or trade strategies), by adding to the *tradeplan.toml* file:
-
-.. code-block:: bash
-
-    bypass_market_schedule = true
 
 Understanding *trader* output and Logging
 *****************************************

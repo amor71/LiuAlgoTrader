@@ -149,34 +149,10 @@ class Strategy(object):
         return False, {}
 
     async def is_sell_time(self, now: datetime):
-        return bool(
-            (
-                any(
-                    (now - config.market_open).seconds // 60
-                    >= schedule["start"]
-                    for schedule in self.schedule
-                )
-                or (
-                    hasattr(config, "bypass_market_schedule")
-                    and config.bypass_market_schedule
-                )
-            )
-            and (config.market_close - now).seconds // 60 > 15
-        )
+        return True
 
     async def is_buy_time(self, now: datetime):
-        return bool(
-            any(
-                (schedule["duration"] + schedule["start"])
-                > (now - config.market_open).seconds // 60
-                > schedule["start"]
-                for schedule in self.schedule
-            )
-            or (
-                hasattr(config, "bypass_market_schedule")
-                and config.bypass_market_schedule
-            )
-        )
+        return True
 
     async def buy_callback(
         self,

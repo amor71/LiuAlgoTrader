@@ -24,6 +24,7 @@ from liualgotrader.common.tracer import trace_elapsed_metrics  # type: ignore
 from liualgotrader.common.types import Order, Trade
 from liualgotrader.fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS
 from liualgotrader.models.new_trades import NewTrade
+from liualgotrader.models.tradeplan import TradePlan
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.trading.base import Trader
@@ -138,142 +139,6 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
         tlog(f"[EXCEPTION] periodic_runner: {e}")
 
     tlog("periodic_runner() task completed")
-
-
-async def liquidator_sleep(trader: Trader) -> bool:
-    try:
-        to_market_close = trader.get_time_market_close()
-        if not to_market_close:
-            return False
-        else:
-            to_market_close -= timedelta(minutes=15)
-
-        tlog(f"liquidator() - waiting for market close: {to_market_close}")
-        await asyncio.sleep(to_market_close.total_seconds())
-
-    except asyncio.CancelledError:
-        tlog("liquidator() cancelled during sleep")
-        return False
-    except KeyboardInterrupt:
-        tlog("liquidator() - Caught KeyboardInterrupt")
-        return False
-    else:
-        return True
-
-
-async def liquidator_loop(trader: Trader):
-    for symbol, position in trading_data.positions.items():
-        symbol = symbol.lower()
-        tlog(f"liquidator() -> checking {symbol}")
-        if (
-            position != 0
-            and trading_data.last_used_strategy[symbol].type
-            == StrategyType.DAY_TRADE
-        ):
-            await liquidate(
-                symbol,
-                position,
-                trader,
-            )
-
-
-async def liquidator(trader: Trader) -> None:
-    tlog("liquidator() task starting")
-
-    if not await liquidator_sleep(trader):
-        return
-
-    tlog("liquidator() -> starting to liquidate positions")
-    try:
-        await liquidator_loop(trader)
-    except asyncio.CancelledError:
-        tlog("liquidator() cancelled")
-    except KeyboardInterrupt:
-        tlog("liquidator() - Caught KeyboardInterrupt")
-
-    tlog("liquidator() task completed")
-
-
-async def teardown_task(trader: Trader, tasks: List[asyncio.Task]) -> None:
-    tlog("consumer-teardown_task() - starting ")
-
-    if not config.market_close:
-        tlog(
-            "we're probably in market schedule by-pass mode, exiting consumer-teardown_task()"
-        )
-        return
-
-    to_market_close = trader.get_time_market_close()
-    tlog(
-        f"consumer-teardown_task() - waiting for market close: {to_market_close}"
-    )
-
-    try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)  # type: ignore
-
-        tlog("consumer-teardown_task() starting")
-        await end_time("market close")
-
-        tlog("consumer-teardown_task(): requesting tasks to cancel")
-        for task in tasks:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                tlog("consumer-teardown_task(): task is cancelled now")
-
-    except asyncio.CancelledError:
-        tlog("consumer-teardown_task() cancelled during sleep")
-    except KeyboardInterrupt:
-        tlog("consumer-teardown_task() - Caught KeyboardInterrupt")
-    except Exception as e:
-        tlog(
-            f"consumer-teardown_task() - exception of type {type(e).__name__} with args {e.args}"
-        )
-        # asyncio.get_running_loop().stop()
-    finally:
-        tlog("consumer-teardown_task() task done.")
-
-
-async def liquidate(
-    symbol: str,
-    symbol_position: float,
-    trader: Trader,
-) -> None:
-
-    symbol = symbol.lower()
-    if symbol_position and symbol not in trading_data.open_orders:
-        tlog(
-            f"Trading over, trying to liquidate remaining position {symbol_position} in {symbol}"
-        )
-        try:
-            if symbol_position < 0:
-                o = await trader.submit_order(
-                    symbol=symbol,
-                    qty=-symbol_position,
-                    side="buy",
-                    order_type="market",
-                    time_in_force="day",
-                )
-                trading_data.buy_indicators[symbol] = {"liquidation": 1}
-
-            else:
-                o = await trader.submit_order(
-                    symbol=symbol,
-                    qty=symbol_position,
-                    side="sell",
-                    order_type="market",
-                    time_in_force="day",
-                )
-                trading_data.sell_indicators[symbol] = {"liquidation": 1}
-
-            trading_data.open_orders[symbol] = o
-            trading_data.open_order_strategy[
-                symbol
-            ] = trading_data.last_used_strategy[symbol]
-
-        except Exception as e:
-            tlog(f"failed to liquidate {symbol} w exception {e}")
 
 
 async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
@@ -769,25 +634,14 @@ async def handle_aggregate(
     # do we have a position?
     symbol_position = trading_data.positions.get(symbol, 0)
 
-    # do we need to liquidate for the day?
-    until_market_close = config.market_close - ts
-    if (
-        until_market_close.seconds // 60
-        <= config.market_liquidation_end_time_minutes
-        and symbol_position != 0
-        and trading_data.last_used_strategy[symbol].type
-        == StrategyType.DAY_TRADE
-    ):
-        await liquidate(symbol, symbol_position, trader)
-    else:
-        await trace(carrier)(do_strategies)(
-            trader=trader,
-            data_loader=data_loader,
-            symbol=symbol,
-            position=symbol_position,
-            now=ts,
-            data=data,
-        )
+    await trace(carrier)(do_strategies)(
+        trader=trader,
+        data_loader=data_loader,
+        symbol=symbol,
+        position=symbol_position,
+        now=ts,
+        data=data,
+    )
 
     return True
 
@@ -881,16 +735,40 @@ async def queue_consumer(
         tlog("queue_consumer() task done.")
 
 
-async def create_strategies(
+async def create_strategies_from_file(
     batch_id: str,
-    symbols: List[str],
     trader: Trader,
     data_loader: DataLoader,
     strategies_conf: Dict,
-) -> int:
-    loaded: int = 0
+) -> List[Strategy]:
+    strategy_list = []
     for strategy_name in strategies_conf:
-        strategy_details = strategies_conf[strategy_name]
+        s = await Strategy.get_strategy(
+            batch_id=batch_id,
+            strategy_name=strategy_name,
+            strategy_details=strategies_conf[strategy_name],
+            data_loader=data_loader,
+        )
+        if s:
+            strategy_list.append(s)
+
+    return strategy_list
+
+
+async def create_strategies_from_db(
+    batch_id: str,
+    trader: Trader,
+    data_loader: DataLoader,
+) -> List[Strategy]:
+    # load from tradeplan file
+    trade_plan = await TradePlan.load()
+
+    strategy_list = []
+    for trade_plan_entry in trade_plan:
+        strategy_details = trade_plan_entry.parameters
+        strategy_details["portfolio_id"] = trade_plan_entry.portfolio_id
+
+        strategy_name = strategy_details.pop("name")
         s = await Strategy.get_strategy(
             batch_id=batch_id,
             strategy_name=strategy_name,
@@ -898,70 +776,43 @@ async def create_strategies(
             data_loader=data_loader,
         )
         if s:
-            trading_data.strategies.append(s)
-            if symbols:
-                loaded += await load_current_positions(
-                    trading_api=trader,
-                    symbols=symbols,
-                    strategy=s,
-                )
+            strategy_list.append(s)
 
-    return loaded
+    return strategy_list
 
 
 async def consumer_async_main(
     queue: MNQueue,
-    symbols: List[str],
     unique_id: str,
     strategies_conf: Dict,
 ):
     await create_db_connection(str(config.dsn))
     data_loader = DataLoader()
-    if symbols:
-        try:
-            trending_db = TrendingTickers(unique_id)
-            await trending_db.save(symbols)
-        except Exception as e:
-            tlog(
-                f"Exception in consumer_async_main() while storing symbols to DB:{type(e).__name__} with args {e.args}"
-            )
-            if config.debug_enabled:
-                tlog_exception("consumer_async_main")
 
     trader = trader_factory()()
-    config.market_open, config.market_close = trader.get_market_schedule()
-    tlog(
-        f"market open:{config.market_open} market close:{config.market_close}"
-    )
 
-    loaded = await create_strategies(
+    trading_data.strategies += await create_strategies_from_file(
         batch_id=unique_id,
-        symbols=symbols,
         trader=trader,
         data_loader=data_loader,
         strategies_conf=strategies_conf,
     )
 
-    if symbols and loaded != len(symbols):
-        tlog(
-            f"[ERROR] Consumer process loaded only {loaded} out of {len(symbols)} open positions. HINT: make sure that your tradeplan.toml file includes all strategies from previous trading session."
-        )
+    trading_data.strategies += await create_strategies_from_db(
+        batch_id=unique_id,
+        trader=trader,
+        data_loader=data_loader,
+    )
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(queue, data_loader, trader)
     )
 
-    liquidate_task = asyncio.create_task(liquidator(trader))
     periodic_runner_task = asyncio.create_task(
         periodic_runner(data_loader, trader)
     )
 
-    tear_down = asyncio.create_task(
-        teardown_task(trader, [queue_consumer_task, periodic_runner_task])
-    )
     await asyncio.gather(
-        tear_down,
-        liquidate_task,
         queue_consumer_task,
         periodic_runner_task,
         return_exceptions=True,
@@ -970,76 +821,8 @@ async def consumer_async_main(
     tlog("consumer_async_main() completed")
 
 
-async def load_current_positions(
-    trading_api: Trader,
-    symbols: List[str],
-    strategy: Strategy,
-) -> int:
-    loaded = 0
-    for symbol in symbols:
-        symbol = symbol.lower()
-        try:
-            position = trading_api.get_position(symbol)
-        except Exception as e:
-            tlog(f"failed to load open position for {symbol} w/ {e}")
-            continue
-
-        if position:
-            try:
-                (
-                    prev_run_id,
-                    price,
-                    stop_price,
-                    target_price,
-                    indicators,
-                    timestamp,
-                ) = await NewTrade.load_latest(
-                    config.db_conn_pool,
-                    symbol=symbol,
-                    strategy_name=strategy.name,
-                )
-
-                if prev_run_id is None:
-                    continue
-
-                tlog(
-                    f"loading current position for {symbol} for strategy {strategy.name}"
-                )
-
-                trading_data.positions[symbol] = position
-                trading_data.stop_prices[symbol] = stop_price
-                trading_data.target_prices[symbol] = target_price
-                trading_data.latest_cost_basis[
-                    symbol
-                ] = trading_data.latest_scalp_basis[symbol] = price
-                trading_data.open_order_strategy[symbol] = strategy
-                trading_data.last_used_strategy[symbol] = strategy
-                trading_data.buy_time[symbol] = timestamp.astimezone(tz=nyc)
-
-                await NewTrade.rename_algo_run_id(
-                    strategy.algo_run.run_id, prev_run_id, symbol
-                )
-                tlog(
-                    f"moved {symbol} from {prev_run_id} to {strategy.algo_run.run_id}"
-                )
-
-                loaded += 1
-
-            except ValueError:
-                pass
-            except Exception as e:
-                if config.debug_enabled:
-                    tlog_exception("load_current_positions")
-                tlog(
-                    f"load_current_positions() for {symbol} could not load latest trade from db due to exception of type {type(e).__name__} with args {e.args}"
-                )
-
-    return loaded
-
-
 def consumer_main(
     queue: MNQueue,
-    symbols: List[str],
     unique_id: str,
     conf: Dict,
 ) -> None:
@@ -1054,19 +837,12 @@ def consumer_main(
 
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
-    config.bypass_market_schedule = conf.get("bypass_market_schedule", False)
     config.portfolio_value = conf.get("portfolio_value", None)
     if "risk" in conf:
         config.risk = conf["risk"]
-    if "market_liquidation_end_time_minutes" in conf:
-        config.market_liquidation_end_time_minutes = conf[
-            "market_liquidation_end_time_minutes"
-        ]
 
     try:
-        asyncio.run(
-            consumer_async_main(queue, symbols, unique_id, conf["strategies"])
-        )
+        asyncio.run(consumer_async_main(queue, unique_id, conf["strategies"]))
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
 
