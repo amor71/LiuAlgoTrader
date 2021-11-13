@@ -10,16 +10,17 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from queue import Empty
+from queue import Empty, Full
 from typing import Dict, List, Optional
 
 from mnqueues import MNQueue
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import QueueMapper, WSEventType
 from liualgotrader.data.data_factory import streaming_factory
+from liualgotrader.models.tradeplan import TradePlan
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.trading.trader_factory import trader_factory
 
@@ -124,6 +125,54 @@ async def trade_run(qm: QueueMapper) -> None:
     tlog("trade_run() completed")
 
 
+async def dispense_strategies(
+    consumer_queues: List[MNQueue], tradeplan_entries: List[TradePlan]
+) -> None:
+    for tradeplan in tradeplan_entries:
+        happy_consumer = consumer_queues[
+            random.SystemRandom().randint(0, len(consumer_queues) - 1)
+        ]
+
+        payload = {
+            "EV": "new_strategy",
+            "parameters": tradeplan.parameters,
+            "portfolio_id": tradeplan.portfolio_id,
+        }
+
+        try:
+            happy_consumer.put(payload)
+        except Exception as e:
+            tlog(
+                f"Exception in dispense_strategies: exception of type {type(e).__name__} with args {e.args}"
+            )
+            if config.debug_enabled:
+                tlog_exception(str(e))
+
+
+async def tradeplan_scanner(
+    consumer_queues: List[MNQueue],
+) -> None:
+    tlog("tradeplan_scanner() task starting ")
+
+    last_scan: datetime = datetime.utcnow()
+    while True:
+        await asyncio.sleep(5 * 60)
+
+        tlog("tradeplan_scanner(): check for new execution requests")
+        new_tradeplan_entries = await TradePlan.get_new_entries(
+            since=last_scan
+        )
+        last_scan = datetime.utcnow()
+
+        if new_tradeplan_entries:
+            tlog(
+                f"found {len(new_tradeplan_entries)} new tradeplan entries for execution"
+            )
+            await dispense_strategies(consumer_queues, new_tradeplan_entries)
+
+    tlog("tradeplan_scanner() task completed")
+
+
 async def run(
     queues: List[MNQueue],
     qm: QueueMapper,
@@ -163,9 +212,11 @@ async def producer_async_main(
         name="scanner_input",
     )
 
-    async_tasks_to_gather = [
-        scanner_input_task,
-    ]
+    tradeplan_scanner_task = asyncio.create_task(
+        tradeplan_scanner(queues), name="tradeplan_scanner"
+    )
+
+    async_tasks_to_gather = [scanner_input_task, tradeplan_scanner_task]
 
     if inspect.iscoroutinefunction(trade_updates_task):
         async_tasks_to_gather.append(trade_updates_task)  # type: ignore

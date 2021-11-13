@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -41,5 +42,18 @@ async def test_load_testplan_from_db():
     )
 
     print(strategy_list)
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_get_new_entries():
+    trade_plan = await TradePlan.get_new_entries(
+        since=datetime.utcnow() - timedelta(days=5)
+    )
+
+    for plan in trade_plan:
+        print(plan)
 
     return True

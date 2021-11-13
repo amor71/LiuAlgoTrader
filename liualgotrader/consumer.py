@@ -102,6 +102,28 @@ async def do_strategy_all(
         raise
 
 
+async def cancel_lingering_orders(trader: Trader):
+    tlog("cancel_lingering_orders() task starting")
+
+    while True:
+        await asyncio.sleep(60)
+
+        if not len(trading_data.open_orders):
+            continue
+
+        ny_now = datetime.now(nyc)
+        if not trader.is_market_open(ny_now):
+            continue
+
+        for symbol, order in trading_data.open_orders.items():
+            await order_inflight(
+                symbol=symbol,
+                existing_order=order,
+                now=ny_now,
+                trader=trader,
+            )
+
+
 async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
     tlog("periodic_runner() task starting")
     try:
@@ -429,12 +451,12 @@ async def aggregate_bar_data(
 async def order_inflight(
     symbol: str,
     existing_order: Order,
-    original_ts: pd.Timestamp,
+    now: pd.Timestamp,
     trader: Trader,
 ) -> bool:
     symbol = symbol.lower()
     try:
-        if await should_cancel_order(existing_order, original_ts):
+        if await should_cancel_order(existing_order, now):
             order = await trader.get_order(existing_order.order_id)
             already_completed, _ = await trader.is_order_completed(order)
             if already_completed:
@@ -466,7 +488,7 @@ async def order_inflight(
             else:
                 # Cancel it so we can try again for a fill
                 tlog(
-                    f"Cancel order id {existing_order.order_id} for {symbol} ts={original_ts} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
+                    f"Cancel order id {existing_order.order_id} for {symbol} ts={now} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                 )
                 await trader.cancel_order(order_id=existing_order.order_id)
                 # trading_data.open_orders.pop(symbol)
@@ -500,7 +522,16 @@ async def execute_strategy_result(
 
         if broker_name:
             trader = get_trader_by_name(broker_name)
+
+    ny_now = datetime.now(nyc)
+    if not trader.is_market_open(ny_now):
+        tlog(
+            f"market closed, can't execute order for {symbol} @ {strategy.name}"
+        )
+        return
+
     try:
+
         if what["type"] == "limit":
             o = await trader.submit_order(
                 symbol=symbol,
@@ -707,7 +738,7 @@ async def handle_data_queue_msg(
 
 
 async def queue_consumer(
-    queue: MNQueue, data_loader: DataLoader, trader: Trader
+    batch_id: str, queue: MNQueue, data_loader: DataLoader, trader: Trader
 ) -> None:
     tlog("queue_consumer() starting")
     try:
@@ -717,6 +748,14 @@ async def queue_consumer(
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
                     await handle_trade_update(Trade(**data["trade"]))
+                elif data["EV"] == "new_strategy":
+                    tlog(f"received new_strategy: {data}")
+                    await handle_new_strategy(
+                        batch_id=batch_id,
+                        data_loader=data_loader,
+                        portfolio_id=data["portfolio_id"],
+                        parameters=data["parameters"],
+                    )
                 else:
                     await trace({})(handle_data_queue_msg)(
                         data, trader, data_loader
@@ -744,6 +783,7 @@ async def queue_consumer(
         tlog(
             f"Exception in queue_consumer(): exception of type {type(e).__name__} with args {e.args}"
         )
+
         if config.debug_enabled:
             tlog_exception("queue_consumer")
     finally:
@@ -796,6 +836,21 @@ async def create_strategies_from_db(
     return strategy_list
 
 
+async def handle_new_strategy(
+    batch_id: str, portfolio_id: str, parameters: dict, data_loader: DataLoader
+):
+    strategy_name = parameters.pop("name")
+    strategy = await Strategy.get_strategy(
+        batch_id=batch_id,
+        strategy_name=strategy_name,
+        strategy_details=parameters,
+        data_loader=data_loader,
+    )
+
+    if strategy:
+        trading_data.strategies.append(strategy)
+
+
 async def consumer_async_main(
     queue: MNQueue,
     unique_id: str,
@@ -820,16 +875,21 @@ async def consumer_async_main(
     )
 
     queue_consumer_task = asyncio.create_task(
-        queue_consumer(queue, data_loader, trader)
+        queue_consumer(unique_id, queue, data_loader, trader)
     )
 
     periodic_runner_task = asyncio.create_task(
         periodic_runner(data_loader, trader)
     )
 
+    cancel_lingering_orders_task = asyncio.create_task(
+        cancel_lingering_orders(trader)
+    )
+
     await asyncio.gather(
         queue_consumer_task,
         periodic_runner_task,
+        cancel_lingering_orders_task,
         return_exceptions=True,
     )
 
