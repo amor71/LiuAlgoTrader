@@ -21,7 +21,7 @@ def event_loop():
 
 
 async def reconnect_trader():
-    trader = trader_factory()()
+    trader = trader_factory()
     return await trader.reconnect()
 
 
@@ -33,7 +33,7 @@ async def get_trading_days(trader, start_date):
 @pytest.mark.devtest
 @pytest.mark.asyncio
 async def test_trader_calendar() -> bool:
-    trader = trader_factory()()
+    trader = trader_factory()
 
     td = await get_trading_days(
         trader=trader, start_date=date(year=2021, month=1, day=1)

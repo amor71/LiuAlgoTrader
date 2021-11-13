@@ -118,7 +118,7 @@ async def scanner_input(
 
 
 async def trade_run(qm: QueueMapper) -> None:
-    at = trader_factory()(qm)
+    at = trader_factory(qm)
     tlog(f"trade_run() starting using {at} trading")
     await at.run()
     tlog("trade_run() completed")
@@ -155,7 +155,7 @@ async def producer_async_main(
     await run(queues=queues, qm=qm)
 
     # TODO: Support multiple brokers
-    at = trader_factory()(qm)
+    at = trader_factory(qm)
     trade_updates_task = await at.run()
 
     scanner_input_task = asyncio.create_task(
@@ -168,7 +168,7 @@ async def producer_async_main(
     ]
 
     if inspect.iscoroutinefunction(trade_updates_task):
-        async_tasks_to_gather.append(trade_updates_task)
+        async_tasks_to_gather.append(trade_updates_task)  # type: ignore
 
     await asyncio.gather(
         *async_tasks_to_gather,

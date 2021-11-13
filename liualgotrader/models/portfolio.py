@@ -80,6 +80,8 @@ class Portfolio:
         credit: float,
         parameters: Dict,
         asset_type: AssetType = AssetType.US_EQUITIES,
+        external_account_id: Optional[str] = None,
+        broker: Optional[str] = None,
     ):
         pool = config.db_conn_pool
         async with pool.acquire() as con:
@@ -93,14 +95,16 @@ class Portfolio:
                 )
                 await con.execute(
                     """
-                        INSERT INTO portfolio (portfolio_id, size, account_id, assets, parameters)
-                        VALUES ($1, $2, $3, $4, $5)
+                        INSERT INTO portfolio (portfolio_id, size, account_id, assets, parameters, external_account_id, broker)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
                     """,
                     portfolio_id,
                     portfolio_size,
                     account_id,
                     asset_type.name,
                     json.dumps(parameters),
+                    external_account_id,
+                    broker,
                 )
 
     @classmethod
@@ -151,3 +155,23 @@ class Portfolio:
                 """,
                 portfolio_id,
             )
+
+    @classmethod
+    async def get_external_account_id(
+        cls, portfolio_id: str
+    ) -> Tuple[Optional[str], Optional[str]]:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            r = await con.fetchrow(
+                """
+                    SELECT
+                        external_account_id, broker
+                    FROM 
+                        portfolio
+                    WHERE
+                        portfolio_id = $1
+                """,
+                portfolio_id,
+            )
+
+            return (r["external_account_id"], r["broker"])

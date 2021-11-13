@@ -1,14 +1,18 @@
 import asyncio
+import os
 import queue
+import time
 import traceback
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
+import requests
 from alpaca_trade_api.entity import Order as AlpacaOrder
 from alpaca_trade_api.rest import REST, URL, Entity
 from alpaca_trade_api.stream import Stream
 from pytz import timezone
+from requests.auth import HTTPBasicAuth
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -22,17 +26,19 @@ class AlpacaTrader(Trader):
     def __init__(self, qm: QueueMapper = None):
         self.market_open: Optional[datetime]
         self.market_close: Optional[datetime]
+        self.alpaca_brokage_api_baseurl = os.getenv(
+            "ALPACA_BROKER_API_BASEURL", None
+        )
+        self.alpaca_brokage_api_key = os.getenv("ALPACA_BROKER_API_KEY", None)
+        self.alpaca_brokage_api_secret = os.getenv(
+            "ALPACA_BROKER_API_SECRET", None
+        )
 
         self.alpaca_rest_client = REST(
             base_url=URL(config.alpaca_base_url),
             key_id=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
         )
-        if not self.alpaca_rest_client:
-            raise AssertionError(
-                "Failed to authenticate Alpaca RESTful client"
-            )
-
         if qm:
             self.alpaca_ws_client = Stream(
                 base_url=URL(config.alpaca_base_url),
@@ -71,9 +77,6 @@ class AlpacaTrader(Trader):
         super().__init__(qm)
 
     async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         status = self.alpaca_rest_client.get_order(order_id=order.order_id)
         if status.filled_qty == status.qty:
             return True, float(status.filled_avg_price or 0.0)
@@ -83,17 +86,11 @@ class AlpacaTrader(Trader):
     def get_market_schedule(
         self,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         return self.market_open, self.market_close
 
     def get_trading_days(
         self, start_date: date, end_date: date = date.today()
     ) -> pd.DataFrame:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         calendars = self.alpaca_rest_client.get_calendar(
             start=str(start_date), end=str(end_date)
         )
@@ -102,8 +99,6 @@ class AlpacaTrader(Trader):
         return _df.set_index("date")
 
     def get_position(self, symbol: str) -> float:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
         pos = self.alpaca_rest_client.get_position(symbol)
 
         return float(pos.qty) if pos.side == "long" else -1.0 * float(pos.qty)
@@ -134,10 +129,35 @@ class AlpacaTrader(Trader):
             trade_fees=0.0,
         )
 
-    async def get_order(self, order_id: str) -> Order:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
+    def _json_to_order(self, brokerage_response: dict) -> Order:
+        event = (
+            Order.EventType.canceled
+            if brokerage_response["status"]
+            in ["canceled", "expired", "replaced"]
+            else Order.EventType.pending
+            if brokerage_response["status"]
+            in ["pending_cancel", "pending_replace"]
+            else Order.EventType.fill
+            if brokerage_response["status"] == "filled"
+            else Order.EventType.partial_fill
+            if brokerage_response["status"] == "partially_filled"
+            else Order.EventType.other
+        )
+        return Order(
+            order_id=brokerage_response["id"],
+            symbol=brokerage_response["symbol"].lower(),
+            event=event,
+            price=float(brokerage_response["limit_price"] or 0.0),
+            side=Order.FillSide[brokerage_response["side"]],
+            filled_qty=float(brokerage_response["filled_qty"]),
+            remaining_amount=float(brokerage_response["qty"])
+            - float(brokerage_response["filled_qty"]),
+            submitted_at=brokerage_response["submitted_at"],
+            avg_execution_price=brokerage_response["filled_avg_price"],
+            trade_fees=0.0,
+        )
 
+    async def get_order(self, order_id: str) -> Order:
         return self.to_order(self.alpaca_rest_client.get_order(order_id))
 
     def is_market_open_today(self) -> bool:
@@ -157,10 +177,6 @@ class AlpacaTrader(Trader):
         self.alpaca_rest_client = REST(
             key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
         )
-        if not self.alpaca_rest_client:
-            raise AssertionError(
-                "Failed to authenticate Alpaca RESTful client"
-            )
 
     async def run(self) -> asyncio.Task:
         if not self.running_task:
@@ -177,16 +193,10 @@ class AlpacaTrader(Trader):
             await self.alpaca_ws_client.stop_ws()
 
     async def get_tradeable_symbols(self) -> List[str]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         data = self.alpaca_rest_client.list_assets()
         return [asset.symbol.lower() for asset in data if asset.tradable]
 
     async def get_shortable_symbols(self) -> List[str]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         data = self.alpaca_rest_client.list_assets()
         return [
             asset.symbol.lower()
@@ -195,9 +205,6 @@ class AlpacaTrader(Trader):
         ]
 
     async def is_shortable(self, symbol) -> bool:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         asset = self.alpaca_rest_client.get_asset(symbol.upper())
         return (
             asset.tradable is not False
@@ -209,14 +216,11 @@ class AlpacaTrader(Trader):
     async def cancel_order(
         self, order_id: Optional[str] = None, order: Optional[Order] = None
     ):
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         if order:
             order_id = order.order_id
         self.alpaca_rest_client.cancel_order(order_id)
 
-    async def submit_order(
+    async def _personal_submit(
         self,
         symbol: str,
         qty: float,
@@ -232,10 +236,8 @@ class AlpacaTrader(Trader):
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
+        on_behalf_of: str = None,
     ) -> Order:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
-
         o = self.alpaca_rest_client.submit_order(
             symbol.upper(),
             str(qty),
@@ -254,6 +256,140 @@ class AlpacaTrader(Trader):
         )
 
         return self.to_order(o)
+
+    async def _post_request(self, url: str, payload: Dict) -> Dict:
+        response = requests.post(
+            url=url,
+            json=payload,
+            auth=HTTPBasicAuth(
+                self.alpaca_brokage_api_key, self.alpaca_brokage_api_secret
+            ),
+        )
+
+        if response.status_code in (429, 504):
+            if "x-ratelimit-reset" in response.headers:
+                tlog(
+                    f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
+                )
+                asyncio.sleep(
+                    int(time.time())
+                    - int(response.headers["x-ratelimit-reset"])
+                )
+                tlog("ALPACA BROKERAGE going to retry")
+            else:
+                tlog(
+                    f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
+                )
+                asyncio.sleep(10.0)
+
+            return await self._post_request(url, payload)
+
+        if response.status_code in (200, 201, 204):
+            return response.json()
+
+        raise AssertionError(
+            f"HTTP ERROR {response.status_code} from ALPACA BROKERAGE API with error {response.text}"
+        )
+
+    async def _order_on_behalf(
+        self,
+        symbol: str,
+        qty: float,
+        side: str,
+        order_type: str,
+        time_in_force: str,
+        limit_price: str = None,
+        stop_price: str = None,
+        client_order_id: str = None,
+        extended_hours: bool = None,
+        order_class: str = None,
+        take_profit: dict = None,
+        stop_loss: dict = None,
+        trail_price: str = None,
+        trail_percent: str = None,
+        on_behalf_of: str = None,
+    ) -> Order:
+        if not self.alpaca_brokage_api_baseurl:
+            raise AssertionError(
+                "order_on_behalf can't be called, if brokerage configs incomplete"
+            )
+
+        endpoint: str = f"/v1/trading/accounts/{on_behalf_of}/orders"
+        url: str = self.alpaca_brokage_api_baseurl + endpoint
+
+        payload = {
+            "symbol": symbol.upper(),
+            "qty": qty,
+            "side": side,
+            "type": order_type,
+        }
+
+        if limit_price:
+            payload["limit_price"] = limit_price
+        if time_in_force:
+            payload["time_in_force"] = time_in_force
+
+        json_response: Dict = await self._post_request(
+            url=url, payload=payload
+        )
+        tlog(f"ALPACA BROKERAGE RESPONSE: {json_response}")
+
+        return self._json_to_order(json_response)
+
+    async def submit_order(
+        self,
+        symbol: str,
+        qty: float,
+        side: str,
+        order_type: str,
+        time_in_force: str = "day",
+        limit_price: str = None,
+        stop_price: str = None,
+        client_order_id: str = None,
+        extended_hours: bool = None,
+        order_class: str = None,
+        take_profit: dict = None,
+        stop_loss: dict = None,
+        trail_price: str = None,
+        trail_percent: str = None,
+        on_behalf_of: str = None,
+    ) -> Order:
+        if on_behalf_of:
+            return await self._order_on_behalf(
+                symbol,
+                qty,
+                side,
+                order_type,
+                time_in_force,
+                limit_price,
+                stop_price,
+                client_order_id,
+                extended_hours,
+                order_class,
+                take_profit,
+                stop_loss,
+                trail_price,
+                trail_percent,
+                on_behalf_of,
+            )
+        else:
+            return await self._personal_submit(
+                symbol,
+                qty,
+                side,
+                order_type,
+                time_in_force,
+                limit_price,
+                stop_price,
+                client_order_id,
+                extended_hours,
+                order_class,
+                take_profit,
+                stop_loss,
+                trail_price,
+                trail_percent,
+                on_behalf_of,
+            )
 
     @classmethod
     def _trade_from_dict(cls, trade_dict: Entity) -> Optional[Trade]:
@@ -308,7 +444,7 @@ class AlpacaTrader(Trader):
 
         except queue.Full as f:
             tlog(
-                f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                f"[EXCEPTION] process_message(): queue for {trade.symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
             )
             raise
         # except AssertionError:

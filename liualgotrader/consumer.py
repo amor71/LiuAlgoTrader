@@ -24,11 +24,13 @@ from liualgotrader.common.tracer import trace_elapsed_metrics  # type: ignore
 from liualgotrader.common.types import Order, Trade
 from liualgotrader.fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS
 from liualgotrader.models.new_trades import NewTrade
+from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.models.tradeplan import TradePlan
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.trading.base import Trader
-from liualgotrader.trading.trader_factory import trader_factory
+from liualgotrader.trading.trader_factory import (get_trader_by_name,
+                                                  trader_factory)
 
 shortable: Dict = {}
 symbol_data_error: Dict = {}
@@ -450,7 +452,7 @@ async def order_inflight(
                 )
             elif order and order.side == Order.EventType.partial_fill:
                 tlog(
-                    f"order_id {existing_order.id} for {symbol} already partially_filled {inflight_order}"  # type: ignore
+                    f"order_id {existing_order.id} for {symbol} already partially_filled"  # type: ignore
                 )
                 await update_partially_filled_order(
                     symbol=symbol,
@@ -487,6 +489,17 @@ async def execute_strategy_result(
     what: Dict,
 ):
     symbol = symbol.lower()
+    external_account_id = broker_name = None
+    if hasattr(strategy, "portfolio_id"):
+        (
+            external_account_id,
+            broker_name,
+        ) = await Portfolio.get_external_account_id(
+            strategy.portfolio_id  # type: ignore
+        )
+
+        if broker_name:
+            trader = get_trader_by_name(broker_name)
     try:
         if what["type"] == "limit":
             o = await trader.submit_order(
@@ -496,6 +509,7 @@ async def execute_strategy_result(
                 order_type="limit",
                 time_in_force="day",
                 limit_price=what["limit_price"],
+                on_behalf_of=external_account_id,
             )
         else:
             o = await trader.submit_order(
@@ -504,6 +518,7 @@ async def execute_strategy_result(
                 side=what["side"],
                 order_type=what["type"],
                 time_in_force="day",
+                on_behalf_of=external_account_id,
             )
 
         if not o:
@@ -789,7 +804,7 @@ async def consumer_async_main(
     await create_db_connection(str(config.dsn))
     data_loader = DataLoader()
 
-    trader = trader_factory()()
+    trader = trader_factory()
 
     trading_data.strategies += await create_strategies_from_file(
         batch_id=unique_id,

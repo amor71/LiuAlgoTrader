@@ -36,7 +36,7 @@ async def test_load_trade_plan_from_db():
 async def test_load_testplan_from_db():
     strategy_list = await create_strategies_from_db(
         batch_id=str(uuid.uuid4()),
-        trader=trader_factory()(),
+        trader=trader_factory(),
         data_loader=DataLoader(),
     )
 

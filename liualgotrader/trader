@@ -22,7 +22,6 @@ from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
 
 
-
 def motd(filename: str, version: str, unique_id: str) -> None:
     """Display welcome message"""
 
@@ -33,9 +32,12 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog("----------------------------------------------------------")
     tlog("----------------------------------------------------------")
 
+
 """
 process main
 """
+
+
 def calc_num_consumer_processes() -> int:
     if config.num_consumers > 0:
         return config.num_consumers
@@ -107,9 +109,7 @@ if __name__ == "__main__":
         if "gcp_monitor_measure_prefix" in conf_dict
         else None
     )
-    queues: List[mnq.MNQueue] = [
-        mnq.MNQueue(m) for i in range(num_consumer_processes)
-    ]
+    queues: List[mnq.MNQueue] = [mnq.MNQueue(m) for i in range(num_consumer_processes)]
     consumers = [
         mp.Process(
             target=consumer_main,
@@ -134,15 +134,17 @@ if __name__ == "__main__":
     )
     producer.start()
 
-    tlog("Starting scanners process")
-    scanner = mp.Process(
-        target=main,
-        args=(
-            conf_dict,
-            scanner_queue,
-        ),
-    )
-    scanner.start()
+    scanner = None
+    if "scanners" in conf_dict:
+        tlog("Starting scanners process")
+        scanner = mp.Process(
+            target=main,
+            args=(
+                conf_dict,
+                scanner_queue,
+            ),
+        )
+        scanner.start()
 
     # wait for completion and hope everyone plays nicely
     try:
@@ -154,7 +156,9 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         producer.kill()
-        scanner.terminate()
+
+        if scanner:
+            scanner.terminate()
 
         for p in consumers:
             p.terminate()

@@ -75,6 +75,7 @@ class Trader:
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
+        on_behalf_of: str = None,
     ) -> Order:
         ...
 
