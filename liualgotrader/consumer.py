@@ -840,6 +840,7 @@ async def handle_new_strategy(
     batch_id: str, portfolio_id: str, parameters: dict, data_loader: DataLoader
 ):
     strategy_name = parameters.pop("name")
+    parameters["portfolio_id"] = portfolio_id
     strategy = await Strategy.get_strategy(
         batch_id=batch_id,
         strategy_name=strategy_name,
