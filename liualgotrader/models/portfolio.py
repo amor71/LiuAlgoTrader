@@ -123,6 +123,23 @@ class Portfolio:
             )
 
     @classmethod
+    async def is_associated(cls, portfolio_id: str, batch_id: str) -> bool:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            result = await con.fetchval(
+                """
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM portfolio_batch_ids
+                        WHERE portfolio_id = $1 AND batch_id=$2
+                    )
+                """,
+                portfolio_id,
+                batch_id,
+            )
+            return result
+
+    @classmethod
     async def exists(cls, portfolio_id: str) -> bool:
         pool = config.db_conn_pool
         async with pool.acquire() as con:

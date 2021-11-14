@@ -39,8 +39,13 @@ class Trader:
         ...
 
     def is_market_open(self, now: datetime) -> bool:
-        open, close = self.get_market_schedule()  # type: ignore
-        return False if not open or not close else open <= now <= close
+        if not hasattr(self, "market_open"):
+            self.market_open, self.market_close = self.get_market_schedule()  # type: ignore
+        return (
+            False
+            if not self.market_open or not self.market_close
+            else self.market_open <= now <= self.market_close
+        )
 
     def get_time_market_close(self) -> Optional[timedelta]:
         ...

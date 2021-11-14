@@ -2,6 +2,7 @@
 Execute Strategies on streaming data received from the Producer
 """
 import asyncio
+import concurrent.futures
 import os
 import sys
 from datetime import datetime, timedelta
@@ -60,14 +61,29 @@ async def execute_run_all_results(
     trader: Trader,
     data_loader: DataLoader,
 ):
+    tlog(f"+ execute_run_all_results for {strategy.name}:{run_all_results} ")
+    external_account_id = None
+    if hasattr(strategy, "portfolio_id"):
+        (
+            external_account_id,
+            broker_name,
+        ) = await Portfolio.get_external_account_id(
+            strategy.portfolio_id  # type: ignore
+        )
+        if broker_name:
+            trader = get_trader_by_name(broker_name)
+
     for symbol, what in run_all_results.items():
         await execute_strategy_result(
-            strategy=strategy,
-            trader=trader,
-            data_loader=data_loader,
-            symbol=symbol.lower(),
-            what=what,
+            strategy,
+            trader,
+            data_loader,
+            symbol.lower(),
+            what,
+            external_account_id,
         )
+
+    tlog(f"- execute_run_all_results for {strategy.name}")
 
 
 async def do_strategy_all(
@@ -125,10 +141,11 @@ async def cancel_lingering_orders(trader: Trader):
 
 
 async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
-    tlog("periodic_runner() task starting")
     try:
         while True:
+            tlog("periodic_runner() task starting")
             # run strategies
+            tasks = []
             for s in trading_data.strategies:
                 try:
                     skip = not await s.should_run_all()
@@ -144,14 +161,19 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
                     if trading_data.last_used_strategy[symbol.lower()] == s
                 ]
 
-                await trace({})(do_strategy_all)(
-                    trader=trader,
-                    data_loader=data_loader,
-                    strategy=s,
-                    symbols=symbols,
+                tasks.append(
+                    asyncio.create_task(
+                        trace({})(do_strategy_all)(
+                            trader=trader,
+                            data_loader=data_loader,
+                            strategy=s,
+                            symbols=symbols,
+                        )
+                    )
                 )
 
-            await asyncio.sleep(60.0)
+            asyncio.gather(*tasks)
+            await asyncio.sleep(5 * 60.0)
 
     except asyncio.CancelledError:
         tlog("periodic_runner() cancelled")
@@ -509,19 +531,10 @@ async def execute_strategy_result(
     data_loader: DataLoader,
     symbol: str,
     what: Dict,
+    external_account_id: str = None,
 ):
+    tlog(f"execute_strategy_result for {symbol} do {what}")
     symbol = symbol.lower()
-    external_account_id = broker_name = None
-    if hasattr(strategy, "portfolio_id"):
-        (
-            external_account_id,
-            broker_name,
-        ) = await Portfolio.get_external_account_id(
-            strategy.portfolio_id  # type: ignore
-        )
-
-        if broker_name:
-            trader = get_trader_by_name(broker_name)
 
     ny_now = datetime.now(nyc)
     if not trader.is_market_open(ny_now):
@@ -531,7 +544,6 @@ async def execute_strategy_result(
         return
 
     try:
-
         if what["type"] == "limit":
             o = await trader.submit_order(
                 symbol=symbol,

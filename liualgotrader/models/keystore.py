@@ -1,4 +1,5 @@
 from liualgotrader.common import config
+from liualgotrader.common.tlog import tlog
 
 
 class KeyStore:
@@ -25,7 +26,6 @@ class KeyStore:
     @classmethod
     async def save(cls, key: str, value: str, algo_name: str, context: str):
         pool = config.db_conn_pool
-
         async with pool.acquire() as con:
             async with con.transaction():
                 val = await con.fetchval(
@@ -41,5 +41,4 @@ class KeyStore:
                     value,
                     context,
                 )
-
                 return val

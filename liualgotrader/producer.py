@@ -158,17 +158,26 @@ async def tradeplan_scanner(
     while True:
         await asyncio.sleep(5 * 60)
 
-        tlog("tradeplan_scanner(): check for new execution requests")
-        new_tradeplan_entries = await TradePlan.get_new_entries(
-            since=last_scan
+        tlog(
+            f"tradeplan_scanner(): check for new execution requests since {last_scan}"
         )
-        last_scan = datetime.utcnow()
-
-        if new_tradeplan_entries:
-            tlog(
-                f"found {len(new_tradeplan_entries)} new tradeplan entries for execution"
+        try:
+            new_tradeplan_entries = await TradePlan.get_new_entries(
+                since=last_scan
             )
-            await dispense_strategies(consumer_queues, new_tradeplan_entries)
+            last_scan = datetime.utcnow()
+
+            if new_tradeplan_entries:
+                tlog(
+                    f"found {len(new_tradeplan_entries)} new tradeplan entries for execution"
+                )
+                await dispense_strategies(
+                    consumer_queues, new_tradeplan_entries
+                )
+        except Exception as e:
+            tlog(f"[EXCEPTION] tradeplan_scanner() {e}")
+            if config.debug_enabled:
+                tlog_exception(str(e))
 
     tlog("tradeplan_scanner() task completed")
 

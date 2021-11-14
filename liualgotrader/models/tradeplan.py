@@ -53,26 +53,23 @@ class TradePlan:
     ) -> Optional[List["TradePlan"]]:
         pool = config.db_conn_pool
         async with pool.acquire() as con:
-            async with con.transaction():
-                rows = await con.fetch(
-                    """
-                        SELECT
-                            strategy_name, portfolio_id, parameters
-                        FROM 
-                            trade_plan
-                        WHERE 
-                            expire_tstamp is null
-                            AND start_date <= NOW()
-                            AND create_tstamp > $1
-                    """,
-                    since,
-                )
+            q = f"""
+                    SELECT
+                        strategy_name, portfolio_id, parameters
+                    FROM 
+                        trade_plan
+                    WHERE 
+                        expire_tstamp is null
+                        AND start_date <= NOW()
+                        AND create_tstamp > '{since}'
+                """
+            rows = await con.fetch(q)
 
-                return [
-                    TradePlan(
-                        strategy_name=r["strategy_name"],
-                        portfolio_id=r["portfolio_id"],
-                        parameters=json.loads(r["parameters"]),
-                    )
-                    for r in rows
-                ]
+            return [
+                TradePlan(
+                    strategy_name=r["strategy_name"],
+                    portfolio_id=r["portfolio_id"],
+                    parameters=json.loads(r["parameters"]),
+                )
+                for r in rows
+            ]
