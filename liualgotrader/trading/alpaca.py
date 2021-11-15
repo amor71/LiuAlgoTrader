@@ -152,7 +152,11 @@ class AlpacaTrader(Trader):
             filled_qty=float(brokerage_response["filled_qty"]),
             remaining_amount=float(brokerage_response["qty"])
             - float(brokerage_response["filled_qty"]),
-            submitted_at=brokerage_response["submitted_at"],
+            submitted_at=pd.Timestamp(
+                ts_input=brokerage_response["submitted_at"],
+                unit="ms",
+                tz="US/Eastern",
+            ),
             avg_execution_price=brokerage_response["filled_avg_price"],
             trade_fees=0.0,
         )
