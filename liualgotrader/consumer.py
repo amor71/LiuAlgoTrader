@@ -193,7 +193,10 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     tlog(
         f"should_cancel_order submitted_at:{submitted_at}, order_lifetime:{order_lifetime}"
     )
-    return market_clock > submitted_at and order_lifetime.seconds // 60 >= 1
+    return (
+        market_clock > submitted_at
+        and order_lifetime.seconds.total_seconds() // 60 >= 1
+    )
 
 
 async def save(
@@ -481,6 +484,9 @@ async def order_inflight(
     symbol = symbol.lower()
     try:
         if await should_cancel_order(existing_order, now):
+            tlog(
+                f"should_cancel_order - checking status w/ order-id{existing_order.order_id}"
+            )
             order = await trader.get_order(existing_order.order_id)
             already_completed, _ = await trader.is_order_completed(order)
             if already_completed:
