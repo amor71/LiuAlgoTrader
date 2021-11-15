@@ -122,10 +122,12 @@ async def cancel_lingering_orders(trader: Trader):
         await asyncio.sleep(60)
 
         if not len(trading_data.open_orders):
+            tlog("cancel_lingering_orders() no open orders")
             continue
 
         ny_now = datetime.now(nyc)
         if not trader.is_market_open(ny_now):
+            tlog("cancel_lingering_orders() market is closed")
             continue
 
         for symbol, order in trading_data.open_orders.items():
@@ -188,6 +190,9 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     # Make sure the order's not too old
     submitted_at = order.submitted_at.astimezone(market_clock.tzinfo)
     order_lifetime = market_clock - submitted_at
+    tlog(
+        f"should_cancel_order submitted_at:{submitted_at}, order_lifetime:{order_lifetime}"
+    )
     return market_clock > submitted_at and order_lifetime.seconds // 60 >= 1
 
 
