@@ -8,8 +8,7 @@ from math import ceil
 
 from liualgotrader.common.types import Order, QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
-from liualgotrader.data.alpaca import get_scale_factor
-from liualgotrader.data.alpaca import get_max_data_points_per_load
+from liualgotrader.data.alpaca import get_scale_factor, get_max_data_points_per_load, get_trading_days
 from liualgotrader.common.types import TimeScale
 
 
@@ -106,7 +105,7 @@ class Trader:
 
         data_points = scale_factor_hours if self.scale == TimeScale.day else scale_factor_minutes
 
-        total_data_points = days * data_points
+        total_data_points = get_trading_days(start_date, end_date) * data_points
         periods =  ceil(total_data_points / get_max_data_points_per_load())
         total_periods = 2 if periods == 1 else periods
 

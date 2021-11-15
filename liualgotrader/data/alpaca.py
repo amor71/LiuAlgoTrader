@@ -180,7 +180,8 @@ class AlpacaData(DataAPI):
         #alpaca suggests 10000 points
         return 10000
 
-
+    def get_trading_days(self, start: date, end: date) -> int:
+        return len(pd.bdate_range(start, end))
 
 class AlpacaStream(StreamingAPI):
     def __init__(self, queues: QueueMapper):
