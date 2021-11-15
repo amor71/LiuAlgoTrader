@@ -226,9 +226,8 @@ class MomentumLongV3(Strategy):
                                 "type": "market",
                             },
                         )
-            else:
-                if debug:
-                    tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
+            elif debug:
+                tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
         if (
             await super().is_sell_time(now)
             and position > 0
@@ -356,8 +355,9 @@ class MomentumLongV3(Strategy):
                 if partial_sell:
                     qty = int(position / 2) if position > 1 else 1
                     tlog(
-                        f"[{self.name}][{now}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close }with reason:{sell_reasons}"
+                        f'[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}'
                     )
+
                     return (
                         True,
                         {
