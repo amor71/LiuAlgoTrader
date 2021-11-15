@@ -178,10 +178,9 @@ class Momentum(Scanner):
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
             return await self.run_polygon()
-        else:
-            rows = await self.load_from_db(back_time)
+        rows = await self.load_from_db(back_time)
 
-            print(
-                f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
-            )
-            return rows
+        print(
+            f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
+        )
+        return rows
