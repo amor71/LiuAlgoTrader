@@ -8,6 +8,7 @@ from math import ceil
 
 from liualgotrader.common.types import Order, QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
+from liualgotrader.data.alpaca import get_scale_factor
 from liualgotrader.common.types import TimeScale
 
 
@@ -97,36 +98,18 @@ class Trader:
     def get_broker(self):
         return config.broker
         
-    def broker_working_limits(self, start_date, end_date):
-        market_opens, market_closes = get_market_schedule()
-        hours = market_closes - market_opens     
-        
-        days = len(get_trading_days(start_date, end_date).index)
-        return hours, days
-        
-    def max_data_points_per_load(self):
-        broker = get_broker()
-        if broker == BrokerType.alpaca:
-            max_data_points_per_load = 10000 
-        elif broker == BrokerType.gemini:
-            max_data_points_per_load = 500
-        return max_data_points_per_load
-    
     def calculate_data_range(self,
           start_date: date,
           end_date: date, 
           ) -> List[Optional[pd.DatetimeIndex]]:
         
-        hours, days = broker_working_limits(start_date, end_date)
-
-        scale_factor_hours = hours
+        scale_factor_hours = get_scale_factor(start_date, end_date)
         scale_factor_minutes = scale_factor_hours * 60
 
         data_points = scale_factor_hours if self.scale == TimeScale.day else scale_factor_minutes
 
         total_data_points = days * data_points
-        max_data_points_per_load = max_data_points_per_load()
-        periods =  ceil(total_data_points / max_data_points_per_load)
+        periods =  ceil(total_data_points / get_max_data_points_per_load())
         total_periods = 2 if periods == 1 else periods
 
         return pd.date_range(start_date, end_date, periods=total_periods)

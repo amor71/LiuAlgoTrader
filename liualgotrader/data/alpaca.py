@@ -167,6 +167,19 @@ class AlpacaData(DataAPI):
                 "vwap",
             ]
         ]
+    
+    def get_scale_factor(self, start: date, end: date) -> int:
+        calendar = self.alpaca_rest_client.get_calendar(start=start, end=end)[0]
+        session_open = calendar.__getattr__('session_open') 
+        session_close = calendar.__getattr__('session_close') 
+        t1 = datetime.strptime(str(session_open), '%H:%M:%S')
+        t2 = datetime.strptime(str(session_close), '%H:%M:%S')
+        return (t2-t1).total_seconds() / 3600.0
+
+    def get_max_data_points_per_load(self):
+        #alpaca suggests 10000 points
+        return 10000
+
 
 
 class AlpacaStream(StreamingAPI):
