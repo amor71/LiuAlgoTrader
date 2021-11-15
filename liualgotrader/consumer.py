@@ -61,7 +61,6 @@ async def execute_run_all_results(
     trader: Trader,
     data_loader: DataLoader,
 ):
-    tlog(f"+ execute_run_all_results for {strategy.name}:{run_all_results} ")
     external_account_id = None
     if hasattr(strategy, "portfolio_id"):
         (
@@ -82,8 +81,6 @@ async def execute_run_all_results(
             what,
             external_account_id,
         )
-
-    tlog(f"- execute_run_all_results for {strategy.name}")
 
 
 async def do_strategy_all(

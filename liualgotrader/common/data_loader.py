@@ -114,7 +114,7 @@ class SymbolData:
             ):
                 self.data.fetch_data_timestamp(key.stop)
 
-            if key.start <= self.data.symbol_data.index[0]:
+            if key.start < self.data.symbol_data.index[0]:
                 self.data.fetch_data_range(
                     key.start, self.data.symbol_data.index[0]
                 )
@@ -276,7 +276,7 @@ class SymbolData:
         if not len(self.symbol_data) or key.stop > self.symbol_data.index[-1]:
             self.fetch_data_timestamp(key.stop)
 
-        if not len(self.symbol_data) or key.start <= self.symbol_data.index[0]:
+        if not len(self.symbol_data) or key.start < self.symbol_data.index[0]:
             self.fetch_data_range(key.start, self.symbol_data.index[0])
 
         # get index for start & end

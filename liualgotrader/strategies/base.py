@@ -176,20 +176,18 @@ class Strategy(object):
         """Called by Framework, upon successful sell (could be partial)"""
         pass
 
-    async def get_global_var(self, key, context):
+    async def get_global_var(self, key):
         """implementing key-store retrival"""
         if key in self.global_var:
             return self.global_var[key]
 
-        self.global_var[key] = (
-            val := await KeyStore.load(key, self.name, context)
-        )
+        self.global_var[key] = (val := await KeyStore.load(key))
         return val
 
-    async def set_global_var(self, key, value, context):
+    async def set_global_var(self, key, value):
         """implementing key-store storing"""
         self.global_var[key] = value
-        await KeyStore.save(key, value, self.name, context)
+        await KeyStore.save(key, value)
 
     @classmethod
     async def get_strategy(

@@ -394,3 +394,13 @@ CREATE TABLE IF NOT EXISTS trade_plan_execution_audit (
 );
 
 ALTER TABLE trade_plan DROP COLUMN filename;
+
+alter table keystore drop column context;
+alter table keystore drop column algo_name;
+drop table keystore;
+
+CREATE TABLE IF NOT EXISTS keystore (
+    key text PRIMARY KEY,
+    value text NOT NULL,
+    tstamp timestamp with time zone DEFAULT current_timestamp
+);
