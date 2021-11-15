@@ -95,9 +95,6 @@ class Trader:
     async def close(self):
         ...
       
-    def get_broker(self):
-        return config.broker
-        
     def calculate_data_range(self,
           start_date: date,
           end_date: date, 
