@@ -9,6 +9,7 @@ from math import ceil
 from liualgotrader.common.types import Order, QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.data.alpaca import get_scale_factor
+from liualgotrader.data.alpaca import get_max_data_points_per_load
 from liualgotrader.common.types import TimeScale
 
 
