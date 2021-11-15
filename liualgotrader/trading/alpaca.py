@@ -270,7 +270,7 @@ class AlpacaTrader(Trader):
             ),
         )
 
-        if response.status_code in (429, 504):
+        if response.status_code in (429, 504, 500):
             if "x-ratelimit-reset" in response.headers:
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
