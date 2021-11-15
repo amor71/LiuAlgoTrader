@@ -195,7 +195,7 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     )
     return (
         market_clock > submitted_at
-        and order_lifetime.seconds.total_seconds() // 60 >= 1
+        and order_lifetime.total_seconds() // 60 >= 1
     )
 
 
