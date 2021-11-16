@@ -122,7 +122,6 @@ async def cancel_lingering_orders(trader: Trader):
         await asyncio.sleep(60)
 
         if not len(trading_data.open_orders):
-            tlog("cancel_lingering_orders() no open orders")
             continue
 
         ny_now = datetime.now(nyc)
@@ -706,6 +705,7 @@ async def handle_aggregate(
     carrier=None,
 ) -> bool:
     symbol = symbol.lower()
+    tlog(f"handle_aggregate {symbol}")
     # Next, check for existing orders for the stock
     if symbol in trading_data.open_orders and await order_inflight(
         symbol, trading_data.open_orders[symbol.lower()], ts, trader
