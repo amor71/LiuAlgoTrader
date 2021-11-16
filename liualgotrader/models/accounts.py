@@ -18,7 +18,6 @@ class Accounts:
         allow_negative: bool = False,
         credit_line: float = 0.0,
         details: Dict = {},
-        db_connection: asyncpg.Connection = None,
     ) -> int:
         q = """
                 INSERT INTO 
@@ -28,13 +27,12 @@ class Accounts:
                 RETURNING account_id;
             """
         params = [balance, allow_negative, credit_line, json.dumps(details)]
-        if db_connection:
-            return await db_connection.fetchval(q, *params)
-
         pool = config.db_conn_pool
         async with pool.acquire() as con:
             async with con.transaction():
-                return await con.fetchval(q, *params)
+                result = await con.fetchval(q, *params)
+
+        return result
 
     @classmethod
     async def check_if_enough_balance_to_withdraw(
@@ -53,24 +51,25 @@ class Accounts:
             WHERE
                 account_id = $1
         """
+        rc = False
         async with config.db_conn_pool.acquire() as con:
             row = await con.fetchrow(query, account_id)
             if row["balance"] > potential_withdraw:
-                return True
+                rc = True
             elif (
                 row["allow_negative"]
                 and row["balance"] + row["credit_line"] > potential_withdraw
             ):
-                return True
+                rc = True
 
-        return False
+        return rc
 
     @classmethod
     async def get_balance(cls, account_id: int) -> float:
         pool = config.db_conn_pool
 
         async with pool.acquire() as con:
-            return await con.fetchval(
+            result = await con.fetchval(
                 """
                     SELECT
                         balance
@@ -81,6 +80,7 @@ class Accounts:
                 """,
                 account_id,
             )
+        return result
 
     @classmethod
     async def add_transaction(
