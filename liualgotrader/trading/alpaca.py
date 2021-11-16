@@ -107,7 +107,7 @@ class AlpacaTrader(Trader):
             )
 
         endpoint: str = (
-            "/v1/trading/accounts/{external_order_id}/orders/{order_id}"
+            f"/v1/trading/accounts/{external_order_id}/orders/{order_id}"
         )
         tlog(f"_is_brokerage_account_order_completed:{endpoint}")
         url: str = self.alpaca_brokage_api_baseurl + endpoint
