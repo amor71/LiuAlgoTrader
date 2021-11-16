@@ -130,13 +130,18 @@ async def cancel_lingering_orders(trader: Trader):
             tlog("cancel_lingering_orders() market is closed")
             continue
 
-        for symbol, order in trading_data.open_orders.items():
-            await order_inflight(
-                symbol=symbol,
-                existing_order=order,
-                now=ny_now,
-                trader=trader,
+        tasks = [
+            asyncio.create_task(
+                order_inflight(
+                    symbol=symbol,
+                    existing_order=order,
+                    now=ny_now,
+                    trader=trader,
+                )
             )
+            for symbol, order in trading_data.open_orders.items()
+        ]
+        asyncio.gather(*tasks)
 
 
 async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
@@ -480,57 +485,66 @@ async def order_inflight(
     existing_order: Order,
     now: pd.Timestamp,
     trader: Trader,
-) -> bool:
+) -> None:
     symbol = symbol.lower()
     try:
         if await should_cancel_order(existing_order, now):
             tlog(
-                f"should_cancel_order - checking status w/ order-id{existing_order.order_id}"
+                f"should_cancel_order - checking status w/ order-id {existing_order.order_id}"
             )
-            order = await trader.get_order(existing_order.order_id)
-            already_completed, _ = await trader.is_order_completed(order)
-            if already_completed:
+            (
+                order_status,
+                filled_price,
+                filled_qty,
+                trade_fee,
+            ) = await trader.is_order_completed(
+                existing_order.order_id, existing_order.external_account_id
+            )
+
+            if order_status == Order.EventType.fill:
                 tlog(
-                    f"order_id {existing_order.order_id} for {symbol} already filled {order}"  # type: ignore
+                    f"order_id {existing_order.order_id} for {symbol} already filled"
                 )
                 await update_filled_order(
                     symbol=symbol,
                     strategy=trading_data.open_order_strategy[symbol],
-                    filled_avg_price=order.avg_execution_price,
-                    filled_qty=order.filled_qty,
-                    side=order.side,
-                    updated_at=order.submitted_at,
-                    trade_fee=order.trade_fees,
+                    filled_avg_price=filled_price,
+                    filled_qty=filled_qty,
+                    side=existing_order.side,
+                    updated_at=existing_order.submitted_at,
+                    trade_fee=trade_fee,
                 )
-            elif order and order.side == Order.EventType.partial_fill:
+            elif order_status == Order.EventType.partial_fill:
                 tlog(
                     f"order_id {existing_order.id} for {symbol} already partially_filled"  # type: ignore
                 )
                 await update_partially_filled_order(
                     symbol=symbol,
                     strategy=trading_data.open_order_strategy[symbol],
-                    side=order.side,
-                    filled_avg_price=order.avg_execution_price,
-                    filled_qty=order.filled_qty,
-                    updated_at=order.submitted_at,
-                    trade_fee=order.trade_fees,
+                    side=existing_order.side,
+                    filled_avg_price=filled_price,
+                    filled_qty=filled_qty,
+                    updated_at=existing_order.submitted_at,
+                    trade_fee=trade_fee,
                 )
             else:
                 # Cancel it so we can try again for a fill
                 tlog(
                     f"Cancel order id {existing_order.order_id} for {symbol} ts={now} submission_ts={existing_order.submitted_at.astimezone(timezone('America/New_York'))}"  # type: ignore
                 )
-                await trader.cancel_order(order_id=existing_order.order_id)
-                # trading_data.open_orders.pop(symbol)
+                if await trader.cancel_order(existing_order):
+                    trading_data.open_orders.pop(symbol)
 
-        return True
-
-    except AttributeError:
+    except AttributeError as e:
         if config.debug_enabled:
-            tlog_exception("order_inflight")
+            tlog_exception(f"order_inflight() w {e}")
         tlog(f"Attribute Error in symbol {symbol} w/ {existing_order}")
-
-    return False
+    except Exception as e:
+        if config.debug_enabled:
+            tlog_exception(f"order_inflight() w {e}")
+        tlog(
+            f"[EXCEPTION] order_inflight() : {e} for symbol {symbol} w/ {existing_order}"
+        )
 
 
 async def execute_strategy_result(

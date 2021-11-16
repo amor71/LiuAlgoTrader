@@ -76,12 +76,68 @@ class AlpacaTrader(Trader):
             self.market_open = self.market_close = None
         super().__init__(qm)
 
-    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
-        status = self.alpaca_rest_client.get_order(order_id=order.order_id)
-        if status.filled_qty == status.qty:
-            return True, float(status.filled_avg_price or 0.0)
+    async def _is_personal_order_completed(
+        self, order_id: str
+    ) -> Tuple[Order.EventType, float, float, float]:
+        alpaca_order = self.alpaca_rest_client.get_order(order_id=order_id)
+        event = (
+            Order.EventType.canceled
+            if alpaca_order.status in ["canceled", "expired", "replaced"]
+            else Order.EventType.pending
+            if alpaca_order.status in ["pending_cancel", "pending_replace"]
+            else Order.EventType.fill
+            if alpaca_order.status == "filled"
+            else Order.EventType.partial_fill
+            if alpaca_order.status == "partially_filled"
+            else Order.EventType.other
+        )
+        return (
+            event,
+            float(alpaca_order.filled_avg_price or 0.0),
+            float(alpaca_order.filled_qty or 0.0),
+            0.0,
+        )
 
-        return False, 0.0
+    async def _is_brokerage_account_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        if not self.alpaca_brokage_api_baseurl:
+            raise AssertionError(
+                "order_on_behalf can't be called, if brokerage configs incomplete"
+            )
+
+        endpoint: str = (
+            "/v1/trading/accounts/{external_order_id}/orders/{order_id}"
+        )
+        url: str = self.alpaca_brokage_api_baseurl + endpoint
+
+        response = await self._get_request(url)
+        event = (
+            Order.EventType.canceled
+            if response["status"] in ["canceled", "expired", "replaced"]
+            else Order.EventType.pending
+            if response["status"] in ["pending_cancel", "pending_replace"]
+            else Order.EventType.fill
+            if response["status"] == "filled"
+            else Order.EventType.partial_fill
+            if response["status"] == "partially_filled"
+            else Order.EventType.other
+        )
+        return (
+            event,
+            float(response.get("filled_avg_price") or 0.0),
+            float(response.get("filled_qty") or 0.0),
+            0.0,
+        )
+
+    async def is_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        if not external_order_id:
+            return await self._is_personal_order_completed(order_id)
+        return await self._is_brokerage_account_order_completed(
+            order_id, external_order_id
+        )
 
     def get_market_schedule(
         self,
@@ -129,7 +185,11 @@ class AlpacaTrader(Trader):
             trade_fees=0.0,
         )
 
-    def _json_to_order(self, brokerage_response: dict) -> Order:
+    def _json_to_order(
+        self,
+        brokerage_response: dict,
+        external_account_id: Optional[str] = None,
+    ) -> Order:
         event = (
             Order.EventType.canceled
             if brokerage_response["status"]
@@ -159,6 +219,7 @@ class AlpacaTrader(Trader):
             ),
             avg_execution_price=brokerage_response["filled_avg_price"],
             trade_fees=0.0,
+            external_account_id=external_account_id,
         )
 
     async def get_order(self, order_id: str) -> Order:
@@ -217,12 +278,34 @@ class AlpacaTrader(Trader):
             and asset.easy_to_borrow is not False
         )
 
-    async def cancel_order(
-        self, order_id: Optional[str] = None, order: Optional[Order] = None
-    ):
-        if order:
-            order_id = order.order_id
+    async def _cancel_personal_order(self, order_id: str) -> bool:
         self.alpaca_rest_client.cancel_order(order_id)
+        return True
+
+    async def _cancel_brokerage_order(
+        self, account_id: str, order_id: str
+    ) -> bool:
+        if not self.alpaca_brokage_api_baseurl:
+            raise AssertionError(
+                "_cancel_brokerage_order can't be called, if brokerage configs incomplete"
+            )
+
+        endpoint: str = f"/v1/trading/accounts/{account_id}/orders/{order_id}"
+        url: str = self.alpaca_brokage_api_baseurl + endpoint
+
+        response_code = await self._delete_request(url)
+        tlog(
+            f"cancel_brokerage_order {account_id},{order_id} -> {response_code}"
+        )
+        return response_code == 204
+
+    async def cancel_order(self, order: Order) -> bool:
+        if order.external_account_id:
+            return await self._cancel_brokerage_order(
+                order.external_account_id, order.order_id
+            )
+
+        return await self._cancel_personal_order(order.order_id)
 
     async def _personal_submit(
         self,
@@ -270,7 +353,7 @@ class AlpacaTrader(Trader):
             ),
         )
 
-        if response.status_code in (429, 504, 500):
+        if response.status_code in (429, 504):
             if "x-ratelimit-reset" in response.headers:
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
@@ -294,6 +377,67 @@ class AlpacaTrader(Trader):
         raise AssertionError(
             f"HTTP ERROR {response.status_code} from ALPACA BROKERAGE API with error {response.text}"
         )
+
+    async def _get_request(self, url: str) -> Dict:
+        response = requests.get(
+            url=url,
+            auth=HTTPBasicAuth(
+                self.alpaca_brokage_api_key, self.alpaca_brokage_api_secret
+            ),
+        )
+
+        if response.status_code in (429, 504):
+            if "x-ratelimit-reset" in response.headers:
+                tlog(
+                    f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
+                )
+                asyncio.sleep(
+                    int(time.time())
+                    - int(response.headers["x-ratelimit-reset"])
+                )
+                tlog("ALPACA BROKERAGE going to retry")
+            else:
+                tlog(
+                    f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
+                )
+                asyncio.sleep(10.0)
+
+            return await self._get_request(url)
+
+        if response.status_code in (200, 201, 204):
+            return response.json()
+
+        raise AssertionError(
+            f"HTTP ERROR {response.status_code} from ALPACA BROKERAGE API with error {response.text}"
+        )
+
+    async def _delete_request(self, url: str) -> int:
+        response = requests.delete(
+            url=url,
+            auth=HTTPBasicAuth(
+                self.alpaca_brokage_api_key, self.alpaca_brokage_api_secret
+            ),
+        )
+        # TODO: create a decorator the the re-try / push-backs from server instead of copying.
+        if response.status_code in (429, 504):
+            if "x-ratelimit-reset" in response.headers:
+                tlog(
+                    f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
+                )
+                asyncio.sleep(
+                    int(time.time())
+                    - int(response.headers["x-ratelimit-reset"])
+                )
+                tlog("ALPACA BROKERAGE going to retry")
+            else:
+                tlog(
+                    f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
+                )
+                asyncio.sleep(10.0)
+
+            return await self._delete_request(url)
+
+        return response.status_code
 
     async def _order_on_behalf(
         self,
@@ -338,7 +482,7 @@ class AlpacaTrader(Trader):
         )
         tlog(f"ALPACA BROKERAGE RESPONSE: {json_response}")
 
-        return self._json_to_order(json_response)
+        return self._json_to_order(json_response, on_behalf_of)
 
     async def submit_order(
         self,

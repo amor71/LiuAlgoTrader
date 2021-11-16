@@ -156,15 +156,15 @@ class GeminiTrader(Trader):
                 f"[EXCEPTION] {result['reason']}:{result['message']}"
             )
 
-    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
-        order = await self.get_order(order.order_id)
+    async def is_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        order = await self.get_order(order_id)
         return (
-            (True, order.avg_execution_price)
-            if order.remaining_amount == 0
-            else (
-                False,
-                0.0,
-            )
+            order.event,
+            order.avg_execution_price,
+            order.filled_qty,
+            order.trade_fees,
         )
 
     def get_market_schedule(
@@ -359,22 +359,11 @@ class GeminiTrader(Trader):
     async def is_shortable(self, symbol) -> bool:
         return False
 
-    async def cancel_order(
-        self, order_id: Optional[str] = None, order: Optional[Order] = None
-    ):
-        if order:
-            _order_id = order.order_id
-        elif order_id:
-            _order_id = order_id
-        else:
-            raise AssertionError(
-                "[ERROR] Gemini cancel_order() missing order details"
-            )
-
+    async def cancel_order(self, order: Order) -> bool:
         endpoint = "/v1/order/cancel"
         url = self.base_url + endpoint
 
-        payload = {"request": endpoint, "order_id": _order_id}
+        payload = {"request": endpoint, "order_id": order.order_id}
         headers = self._generate_request_headers(payload)
         response = requests.post(url, data=None, headers=headers)
         if response.status_code == 200:

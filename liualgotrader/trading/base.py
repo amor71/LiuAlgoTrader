@@ -65,7 +65,10 @@ class Trader:
     async def is_shortable(self, symbol: str) -> bool:
         ...
 
-    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
+    async def is_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        """return filled order status, average filled price, filled quantity and trade fee"""
         ...
 
     async def submit_order(
@@ -91,9 +94,12 @@ class Trader:
     async def get_order(self, order_id: str) -> Order:
         ...
 
-    async def cancel_order(
-        self, order_id: Optional[str] = None, order: Optional[Order] = None
-    ):
+    async def get_account_order(
+        self, external_account_id: str, order_id: str
+    ) -> Order:
+        ...
+
+    async def cancel_order(self, order: Order) -> bool:
         ...
 
     async def run(self) -> Optional[asyncio.Task]:
