@@ -90,7 +90,6 @@ class Portfolio:
                     portfolio_size,
                     allow_negative=credit > 0.0,
                     credit_line=credit,
-                    db_connection=con,
                     details=parameters,
                 )
                 await con.execute(

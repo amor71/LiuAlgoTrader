@@ -317,7 +317,8 @@ async def update_filled_order(
         trade_fee=trade_fee,
     )
     trading_data.open_orders.pop(symbol)
-    trading_data.open_order_strategy.pop(symbol)
+    if symbol in trading_data.open_order_strategy:
+        trading_data.open_order_strategy.pop(symbol)
 
     tlog(
         f"update_filled_order open order for {symbol} popped. Position now {trading_data.positions[symbol]}"
