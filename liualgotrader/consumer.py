@@ -263,6 +263,15 @@ async def update_partially_filled_order(
     trade_fee: float,
 ) -> None:
     symbol = symbol.lower()
+
+    await do_callbacks(
+        symbol=symbol,
+        strategy=strategy,
+        filled_qty=filled_qty,
+        side=side,
+        filled_avg_price=filled_avg_price,
+    )
+
     trading_data.positions[symbol] = round(
         trading_data.positions.get(symbol, 0.0)
         + filled_qty * (1 if side == Order.FillSide.buy else -1),
@@ -285,13 +294,6 @@ async def update_partially_filled_order(
         indicators,
         updated_at,
         trade_fee,
-    )
-    await do_callbacks(
-        symbol=symbol,
-        strategy=strategy,
-        filled_qty=filled_qty,
-        side=side,
-        filled_avg_price=filled_avg_price,
     )
 
 
