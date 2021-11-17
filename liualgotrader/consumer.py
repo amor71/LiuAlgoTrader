@@ -129,18 +129,17 @@ async def cancel_lingering_orders(trader: Trader):
             tlog("cancel_lingering_orders() market is closed")
             continue
 
-        tasks = [
-            asyncio.create_task(
-                order_inflight(
-                    symbol=symbol,
-                    existing_order=order,
-                    now=ny_now,
-                    trader=trader,
-                )
-            )
+        t = [
+            (symbol, order)
             for symbol, order in trading_data.open_orders.items()
         ]
-        asyncio.gather(*tasks)
+        for symbol, order in t:
+            await order_inflight(
+                symbol=symbol,
+                existing_order=order,
+                now=ny_now,
+                trader=trader,
+            )
 
 
 async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:

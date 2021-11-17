@@ -12,7 +12,6 @@ def test_add_daily_vwap_single_line() -> bool:
     print("test_add_daily_vwap_single_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start
-    config.market_open = start
 
     index = pd.date_range(start=start, end=end, freq="T")
 
@@ -25,7 +24,7 @@ def test_add_daily_vwap_single_line() -> bool:
     }
     df = pd.DataFrame(data=d, index=index)
     print(df)
-    success = add_daily_vwap(df)
+    success = add_daily_vwap(df, back_time=start)
     print(df)
     if 50.0 / 3 != df.iloc[0].vwap:
         raise AssertionError(f"Unexpected VWAP {df.iloc[0].vwap}")
@@ -42,7 +41,6 @@ def test_add_daily_vwap_two_line() -> bool:
     print("test_add_daily_vwap_two_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=1)
-    config.market_open = start
 
     index = pd.date_range(start=start, end=end, freq="T")
 
@@ -53,11 +51,11 @@ def test_add_daily_vwap_two_line() -> bool:
         "close": [20, 20],
         "volume": [100, 100],
     }
-    print(index)
+    print("index:", index)
     df = pd.DataFrame(data=d, index=index)
-    print(df)
-    success = add_daily_vwap(df)
-    print(df)
+    print("df:", df)
+    success = add_daily_vwap(df, back_time=start)
+    print("df w/ vwap:", df)
     if 50.0 / 3 != df.iloc[1].vwap:
         raise AssertionError(f"Unexpected VWAP {df.iloc[1].vwap}")
     if 50.0 / 3 != df.iloc[1].average:
@@ -73,7 +71,6 @@ def test_add_daily_vwap_three_line() -> bool:
     print("test_add_daily_vwap_three_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=2)
-    config.market_open = start
 
     index = pd.date_range(start=start, end=end, freq="T")
 
@@ -87,7 +84,7 @@ def test_add_daily_vwap_three_line() -> bool:
     print(index)
     df = pd.DataFrame(data=d, index=index)
     print(df)
-    success = add_daily_vwap(df, debug=True)
+    success = add_daily_vwap(df, debug=True, back_time=start)
     print(df)
     if df.iloc[2].vwap != 25.0:
         raise AssertionError(f"Unexpected VWAP {df.iloc[2].vwap}")
@@ -103,7 +100,6 @@ def test_anchored_vwap_three_line() -> bool:
     print("test_anchored_vwap_three_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=2)
-    config.market_open = start
 
     index = pd.date_range(start=start, end=end, freq="T")
 
