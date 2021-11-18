@@ -1,4 +1,4 @@
-# type: ignore
+#type: ignore
 from datetime import date, datetime, timedelta
 from typing import Dict, Tuple
 
@@ -7,17 +7,18 @@ import nest_asyncio
 import pandas as pd
 from dateutil.parser import parse as date_parser
 from pytz import timezone
+from concurrent.futures import ThreadPoolExecutor
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import DataConnectorType, TimeScale
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.data_factory import data_loader_factory
+from liualgotrader.trading.base import calculate_data_range
 
 nest_asyncio.apply()
 
 nyc = timezone("America/New_York")
-
 
 class SymbolData:
     class _Column:
@@ -339,34 +340,41 @@ class SymbolData:
             _end - timedelta(days=6 if self.scale == TimeScale.minute else 10),
             _end,
         )
+    
+    def fetch_data_range(self, start: date, end: date) -> None:
+        new_df = pd.DataFrame()
 
-    def _fetch_data_range(self, start, end):
-        _df = self.data_api.get_symbol_data(
-            self.symbol,
-            start=start.date() if type(start) != date else start,
-            end=end.date() if type(end) != date else end,
-            scale=self.scale,
-        )
+        ranges = calculate_data_range(start, end)
 
-        self.symbol_data = pd.concat(
-            [self.symbol_data, _df], sort=True
-        ).drop_duplicates()
+        def loading_data(new_df):
+            for _start, _end in zip(ranges[0:], ranges[1:]):
+                _df = self.data_api.get_symbol_data(
+                    self.symbol,
+                    start=_start,
+                    end=_end,
+                    scale=self.scale,
+                )
+                new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
 
-        self.symbol_data = self.symbol_data.loc[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
-        self.symbol_data = self.symbol_data.reindex(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
-        ).sort_index()
+                new_df = new_df[
+                    ~new_df.index.duplicated(keep="first")
+                ]
+
+            new_df = new_df.reindex(
+                columns=[
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "vwap",
+                    "average",
+                    "count",
+                ]
+            ).sort_index()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(loading_data(new_df))
 
     def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
         if type(timestamp) == pd.Timestamp:
@@ -380,54 +388,7 @@ class SymbolData:
             )
             _end = timestamp + timedelta(days=1)
 
-        self._fetch_data_range(_start, _end)
-
-    def fetch_data_range(self, start: datetime, end: datetime) -> None:
-        new_df = pd.DataFrame()
-        while end >= start:
-            if type(end) == pd.Timestamp:
-                _start = (
-                    end
-                    - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 10
-                    )
-                ).date()
-                _end = end.date()
-            else:
-                _start = end - timedelta(
-                    days=7 if self.scale == TimeScale.minute else 10
-                )
-                _end = end
-
-            _df = self.data_api.get_symbol_data(
-                self.symbol,
-                start=_start,
-                end=_end,
-                scale=self.scale,
-            )
-
-            new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
-
-            end -= timedelta(days=7 if self.scale == TimeScale.minute else 10)
-
-        self.symbol_data = pd.concat(
-            [new_df, self.symbol_data], sort=True
-        ).drop_duplicates()
-        self.symbol_data = self.symbol_data[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
-        self.symbol_data = self.symbol_data.reindex(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
-        ).sort_index()
+        self.fetch_data_range(_start, _end)
 
     def __repr__(self):
         return str(self.symbol_data)
