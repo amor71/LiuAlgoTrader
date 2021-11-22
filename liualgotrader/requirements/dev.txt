@@ -33,7 +33,7 @@ pre-commit==2.15.0
 empyrical==0.5.5
 sklearn==0.0
 plotly==5.4.0
-hypothesis==6.24.4
+hypothesis==6.27.0
 torch==1.10.0
 parsedatetime==2.6
 scipy==1.7.2
