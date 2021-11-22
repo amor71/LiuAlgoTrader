@@ -264,7 +264,8 @@ class GeminiTrader(Trader):
                 )
 
             time.sleep(20)
-        tlog("GEMINI HEARTBEAT thread canceled")
+
+        tlog("GEMINI HEARTBEAT thread terminated")
 
     @classmethod
     def on_message(cls, ws, msgs):
@@ -428,6 +429,11 @@ class GeminiTrader(Trader):
             new_order = response.json()
             self.check_error(new_order)
             return self._order_from_dict(new_order)
+
+        if self.flags:
+            self.flags.run = False
+
+        await self.close()
 
         raise AssertionError(
             f"HTTP ERROR {response.status_code} {response.text}"

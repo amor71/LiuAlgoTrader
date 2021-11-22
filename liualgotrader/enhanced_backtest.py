@@ -349,8 +349,6 @@ async def backtest_day(
 ):
     day_start, day_end = get_day_start_end(asset_type, day)
     print(day_start, day_end)
-    config.market_open = day_start
-    config.market_close = day_end
     current_time = day_start
     prefetched: List[str] = []
     while current_time < day_end:
@@ -441,8 +439,10 @@ async def backtest_main(
     trade_api = tradeapi.REST(
         key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
     )
-    scanners = await create_scanners(
-        data_loader, tradeplan["scanners"], scanners
+    scanners = (
+        await create_scanners(data_loader, tradeplan["scanners"], scanners)
+        if "scanners" in tradeplan
+        else []
     )
     tlog(f"instantiated {len(scanners)} scanners")
     strategies = await create_strategies(

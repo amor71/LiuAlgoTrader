@@ -31,6 +31,17 @@ from liualgotrader.data.streaming_base import StreamingAPI
 utctz = pytz.timezone("UTC")
 
 
+def requests_get(url):
+    r = requests.get(url)
+
+    if r.status_code in (429, 502):
+        tlog(f"{url} return {r.status_code}, waiting and re-trying")
+        time.sleep(10)
+        return requests_get(url)
+
+    return r
+
+
 class GeminiData(DataAPI):
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
     gemini_api_secret: Optional[str] = os.getenv("GEMINI_API_SECRET")
@@ -87,7 +98,7 @@ class GeminiData(DataAPI):
             futures = [
                 loop.run_in_executor(
                     executor,
-                    requests.get,
+                    requests_get,
                     f"{self.base_url}{endpoint}?timestamp={int(current_timestamp.timestamp())}&limit_trades=500",
                 )
                 for current_timestamp in ranges[:-1]

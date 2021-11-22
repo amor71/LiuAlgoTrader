@@ -224,7 +224,7 @@ class Strategy(object):
             tlog(
                 f"[EXCEPTION] {e} : file not found `{strategy_details['filename']}`"
             )
-            exit(0)
+            raise
         except Exception as e:
             tlog(
                 f"[Error]exception of type {type(e).__name__} with args {e.args}"

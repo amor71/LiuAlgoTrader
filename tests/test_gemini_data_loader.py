@@ -248,9 +248,10 @@ def test_stock_price_range_date_min_mixed() -> bool:
 def test_stock_price_range_date_day_mixed() -> bool:
     print("test_stock_price_range_date_day_mixed")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
+
+    d1 = date.today() - timedelta(days=20)
     last_price_range = dl["BTCUSD"][
-        d1 : date(year=2021, month=9, day=1)  # type:ignore
+        d1 : date.today()  # type:ignore
     ]
     print(last_price_range)
 
@@ -320,7 +321,7 @@ def test_stock_price_open_str2() -> bool:
     dl["BTCUSD"].loc[
         str(
             (datetime.today() - timedelta(days=20)).replace(  # type:ignore
-                hour=10, minute=5
+                hour=10, minute=5, microsecond=0
             )
         )
     ] = [
