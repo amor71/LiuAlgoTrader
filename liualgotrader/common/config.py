@@ -19,11 +19,11 @@ env: str
 
 data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "alpaca")]  # type: ignore
 
-# Performance & Debugging
+# Performance, Debugging & Logging
 trace_enabled = bool(int(os.getenv("LIU_TRACE_ENABLED", 0)))
 debug_enabled = bool(int(os.getenv("LIU_DEBUG_ENABLED", 0)))
-
 gcp_logger = bool(int(os.getenv("GCP_STACKDRIVER", 0)))
+
 #
 # Broker
 #
