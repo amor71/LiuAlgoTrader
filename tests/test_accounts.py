@@ -15,7 +15,6 @@ def event_loop():
 
 
 @pytest.mark.asyncio
-@pytest.mark.devtest
 async def test_create() -> bool:
     account_id = await Accounts.create(
         balance=1000.0,
