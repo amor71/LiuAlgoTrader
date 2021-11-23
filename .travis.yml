@@ -7,6 +7,7 @@ services:
 env:
   global:
   - DEPS_DIR=$HOME/dependencies
+  - DSN=postgresql://postgres@localhost/travis_ci_test"
 cache:
   directories:
   - "$DEPS_DIR"
