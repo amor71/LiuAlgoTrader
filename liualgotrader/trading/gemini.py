@@ -48,15 +48,14 @@ class GeminiTrader(Trader):
                 "both env variables GEMINI_API_KEY and GEMINI_API_SECRET must be set up"
             )
         t = datetime.now()
-        payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
+        payload_nonce = int(time.mktime(t.timetuple()) * 1000)
 
         if cls.last_nonce and cls.last_nonce == payload_nonce:
-            time.sleep(0.1)
-            payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
+            payload_nonce += 1
 
         cls.last_nonce = payload_nonce
 
-        payload["nonce"] = payload_nonce
+        payload["nonce"] = str(payload_nonce)
         encoded_payload = json.dumps(payload).encode()
         b64 = base64.b64encode(encoded_payload)
         signature = hmac.new(

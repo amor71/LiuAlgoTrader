@@ -412,6 +412,9 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     portfolio = loop.run_until_complete(Portfolio.load_by_batch_id(batch_id))
     data_loader = DataLoader()
     trades = load_trades_by_batch_id(batch_id)
+
+    if trades.empty:
+        return pd.DataFrame()
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
     trader = trader_factory()
