@@ -1,5 +1,6 @@
 import asyncio
 import queue
+import time
 import traceback
 from datetime import date, datetime, timedelta
 from random import randint
@@ -9,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytz
 import requests
-from alpaca_trade_api.rest import REST, URL, TimeFrame
+from alpaca_trade_api.rest import REST, URL, APIError, TimeFrame
 from alpaca_trade_api.stream import Stream
 
 from liualgotrader.common import config
@@ -140,6 +141,16 @@ class AlpacaData(DataAPI):
                     symbol=symbol, start=_start, end=_end, timeframe=t
                 )
             )
+        except APIError as e:
+            tlog(f"received APIError: {e}")
+            if e.status_code == 500:
+                time.sleep(10)
+                return self.get_symbol_data(symbol, start, end, scale)
+
+            raise ValueError(
+                f"[EXCEPTION] {e} for {symbol} has no data for {_start} to {_end} w {scale.name}"
+            )
+
         except Exception as e:
             raise ValueError(
                 f"[EXCEPTION] {e} for {symbol} has no data for {_start} to {_end} w {scale.name}"

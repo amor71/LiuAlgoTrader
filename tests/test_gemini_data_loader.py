@@ -262,7 +262,7 @@ def test_stock_price_range_date_day_mixed() -> bool:
 def test_stock_price_open_range_date_min_mixed() -> bool:
     print("test_stock_price_range_date_min_mixed")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
+    d1 = date.today() - timedelta(days=20)
     last_price_range = (
         dl["ETHUSD"]
         .open[d1 : str(date.today() - timedelta(days=10))]  # type:ignore
@@ -277,7 +277,7 @@ def test_stock_price_open_range_date_min_mixed() -> bool:
 def test_stock_price_open_str() -> bool:
     print("test_stock_price_open_str")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
+    d1 = date.today() - timedelta(days=20)
     last_price_range = dl["BTCUSD"].open[
         str(
             (datetime.today() - timedelta(days=20)).replace(  # type:ignore
@@ -294,7 +294,7 @@ def test_stock_price_open_str() -> bool:
 def test_stock_price_open_date() -> bool:
     print("test_stock_price_open_date")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=9, day=1)
+    d1 = date.today() - timedelta(days=20)
     last_price_range = dl["BTCUSD"].open[d1]
     print(last_price_range)
 
@@ -315,7 +315,7 @@ def test_get_symbols_alpaca() -> bool:
 def test_stock_price_open_str2() -> bool:
     print("test_stock_price_open_str2")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
-    d1 = date(year=2021, month=2, day=1)
+    d1 = date.today() - timedelta(days=20)
     last_price_range = dl["BTCUSD"][-1]
     print("after this")
     dl["BTCUSD"].loc[

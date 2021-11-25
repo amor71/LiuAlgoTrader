@@ -325,7 +325,7 @@ def symbol_trade_analytics(
 
     for _, row in symbol_df.iterrows():
         plt.scatter(
-            row["client_time"].tz_convert("US/Eastern"),
+            row["client_time"],  # .tz_convert("US/Eastern"),
             row["price"],
             c="g" if row["operation"] == "buy" else "r",
             s=100,
@@ -381,14 +381,18 @@ def calc_symbol_trades_returns(
 
     if qty and t1 is not None:
         for i in range(t1, len(daily_returns.index)):
-            value = (
-                qty
-                * data_loader[symbol].close[
-                    eastern.localize(
-                        daily_returns.index[i].to_pydatetime()
-                    ).replace(hour=9, minute=30, second=0, microsecond=0)
-                ]
-            )
+            try:
+                value = (
+                    qty
+                    * data_loader[symbol].close[
+                        eastern.localize(
+                            daily_returns.index[i].to_pydatetime()
+                        ).replace(hour=9, minute=30, second=0, microsecond=0)
+                    ]
+                )
+            except ValueError:
+                print("qty:", qty, t1)
+                raise
             daily_returns.loc[daily_returns.index[i], "equity"] += value
 
 
