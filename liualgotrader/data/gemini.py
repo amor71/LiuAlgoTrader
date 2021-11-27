@@ -85,9 +85,12 @@ class GeminiData(DataAPI):
 
         _df = _df.set_index(_df.timestamp).sort_index()
 
-        _df["s"] = _df.timestamp.apply(
-            lambda x: pd.Timestamp(datetime.fromtimestamp(x).astimezone(utctz))
+        _df["s"] = pd.to_datetime(
+            (_df.index * 1e9).astype("int64"),
+            utc=True,
         )
+
+        # _df.timestamp.apply(lambda x: pd.Timestamp(x, tz=utctz, unit="ns"))
         _df["amount"] = pd.to_numeric(_df.amount)
         _df["price"] = pd.to_numeric(_df.price)
         _df = _df[["s", "price", "amount"]].set_index("s")
@@ -158,6 +161,30 @@ class GeminiData(DataAPI):
         )
         return returned_df
 
+    def get_symbols_data(
+        self,
+        symbols: List[str],
+        start: date,
+        end: date = date.today(),
+        scale: TimeScale = TimeScale.minute,
+    ) -> Dict[str, pd.DataFrame]:
+        raise NotImplementedError(
+            "get_symbols_data() not implemented yet for Gemini data provider"
+        )
+
+    def trading_days_slice(self, s: slice) -> slice:
+        return s
+
+    def get_last_trading(self, symbol: str) -> datetime:
+        return datetime.now(timezone.utc)
+
+    def get_trading_day(self, now: datetime, offset: int) -> datetime:
+        return (
+            utctz.localize(datetime.combine(now, datetime.min.time()))
+            if isinstance(now, date)
+            else now
+        ) + timedelta(days=offset)
+
     def get_symbol_data(
         self,
         symbol: str,
@@ -170,6 +197,15 @@ class GeminiData(DataAPI):
         return loop.run_until_complete(
             self.aget_symbol_data(symbol, start, end, scale)
         )
+
+    def num_trading_minutes(self, start: date, end: date) -> int:
+        raise NotImplementedError("num_trading_minutes")
+
+    def num_trading_days(self, start: date, end: date) -> int:
+        raise NotImplementedError("num_trading_days")
+
+    def get_max_data_points_per_load(self) -> int:
+        raise NotImplementedError("get_max_data_points_per_load")
 
 
 class GeminiStream(StreamingAPI):

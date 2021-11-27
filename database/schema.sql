@@ -286,18 +286,6 @@ BEGIN
         account_id = NEW .account_id
     INTO negative, b, credit;
     
-    IF 
-        negative = FALSE
-        AND b + NEW.amount < 0 
-    THEN 
-        RAISE EXCEPTION 'Account not allowed to get into negative balance';
-    ELSEIF 
-        negative = TRUE
-        AND b + NEW.amount < -credit
-    THEN 
-        RAISE EXCEPTION 'Account credit limit exceeded';
-    END IF;
-
     UPDATE
         accounts
     SET

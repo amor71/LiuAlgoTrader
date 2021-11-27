@@ -22,22 +22,6 @@ def event_loop():
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_buy_apple():
-    global alpaca_trader
-    global account_id
-    order = await alpaca_trader.submit_order(
-        symbol="AAPL",
-        qty=2.0,
-        side="buy",
-        order_type="market",
-        on_behalf_of=account_id,
-    )
-    print(order)
-    return True
-
-
-@pytest.mark.asyncio
-@pytest.mark.devtest
 async def test_sell_apple():
     global alpaca_trader
     global account_id
@@ -54,5 +38,25 @@ async def test_sell_apple():
         print(f"AssertionError with {e}")
     else:
         print(order)
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_buy_apple():
+    global alpaca_trader
+    global account_id
+    try:
+        order = await alpaca_trader.submit_order(
+            symbol="AAPL",
+            qty=2.0,
+            side="buy",
+            order_type="market",
+            on_behalf_of=account_id,
+        )
+        print(order)
+    except Exception as e:
+        print(f"EXCEPTION: {e}")
 
     return True

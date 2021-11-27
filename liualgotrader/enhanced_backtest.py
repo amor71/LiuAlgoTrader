@@ -20,6 +20,8 @@ from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.scanners.base import Scanner  # type: ignore
 from liualgotrader.scanners_runner import create_momentum_scanner
 from liualgotrader.strategies.base import Strategy
+from liualgotrader.trading.base import Trader
+from liualgotrader.trading.trader_factory import trader_factory
 
 run_scanners: Dict[Scanner, datetime] = {}
 symbol_data: Dict[str, pd.DataFrame] = {}
@@ -219,6 +221,7 @@ async def do_strategy_all(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
@@ -232,6 +235,7 @@ async def do_strategy_all(
             "portfolio_value": portfolio_value,
             "backtesting": True,
             "data_loader": data_loader,
+            "trader": trader,
         }
         if "fee_buy_percentage" in sig.parameters:
             param["fee_buy_percentage"] = buy_fee_percentage
@@ -289,6 +293,7 @@ async def do_strategy(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
@@ -300,6 +305,7 @@ async def do_strategy(
             now,
             strategy,
             symbols,
+            trader,
             buy_fee_percentage,
             sell_fee_percentage,
         )
@@ -344,6 +350,7 @@ async def backtest_day(
     scale,
     data_loader,
     asset_type: AssetType,
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
@@ -400,6 +407,7 @@ async def backtest_day(
                 current_time,
                 strategy,
                 strategy_symbols,
+                trader,
                 buy_fee_percentage,
                 sell_fee_percentage,
             )
@@ -469,6 +477,7 @@ async def backtest_main(
             scale,
             data_loader,
             asset_type,
+            trader_factory(),
             buy_fee_percentage,
             sell_fee_percentage,
         )

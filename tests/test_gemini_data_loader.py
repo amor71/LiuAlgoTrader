@@ -14,7 +14,7 @@ def test_create_data_loader_default() -> bool:
 
 
 @pytest.mark.devtest
-def test_stock_current_price() -> bool:
+def test_btc_current_price() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price = dl["BTCUSD"].close[-1]
     last_price_time = dl["BTCUSD"].close.index[-1]
@@ -38,16 +38,15 @@ def test_stock_current_price_range_int_minute() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_daily_price() -> bool:
+def test_ethusd_stock_daily_price() -> bool:
     print("test_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.gemini)
     last_price = dl["ETHUSD"].close[-1]
     last_price_time = dl["ETHUSD"].close.index[-1]
     print(last_price, last_price_time)
     before_price = dl["ETHUSD"].close[-5]
-    before_price_time = dl["ETHUSD"].close.index[-5]
     print(
-        f"ETHUSD {last_price} @ {last_price_time}, before was {before_price}@{before_price_time}"
+        f"ETHUSD {last_price} @ {last_price_time}, before was {before_price}"
     )
 
     return True
