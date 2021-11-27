@@ -65,6 +65,51 @@ class GeminiData(DataAPI):
             f"HTTP ERROR {response.status_code} {response.text}"
         )
 
+    def _get_ranges(self, start, end):
+        start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
+        end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
+
+        minutes = (end_t - start_t).total_seconds() / 60
+        return pd.date_range(
+            start_t,
+            end_t,
+            periods=minutes
+            / (self.datapoints_per_request / self.max_trades_per_minute),
+        )
+
+    async def _consolidate_response(self, response, scale) -> pd.DataFrame:
+        _df = pd.DataFrame(response.json())
+
+        if _df.empty:
+            return pd.DataFrame()
+
+        _df = _df.set_index(_df.timestamp).sort_index()
+
+        _df["s"] = _df.timestamp.apply(
+            lambda x: pd.Timestamp(datetime.fromtimestamp(x).astimezone(utctz))
+        )
+        _df["amount"] = pd.to_numeric(_df.amount)
+        _df["price"] = pd.to_numeric(_df.price)
+        _df = _df[["s", "price", "amount"]].set_index("s")
+
+        rule = "T" if scale == TimeScale.minute else "D"
+        _newdf = _df.resample(rule).first()
+        _newdf["high"] = _df.resample(rule).max().price
+        _newdf["low"] = _df.resample(rule).min().price
+        _newdf["close"] = _df.resample(rule).last().price
+        _newdf["count"] = _df.resample(rule).count().amount
+        _newdf["volume"] = _df.resample(rule).sum().amount
+        _newdf = (
+            _newdf.rename(columns={"price": "open", "s": "timestamp"})
+            .drop(columns=["amount"])
+            .sort_index()
+        )
+        _newdf = _newdf.dropna()
+        _newdf["average"] = 0.0
+        _newdf["vwap"] = 0.0
+
+        return _newdf
+
     async def aget_symbol_data(
         self,
         symbol: str,
@@ -76,21 +121,7 @@ class GeminiData(DataAPI):
         tlog(
             f"GEMINI start loading {symbol} from {start} to {end} w scale {scale}"
         )
-        start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
-        end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
-        start_ts, end_ts = (
-            int(start_t.timestamp()),
-            int(end_t.timestamp()),
-        )
-
-        minutes = (end_t - start_t).total_seconds() / 60
-
-        ranges = pd.date_range(
-            start_t,
-            end_t,
-            periods=minutes
-            / (self.datapoints_per_request / self.max_trades_per_minute),
-        )
+        ranges = self._get_ranges(start, end)
         endpoint = f"/v1/trades/{symbol}"
         returned_df: pd.DataFrame = pd.DataFrame()
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -109,42 +140,15 @@ class GeminiData(DataAPI):
                     raise ValueError(
                         f"HTTP ERROR {response.status_code} {response.text}"
                     )
-                _df = pd.DataFrame(response.json())
 
-                if _df.empty:
+                df = await self._consolidate_response(response, scale)
+
+                if df.empty:
                     continue
-
-                _df = _df.set_index(_df.timestamp).sort_index()
-
-                _df["s"] = _df.timestamp.apply(
-                    lambda x: pd.Timestamp(
-                        datetime.fromtimestamp(x).astimezone(utctz)
-                    )
-                )
-                _df["amount"] = pd.to_numeric(_df.amount)
-                _df["price"] = pd.to_numeric(_df.price)
-                _df = _df[["s", "price", "amount"]].set_index("s")
-
-                rule = "T" if scale == TimeScale.minute else "D"
-                _newdf = _df.resample(rule).first()
-                _newdf["high"] = _df.resample(rule).max().price
-                _newdf["low"] = _df.resample(rule).min().price
-                _newdf["close"] = _df.resample(rule).last().price
-                _newdf["count"] = _df.resample(rule).count().amount
-                _newdf["volume"] = _df.resample(rule).sum().amount
-                _newdf = (
-                    _newdf.rename(columns={"price": "open", "s": "timestamp"})
-                    .drop(columns=["amount"])
-                    .sort_index()
-                )
-                _newdf = _newdf.dropna()
-                _newdf["average"] = 0.0
-                _newdf["vwap"] = 0.0
-
                 if returned_df.empty:
-                    returned_df = _newdf
+                    returned_df = df
                 else:
-                    returned_df = pd.concat([returned_df, _newdf])
+                    returned_df = pd.concat([returned_df, df])
                     returned_df = returned_df[
                         ~returned_df.index.duplicated(keep="first")
                     ]
