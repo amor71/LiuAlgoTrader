@@ -71,6 +71,9 @@ class Trader:
         """return filled order status, average filled price, filled quantity and trade fee"""
         ...
 
+    async def is_fractionable(self, symbol: str) -> bool:
+        ...
+
     async def submit_order(
         self,
         symbol: str,

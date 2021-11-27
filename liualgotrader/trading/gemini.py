@@ -149,6 +149,9 @@ class GeminiTrader(Trader):
             side=Order.FillSide[trade_dict["side"]],
         )
 
+    async def is_fractionable(self, symbol: str) -> bool:
+        return True
+
     def check_error(self, result: Dict):
         if result.get("result") == "error":
             raise AssertionError(

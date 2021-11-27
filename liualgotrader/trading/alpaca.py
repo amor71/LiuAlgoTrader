@@ -98,6 +98,11 @@ class AlpacaTrader(Trader):
             0.0,
         )
 
+    async def is_fractionable(self, symbol: str) -> bool:
+        asset_details = self.alpaca_rest_client.get_asset(symbol)
+
+        return asset_details.fractionable
+
     async def _is_brokerage_account_order_completed(
         self, order_id: str, external_order_id: Optional[str] = None
     ) -> Tuple[Order.EventType, float, float, float]:
