@@ -5,7 +5,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-import alpaca_trade_api as tradeapi
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
@@ -14,6 +13,7 @@ from liualgotrader.common.tlog import tlog
 from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.keystore import KeyStore
+from liualgotrader.trading.base import Trader
 
 
 class StrategyType(Enum):
@@ -94,7 +94,7 @@ class Strategy(object):
         data_loader: DataLoader,
         now: datetime,
         portfolio_value: float = None,
-        trading_api: tradeapi = None,
+        trader: Trader = None,
         debug: bool = False,
         backtesting: bool = False,
         fee_buy_percentage: float = 0.0,

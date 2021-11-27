@@ -104,6 +104,7 @@ async def do_strategy_all(
             portfolio_value=config.portfolio_value,
             backtesting=True,
             data_loader=data_loader,
+            trader=trader,
         )
         await execute_run_all_results(strategy, do, trader, data_loader)
 
