@@ -13,7 +13,7 @@ google-cloud-logging==2.7.0
 therapist==2.2.0
 jupyter==1.0.0
 asyncpg==0.25.0
-pygit2==1.6.1
+pygit2==1.7.1
 pytest==6.2.5
 pytest-asyncio==0.16.0
 pytest-cov==3.0.0
