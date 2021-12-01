@@ -22,12 +22,19 @@ class PolygonData(DataAPI):
                 "Failed to authenticate Polygon restful client"
             )
 
-    def get_symbols(self) -> List[Dict]:
+    def get_market_snapshot(self) -> List[Dict]:
         if not self.polygon_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")
-
+        # this API endpoint requires at least starter subscriptions from Polygon
         data = self.polygon_rest_client.stocks_equities_snapshot_all_tickers()
         return data.tickers
+
+    def get_symbols(self) -> List[str]:
+        if not self.polygon_rest_client:
+            raise AssertionError("Must call w/ authenticated polygon client")
+        # this API endpoint is accessible from free plan
+        data = self.polygon_rest_client.reference_tickers_v3()
+        return [_d['ticker'] for _d in data.results]
 
     def get_symbol_data(
         self,

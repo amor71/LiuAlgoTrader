@@ -23,5 +23,9 @@ class DataAPI(metaclass=ABCMeta):
         return pd.DataFrame()
 
     @abstractmethod
-    def get_symbols(self) -> List[Dict]:
+    def get_market_snapshot(self) -> List[Dict]:
+        return []
+
+    @abstractmethod
+    def get_symbols(self) -> List[str]:
         return []

@@ -83,27 +83,27 @@ class Momentum(Scanner):
         tlog(f"{self.name}: run_polygon(): started")
         try:
             while True:
-                tickers = self.data_loader.data_api.get_symbols()
-                tlog(f"loaded {len(tickers)} tickers from Polygon")
-                if not len(tickers):
+                market_snapshot = self.data_loader.data_api.get_market_snapshot()
+                tlog(f"loaded {len(market_snapshot)} tickers of market snapshots from Polygon")
+                if not len(market_snapshot):
                     break
                 trade_able_symbols = await self._get_trade_able_symbols()
 
                 unsorted = [
-                    ticker
-                    for ticker in tickers
+                    _ticket_snapshot
+                    for _ticket_snapshot in market_snapshot
                     if (
-                        ticker["ticker"] in trade_able_symbols  # type: ignore
+                        _ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
                         and self.max_share_price
-                        >= ticker["lastTrade"]["p"]  # type: ignore
+                        >= _ticket_snapshot["lastTrade"]["p"]  # type: ignore
                         >= self.min_share_price  # type: ignore
-                        and float(ticker["prevDay"]["v"])  # type: ignore
-                        * float(ticker["lastTrade"]["p"])  # type: ignore
+                        and float(_ticket_snapshot["prevDay"]["v"])  # type: ignore
+                        * float(_ticket_snapshot["lastTrade"]["p"])  # type: ignore
                         > self.min_last_dv  # type: ignore
-                        and ticker["todaysChangePerc"]  # type: ignore
+                        and _ticket_snapshot["todaysChangePerc"]  # type: ignore
                         >= self.today_change_percent  # type: ignore
                         and (
-                            ticker["day"]["v"] > self.min_volume  # type: ignore
+                            _ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
                             or config.bypass_market_schedule
                         )
                     )
