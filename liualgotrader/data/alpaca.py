@@ -33,11 +33,15 @@ class AlpacaData(DataAPI):
                 "Failed to authenticate Alpaca RESTful client"
             )
 
-    def get_symbols(self) -> List[Dict]:
+    def get_symbols(self) -> List[str]:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        return self.alpaca_rest_client.list_assets()
+        data = self.alpaca_rest_client.list_assets(asset_class='us_equity')
+        return [_d.symbol for _d in data]
+
+    def get_market_snapshot(self) -> List[Dict]:
+        return []
 
     def _localize_start_end(self, start: date, end: date) -> Tuple[str, str]:
         return (

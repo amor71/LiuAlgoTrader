@@ -12,6 +12,8 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType
+from liualgotrader.data.alpaca import AlpacaData
+from liualgotrader.data.polygon import PolygonData
 from liualgotrader.models.ticker_data import StockOhlc
 from liualgotrader.trading.base import Trader
 
@@ -125,6 +127,9 @@ class Momentum(Scanner):
             tlog("KeyboardInterrupt")
         return []
 
+    async def run_alpaca(self) -> List[str]:
+        raise NotImplementedError
+
     async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
         _minute_data = self.data_loader[symbol][
             when : when + timedelta(days=1)  # type: ignore
@@ -198,7 +203,12 @@ class Momentum(Scanner):
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
             await self._wait_time()
-            return await self.run_polygon()
+            if isinstance(self.data_loader.data_api, PolygonData):
+                return await self.run_polygon()
+            elif isinstance(self.data_loader.data_api, AlpacaData):
+                return await self.run_alpaca()
+            else:
+                raise ValueError
         else:
             rows = await self.load_from_db(back_time)
 
