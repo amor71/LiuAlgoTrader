@@ -12,7 +12,7 @@ tabulate==0.8.9
 streamlit==1.2.0
 stockstats==0.3.2
 empyrical==0.5.5
-nest_asyncio==1.5.1
+nest_asyncio==1.5.4
 parsedatetime==2.6
 scipy==1.7.2
 polygon-api-client==0.1.11
