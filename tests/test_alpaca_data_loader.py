@@ -309,3 +309,36 @@ def test_apple_update() -> bool:
     print(dl["AAPL"].loc["2021-02-02 09:46:00"])
 
     return True
+
+#range_day_scale_minute
+@pytest.mark.devtest
+def test_apple_stock_price_range_day_minute() -> bool:
+    print("test_apple_stock_price_range_day_minute")
+    dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
+    d1 = date(year=2021, month=9, day=1)
+    d2 = date(year=2021, month=9, day=1)
+    price_range = dl["AAPL"][d1:"2021-09-01"].between_time("9:00", "9:01")
+    print(price_range)
+    return True
+
+#range_month_scale_day
+@pytest.mark.devtest
+def test_apple_stock_price_range_month_day() -> bool:
+    print("test_apple_stock_price_range_month_day")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    d1 = date(year=2021, month=9, day=1)
+    d2 = date(year=2021, month=10, day=1)
+    price_range = dl["AAPL"][d1:d2]["2021-09-30 9:00":"2021-10-01 10:00"]
+    print(price_range)
+    return True
+
+#range_year_scale_day
+@pytest.mark.devtest
+def test_apple_stock_price_range_year_day() -> bool:
+    print("test_apple_stock_price_range_year_day")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    d1 = date(year=2020, month=9, day=1)
+    d2 = date(year=2021, month=9, day=1)
+    price_range = dl["AAPL"][d1:d2]["2021-01-30":"2021-09-01"]
+    print(price_range)
+    return True
