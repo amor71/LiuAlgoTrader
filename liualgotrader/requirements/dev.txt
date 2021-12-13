@@ -40,7 +40,7 @@ scipy==1.7.3
 polygon-api-client==0.1.11
 bandit==1.7.1
 finnhub-python==2.4.6
-pandas==1.3.4
+pandas==1.3.5
 quantstats==0.0.44
 tqdm==4.62.3
 mnqueues==0.0.33
