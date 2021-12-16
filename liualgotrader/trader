@@ -19,6 +19,7 @@ from typing import List
 import pygit2
 import toml
 import copy
+import psutil
 from pytz import timezone
 import alpaca_trade_api as tradeapi
 from liualgotrader.common import config
@@ -123,7 +124,7 @@ def calc_num_consumer_processes() -> int:
         raise AssertionError(
             "Can't automatically detect number of CPU, use fixed configuration"
         )
-    load_avg = sum(os.getloadavg()) / 3
+    load_avg = sum(psutil.getloadavg()) / 3
 
     tlog(
         f"15-min load_avg:{load_avg}, num_cpu:{num_cpu}, proc_factor:{config.proc_factor}"
