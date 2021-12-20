@@ -202,7 +202,7 @@ class SymbolData:
     #        return self.symbol_data.__setattr__(name, value)
 
     def __getattr__(self, attr) -> _Column:
-        if attr[0:3] == "loc" or attr[0:4] == "iloc" or attr[0:5] == "apply":
+        if attr[:3] == "loc" or attr[:4] == "iloc" or attr[:5] == "apply":
             return self.symbol_data.__getattr__(attr)
         elif attr not in self.columns:
             self.columns[attr] = self._Column(self.data_api, attr, self)
@@ -347,7 +347,7 @@ class SymbolData:
         ranges = calculate_data_range(start, end)
 
         def loading_data(new_df):
-            for _start, _end in zip(ranges[0:], ranges[1:]):
+            for _start, _end in zip(ranges[:], ranges[1:]):
                 _df = self.data_api.get_symbol_data(
                     self.symbol,
                     start=_start,
