@@ -176,7 +176,7 @@ class AlpacaData(DataAPI):
         t2 = datetime.strptime(str(session_close), '%H:%M:%S')
         return (t2-t1).total_seconds() / 3600.0
 
-    def get_max_data_points_per_load(self):
+    def get_max_data_points_per_load(self) -> int:
         #alpaca suggests 10000 points
         return 10000
 

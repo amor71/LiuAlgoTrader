@@ -8,7 +8,6 @@ from math import ceil
 
 from liualgotrader.common.types import Order, QueueMapper
 from liualgotrader.models.algo_run import AlgoRun
-from liualgotrader.data.alpaca import get_scale_factor, get_max_data_points_per_load, get_trading_days
 from liualgotrader.common.types import TimeScale
 
 
@@ -94,7 +93,16 @@ class Trader:
 
     async def close(self):
         ...
-      
+
+    def get_scale_factor(self, start: date, end: date) -> int:
+        ...
+
+    def get_trading_days(self, start: date, end: date) -> int:   
+        ...
+
+    def get_max_data_points_per_load(self): -> int:    
+        ...
+
     def calculate_data_range(self,
           start_date: date,
           end_date: date, 
