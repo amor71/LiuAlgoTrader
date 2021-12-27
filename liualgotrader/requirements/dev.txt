@@ -34,7 +34,7 @@ empyrical==0.5.5
 sklearn==0.0
 plotly==5.5.0
 hypothesis==6.32.1
-torch==1.10.0
+torch==1.10.1
 parsedatetime==2.6
 scipy==1.7.3
 polygon-api-client==0.1.11
