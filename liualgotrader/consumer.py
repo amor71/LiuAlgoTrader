@@ -131,10 +131,7 @@ async def cancel_lingering_orders(trader: Trader):
             tlog("cancel_lingering_orders() market is closed")
             continue
 
-        t = [
-            (symbol, order)
-            for symbol, order in trading_data.open_orders.items()
-        ]
+        t = list(trading_data.open_orders.items())
         for symbol, order in t:
             await order_inflight(
                 symbol=symbol,
