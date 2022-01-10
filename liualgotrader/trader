@@ -115,6 +115,8 @@ def ready_to_start(trading_api: tradeapi) -> bool:
 
 
 def calc_num_consumer_processes() -> int:
+
+
     if config.num_consumers > 0:
         return config.num_consumers
 
@@ -124,7 +126,7 @@ def calc_num_consumer_processes() -> int:
         raise AssertionError(
             "Can't automatically detect number of CPU, use fixed configuration"
         )
-    load_avg = psutil.cpu_percent(interval=1) / num_cpu
+    load_avg = psutil.cpu_percent(interval=None) / num_cpu
 
     tlog(
         f"15-min load_avg:{load_avg}, num_cpu:{num_cpu}, proc_factor:{config.proc_factor}"
