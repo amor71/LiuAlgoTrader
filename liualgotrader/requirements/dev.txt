@@ -1,7 +1,7 @@
 iso8601==1.0.2
 requests==2.27.1
 deprecated==1.2.13
-urllib3==1.26.7
+urllib3==1.26.8
 numpy==1.22.0
 mypy==0.930
 black==21.12b0
