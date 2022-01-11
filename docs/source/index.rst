@@ -65,7 +65,6 @@ sessions w/ LiuAlgoTrader.
    Off-market
    Additional apps
    Analysis
-   Examples
    How to Contribute
    Troubleshooting
    

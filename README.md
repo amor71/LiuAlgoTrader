@@ -8,6 +8,7 @@
 [![Gitter](https://badges.gitter.im/LiuAlgoTrader/community.svg)](https://gitter.im/LiuAlgoTrader/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Sourcery](https://img.shields.io/badge/Sourcery-enabled-brightgreen)](https://sourcery.ai)
 [![codecov](https://codecov.io/gh/amor71/LiuAlgoTrader/branch/master/graph/badge.svg?token=RIDO1ODHNQ)](https://codecov.io/gh/amor71/LiuAlgoTrader)
+
 ## Introduction
 
 **LiuAlgoTrader** is a scalable, multi-process ML-ready framework
@@ -34,7 +35,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 - [Make 30% trading pair volatility](https://amor71.github.io/LiuAlgoTrader/brandtreade_tearsheet.html) using LiuAlgoTrader.
 
 
-## Quickstart
+## Quick-start
 
 ### Prerequisite
 
@@ -106,9 +107,10 @@ email me at  amor71@sgeltd.com
 
 Special thanks to the below individuals for their comments, reviews and suggestions:
 
+- [Alex Lau](https://github.com/riven314)
+- [Rokas Gegevicius](https://github.com/ksilo)
 - Shlomi Kushchi [shlomikushchi](https://github.com/shlomikushchi)
 - Venkat Y [vinmestmant](https://github.com/vinmestmant)
 - Chris [crowforc3](https://github.com/crawforc3)
 - [TheSnoozer](https://github.com/TheSnoozer)
 - [Aditya Gupta](https://github.com/adi0x90)
-- [Alex Lau](https://github.com/riven314)

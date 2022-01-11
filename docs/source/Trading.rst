@@ -119,13 +119,6 @@ to help troubleshooting and for better readability.
 - The fifth and last section displays the strategies execution. For more details on strategies read the `Strategies` section.
 
 
-Liquidation
-***********
-
-15 minutes before the end of the trading-day
-LiuAlgoTrader will start closing positions,
-you need to be aware of this behaviour if you
-build custom strategies for end-of-day.
 
 
 
