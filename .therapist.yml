@@ -1,6 +1,6 @@
 actions:
     mypy:
-        run: mypy --show-error-context --pretty  --strict-optional  --ignore-missing-imports {files}
+        run: mypy --namespace-packages --show-error-context --pretty  --strict-optional  --ignore-missing-imports {files}
         include: "*.py"
     bandit:
         run: bandit -ii {files}

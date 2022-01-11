@@ -7,7 +7,7 @@ from hypothesis.strategies import text
 from liualgotrader.analytics.consolidate import trades
 
 
-@settings(deadline=None, max_examples=5)  # type: ignore
+@settings(deadline=None, max_examples=3)  # type: ignore
 @given(text())
 @pytest.mark.asyncio
 @pytest.mark.devtest
