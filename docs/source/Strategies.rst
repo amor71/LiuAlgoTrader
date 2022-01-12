@@ -41,16 +41,21 @@ The Basics
 * The framework supports trading windows (=time frame for buying) per
   strategy out of the box, however they are not enforced.
 
+* A Strategy may act on a single symbol, or can act on a collection of symbols (e.g. SP500)
+
 Configuration
 -------------
-As with Scanners, Strategies are declared in the *tradeplan.toml*
+Strategies are declared in the *trade_plan* Database table, or in the *tradeplan.toml*
 configuration file under the section:
 
 .. code-block:: bash
 
     [strategies]
 
-Several strategies may run concurrently. The order
+tradeplan.toml
+**************
+
+Strategies may run concurrently. The order
 of execution is based on the order in which strategies are presented in the *tradeplan* file.
 
 Each strategy should have its own entry point in the
@@ -80,6 +85,10 @@ A Strategy may have any number of parameters, once instanticated, the Framework 
 pass all the parameters from the `.toml` file to the strategy. 
 Exception will be raised if parameters are missing. Always make sure to called
 `super()` to ensure proper setting of basic parameters.
+
+trade-plan table
+****************
+See *Concepts* section from further details
 
 Developing a Strategy
 ---------------------
@@ -193,7 +202,7 @@ It is up to the Strategy developer if to use these functions or not.
 
 Data Persistence
 ****************
-`LiuAlgoTrader` framework takes responsibility for storing successful
+`LiuAlgoTrader` framework stores successful
 operations. This data serves well the analysis tools provided by the
 framework.
 
@@ -314,20 +323,6 @@ The platform implement a key-value store, per strategy (see base.py for implemen
 key-value allows for strategies to persist state across executions. 
 This feature is specifically helpful for `swing` strategies that run across different batches. 
 
-Liquidation Schedule
-^^^^^^^^^^^^^^^^^^^^
-
-The framework will automatically start liquidating open
-positions held by day-trading strategies.
-
-By default the liquidation process kicks in 15 minutes before the market close.
-Be advise that this schedule is an estimated schedule as timing tends to
-drift during the trading day depending on the hardware configuration used.
-
-The `tradeplan.toml` file includes a configuration parameter
-**market_liquidation_end_time_minutes** w/ the number of minutes
-before close of market, to start the liquidation process.
-
 
 Additional Configurations
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -336,7 +331,6 @@ Additional Configurations
 configure the behaviour of the platform and the strategies.
 
 The best place to check out all possibilities is here_.
-
 
 .. _here:
     https://github.com/amor71/LiuAlgoTrader/blob/master/liualgotrader/common/config.py

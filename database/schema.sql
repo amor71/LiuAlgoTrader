@@ -286,18 +286,6 @@ BEGIN
         account_id = NEW .account_id
     INTO negative, b, credit;
     
-    IF 
-        negative = FALSE
-        AND b + NEW.amount < 0 
-    THEN 
-        RAISE EXCEPTION 'Account not allowed to get into negative balance';
-    ELSEIF 
-        negative = TRUE
-        AND b + NEW.amount < -credit
-    THEN 
-        RAISE EXCEPTION 'Account credit limit exceeded';
-    END IF;
-
     UPDATE
         accounts
     SET
@@ -350,3 +338,57 @@ ALTER TABLE new_trades ADD COLUMN trade_fee NUMERIC(9,2) NOT NULL DEFAULT 0.0;
 CREATE TYPE asset_type AS ENUM ('US_EQUITIES', 'CRYPTO');
 
 ALTER TABLE portfolio ADD COLUMN assets asset_type NOT NULL DEFAULT 'US_EQUITIES';
+
+ALTER TABLE portfolio ADD COLUMN external_account_id text;
+
+ALTER TABLE portfolio ADD COLUMN broker text;
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS trade_plan (
+    trade_plan_id uuid DEFAULT uuid_generate_v4 (),
+    portfolio_id text NOT NULL REFERENCES portfolio(portfolio_id),
+    filename text NOT NULL,
+    start_date date NOT NULL,
+    strategy_name text NOT NULL,
+    parameters JSONB,
+    create_tstamp timestamp with time zone DEFAULT current_timestamp,
+    modify_tstamp timestamp with time zone,
+    expire_tstamp timestamp with time zone,
+    PRIMARY KEY (trade_plan_id)
+);
+
+CREATE  FUNCTION update_modify_tstamp_action()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.modify_tstamp = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_trade_plan_modify_tstamp
+    BEFORE UPDATE
+    ON
+        trade_plan
+    FOR EACH ROW
+EXECUTE PROCEDURE update_modify_tstamp_action();
+
+CREATE TABLE IF NOT EXISTS trade_plan_execution_audit (
+    execution_id serial PRIMARY KEY,
+    trade_plan_id uuid REFERENCES trade_plan(trade_plan_id),
+    details JSONB,
+    started_on timestamp with time zone DEFAULT current_timestamp,
+    ended_on timestamp with time zone DEFAULT current_timestamp
+);
+
+ALTER TABLE trade_plan DROP COLUMN filename;
+
+alter table keystore drop column context;
+alter table keystore drop column algo_name;
+drop table keystore;
+
+CREATE TABLE IF NOT EXISTS keystore (
+    key text PRIMARY KEY,
+    value text NOT NULL,
+    tstamp timestamp with time zone DEFAULT current_timestamp
+);

@@ -1,5 +1,4 @@
 # This is a TOML configuration file.
-bypass_market_schedule = false
 portfolio_value = 25000
 
 [strategies]

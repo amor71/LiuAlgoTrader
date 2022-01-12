@@ -38,7 +38,7 @@ async def test_apple_sec_agg():
         ["AAPL", "GLD"], [WSEventType.MIN_AGG]
     )
     print(apple)
-    await asyncio.sleep(5 * 60)
+    await asyncio.sleep(1 * 60)
 
     print("done")
     await polygon_stream.close()

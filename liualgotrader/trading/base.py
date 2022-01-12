@@ -1,5 +1,7 @@
 import asyncio
+import math
 import uuid
+from abc import abstractmethod
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
@@ -38,6 +40,15 @@ class Trader:
     def is_market_open_today(self) -> bool:
         ...
 
+    def is_market_open(self, now: datetime) -> bool:
+        if not hasattr(self, "market_open"):
+            self.market_open, self.market_close = self.get_market_schedule()  # type: ignore
+        return (
+            False
+            if not self.market_open or not self.market_close
+            else self.market_open <= now <= self.market_close
+        )
+
     def get_time_market_close(self) -> Optional[timedelta]:
         ...
 
@@ -56,7 +67,13 @@ class Trader:
     async def is_shortable(self, symbol: str) -> bool:
         ...
 
-    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
+    async def is_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        """return filled order status, average filled price, filled quantity and trade fee"""
+        ...
+
+    async def is_fractionable(self, symbol: str) -> bool:
         ...
 
     async def submit_order(
@@ -75,15 +92,19 @@ class Trader:
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
+        on_behalf_of: str = None,
     ) -> Order:
         ...
 
     async def get_order(self, order_id: str) -> Order:
         ...
 
-    async def cancel_order(
-        self, order_id: Optional[str] = None, order: Optional[Order] = None
-    ):
+    async def get_account_order(
+        self, external_account_id: str, order_id: str
+    ) -> Order:
+        ...
+
+    async def cancel_order(self, order: Order) -> bool:
         ...
 
     async def run(self) -> Optional[asyncio.Task]:

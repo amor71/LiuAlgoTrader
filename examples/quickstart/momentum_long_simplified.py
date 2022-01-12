@@ -9,7 +9,7 @@ from pandas import DataFrame as df
 from stockstats import StockDataFrame
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.trading_data import (buy_indicators, buy_time,
                                                cool_down, last_used_strategy,
@@ -43,15 +43,31 @@ class MomentumLongV3(Strategy):
             schedule=schedule,
         )
 
-    async def buy_callback(self, symbol: str, price: float, qty: int) -> None:
+    async def buy_callback(
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
+    ) -> None:
+        """Called by Framework, upon successful buy (could be partial)"""
         latest_scalp_basis[symbol] = latest_cost_basis[symbol] = price
 
-    async def sell_callback(self, symbol: str, price: float, qty: int) -> None:
+    async def sell_callback(
+        self,
+        symbol: str,
+        price: float,
+        qty: float,
+        now: datetime = None,
+        trade_fee: float = 0.0,
+    ) -> None:
         latest_scalp_basis[symbol] = price
 
-    async def create(self) -> None:
+    async def create(self) -> bool:
         await super().create()
         tlog(f"strategy {self.name} created")
+        return True
 
     async def should_cool_down(self, symbol: str, now: datetime):
         if (
@@ -68,18 +84,18 @@ class MomentumLongV3(Strategy):
         self,
         symbol: str,
         shortable: bool,
-        position: int,
+        position: float,
         now: datetime,
         minute_history: df,
         portfolio_value: float = None,
-        trading_api: tradeapi = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
         data = minute_history.iloc[-1]
         prev_min = minute_history.iloc[-2]
 
-        morning_rush = (now - config.market_open).seconds // 60 < 30
+        market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
+        morning_rush = (now - market_open).seconds // 60 < 30
 
         if (
             await super().is_buy_time(now)
@@ -88,7 +104,7 @@ class MomentumLongV3(Strategy):
             and not await self.should_cool_down(symbol, now)
         ):
             # Check for buy signals
-            lbound = config.market_open.replace(second=0, microsecond=0)
+            lbound = market_open
             ubound = lbound + timedelta(minutes=15)
             try:
                 high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
@@ -99,10 +115,7 @@ class MomentumLongV3(Strategy):
                 )
                 return False, {}
 
-            if data.close > high_15m or (
-                hasattr(config, "bypass_market_schedule")
-                and config.bypass_market_schedule
-            ):
+            if data.close > high_15m:
                 close = (
                     minute_history["close"]
                     .dropna()
@@ -175,33 +188,8 @@ class MomentumLongV3(Strategy):
                     target_prices[symbol] = target_price
                     stop_prices[symbol] = stop_price
 
-                    if portfolio_value is None:
-                        if not trading_api:
-                            raise Exception(
-                                f"{self.name}: both portfolio_value and trading_api can't be None"
-                            )
-
-                        retry = 3
-                        while retry > 0:
-                            try:
-                                portfolio_value = float(
-                                    trading_api.get_account().portfolio_value
-                                )
-                                break
-                            except ConnectionError as e:
-                                tlog(
-                                    f"[{symbol}][{now}[Error] get_account() failed w/ {e}, retrying {retry} more times"
-                                )
-                                await asyncio.sleep(0)
-                                retry -= 1
-
-                        if not portfolio_value:
-                            tlog(
-                                "f[{symbol}][{now}[Error] failed to get portfolio_value"
-                            )
-                            return False, {}
                     shares_to_buy = (
-                        portfolio_value
+                        portfolio_value  # type: ignore
                         * config.risk
                         // (data.close - stop_prices[symbol])
                     )
@@ -238,9 +226,8 @@ class MomentumLongV3(Strategy):
                                 "type": "market",
                             },
                         )
-            else:
-                if debug:
-                    tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
+            elif debug:
+                tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
         if (
             await super().is_sell_time(now)
             and position > 0
@@ -360,15 +347,17 @@ class MomentumLongV3(Strategy):
                     "sell_macd_signal": macd_signal[-5:].tolist(),
                     "vwap": data.vwap,
                     "avg": data.average,
-                    "reasons": " AND ".join(str(elem) for elem in sell_reasons),
+                    "reasons": " AND ".join(
+                        str(elem) for elem in sell_reasons
+                    ),
                 }
-
 
                 if partial_sell:
                     qty = int(position / 2) if position > 1 else 1
                     tlog(
-                        f"[{self.name}][{now}] Submitting sell for {str(qty)} shares of {symbol} at limit of {data.close }with reason:{sell_reasons}"
+                        f'[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}'
                     )
+
                     return (
                         True,
                         {

@@ -1,8 +1,5 @@
 # This is a TOML configuration file.
 
-# if set to true, allow running outside market open hours
-bypass_market_schedule = false
-
 # set max portfolio_value
 # portfolio_value = 25000.0
 
@@ -11,12 +8,6 @@ bypass_market_schedule = false
 
 # how many minutes, before end of the trading day to enforce liqudation
 # market_liquidation_end_time_minutes = 15
-
-# if set, existing positions won't be pull into a run,
-# this configuration is helpful when testing different
-# scanners & strategies on different dockers, all sharing
-# same paper/production accounts
-# skip_existing = true
 
 # if set, only scanners would run, w/o running consumer or producers
 # useful for debugging new scanners

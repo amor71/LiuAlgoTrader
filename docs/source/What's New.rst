@@ -3,6 +3,22 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.10           | **Major Release**                            |
+|                  |                                              |
+|                  | 1. trader application runs until stopped,    |
+|                  |    won't start/stop on US Equity markets.    |
+|                  | 2. Add support to database-based tradeplan   |
+|                  |    (undocumented yet).                       |
+|                  | 3. Significant performance improvements.     |
+|                  | 4. Complete re-write to DataLoader. Add      |
+|                  |    pre-fetching list of symbols concurrently.|
+|                  |    Allow concurrent loading of data with     |
+|                  |    significant loading time improvements.    |
+|                  | 5. Infrastructure for supporting multiple    |
+|                  |    users / accounts (undocumented yet).      |
+|                  | 6. Added DB Schema browsing web-site.        |
+|                  | 7. Massive refactoring and code styling.     |
++------------------+----------------------------------------------+
 | 0.4.00           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. Extend platform to support Crypto assets  |

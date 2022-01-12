@@ -48,15 +48,14 @@ class GeminiTrader(Trader):
                 "both env variables GEMINI_API_KEY and GEMINI_API_SECRET must be set up"
             )
         t = datetime.now()
-        payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
+        payload_nonce = int(time.mktime(t.timetuple()) * 1000)
 
         if cls.last_nonce and cls.last_nonce == payload_nonce:
-            time.sleep(0.1)
-            payload_nonce = str(int(time.mktime(t.timetuple()) * 1000))
+            payload_nonce += 1
 
         cls.last_nonce = payload_nonce
 
-        payload["nonce"] = payload_nonce
+        payload["nonce"] = str(payload_nonce)
         encoded_payload = json.dumps(payload).encode()
         b64 = base64.b64encode(encoded_payload)
         signature = hmac.new(
@@ -93,6 +92,38 @@ class GeminiTrader(Trader):
         }
 
     @classmethod
+    def _get_order_event_type(cls, order_data: Dict) -> Order.EventType:
+        return (
+            Order.EventType.canceled
+            if order_data["is_cancelled"] == True
+            else Order.EventType.fill
+            if order_data["remaining_amount"] == "0"
+            else Order.EventType.partial_fill
+        )
+
+    @classmethod
+    def _get_trade_event_type(cls, trade_data: Dict) -> Order.EventType:
+        return (
+            Order.EventType.canceled
+            if trade_data["type"] == "cancelled"
+            else Order.EventType.rejected
+            if trade_data["type"] == "rejected"
+            else Order.EventType.canceled
+            if trade_data["type"] == "cancel_rejected"
+            else Order.EventType.fill
+            if trade_data["remaining_amount"] == "0"
+            else Order.EventType.partial_fill
+        )
+
+    @classmethod
+    def _get_order_side(cls, order_data: Dict) -> Order.FillSide:
+        return (
+            Order.FillSide.buy
+            if order_data["side"] == "buy"
+            else Order.FillSide.sell
+        )
+
+    @classmethod
     def _order_from_dict(cls, order_data: Dict) -> Order:
         trades = order_data.get("trades", [])
         trade_fees: float = 0.0 + sum(float(t["fee_amount"]) for t in trades)
@@ -100,15 +131,9 @@ class GeminiTrader(Trader):
             order_id=order_data["order_id"],
             symbol=order_data["symbol"].lower(),
             filled_qty=float(order_data["executed_amount"]),
-            event=Order.EventType.canceled
-            if order_data["is_cancelled"] == True
-            else Order.EventType.fill
-            if order_data["remaining_amount"] == "0"
-            else Order.EventType.partial_fill,
+            event=cls._get_order_event_type(order_data),
             price=float(order_data["price"]),
-            side=Order.FillSide.buy
-            if order_data["side"] == "buy"
-            else Order.FillSide.sell,
+            side=cls._get_order_side(order_data),
             submitted_at=pd.Timestamp(
                 ts_input=order_data["timestampms"], unit="ms", tz="UTC"
             ),
@@ -123,15 +148,7 @@ class GeminiTrader(Trader):
         return Trade(
             order_id=trade_dict["order_id"],
             symbol=trade_dict["symbol"].lower(),
-            event=Order.EventType.canceled
-            if trade_dict["type"] == "cancelled"
-            else Order.EventType.rejected
-            if trade_dict["type"] == "rejected"
-            else Order.EventType.canceled
-            if trade_dict["type"] == "cancel_rejected"
-            else Order.EventType.fill
-            if trade_dict["remaining_amount"] == "0"
-            else Order.EventType.partial_fill,
+            event=cls._get_trade_event_type(trade_dict),
             filled_qty=float(trade_dict["fill"]["amount"])
             if "fill" in trade_dict
             else 0.0,
@@ -150,21 +167,24 @@ class GeminiTrader(Trader):
             side=Order.FillSide[trade_dict["side"]],
         )
 
+    async def is_fractionable(self, symbol: str) -> bool:
+        return True
+
     def check_error(self, result: Dict):
         if result.get("result") == "error":
             raise AssertionError(
                 f"[EXCEPTION] {result['reason']}:{result['message']}"
             )
 
-    async def is_order_completed(self, order: Order) -> Tuple[bool, float]:
-        order = await self.get_order(order.order_id)
+    async def is_order_completed(
+        self, order_id: str, external_order_id: Optional[str] = None
+    ) -> Tuple[Order.EventType, float, float, float]:
+        order = await self.get_order(order_id)
         return (
-            (True, order.avg_execution_price)
-            if order.remaining_amount == 0
-            else (
-                False,
-                0.0,
-            )
+            order.event,
+            order.avg_execution_price,
+            order.filled_qty,
+            order.trade_fees,
         )
 
     def get_market_schedule(
@@ -264,7 +284,8 @@ class GeminiTrader(Trader):
                 )
 
             time.sleep(20)
-        tlog("GEMINI HEARTBEAT thread canceled")
+
+        tlog("GEMINI HEARTBEAT thread terminated")
 
     @classmethod
     def on_message(cls, ws, msgs):
@@ -359,22 +380,11 @@ class GeminiTrader(Trader):
     async def is_shortable(self, symbol) -> bool:
         return False
 
-    async def cancel_order(
-        self, order_id: Optional[str] = None, order: Optional[Order] = None
-    ):
-        if order:
-            _order_id = order.order_id
-        elif order_id:
-            _order_id = order_id
-        else:
-            raise AssertionError(
-                "[ERROR] Gemini cancel_order() missing order details"
-            )
-
+    async def cancel_order(self, order: Order) -> bool:
         endpoint = "/v1/order/cancel"
         url = self.base_url + endpoint
 
-        payload = {"request": endpoint, "order_id": _order_id}
+        payload = {"request": endpoint, "order_id": order.order_id}
         headers = self._generate_request_headers(payload)
         response = requests.post(url, data=None, headers=headers)
         if response.status_code == 200:
@@ -402,6 +412,7 @@ class GeminiTrader(Trader):
         stop_loss: dict = None,
         trail_price: str = None,
         trail_percent: str = None,
+        on_behalf_of: str = None,
     ) -> Order:
         symbol = symbol.lower()
         if order_type == "market":
@@ -438,6 +449,11 @@ class GeminiTrader(Trader):
             new_order = response.json()
             self.check_error(new_order)
             return self._order_from_dict(new_order)
+
+        if self.flags:
+            self.flags.run = False
+
+        await self.close()
 
         raise AssertionError(
             f"HTTP ERROR {response.status_code} {response.text}"

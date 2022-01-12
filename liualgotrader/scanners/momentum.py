@@ -57,23 +57,6 @@ class Momentum(Scanner):
     def __str__(cls) -> str:
         return cls.name
 
-    async def _wait_time(self) -> None:
-        if not config.bypass_market_schedule and config.market_open:
-            nyc = timezone("America/New_York")
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
-
-            if since_market_open.seconds // 60 < self.from_market_open:
-                tlog(f"market open, wait {self.from_market_open} minutes")
-                while since_market_open.seconds // 60 < self.from_market_open:
-                    await asyncio.sleep(1)
-                    since_market_open = (
-                        datetime.today().astimezone(nyc) - config.market_open
-                    )
-
-        tlog(f"Scanner {self.name} ready to run")
-
     async def _get_trade_able_symbols(self) -> List[str]:
         symbols = await self.trading_api.get_tradeable_symbols()
         tlog(f"loaded list of {len(symbols)} trade-able symbols from Alpaca")
@@ -102,10 +85,7 @@ class Momentum(Scanner):
                         > self.min_last_dv  # type: ignore
                         and ticker["todaysChangePerc"]  # type: ignore
                         >= self.today_change_percent  # type: ignore
-                        and (
-                            ticker["day"]["v"] > self.min_volume  # type: ignore
-                            or config.bypass_market_schedule
-                        )
+                        and ticker["day"]["v"] > self.min_volume  # type: ignore
                     )
                 ]
                 if unsorted:
@@ -197,12 +177,10 @@ class Momentum(Scanner):
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
-            await self._wait_time()
             return await self.run_polygon()
-        else:
-            rows = await self.load_from_db(back_time)
+        rows = await self.load_from_db(back_time)
 
-            print(
-                f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
-            )
-            return rows
+        print(
+            f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
+        )
+        return rows
