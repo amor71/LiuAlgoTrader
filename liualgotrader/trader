@@ -14,10 +14,10 @@ from typing import List
 import pygit2
 import toml
 import copy
-import psutil
 from pytz import timezone
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
+from liualgotrader.common.concurrency import calc_num_consumer_processes
 from liualgotrader.consumer import consumer_main
 from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
@@ -37,36 +37,6 @@ def motd(filename: str, version: str, unique_id: str) -> None:
 """
 process main
 """
-
-
-def calc_num_consumer_processes() -> int:
-
-
-    if config.num_consumers > 0:
-        return config.num_consumers
-
-    num_cpu = psutil.cpu_count()
-
-    if not num_cpu:
-        raise AssertionError(
-            "Can't automatically detect number of CPU, use fixed configuration"
-        )
-    load_avg = psutil.cpu_percent(interval=None) / num_cpu
-
-    tlog(
-        f"15-min load_avg:{load_avg}, num_cpu:{num_cpu}, proc_factor:{config.proc_factor}"
-    )
-    if not load_avg:
-        load_avg = 1.0
-
-    return max(
-        1,
-        ceil(
-            num_cpu / min(load_avg, 1.0) * config.proc_factor
-            if num_cpu > 0
-            else config.proc_factor / min(load_avg, 1.0)
-        ),
-    )
 
 
 """
@@ -152,7 +122,8 @@ if __name__ == "__main__":
     # wait for completion and hope everyone plays nicely
     try:
         producer.join()
-        scanner.join()
+        if scanner:
+            scanner.join()
 
         for p in consumers:
             p.join()
