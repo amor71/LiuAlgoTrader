@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>tradedb Database</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="bower/html5shiv/html5shiv.min.js"></script>
+        <script src="bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="index.html" class="navbar-brand"><b>tradedb</b> Database</a>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>All Relationships</h1>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-code-fork"></i>
+                            <h3 class="box-title">Diagrams</h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="nav-tabs-custom">
+                                <!-- Tabs within a box -->
+                                <h5>By default only columns that are primary keys, foreign keys or indexes are shown.</h5>
+                                <ul class="nav nav-tabs pull-left ui-sortable-handle">
+                                    <li class="active"><a href="#compactDegreeImg-chart" data-toggle="tab" aria-expanded="true">Compact</a></li>
+                                    <li class=""><a href="#largeDegreeImg-chart" data-toggle="tab" aria-expanded="true">Large</a></li>
+                                    <li class=""><a href="#compactimpliedDegreeImg-chart" data-toggle="tab" aria-expanded="true">Compact Implied</a></li>
+                                    <li class=""><a href="#largeimpliedDegreeImg-chart" data-toggle="tab" aria-expanded="true">Large Implied</a></li>
+                                </ul>
+                                <div class="tab-content no-padding">
+                                    <div class="chart tab-pane active" id="compactDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="compactRelationshipsDiagram" name="compactRelationshipsDiagram">
+<area shape="rect" id="node1" href="tables/account_transactions.html" target="_top" title="account_transactions" alt="" coords="227,677,459,824">
+<area shape="rect" id="node2" href="tables/accounts.html" target="_top" title="accounts" alt="" coords="5,789,183,907">
+<area shape="rect" id="node3" href="tables/algo_run.html" target="_top" title="algo_run" alt="" coords="527,355,695,560">
+<area shape="rect" id="node4" href="tables/gain_loss.html" target="_top" title="gain_loss" alt="" coords="813,5,989,181">
+<area shape="rect" id="node5" href="tables/new_trades.html" target="_top" title="new_trades" alt="" coords="819,199,983,404">
+<area shape="rect" id="node6" href="tables/portfolio.html" target="_top" title="portfolio" alt="" coords="241,841,445,988">
+<area shape="rect" id="node7" href="tables/portfolio_batch_ids.html" target="_top" title="portfolio_batch_ids" alt="" coords="503,727,720,879">
+<area shape="rect" id="node8" href="tables/trade_analysis.html" target="_top" title="trade_analysis" alt="" coords="809,421,992,627">
+<area shape="rect" id="node9" href="tables/trade_plan.html" target="_top" title="trade_plan" alt="" coords="530,896,693,1043">
+<area shape="rect" id="node10" href="tables/trade_plan_execution_audit.html" target="_top" title="trade_plan_execution_audit" alt="" coords="764,867,1037,1013">
+<area shape="rect" id="node11" href="tables/trades.html" target="_top" title="trades" alt="" coords="816,644,985,849">
+</map>
+                                        <a name='diagram'><img id="compactDegreeImg" src="diagrams/summary/relationships.real.compact.png" usemap="#compactRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="largeDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="largeRelationshipsDiagram" name="largeRelationshipsDiagram">
+<area shape="rect" id="node1" href="tables/account_transactions.html" target="_top" title="account_transactions" alt="" coords="227,1280,459,1520">
+<area shape="rect" id="node2" href="tables/accounts.html" target="_top" title="accounts" alt="" coords="5,1497,183,1767">
+<area shape="rect" id="node3" href="tables/algo_run.html" target="_top" title="algo_run" alt="" coords="527,539,695,896">
+<area shape="rect" id="node4" href="tables/gain_loss.html" target="_top" title="gain_loss" alt="" coords="813,5,989,245">
+<area shape="rect" id="node5" href="tables/new_trades.html" target="_top" title="new_trades" alt="" coords="819,263,983,708">
+<area shape="rect" id="node6" href="tables/portfolio.html" target="_top" title="portfolio" alt="" coords="241,1537,445,1865">
+<area shape="rect" id="node7" href="tables/portfolio_batch_ids.html" target="_top" title="portfolio_batch_ids" alt="" coords="503,1423,720,1575">
+<area shape="rect" id="node8" href="tables/trade_analysis.html" target="_top" title="trade_analysis" alt="" coords="809,725,992,1083">
+<area shape="rect" id="node9" href="tables/trade_plan.html" target="_top" title="trade_plan" alt="" coords="530,1592,693,1891">
+<area shape="rect" id="node10" href="tables/trade_plan_execution_audit.html" target="_top" title="trade_plan_execution_audit" alt="" coords="764,1563,1037,1773">
+<area shape="rect" id="node11" href="tables/trades.html" target="_top" title="trades" alt="" coords="816,1100,985,1545">
+</map>
+                                        <a name='diagram'><img id="largeDegreeImg" src="diagrams/summary/relationships.real.large.png" usemap="#largeRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="compactimpliedDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="compactImpliedRelationshipsDiagram" name="compactImpliedRelationshipsDiagram">
+<area shape="rect" id="node1" href="tables/account_transactions.html" target="_top" title="account_transactions" alt="" coords="227,1099,459,1245">
+<area shape="rect" id="node2" href="tables/accounts.html" target="_top" title="accounts" alt="" coords="5,1211,183,1328">
+<area shape="rect" id="node3" href="tables/algo_run.html" target="_top" title="algo_run" alt="" coords="527,355,695,560">
+<area shape="rect" id="node4" href="tables/gain_loss.html" target="_top" title="gain_loss" alt="" coords="813,5,989,181">
+<area shape="rect" id="node9" href="tables/ticker_data.html" target="_top" title="ticker_data" alt="" coords="530,717,693,952">
+<area shape="rect" id="node5" href="tables/new_trades.html" target="_top" title="new_trades" alt="" coords="819,199,983,404">
+<area shape="rect" id="node6" href="tables/portfolio.html" target="_top" title="portfolio" alt="" coords="241,1263,445,1409">
+<area shape="rect" id="node7" href="tables/portfolio_batch_ids.html" target="_top" title="portfolio_batch_ids" alt="" coords="503,1148,720,1300">
+<area shape="rect" id="node8" href="tables/stock_ohlc.html" target="_top" title="stock_ohlc" alt="" coords="819,867,982,1043">
+<area shape="rect" id="node10" href="tables/trade_analysis.html" target="_top" title="trade_analysis" alt="" coords="809,421,992,627">
+<area shape="rect" id="node11" href="tables/trade_plan.html" target="_top" title="trade_plan" alt="" coords="530,1317,693,1464">
+<area shape="rect" id="node12" href="tables/trade_plan_execution_audit.html" target="_top" title="trade_plan_execution_audit" alt="" coords="764,1288,1037,1435">
+<area shape="rect" id="node13" href="tables/trades.html" target="_top" title="trades" alt="" coords="816,644,985,849">
+<area shape="rect" id="node14" href="tables/trending_tickers.html" target="_top" title="trending_tickers" alt="" coords="803,1060,998,1271">
+</map>
+                                        <a name='diagram'><img id="compactimpliedDegreeImg" src="diagrams/summary/relationships.implied.compact.png" usemap="#compactImpliedRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="largeimpliedDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="largeImpliedRelationshipsDiagram" name="largeImpliedRelationshipsDiagram">
+<area shape="rect" id="node1" href="tables/account_transactions.html" target="_top" title="account_transactions" alt="" coords="227,1912,459,2152">
+<area shape="rect" id="node2" href="tables/accounts.html" target="_top" title="accounts" alt="" coords="5,2129,183,2399">
+<area shape="rect" id="node3" href="tables/algo_run.html" target="_top" title="algo_run" alt="" coords="527,539,695,896">
+<area shape="rect" id="node4" href="tables/gain_loss.html" target="_top" title="gain_loss" alt="" coords="813,5,989,245">
+<area shape="rect" id="node9" href="tables/ticker_data.html" target="_top" title="ticker_data" alt="" coords="530,1173,693,1560">
+<area shape="rect" id="node5" href="tables/new_trades.html" target="_top" title="new_trades" alt="" coords="819,263,983,708">
+<area shape="rect" id="node6" href="tables/portfolio.html" target="_top" title="portfolio" alt="" coords="241,2169,445,2497">
+<area shape="rect" id="node7" href="tables/portfolio_batch_ids.html" target="_top" title="portfolio_batch_ids" alt="" coords="503,2055,720,2207">
+<area shape="rect" id="node8" href="tables/stock_ohlc.html" target="_top" title="stock_ohlc" alt="" coords="819,1563,982,1949">
+<area shape="rect" id="node10" href="tables/trade_analysis.html" target="_top" title="trade_analysis" alt="" coords="809,725,992,1083">
+<area shape="rect" id="node11" href="tables/trade_plan.html" target="_top" title="trade_plan" alt="" coords="530,2224,693,2523">
+<area shape="rect" id="node12" href="tables/trade_plan_execution_audit.html" target="_top" title="trade_plan_execution_audit" alt="" coords="764,2195,1037,2405">
+<area shape="rect" id="node13" href="tables/trades.html" target="_top" title="trades" alt="" coords="816,1100,985,1545">
+<area shape="rect" id="node14" href="tables/trending_tickers.html" target="_top" title="trending_tickers" alt="" coords="803,1967,998,2177">
+</map>
+                                        <a name='diagram'><img id="largeimpliedDegreeImg" src="diagrams/summary/relationships.implied.large.png" usemap="#largeImpliedRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- /.box-body -->
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 6.1.0</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="bower/pdfmake/pdfmake.min.js"></script>
+        <script src="bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="bower/codemirror/codemirror.js"></script>
+        <script src="bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="relationships.js"></script>
+        <script src="schemaSpy.js"></script>
+    </body>
+</html>

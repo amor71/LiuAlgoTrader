@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<database name="tradedb" schema="public" type="PostgreSQL - 11.13">
+   <sequences>
+      <sequence increment="1" name="account_transactions_account_id_seq" startValue="1"/>
+      <sequence increment="1" name="account_transactions_transaction_id_seq" startValue="1"/>
+      <sequence increment="1" name="accounts_account_id_seq" startValue="1"/>
+      <sequence increment="1" name="algo_run_algo_run_id_seq" startValue="1"/>
+      <sequence increment="1" name="gain_loss_gain_loss_id_seq" startValue="1"/>
+      <sequence increment="1" name="new_trades_trade_id_seq" startValue="1"/>
+      <sequence increment="1" name="optimizer_run_optimizer_run_id_seq" startValue="1"/>
+      <sequence increment="1" name="portfolio_batch_ids_assoc_id_seq" startValue="1"/>
+      <sequence increment="1" name="stock_ohlc_symbol_id_seq" startValue="1"/>
+      <sequence increment="1" name="trade_analysis_trade_analysis_id_seq" startValue="1"/>
+      <sequence increment="1" name="trade_plan_execution_audit_execution_id_seq" startValue="1"/>
+      <sequence increment="1" name="trades_trade_id_seq" startValue="1"/>
+      <sequence increment="1" name="transaction_id_seq" startValue="1"/>
+      <sequence increment="1" name="trending_tickers_trending_id_seq" startValue="1"/>
+   </sequences>
+   <tables>
+      <table name="account_transactions" numRows="232224" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('account_transactions_transaction_id_seq'::regclass)" digits="0" id="0" name="transaction_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="true" defaultValue="nextval('account_transactions_account_id_seq'::regclass)" digits="0" id="1" name="account_id" nullable="false" remarks="" size="10" type="serial" typeCode="4">
+            <parent column="account_id" foreignKey="account_transactions_account_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="accounts"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="2" name="amount" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="details" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="4" name="tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="5" name="create_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="transaction_id" sequenceNumberInPK="1"/>
+         <index name="account_transactions_pkey" unique="true">
+            <column ascending="true" name="transaction_id"/>
+         </index>
+      </table>
+      <table name="accounts" numRows="5543" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('accounts_account_id_seq'::regclass)" digits="0" id="0" name="account_id" nullable="false" remarks="" size="10" type="serial" typeCode="4">
+            <child column="account_id" foreignKey="account_transactions_account_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="account_transactions"/>
+            <child column="account_id" foreignKey="portfolio_account_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="portfolio"/>
+         </column>
+         <column autoUpdated="false" defaultValue="0.0" digits="17" id="1" name="balance" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="2" name="allow_negative" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="'0'::numeric" digits="17" id="3" name="credit_line" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="details" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="5" name="create_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="modified_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="account_id" sequenceNumberInPK="1"/>
+         <index name="accounts_pkey" unique="true">
+            <column ascending="true" name="account_id"/>
+         </index>
+         <checkConstraint constraint="(((credit_line &gt; (0)::double precision) OR (NOT allow_negative)))" name="accounts_check"/>
+      </table>
+      <table name="algo_run" numRows="17369" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('algo_run_algo_run_id_seq'::regclass)" digits="0" id="0" name="algo_run_id" nullable="false" remarks="" size="10" type="serial" typeCode="4">
+            <child column="ref_algo_run" foreignKey="algo_run_ref_algo_run_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+            <child column="algo_run_id" foreignKey="gain_loss_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="gain_loss"/>
+            <child column="algo_run_id" foreignKey="new_trades_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="new_trades"/>
+            <child column="algo_run_id" foreignKey="trade_analysis_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="trade_analysis"/>
+            <child column="algo_run_id" foreignKey="trades_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="trades"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="algo_name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="algo_env" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="build_number" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="parameters" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="5" name="start_time" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="end_time" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="end_reason" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="''::text" digits="0" id="8" name="batch_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="ref_algo_run" nullable="true" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="algo_run_id" foreignKey="algo_run_ref_algo_run_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+         </column>
+         <primaryKey column="algo_run_id" sequenceNumberInPK="1"/>
+         <index name="algo_run_pkey" unique="true">
+            <column ascending="true" name="algo_run_id"/>
+         </index>
+         <index name="algo_run_batch_id_idx" unique="false">
+            <column ascending="true" name="batch_id"/>
+         </index>
+         <index name="algo_run_start_time_idx" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx1" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx10" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx11" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx12" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx2" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx3" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx4" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx5" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx6" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx7" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx8" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+         <index name="algo_run_start_time_idx9" unique="false">
+            <column ascending="true" name="start_time"/>
+         </index>
+      </table>
+      <table name="gain_loss" numRows="1943" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('gain_loss_gain_loss_id_seq'::regclass)" digits="0" id="0" name="gain_loss_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="algo_run_id" nullable="false" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="algo_run_id" foreignKey="gain_loss_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="3" name="gain_percentage" nullable="false" remarks="" size="5" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="4" name="gain_value" nullable="false" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="5" name="tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <primaryKey column="gain_loss_id" sequenceNumberInPK="1"/>
+         <index name="gain_loss_pkey" unique="true">
+            <column ascending="true" name="gain_loss_id"/>
+         </index>
+         <index name="gain_loss_symbol_algo_run_id_idx" unique="false">
+            <column ascending="true" name="symbol"/>
+            <column ascending="true" name="algo_run_id"/>
+         </index>
+         <index name="gain_loss_symbol_algo_run_id_key" unique="true">
+            <column ascending="true" name="symbol"/>
+            <column ascending="true" name="algo_run_id"/>
+         </index>
+      </table>
+      <table name="keystore" numRows="2768" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="key" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="value" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="2" name="tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="key" sequenceNumberInPK="1"/>
+         <index name="keystore_pkey" unique="true">
+            <column ascending="true" name="key"/>
+         </index>
+      </table>
+      <table name="new_trades" numRows="322951" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('new_trades_trade_id_seq'::regclass)" digits="0" id="0" name="trade_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="algo_run_id" nullable="false" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="algo_run_id" foreignKey="new_trades_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="operation" nullable="false" remarks="" size="2147483647" type="trade_operation" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="10" id="4" name="qty" nullable="false" remarks="" size="24" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="5" name="price" nullable="false" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="indicators" nullable="false" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="client_time" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="8" name="tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="9" name="stop_price" nullable="true" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="10" name="target_price" nullable="true" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="11" name="expire_tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="0.0" digits="2" id="12" name="trade_fee" nullable="false" remarks="" size="9" type="numeric" typeCode="2"/>
+         <primaryKey column="trade_id" sequenceNumberInPK="1"/>
+         <index name="new_trades_pkey" unique="true">
+            <column ascending="true" name="trade_id"/>
+         </index>
+         <index name="new_trades_algo_run_id_idx" unique="false">
+            <column ascending="true" name="algo_run_id"/>
+         </index>
+         <index name="new_trades_symbol_idx" unique="false">
+            <column ascending="true" name="symbol"/>
+         </index>
+         <index name="new_trades_tstamp_idx" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx1" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx10" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx11" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx12" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx2" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx3" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx4" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx5" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx6" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx7" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx8" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+         <index name="new_trades_tstamp_idx9" unique="false">
+            <column ascending="true" name="tstamp"/>
+         </index>
+      </table>
+      <table name="optimizer_run" numRows="348" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('optimizer_run_optimizer_run_id_seq'::regclass)" digits="0" id="0" name="optimizer_run_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="optimizer_session_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="batch_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="3" name="tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="''::text" digits="0" id="4" name="parameters" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <primaryKey column="optimizer_run_id" sequenceNumberInPK="1"/>
+         <index name="optimizer_run_pkey" unique="true">
+            <column ascending="true" name="optimizer_run_id"/>
+         </index>
+         <index name="optimizer_run_idx" unique="false">
+            <column ascending="true" name="optimizer_session_id"/>
+         </index>
+         <index name="optimizer_run_optimizer_session_id_idx" unique="false">
+            <column ascending="true" name="optimizer_session_id"/>
+         </index>
+         <index name="optimizer_run_optimizer_session_id_idx1" unique="false">
+            <column ascending="true" name="optimizer_session_id"/>
+         </index>
+      </table>
+      <table name="portfolio" numRows="4076" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="portfolio_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <child column="portfolio_id" foreignKey="portfolio_batch_ids_portfolio_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="portfolio_batch_ids"/>
+            <child column="portfolio_id" foreignKey="trade_plan_portfolio_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="trade_plan"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="size" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="parameters" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="expire_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="4" name="tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="account_id" nullable="true" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="account_id" foreignKey="portfolio_account_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="accounts"/>
+         </column>
+         <column autoUpdated="false" defaultValue="'US_EQUITIES'::asset_type" digits="0" id="6" name="assets" nullable="false" remarks="" size="2147483647" type="asset_type" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="external_account_id" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="broker" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <primaryKey column="portfolio_id" sequenceNumberInPK="1"/>
+         <index name="portfolio_pkey" unique="true">
+            <column ascending="true" name="portfolio_id"/>
+         </index>
+         <index name="portfolio_account_id_idx" unique="false">
+            <column ascending="true" name="account_id"/>
+         </index>
+      </table>
+      <table name="portfolio_batch_ids" numRows="4528" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('portfolio_batch_ids_assoc_id_seq'::regclass)" digits="0" id="0" name="assoc_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="portfolio_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="portfolio_id" foreignKey="portfolio_batch_ids_portfolio_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="portfolio"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="batch_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <primaryKey column="assoc_id" sequenceNumberInPK="1"/>
+         <index name="portfolio_batch_ids_pkey" unique="true">
+            <column ascending="true" name="assoc_id"/>
+         </index>
+         <index name="portfolio_batch_ids_batch_id_idx" unique="false">
+            <column ascending="true" name="batch_id"/>
+         </index>
+         <index name="portfolio_batch_ids_portfolio_id_batch_id_key" unique="true">
+            <column ascending="true" name="portfolio_id"/>
+            <column ascending="true" name="batch_id"/>
+         </index>
+         <index name="portfolio_batch_ids_portfolio_id_idx" unique="false">
+            <column ascending="true" name="portfolio_id"/>
+         </index>
+      </table>
+      <table name="stock_ohlc" numRows="43679" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('stock_ohlc_symbol_id_seq'::regclass)" digits="0" id="0" name="symbol_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="symbol_date" nullable="false" remarks="" size="13" type="date" typeCode="91"/>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="3" name="open" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="4" name="high" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="5" name="low" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="6" name="close" nullable="false" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="volume" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="indicators" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="9" name="modify_tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="10" name="create_tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <primaryKey column="symbol_id" sequenceNumberInPK="1"/>
+         <index name="stock_ohlc_pkey" unique="true">
+            <column ascending="true" name="symbol_id"/>
+         </index>
+         <index name="stock_ohlc_symbol_date_idx" unique="false">
+            <column ascending="true" name="symbol_date"/>
+         </index>
+         <index name="stock_ohlc_symbol_idx" unique="false">
+            <column ascending="true" name="symbol"/>
+         </index>
+         <index name="stock_ohlc_symbol_symbol_date_key" unique="true">
+            <column ascending="true" name="symbol"/>
+            <column ascending="true" name="symbol_date"/>
+         </index>
+      </table>
+      <table name="ticker_data" numRows="7323" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="gain_loss"/>
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="new_trades"/>
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="stock_ohlc"/>
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="trade_analysis"/>
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="trades"/>
+            <child column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="trending_tickers"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="description" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="tags" nullable="true" remarks="" size="2147483647" type="_text" typeCode="2003"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="similar_tickers" nullable="true" remarks="" size="2147483647" type="_text" typeCode="2003"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="industry" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="sector" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="exchange" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="17" id="8" name="short_ratio" nullable="true" remarks="" size="17" type="float8" typeCode="8"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="9" name="create_tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="10" name="modify_tstamp" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <primaryKey column="symbol" sequenceNumberInPK="1"/>
+         <index name="ticker_data_pkey" unique="true">
+            <column ascending="true" name="symbol"/>
+         </index>
+         <index name="ticker_data_industry_idx" unique="false">
+            <column ascending="true" name="industry"/>
+         </index>
+         <index name="ticker_data_sector_idx" unique="false">
+            <column ascending="true" name="sector"/>
+         </index>
+         <index name="ticker_data_similar_tickers_idx" unique="false">
+            <column ascending="true" name="similar_tickers"/>
+         </index>
+         <index name="ticker_data_tags_idx" unique="false">
+            <column ascending="true" name="tags"/>
+         </index>
+      </table>
+      <table name="trade_analysis" numRows="1571" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('trade_analysis_trade_analysis_id_seq'::regclass)" digits="0" id="0" name="trade_analysis_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="algo_run_id" nullable="false" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="algo_run_id" foreignKey="trade_analysis_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="start_tstamp" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="end_tstamp" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="5" name="gain_percentage" nullable="false" remarks="" size="5" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="6" name="gain_value" nullable="false" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="7" name="r_units" nullable="true" remarks="" size="4" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="8" name="tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="9" name="scanned_time" nullable="false" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="trade_analysis_id" sequenceNumberInPK="1"/>
+         <index name="trade_analysis_pkey" unique="true">
+            <column ascending="true" name="trade_analysis_id"/>
+         </index>
+         <index name="trade_analysis_symbol_algo_run_id_start_tstamp_key" unique="true">
+            <column ascending="true" name="symbol"/>
+            <column ascending="true" name="algo_run_id"/>
+            <column ascending="true" name="start_tstamp"/>
+         </index>
+      </table>
+      <table name="trade_plan" numRows="8" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="uuid_generate_v4()" digits="0" id="0" name="trade_plan_id" nullable="false" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <child column="trade_plan_id" foreignKey="trade_plan_execution_audit_trade_plan_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="trade_plan_execution_audit"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="portfolio_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="portfolio_id" foreignKey="trade_plan_portfolio_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="portfolio"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="start_date" nullable="false" remarks="" size="13" type="date" typeCode="91"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="strategy_name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="parameters" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="5" name="create_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="modify_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="7" name="expire_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="trade_plan_id" sequenceNumberInPK="1"/>
+         <index name="trade_plan_pkey" unique="true">
+            <column ascending="true" name="trade_plan_id"/>
+         </index>
+      </table>
+      <table name="trade_plan_execution_audit" numRows="0" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('trade_plan_execution_audit_execution_id_seq'::regclass)" digits="0" id="0" name="execution_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="trade_plan_id" nullable="true" remarks="" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="trade_plan_id" foreignKey="trade_plan_execution_audit_trade_plan_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="trade_plan"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="details" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="3" name="started_on" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="4" name="ended_on" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <primaryKey column="execution_id" sequenceNumberInPK="1"/>
+         <index name="trade_plan_execution_audit_pkey" unique="true">
+            <column ascending="true" name="execution_id"/>
+         </index>
+      </table>
+      <table name="trades" numRows="2603" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('trades_trade_id_seq'::regclass)" digits="0" id="0" name="trade_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="algo_run_id" nullable="true" remarks="" size="10" type="int4" typeCode="4">
+            <parent column="algo_run_id" foreignKey="trades_algo_run_id_fkey" implied="false" onDeleteCascade="false" schema="public" table="algo_run"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="is_win" nullable="true" remarks="" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="qty" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="5" name="buy_price" nullable="false" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="buy_indicators" nullable="false" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="7" name="buy_time" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="2" id="8" name="sell_price" nullable="true" remarks="" size="8" type="numeric" typeCode="2"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="sell_indicators" nullable="true" remarks="" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="10" name="sell_time" nullable="true" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="client_sell_time" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="client_buy_time" nullable="true" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <primaryKey column="trade_id" sequenceNumberInPK="1"/>
+         <index name="trades_pkey" unique="true">
+            <column ascending="true" name="trade_id"/>
+         </index>
+         <index name="trades_algo_run_id_idx" unique="false">
+            <column ascending="true" name="algo_run_id"/>
+         </index>
+         <index name="trades_is_win_idx" unique="false">
+            <column ascending="true" name="is_win"/>
+         </index>
+         <index name="trades_symbol_idx" unique="false">
+            <column ascending="true" name="symbol"/>
+         </index>
+         <checkConstraint constraint="((qty &gt; 0))" name="trades_qty_check"/>
+      </table>
+      <table name="trending_tickers" numRows="208939" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('trending_tickers_trending_id_seq'::regclass)" digits="0" id="0" name="trending_id" nullable="false" remarks="" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="batch_id" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="symbol" nullable="false" remarks="" size="2147483647" type="text" typeCode="12">
+            <parent column="symbol" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="ticker_data"/>
+         </column>
+         <column autoUpdated="false" defaultValue="CURRENT_TIMESTAMP" digits="6" id="3" name="create_tstamp" nullable="true" remarks="" size="35" type="timestamptz" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="'momentum'::text" digits="0" id="4" name="scanner_name" nullable="false" remarks="" size="2147483647" type="text" typeCode="12"/>
+         <primaryKey column="trending_id" sequenceNumberInPK="1"/>
+         <index name="trending_tickers_pkey" unique="true">
+            <column ascending="true" name="trending_id"/>
+         </index>
+         <index name="trending_tickers_batch_id_idx" unique="false">
+            <column ascending="true" name="batch_id"/>
+         </index>
+         <index name="trending_tickers_create_tstamp_idx" unique="false">
+            <column ascending="true" name="create_tstamp"/>
+         </index>
+         <index name="trending_tickers_scanner_idx" unique="false">
+            <column ascending="true" name="scanner_name"/>
+         </index>
+         <index name="trending_tickers_scanner_name_idx" unique="false">
+            <column ascending="true" name="scanner_name"/>
+         </index>
+         <index name="trending_tickers_tstamp_idx" unique="false">
+            <column ascending="true" name="create_tstamp"/>
+         </index>
+      </table>
+   </tables>
+   <routines>
+      <routine dataAccess="MODIFIES" deterministic="false" name="update_balance" returnType="trigger" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="PLPGSQL">
+            <![CDATA[ 
+DECLARE
+    negative bool;
+    b float;
+    credit float;
+BEGIN
+    SELECT
+        allow_negative,
+        balance,
+        credit_line
+    FROM
+        accounts
+    WHERE
+        account_id = NEW .account_id
+    INTO negative, b, credit;
+    
+    UPDATE
+        accounts
+    SET
+        balance = balance + NEW .amount,
+        modified_tstamp = 'now()'
+    WHERE
+        account_id = NEW .account_id;
+
+    RETURN NEW;
+
+END;
+]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="update_modify_tstamp_action" returnType="trigger" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="PLPGSQL">
+            <![CDATA[
+BEGIN
+    NEW.modify_tstamp = now();
+    RETURN NEW;
+END;
+]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="uuid_generate_v1" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_generate_v1]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="uuid_generate_v1mc" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_generate_v1mc]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_generate_v3" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_generate_v3]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="uuid_generate_v4" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_generate_v4]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_generate_v5" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_generate_v5]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_nil" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_nil]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_ns_dns" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_ns_dns]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_ns_oid" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_ns_oid]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_ns_url" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_ns_url]]>
+         </definition>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="true" name="uuid_ns_x500" returnType="uuid" securityType="INVOKER" type="FUNCTION">
+         <comment/>
+         <definition language="C">
+            <![CDATA[uuid_ns_x500]]>
+         </definition>
+      </routine>
+   </routines>
+</database>

@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>tradedb Database</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="bower/html5shiv/html5shiv.min.js"></script>
+        <script src="bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="index.html" class="navbar-brand"><b>tradedb</b> Database</a>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>Columns</h1>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 class="box-title">Columns</h3>
+                        </div>
+                        <div class="box-body">
+                            <table id="column_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                    <tr>
+                                        <th>Table</th>
+                                        <th>Type</th>
+                                        <th>Column</th>
+                                        <th>Type</th>
+                                        <th>Size</th>
+                                        <th title='Are nulls allowed?'>Nullable</th>
+                                        <th title='Is column automatically updated?'>Auto</th>
+                                        <th title='Default value'>Default</th>
+                                        <th title='Comments' class="toggle"><span>Comments</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <script>
+                    var tableData = [
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>symbol_date",
+        "type": "date",
+        "length": 13,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "gain_percentage",
+        "type": "numeric",
+        "length": 5,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "client_time",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "expire_tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "strategy_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "indicators",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "optimizer_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "price",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "scanned_time",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>portfolio_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "qty",
+        "type": "numeric",
+        "length": 24,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "optimizer_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "batch_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trending_tickers",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trending_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('trending_tickers_trending_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "external_account_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "qty",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "keystore",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "value",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>transaction_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('account_transactions_transaction_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan_execution_audit",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "details",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "gain_value",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>algo_run_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('stock_ohlc_symbol_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "high",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "parameters",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "short_ratio",
+        "type": "float8",
+        "length": 17,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>algo_run_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('algo_run_algo_run_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trending_tickers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>create_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "modify_tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "create_tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "optimizer_run",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>optimizer_session_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "allow_negative",
+        "type": "bool",
+        "length": 1,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "false",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "modified_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>algo_run_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "client_buy_time",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "algo_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "client_sell_time",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>account_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('accounts_account_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "trade_fee",
+        "type": "numeric",
+        "length": 9,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "0.0",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "amount",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>start_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>start_time",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "r_units",
+        "type": "numeric",
+        "length": 4,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "close",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "create_tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "parameters",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trending_tickers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>scanner_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'momentum'::text",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>similar_tickers",
+        "type": "_text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>account_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('account_transactions_account_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trade_analysis_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('trade_analysis_trade_analysis_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trade_plan_id",
+        "type": "uuid",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "uuid_generate_v4()",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "details",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "optimizer_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "parameters",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "''::text",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "size",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>industry",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trending_tickers",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "operation",
+        "type": "trade_operation",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "algo_env",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trending_tickers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>batch_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "optimizer_run",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>optimizer_run_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('optimizer_run_optimizer_run_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "account_transactions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "create_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>batch_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "''::text",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan_execution_audit",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "started_on",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>portfolio_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio_batch_ids",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>portfolio_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>gain_loss_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('gain_loss_gain_loss_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "buy_indicators",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan_execution_audit",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "ended_on",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan_execution_audit",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>execution_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('trade_plan_execution_audit_execution_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trade_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('trades_trade_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "parameters",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>ref_algo_run",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_reason",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan_execution_audit",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trade_plan_id",
+        "type": "uuid",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "modify_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "exchange",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>trade_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('new_trades_trade_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "sell_price",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>is_win",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "keystore",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "buy_time",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>account_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "sell_indicators",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "modify_tstamp",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "buy_price",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>tags",
+        "type": "_text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "create_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "sell_time",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "credit_line",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'0'::numeric",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "target_price",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "volume",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "start_date",
+        "type": "date",
+        "length": 13,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_plan",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "expire_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>sector",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio_batch_ids",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>assoc_id",
+        "type": "serial",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "nextval('portfolio_batch_ids_assoc_id_seq'::regclass)",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "build_number",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "indicators",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "details",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>algo_run_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>algo_run_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "open",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "balance",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "0.0",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "assets",
+        "type": "asset_type",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'US_EQUITIES'::asset_type",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "expire_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio_batch_ids",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>batch_id",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "gain_percentage",
+        "type": "numeric",
+        "length": 5,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "keystore",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>key",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "broker",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "portfolio",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "algo_run",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_time",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "trade_analysis",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "gain_value",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "gain_loss",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>symbol",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "accounts",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "create_tstamp",
+        "type": "timestamptz",
+        "length": 35,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "CURRENT_TIMESTAMP",
+        "comments": ""
+    },
+    {
+        "tableName": "new_trades",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "stop_price",
+        "type": "numeric",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "ticker_data",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "description",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "stock_ohlc",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "low",
+        "type": "float8",
+        "length": 17,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    }
+];
+                    var config = {
+                        pagination: true
+                    };
+                </script>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 6.1.0</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="bower/pdfmake/pdfmake.min.js"></script>
+        <script src="bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="bower/codemirror/codemirror.js"></script>
+        <script src="bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="column.js"></script>
+        <script src="schemaSpy.js"></script>
+    </body>
+</html>

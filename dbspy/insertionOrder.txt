@@ -1,0 +1,16 @@
+ticker_data
+accounts
+portfolio
+algo_run
+trade_plan
+account_transactions
+portfolio_batch_ids
+stock_ohlc
+trade_plan_execution_audit
+trending_tickers
+gain_loss
+new_trades
+trade_analysis
+trades
+keystore
+optimizer_run
