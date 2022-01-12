@@ -286,9 +286,6 @@ def count_trades(symbol, trades: pd.DataFrame, batch_id: str) -> int:
 
 def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
     day_to_analyze = min(trades["client_time"].tolist())
-    config.market_open = day_to_analyze.replace(
-        hour=9, minute=30, second=0, microsecond=0
-    )
     trades_analytics = pd.DataFrame()
     trades["client_time"] = pd.to_datetime(trades["client_time"], utc=True)
     trades_analytics["symbol"] = trades.symbol.unique()
@@ -328,7 +325,7 @@ def symbol_trade_analytics(
 
     for _, row in symbol_df.iterrows():
         plt.scatter(
-            row["client_time"].tz_convert("US/Eastern"),
+            row["client_time"],  # .tz_convert("US/Eastern"),
             row["price"],
             c="g" if row["operation"] == "buy" else "r",
             s=100,
@@ -384,14 +381,18 @@ def calc_symbol_trades_returns(
 
     if qty and t1 is not None:
         for i in range(t1, len(daily_returns.index)):
-            value = (
-                qty
-                * data_loader[symbol].close[
-                    eastern.localize(
-                        daily_returns.index[i].to_pydatetime()
-                    ).replace(hour=9, minute=30, second=0, microsecond=0)
-                ]
-            )
+            try:
+                value = (
+                    qty
+                    * data_loader[symbol].close[
+                        eastern.localize(
+                            daily_returns.index[i].to_pydatetime()
+                        ).replace(hour=9, minute=30, second=0, microsecond=0)
+                    ]
+                )
+            except ValueError:
+                print("qty:", qty, t1)
+                raise
             daily_returns.loc[daily_returns.index[i], "equity"] += value
 
 
@@ -415,9 +416,12 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     portfolio = loop.run_until_complete(Portfolio.load_by_batch_id(batch_id))
     data_loader = DataLoader()
     trades = load_trades_by_batch_id(batch_id)
+
+    if trades.empty:
+        return pd.DataFrame()
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
-    trader = trader_factory()()
+    trader = trader_factory()
 
     td = trader.get_trading_days(start_date=start_date, end_date=end_date)
 
@@ -444,7 +448,7 @@ def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
     trades = load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
-    trader = trader_factory()()
+    trader = trader_factory()
 
     td = trader.get_trading_days(start_date=start_date, end_date=end_date)
     td[symbol] = td.apply(
@@ -481,7 +485,7 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
         return pd.DataFrame()
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
-    trader = trader_factory()()
+    trader = trader_factory()
 
     if portfolio.asset_type == AssetType.US_EQUITIES:
         td = trader.get_trading_days(start_date=start_date, end_date=end_date)

@@ -3,6 +3,16 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.10           | **Major Release**                            |
+|                  |                                              |
+|                  | 1. trader application runs until stopped,    |
+|                  |    won't start/stop on US Equity markets.    |
+|                  | 2. Add support to database-based tradeplan.  |
+|                  | 3. Significant performance improvements.     |
+|                  | 4. Massive refactoring and bug-fixes.        |
+|                  | 5. Infrastructure for supporting multiple    |
+|                  |    users / accounts.                         |
++------------------+----------------------------------------------+
 | 0.4.00           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. Extend platform to support Crypto assets  |

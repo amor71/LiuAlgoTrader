@@ -157,41 +157,6 @@ async def scanners_runner(
         tlog("scanners_runner.scanners_runner()  done.")
 
 
-async def teardown_task(
-    to_market_close: Optional[timedelta], tasks: List[asyncio.Task]
-) -> None:
-    tlog("scanners_runner.teardown_task() starting")
-
-    if not to_market_close or not config.market_close:
-        tlog(
-            "we're probably in market schedule by-pass mode, exiting teardown_task()"
-        )
-        return
-
-    tlog(
-        f"scanners_runner.teardown_task() task waiting for market close: {to_market_close}"
-    )
-
-    try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
-        tlog("scanners_runner.teardown_task() closing tasks")
-
-        for task in tasks:
-            tlog(
-                f"scanners_runner.teardown_task() requesting task {task.get_name()} to cancel"
-            )
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                tlog("scanners_runner.teardown_task() task is cancelled now")
-
-    except asyncio.CancelledError:
-        tlog("scanners_runner.teardown_task() cancelled during sleep")
-    finally:
-        tlog("scanners_runner.teardown_task() done.")
-
-
 async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
     await create_db_connection(str(config.dsn))
 
@@ -199,38 +164,23 @@ async def async_main(scanners_conf: Dict, queue: mp.Queue) -> None:
         scanners_runner(
             scanners_conf,
             queue,
-            trader=(at := trader_factory()()),
+            trader=(at := trader_factory()),
         ),
         name="main_task",
     )
 
-    tear_down = asyncio.create_task(
-        teardown_task(
-            at.get_time_market_close(),
-            [main_task],
-        ),
-    )
-
     await asyncio.gather(
         main_task,
-        tear_down,
         return_exceptions=True,
     )
 
 
 def main(
     conf_dict: Dict,
-    market_open: datetime,
-    market_close: datetime,
     scanner_queue: mp.Queue,
 ) -> None:
     tlog(f"*** scanners_runner.main() starting w pid {os.getpid()} ***")
 
-    config.market_open = market_open
-    config.market_close = market_close
-    config.bypass_market_schedule = conf_dict.get(
-        "bypass_market_schedule", False
-    )
     scanners_conf = conf_dict["scanners"]
     if scanners_conf:
         try:

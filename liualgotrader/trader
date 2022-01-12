@@ -1,9 +1,4 @@
 #!/usr/bin/env python
-
-"""
-Trading strategy runner
-"""
-
 import multiprocessing as mp
 import mnqueues as mnq
 from mnqueues.gcp_monitor import GCPMonitor
@@ -21,13 +16,11 @@ import toml
 import copy
 import psutil
 from pytz import timezone
-import alpaca_trade_api as tradeapi
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 from liualgotrader.consumer import consumer_main
 from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
-from liualgotrader.analytics import consolidate
 
 
 def motd(filename: str, version: str, unique_id: str) -> None:
@@ -37,81 +30,13 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     tlog(f"{filename} {version} starting")
     tlog(f"unique id: {unique_id}")
-    tlog(f"DSN: {config.dsn}")
     tlog("----------------------------------------------------------")
     tlog("----------------------------------------------------------")
-
-
-def get_trading_windows(tz, api):
-    """Get start and end time for trading"""
-    tlog("checking market schedule")
-    today = datetime.today().astimezone(tz)
-    today_str = datetime.today().astimezone(tz).strftime("%Y-%m-%d")
-
-    calendar = api.get_calendar(start=today_str, end=today_str)[0]
-
-    tlog(f"next open date {calendar.date.date()}")
-
-    if today.date() < calendar.date.date():
-        tlog(f"which is not today {today}")
-        return None, None
-    market_open = today.replace(
-        hour=calendar.open.hour,
-        minute=calendar.open.minute,
-        second=0,
-        microsecond=0,
-    )
-    market_close = today.replace(
-        hour=calendar.close.hour,
-        minute=calendar.close.minute,
-        second=0,
-        microsecond=0,
-    )
-    return market_open, market_close
-
-
-async def off_hours(batch_id) -> None:
-    await consolidate.trades(batch_id)
 
 
 """
 process main
 """
-
-
-def ready_to_start(trading_api: tradeapi) -> bool:
-    nyc = timezone("America/New_York")
-
-    config.market_open, config.market_close = get_trading_windows(nyc, trading_api)
-
-    if config.market_open or config.bypass_market_schedule:
-
-        if not config.bypass_market_schedule:
-            tlog(
-                f"markets open {config.market_open} market close {config.market_close}"
-            )
-
-        # Wait until just before we might want to trade
-        current_dt = datetime.today().astimezone(nyc)
-        tlog(f"current time {current_dt}")
-
-        if config.bypass_market_schedule:
-            tlog("bypassing market schedule, are we debugging something?")
-            return True
-        elif current_dt < config.market_close:
-            to_market_open = config.market_open - current_dt
-            if to_market_open.total_seconds() > 0:
-                try:
-                    tlog(
-                        f"waiting for market open: {to_market_open} ({to_market_open.total_seconds()} seconds)"
-                    )
-                    time.sleep(to_market_open.total_seconds() + 1)
-                except KeyboardInterrupt:
-                    return False
-
-            return True
-
-    return False
 
 
 def calc_num_consumer_processes() -> int:
@@ -147,8 +72,6 @@ def calc_num_consumer_processes() -> int:
 """
 starting
 """
-
-
 if __name__ == "__main__":
     config.filename = os.path.basename(__file__)
     mp.set_start_method("spawn")
@@ -180,132 +103,67 @@ if __name__ == "__main__":
         tlog(f"[ERROR] could not locate tradeplan file {fname}")
         sys.exit(0)
 
-    # parse configuration
-    config.bypass_market_schedule = conf_dict.get("bypass_market_schedule", False)
-    scanners_only = bool("test_scanners" in conf_dict and conf_dict["test_scanners"])
+    # Consumers first
+    num_consumer_processes = calc_num_consumer_processes()
+    tlog(f"Starting {num_consumer_processes} consumer processes")
 
-    # basic validation for scanners and strategies
-    tlog(f"bypass_market_schedule = {config.bypass_market_schedule}")
-    if "strategies" not in conf_dict or len(conf_dict["strategies"]) == 0:
-        tlog("must have at least one strategy configured")
-        exit(0)
-
-    scanners_conf = conf_dict["scanners"]
-    for scanner in scanners_conf:
-        tlog(f"- {scanner} scanner detected")
-
-    trade_api = tradeapi.REST(
-        base_url=config.alpaca_base_url,
-        key_id=config.alpaca_api_key,
-        secret_key=config.alpaca_api_secret,
+    m = (
+        GCPMonitor(conf_dict["gcp_monitor_measure_prefix"])
+        if "gcp_monitor_measure_prefix" in conf_dict
+        else None
     )
+    queues: List[mnq.MNQueue] = [mnq.MNQueue(m) for i in range(num_consumer_processes)]
+    consumers = [
+        mp.Process(
+            target=consumer_main,
+            args=(queues[i], uid, conf_dict),
+        )
+        for i in range(num_consumer_processes)
+    ]
+    for p in consumers:
+        # p.daemon = True
+        p.start()
 
-    if ready_to_start(trade_api):
-        # add open positions
-        symbols: List = []
+    scanner_queue: mp.Queue = mp.Queue()
+    producer = mp.Process(
+        target=producer_main,
+        args=(
+            uid,
+            queues,
+            conf_dict,
+            scanner_queue,
+            num_consumer_processes,
+        ),
+    )
+    producer.start()
 
-        if "skip_existing" not in conf_dict or not conf_dict["skip_existing"]:
-            # TODO move to trader implementation, and  need to figure how to handle it per asset-type
-            existing_positions = trade_api.list_positions()
-
-            if len(existing_positions) == 0:
-                tlog("no open positions")
-            else:
-                for position in existing_positions:
-                    if position.symbol not in symbols:
-                        symbols.append(position.symbol.lower())
-                        tlog(f"added existing open position in {position.symbol}")
-        else:
-            tlog("skipping existing open positions")
-
-        if not scanners_only:
-            # Consumers first
-            num_consumer_processes = calc_num_consumer_processes()
-            tlog(f"Starting {num_consumer_processes} consumer processes")
-
-            m = (
-                GCPMonitor(conf_dict["gcp_monitor_measure_prefix"])
-                if "gcp_monitor_measure_prefix" in conf_dict
-                else None
-            )
-            queues: List[mnq.MNQueue] = [
-                mnq.MNQueue(m) for i in range(num_consumer_processes)
-            ]
-            q_id_hash = {}
-            symbol_by_queue = {}
-            for symbol in symbols:
-                _index = random.SystemRandom().randint(0, num_consumer_processes - 1)
-                q_id_hash[symbol] = _index
-                if _index not in symbol_by_queue:
-                    symbol_by_queue[_index] = [symbol]
-                else:
-                    symbol_by_queue[_index].append(symbol)
-
-            consumers = [
-                mp.Process(
-                    target=consumer_main,
-                    args=(queues[i], symbol_by_queue.get(i), uid, conf_dict),
-                )
-                for i in range(num_consumer_processes)
-            ]
-            for p in consumers:
-                # p.daemon = True
-                p.start()
-
-        scanner_queue: mp.Queue = mp.Queue()
-
-        if not scanners_only:
-            producer = mp.Process(
-                target=producer_main,
-                args=(
-                    uid,
-                    queues,
-                    symbols,
-                    q_id_hash,
-                    config.market_close,
-                    conf_dict,
-                    scanner_queue,
-                    num_consumer_processes,
-                ),
-            )
-            producer.start()
-
+    scanner = None
+    if "scanners" in conf_dict:
         tlog("Starting scanners process")
         scanner = mp.Process(
             target=main,
             args=(
                 conf_dict,
-                config.market_open,
-                config.market_close,
                 scanner_queue,
             ),
         )
         scanner.start()
 
-        # wait for completion and hope everyone plays nicely
-        try:
-            if not scanners_only:
-                producer.join()
-            scanner.join()
+    # wait for completion and hope everyone plays nicely
+    try:
+        producer.join()
+        scanner.join()
 
-            if not scanners_only:
-                for p in consumers:
-                    p.join()
+        for p in consumers:
+            p.join()
 
-        except KeyboardInterrupt:
-            if not scanners_only:
-                producer.kill()
+    except KeyboardInterrupt:
+        producer.kill()
+
+        if scanner:
             scanner.terminate()
 
-            if not scanners_only:
-                for p in consumers:
-                    p.terminate()
-
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
-    tlog(f"run {uid} completed")
-    tlog("Executing off-hours calculations")
-    asyncio.run(off_hours(uid))
-    tlog("Off-hours calculations completed")
-    print("+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=+")
+        for p in consumers:
+            p.terminate()
 
     sys.exit(0)

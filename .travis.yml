@@ -7,6 +7,7 @@ services:
 env:
   global:
   - DEPS_DIR=$HOME/dependencies
+  - DSN="postgresql://postgres@localhost/travis_ci_test"
 cache:
   directories:
   - "$DEPS_DIR"
@@ -20,7 +21,7 @@ before_script:
 - psql -c 'create database travis_ci_test;' -U postgres
 - psql -d travis_ci_test -U postgres -f database/schema.sql
 script:
-- coverage run -m pytest -m "not devtest"
+- coverage run -m pytest
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 deploy:

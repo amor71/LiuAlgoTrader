@@ -31,6 +31,17 @@ from liualgotrader.data.streaming_base import StreamingAPI
 utctz = pytz.timezone("UTC")
 
 
+def requests_get(url):
+    r = requests.get(url)
+
+    if r.status_code in (429, 502):
+        tlog(f"{url} return {r.status_code}, waiting and re-trying")
+        time.sleep(10)
+        return requests_get(url)
+
+    return r
+
+
 class GeminiData(DataAPI):
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
     gemini_api_secret: Optional[str] = os.getenv("GEMINI_API_SECRET")
@@ -54,6 +65,54 @@ class GeminiData(DataAPI):
             f"HTTP ERROR {response.status_code} {response.text}"
         )
 
+    def _get_ranges(self, start, end):
+        start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
+        end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
+
+        minutes = (end_t - start_t).total_seconds() / 60
+        return pd.date_range(
+            start_t,
+            end_t,
+            periods=minutes
+            / (self.datapoints_per_request / self.max_trades_per_minute),
+        )
+
+    async def _consolidate_response(self, response, scale) -> pd.DataFrame:
+        _df = pd.DataFrame(response.json())
+
+        if _df.empty:
+            return pd.DataFrame()
+
+        _df = _df.set_index(_df.timestamp).sort_index()
+
+        _df["s"] = pd.to_datetime(
+            (_df.index * 1e9).astype("int64"),
+            utc=True,
+        )
+
+        # _df.timestamp.apply(lambda x: pd.Timestamp(x, tz=utctz, unit="ns"))
+        _df["amount"] = pd.to_numeric(_df.amount)
+        _df["price"] = pd.to_numeric(_df.price)
+        _df = _df[["s", "price", "amount"]].set_index("s")
+
+        rule = "T" if scale == TimeScale.minute else "D"
+        _newdf = _df.resample(rule).first()
+        _newdf["high"] = _df.resample(rule).max().price
+        _newdf["low"] = _df.resample(rule).min().price
+        _newdf["close"] = _df.resample(rule).last().price
+        _newdf["count"] = _df.resample(rule).count().amount
+        _newdf["volume"] = _df.resample(rule).sum().amount
+        _newdf = (
+            _newdf.rename(columns={"price": "open", "s": "timestamp"})
+            .drop(columns=["amount"])
+            .sort_index()
+        )
+        _newdf = _newdf.dropna()
+        _newdf["average"] = 0.0
+        _newdf["vwap"] = 0.0
+
+        return _newdf
+
     async def aget_symbol_data(
         self,
         symbol: str,
@@ -65,21 +124,7 @@ class GeminiData(DataAPI):
         tlog(
             f"GEMINI start loading {symbol} from {start} to {end} w scale {scale}"
         )
-        start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
-        end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
-        start_ts, end_ts = (
-            int(start_t.timestamp()),
-            int(end_t.timestamp()),
-        )
-
-        minutes = (end_t - start_t).total_seconds() / 60
-
-        ranges = pd.date_range(
-            start_t,
-            end_t,
-            periods=minutes
-            / (self.datapoints_per_request / self.max_trades_per_minute),
-        )
+        ranges = self._get_ranges(start, end)
         endpoint = f"/v1/trades/{symbol}"
         returned_df: pd.DataFrame = pd.DataFrame()
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -87,7 +132,7 @@ class GeminiData(DataAPI):
             futures = [
                 loop.run_in_executor(
                     executor,
-                    requests.get,
+                    requests_get,
                     f"{self.base_url}{endpoint}?timestamp={int(current_timestamp.timestamp())}&limit_trades=500",
                 )
                 for current_timestamp in ranges[:-1]
@@ -98,42 +143,15 @@ class GeminiData(DataAPI):
                     raise ValueError(
                         f"HTTP ERROR {response.status_code} {response.text}"
                     )
-                _df = pd.DataFrame(response.json())
 
-                if _df.empty:
+                df = await self._consolidate_response(response, scale)
+
+                if df.empty:
                     continue
-
-                _df = _df.set_index(_df.timestamp).sort_index()
-
-                _df["s"] = _df.timestamp.apply(
-                    lambda x: pd.Timestamp(
-                        datetime.fromtimestamp(x).astimezone(utctz)
-                    )
-                )
-                _df["amount"] = pd.to_numeric(_df.amount)
-                _df["price"] = pd.to_numeric(_df.price)
-                _df = _df[["s", "price", "amount"]].set_index("s")
-
-                rule = "T" if scale == TimeScale.minute else "D"
-                _newdf = _df.resample(rule).first()
-                _newdf["high"] = _df.resample(rule).max().price
-                _newdf["low"] = _df.resample(rule).min().price
-                _newdf["close"] = _df.resample(rule).last().price
-                _newdf["count"] = _df.resample(rule).count().amount
-                _newdf["volume"] = _df.resample(rule).sum().amount
-                _newdf = (
-                    _newdf.rename(columns={"price": "open", "s": "timestamp"})
-                    .drop(columns=["amount"])
-                    .sort_index()
-                )
-                _newdf = _newdf.dropna()
-                _newdf["average"] = 0.0
-                _newdf["vwap"] = 0.0
-
                 if returned_df.empty:
-                    returned_df = _newdf
+                    returned_df = df
                 else:
-                    returned_df = pd.concat([returned_df, _newdf])
+                    returned_df = pd.concat([returned_df, df])
                     returned_df = returned_df[
                         ~returned_df.index.duplicated(keep="first")
                     ]
@@ -142,6 +160,30 @@ class GeminiData(DataAPI):
             f"GEMINI completed loading {symbol} from {start} to {end} w scale {scale}"
         )
         return returned_df
+
+    def get_symbols_data(
+        self,
+        symbols: List[str],
+        start: date,
+        end: date = date.today(),
+        scale: TimeScale = TimeScale.minute,
+    ) -> Dict[str, pd.DataFrame]:
+        raise NotImplementedError(
+            "get_symbols_data() not implemented yet for Gemini data provider"
+        )
+
+    def trading_days_slice(self, s: slice) -> slice:
+        return s
+
+    def get_last_trading(self, symbol: str) -> datetime:
+        return datetime.now(timezone.utc)
+
+    def get_trading_day(self, now: datetime, offset: int) -> datetime:
+        return (
+            utctz.localize(datetime.combine(now, datetime.min.time()))
+            if isinstance(now, date)
+            else now
+        ) + timedelta(days=offset)
 
     def get_symbol_data(
         self,
@@ -155,6 +197,15 @@ class GeminiData(DataAPI):
         return loop.run_until_complete(
             self.aget_symbol_data(symbol, start, end, scale)
         )
+
+    def num_trading_minutes(self, start: date, end: date) -> int:
+        raise NotImplementedError("num_trading_minutes")
+
+    def num_trading_days(self, start: date, end: date) -> int:
+        raise NotImplementedError("num_trading_days")
+
+    def get_max_data_points_per_load(self) -> int:
+        raise NotImplementedError("get_max_data_points_per_load")
 
 
 class GeminiStream(StreamingAPI):

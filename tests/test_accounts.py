@@ -15,7 +15,6 @@ def event_loop():
 
 
 @pytest.mark.asyncio
-@pytest.mark.devtest
 async def test_create() -> bool:
     account_id = await Accounts.create(
         balance=1000.0,
@@ -117,29 +116,6 @@ async def test_add_transaction3() -> bool:
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_negative_add_transaction() -> bool:
-    balance = 1234.0
-    account_id = await Accounts.create(
-        balance=balance,
-        allow_negative=False,
-    )
-    amount = 1000.0
-    await Accounts.add_transaction(account_id, amount)
-    await Accounts.add_transaction(account_id, -amount)
-    try:
-        await Accounts.add_transaction(account_id, -10000.0)
-    except Exception as e:
-        print(e)
-    if balance != await Accounts.get_balance(account_id):
-        raise AssertionError(
-            "test_negative_add_transaction(): get_balance() did not return the expect value"
-        )
-
-    return True
-
-
-@pytest.mark.asyncio
-@pytest.mark.devtest
 async def test_add_transaction5() -> bool:
     balance = 100.0
     account_id = await Accounts.create(
@@ -148,27 +124,6 @@ async def test_add_transaction5() -> bool:
     amount = 1000.0
     await Accounts.add_transaction(account_id, -amount)
     if balance - amount != await Accounts.get_balance(account_id):
-        raise AssertionError(
-            "test_add_transaction5(): get_balance() did not return the expect value"
-        )
-
-    return True
-
-
-@pytest.mark.asyncio
-@pytest.mark.devtest
-async def test_negative_add_transaction2() -> bool:
-    balance = 100.0
-    account_id = await Accounts.create(
-        balance=balance, allow_negative=True, credit_line=5000.0
-    )
-    amount = 10000.0
-    try:
-        await Accounts.add_transaction(account_id, -amount)
-    except Exception as e:
-        print(e)
-
-    if balance != await Accounts.get_balance(account_id):
         raise AssertionError(
             "test_add_transaction5(): get_balance() did not return the expect value"
         )
