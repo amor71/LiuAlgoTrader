@@ -3,6 +3,13 @@ Concepts
 
 This section explains the concepts and architecture of `LiuAlgoTrader` framework.
 
+.. image:: /images/core-platform-components.png
+    :width: 1000
+    :align: left
+    :alt: liu blcok diagram
+
+
+
 Building Blocks
 ---------------
 The framework executes two components in parallel: Scanners and Strategies.
@@ -12,7 +19,6 @@ The framework executes two components in parallel: Scanners and Strategies.
 
 Data Propagation 
 ----------------
-**new in version 1.0** 
 
 Data is either loaded directly from a data-providers, 
 or updated in real-time using web-sockets.
@@ -21,6 +27,12 @@ or updated in real-time using web-sockets.
 * `StreamingAPI()` and `DataAPI()` are abstract classes for integrating data-providers (there are implemented connectors for both Alpaca and Polygon), 
 * `data_loader_factory()` instantiates implementation for `StreamingAPI()` and `DataAPI()`, based on the selected data-providers,
 * `Trader()` is a base-class for integration Broker APIs (only Alpaca is currently supported),
+
+DataLoader class
+****************
+
+The DataLoader class is fundamental in creating a strategy using LiuAlgoTrader. It allows access to data without the need to pay attention to any connectivity details and is consistent among the different data providers. The Framework is responsibility for constantly maintaing an updated DataLoader class, which is passed a long to the strategy during its execution. 
+
 
 Usage Fundamentals
 ------------------
@@ -227,6 +239,10 @@ strategies using the platform.
     :align: left
     :alt: liu architecture
 
+
+
+* To browse the entire database schema: https://amor71.github.io/LiuAlgoTrader/dbspy/
+* To view the relationships between the tables: https://amor71.github.io/LiuAlgoTrader/dbspy/relationships.html
 
 
 The data-model, as represented in the database tables can
