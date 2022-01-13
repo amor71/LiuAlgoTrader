@@ -70,6 +70,9 @@ class AlpacaData(DataAPI):
             raise ValueError(f"{symbol} snapshot not found")
 
         min_bar = snapshot_data.minute_bar
+        if not min_bar:
+            raise ValueError(f"Can't get snapshot for {symbol}")
+
         return min_bar.t
 
     def get_trading_holidays(self) -> List[str]:
