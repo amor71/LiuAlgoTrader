@@ -35,7 +35,7 @@ total_tickers = 000
 #
 # Shared data
 #
-build_label: str
+build_label: str = "xoxo"
 filename: str
 db_conn_pool: Pool
 batch_id: str

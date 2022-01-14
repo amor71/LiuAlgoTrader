@@ -65,7 +65,7 @@ def test_apple_stock_current_price_range_int_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_daily_price() -> bool:
+def no_test_apple_stock_daily_price() -> bool:
     print("test_apple_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.alpaca)
     last_price = dl["AAPL"].close[-1]
