@@ -35,7 +35,7 @@ async def create_scanners(
 ) -> List[Scanner]:
     scanners: List = []
     for scanner_name in scanners_conf:
-        if scanner_names and scanner_name not in scanner_name:
+        if scanner_names and scanner_name not in scanner_names:
             continue
         tlog(f"scanner {scanner_name} selected")
         if scanner_name == "momentum":
@@ -381,6 +381,7 @@ async def backtest_day(
             tlog(f"Prefetch data for {symbol}@{day_start}-{day_end}")
 
             # try:
+            print(data_loader[symbol])
             data_loader[symbol][day_start:day_end]
             prefetched.append(symbol)
             # except ValueError:
@@ -450,16 +451,16 @@ async def backtest_time_range(
 
     for day in calendars:
         await backtest_day(
-            day,
-            scanners,
-            symbols,
-            strategies,
-            scale,
-            data_loader,
-            asset_type,
-            trader_factory(),
-            buy_fee_percentage,
-            sell_fee_percentage,
+            day=day,
+            scanners=scanners,
+            symbols=symbols,
+            strategies=strategies,
+            scale=scale,
+            data_loader=data_loader,
+            asset_type=asset_type,
+            trader=trader_factory(),
+            buy_fee_percentage=buy_fee_percentage,
+            sell_fee_percentage=sell_fee_percentage,
         )
 
 
@@ -489,7 +490,7 @@ async def backtest_main(
 
     await create_db_connection()
 
-    data_loader = DataLoader()  # DataLoader(scale)
+    data_loader = DataLoader(scale)
 
     scanners = (
         await create_scanners(data_loader, tradeplan["scanners"], scanners)
@@ -506,7 +507,7 @@ async def backtest_main(
         from_date=from_date,
         to_date=to_date,
         scale=scale,
-        data_loader=date,
+        data_loader=data_loader,
         buy_fee_percentage=buy_fee_percentage,
         sell_fee_percentage=sell_fee_percentage,
         asset_type=asset_type,
