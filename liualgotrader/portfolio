@@ -105,7 +105,7 @@ def list():
     data = []
     loop = asyncio.get_event_loop()
     loop.run_until_complete(create_db_connection())
-    print(f"Portfolio(s):")
+    print('Portfolio(s):')
     data = loop.run_until_complete(Portfolio.list_portfolios())
     print(data)
 
