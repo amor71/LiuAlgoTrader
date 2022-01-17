@@ -172,13 +172,15 @@ class GeminiData(DataAPI):
             "get_symbols_data() not implemented yet for Gemini data provider"
         )
 
-    def trading_days_slice(self, s: slice) -> slice:
+    def trading_days_slice(self, symbol: str, s: slice) -> slice:
         return s
 
     def get_last_trading(self, symbol: str) -> datetime:
         return datetime.now(timezone.utc)
 
-    def get_trading_day(self, now: datetime, offset: int) -> datetime:
+    def get_trading_day(
+        self, symbol: str, now: datetime, offset: int
+    ) -> datetime:
         return (
             utctz.localize(datetime.combine(now, datetime.min.time()))
             if isinstance(now, date)
@@ -198,10 +200,10 @@ class GeminiData(DataAPI):
             self.aget_symbol_data(symbol, start, end, scale)
         )
 
-    def num_trading_minutes(self, start: date, end: date) -> int:
+    def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
         raise NotImplementedError("num_trading_minutes")
 
-    def num_trading_days(self, start: date, end: date) -> int:
+    def num_trading_days(self, symbol: str, start: date, end: date) -> int:
         raise NotImplementedError("num_trading_days")
 
     def get_max_data_points_per_load(self) -> int:

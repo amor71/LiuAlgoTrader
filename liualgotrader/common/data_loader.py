@@ -52,7 +52,9 @@ def convert_offset_to_datetime(
                 second=0, microsecond=0
             ) + timedelta(minutes=1 + offset)
 
-        return data_api.get_trading_day(last_trading_time.date(), 1 + offset)
+        return data_api.get_trading_day(
+            symbol, last_trading_time.date(), 1 + offset
+        )
 
 
 def handle_slice_conversion(
@@ -192,7 +194,7 @@ def _concurrent_fetch_data(
     end: datetime,
 ):
     ranges = data_api.data_concurrency_ranges(
-        start=start, end=end, scale=scale
+        symbol=symbol, start=start, end=end, scale=scale
     )
     if not len(ranges):
         raise ValueError(f"can't load empty range list {ranges}")

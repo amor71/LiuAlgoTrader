@@ -13,9 +13,10 @@ def calc_num_consumer_processes() -> int:
     num_cpu = psutil.cpu_count(False)
 
     if not num_cpu:
-        raise AssertionError(
+        tlog(
             "Can't automatically detect number of CPUs, use fixed configuration"
         )
+        return 1
 
     load_pct: float = psutil.cpu_percent(interval=5)
 

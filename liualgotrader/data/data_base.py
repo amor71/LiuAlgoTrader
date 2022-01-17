@@ -42,19 +42,21 @@ class DataAPI(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_trading_day(self, now: datetime, offset: int) -> datetime:
+    def get_trading_day(
+        self, symbol: str, now: datetime, offset: int
+    ) -> datetime:
         ...
 
     @abstractmethod
-    def trading_days_slice(self, slice) -> slice:
+    def trading_days_slice(self, symbol: str, slice) -> slice:
         ...
 
     @abstractmethod
-    def num_trading_minutes(self, start: date, end: date) -> int:
+    def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
         ...
 
     @abstractmethod
-    def num_trading_days(self, start: date, end: date) -> int:
+    def num_trading_days(self, symbol: str, start: date, end: date) -> int:
         ...
 
     @abstractmethod
@@ -62,16 +64,17 @@ class DataAPI(metaclass=ABCMeta):
         ...
 
     def data_concurrency_ranges(
-        self, start: date, end: date, scale: TimeScale
+        self, symbol: str, start: date, end: date, scale: TimeScale
     ) -> List[Optional[pd.DatetimeIndex]]:
-
-        scale_factor_minutes = self.num_trading_minutes(start, end)
+        scale_factor_minutes = self.num_trading_minutes(symbol, start, end)
         data_points = (
             scale_factor_minutes / 60
             if scale == TimeScale.day
             else scale_factor_minutes
         )
-        total_data_points = self.num_trading_days(start, end) * data_points
+        total_data_points = (
+            self.num_trading_days(symbol, start, end) * data_points
+        )
         periods = math.ceil(
             total_data_points / self.get_max_data_points_per_load()
         )

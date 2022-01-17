@@ -14,6 +14,7 @@ import pytz
 import requests
 from alpaca_trade_api.rest import REST, URL, APIError, TimeFrame
 from alpaca_trade_api.stream import Stream
+from dateutil.parser import parse as date_parser
 
 from liualgotrader.common import config
 from liualgotrader.common.list_utils import chunks
@@ -64,6 +65,8 @@ class AlpacaData(DataAPI):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
+        if self._is_crypto_symbol(symbol):
+            return datetime.now(tz=nytz)
         try:
             snapshot_data = self.alpaca_rest_client.get_snapshot(symbol)
         except APIError:
@@ -79,26 +82,39 @@ class AlpacaData(DataAPI):
         nyse = pandas_market_calendars.get_calendar("NYSE")
         return nyse.holidays().holidays
 
-    def get_trading_day(self, now: datetime, offset: int) -> datetime:
-        cbd_offset = pd.tseries.offsets.CustomBusinessDay(
-            n=offset, holidays=self.get_trading_holidays()
-        )
+    def get_trading_day(
+        self, symbol: str, now: datetime, offset: int
+    ) -> datetime:
+        if self._is_crypto_symbol(symbol):
+            cbd_offset = timedelta(days=offset)
+        else:
+            cbd_offset = pd.tseries.offsets.CustomBusinessDay(
+                n=offset, holidays=self.get_trading_holidays()
+            )
 
         return nytz.localize(now + cbd_offset)
 
-    def num_trading_minutes(self, start: date, end: date) -> int:
-        # Alpaca extended trading data is from 4AM to 8PM
-        return (20 - 4) * 60
+    def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
+        return (24 if self._is_crypto_symbol(symbol) else (20 - 4)) * 60
 
-    def num_trading_days(self, start: date, end: date) -> int:
-        return len(
-            pd.date_range(
-                start,
-                end,
-                freq=pd.tseries.offsets.CustomBusinessDay(
-                    holidays=self.get_trading_holidays()
-                ),
+    def num_trading_days(self, symbol: str, start: date, end: date) -> int:
+        if type(start) == str:
+            start = date_parser(start)  # type: ignore
+        if type(end) == str:
+            end = date_parser(end)  # type: ignore
+
+        return (
+            len(
+                pd.date_range(
+                    start,
+                    end,
+                    freq=pd.tseries.offsets.CustomBusinessDay(
+                        holidays=self.get_trading_holidays()
+                    ),
+                )
             )
+            if not self._is_crypto_symbol(symbol)
+            else (end - start).days + 1
         )
 
     def get_max_data_points_per_load(self) -> int:
@@ -108,9 +124,12 @@ class AlpacaData(DataAPI):
     def _is_crypto_symbol(self, symbol: str) -> bool:
         return symbol.lower() in ["btcusd", "ethusd"]
 
-    def trading_days_slice(self, s: slice) -> slice:
+    def trading_days_slice(self, symbol: str, s: slice) -> slice:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
+
+        if self._is_crypto_symbol(symbol):
+            return s
 
         if s.start in self.datetime_cache and s.stop in self.datetime_cache:
             return slice(
