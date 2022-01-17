@@ -175,7 +175,7 @@ def quickstart():
         print("The Framework expects three environment variables to be set:")
         print("`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`: reflecting the funded")
         print("account's API key and secret respectively.")
-        print("And `ALPACA_BASEURL` reflecting the base URL for your account.")
+        print("And `APCA_API_BASE_URL` reflecting the base URL for your account.")
         print("Please set the three environment variables and re-run the wizard.")
         to_exit = True
 
