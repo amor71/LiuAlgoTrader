@@ -52,5 +52,5 @@ opentelemetry-exporter-gcp-trace==1.1.0
 websocket-client==1.2.3
 types-requests==2.27.7
 types-pytz==2021.3.4
-pandas_market_calendars
+pandas_market_calendars==3.2
 psutil==5.8.0
