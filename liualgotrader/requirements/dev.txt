@@ -50,7 +50,7 @@ sphinxcontrib-serializinghtml==1.1.5
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.1.0
 websocket-client==1.2.3
-types-requests==2.27.5
+types-requests==2.27.7
 types-pytz==2021.3.4
 pandas_market_calendars
 psutil==5.8.0
