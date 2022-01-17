@@ -11,9 +11,7 @@
 
 ## Introduction
 
-**LiuAlgoTrader** is a scalable, multi-process ML-ready framework
-for effective algorithmic trading. The framework simplify development, testing,
-deployment, analysis and training algo trading strategies. The framework **automatically analyzes** trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
+**LiuAlgoTrader** is a scalable, multi-process ML-ready framework for effective algorithmic trading. The framework simplifies development, testing, deployment, analysis, and training algo trading strategies. The framework automatically analyzes trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
 
 The framework currently support trading and back-testing of US Equities, and Crypto strategies.
 

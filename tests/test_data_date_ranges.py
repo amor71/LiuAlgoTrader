@@ -12,19 +12,60 @@ from liualgotrader.data.data_factory import data_loader_factory
 def test_alpaca_num_trading_day():
     print("test_alpaca_num_trading_days_positive")
     alpaca_dl = data_loader_factory(DataConnectorType.alpaca)
-    if alpaca_dl.num_trading_days(start="2022-01-06", end="2022-01-07") != 2:
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="AAPL", start="2022-01-06", end="2022-01-07"
+        )
+        != 2
+    ):
         raise AssertionError("expected 2")
 
-    if alpaca_dl.num_trading_days(start="2022-01-01", end="2022-01-07") != 5:
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="aapl", start="2022-01-06", end="2022-01-07"
+        )
+        != 2
+    ):
+        raise AssertionError("expected 2")
+
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="AAPL", start="2022-01-01", end="2022-01-07"
+        )
+        != 5
+    ):
         raise AssertionError("expected 5")
 
-    if alpaca_dl.num_trading_days(start="2021-12-28", end="2022-01-07") != 9:
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="AAPL", start="2021-12-28", end="2022-01-07"
+        )
+        != 9
+    ):
         raise AssertionError("expected 9")
 
-    if alpaca_dl.num_trading_days(start="2021-07-01", end="2021-07-07") != 4:
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="AAPL", start="2021-07-01", end="2021-07-07"
+        )
+        != 4
+    ):
         raise AssertionError("expected 4")
 
-    if alpaca_dl.num_trading_days(start="2022-08-06", end="2022-01-07") != 0:
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="BTCUSD", start="2021-07-01", end="2021-07-07"
+        )
+        != 7
+    ):
+        raise AssertionError("BTCUSD - expected 7")
+
+    if (
+        alpaca_dl.num_trading_days(
+            symbol="AAPL", start="2022-08-06", end="2022-01-07"
+        )
+        != 0
+    ):
         raise AssertionError("expected 0")
 
     return True
@@ -38,7 +79,10 @@ def test_alpaca_concurrency_ranges_min():
     if (
         len(
             alpaca_dl.data_concurrency_ranges(
-                start="2021-11-10", end="2022-01-07", scale=TimeScale.minute
+                symbol="AAPL",
+                start="2021-11-10",
+                end="2022-01-07",
+                scale=TimeScale.minute,
             )
         )
         != 5
@@ -50,7 +94,10 @@ def test_alpaca_concurrency_ranges_min():
     if (
         len(
             alpaca_dl.data_concurrency_ranges(
-                start="2022-01-01", end="2022-01-07", scale=TimeScale.minute
+                symbol="AAPL",
+                start="2022-01-01",
+                end="2022-01-07",
+                scale=TimeScale.minute,
             )
         )
         != 2
@@ -71,7 +118,7 @@ def test_hpy_alpaca_concurrency_ranges_min(start: date, end: date):
 
     t = time.time()
     r = alpaca_dl.data_concurrency_ranges(
-        start=start, end=end, scale=TimeScale.minute
+        symbol="AAPL", start=start, end=end, scale=TimeScale.minute
     )
     duration = time.time() - t
 

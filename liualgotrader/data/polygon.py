@@ -84,23 +84,25 @@ class PolygonData(DataAPI):
     ) -> Dict[str, pd.DataFrame]:
         raise NotImplementedError("get_symbols_data")
 
-    def num_trading_minutes(self, start: date, end: date) -> int:
+    def get_last_trading(self, symbol: str) -> datetime:
+        raise NotImplementedError("get_last_trading")
+
+    def get_trading_day(
+        self, symbol: str, now: datetime, offset: int
+    ) -> datetime:
+        raise NotImplementedError("get_trading_day")
+
+    def trading_days_slice(self, symbol: str, slice) -> slice:
+        raise NotImplementedError("trading_days_slice")
+
+    def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
         raise NotImplementedError("num_trading_minutes")
 
-    def num_trading_days(self, start: date, end: date) -> int:
+    def num_trading_days(self, symbol: str, start: date, end: date) -> int:
         raise NotImplementedError("num_trading_days")
 
     def get_max_data_points_per_load(self) -> int:
         raise NotImplementedError("get_max_data_points_per_load")
-
-    def get_last_trading(self, symbol: str) -> datetime:
-        raise NotImplementedError("get_last_trading")
-
-    def get_trading_day(self, now: datetime, offset: int) -> datetime:
-        raise NotImplementedError("get_trading_day")
-
-    def trading_days_slice(self, slice) -> slice:
-        raise NotImplementedError("trading_days_slice")
 
 
 class PolygonStream(StreamingAPI):

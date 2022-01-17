@@ -54,3 +54,4 @@ types-requests==2.27.7
 types-pytz==2021.3.4
 pandas_market_calendars==3.2
 psutil==5.9.0
+types-python-dateutil

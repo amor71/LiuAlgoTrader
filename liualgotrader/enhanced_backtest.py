@@ -381,7 +381,6 @@ async def backtest_day(
             tlog(f"Prefetch data for {symbol}@{day_start}-{day_end}")
 
             # try:
-            print(data_loader[symbol])
             data_loader[symbol][day_start:day_end]
             prefetched.append(symbol)
             # except ValueError:
