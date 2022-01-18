@@ -22,6 +22,6 @@ mnqueues==0.0.34
 tqdm==4.62.3
 toml==0.10.2
 fire==0.4.0
-opentelemetry-exporter-gcp-trace==1.1.0
+opentelemetry-exporter-gcp-trace==1.0
 pandas_market_calendars==3.2
 psutil==5.9.0
