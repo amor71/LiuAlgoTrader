@@ -1,5 +1,6 @@
 import json
 from typing import Dict, List, Optional, Tuple
+import tabulate
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
@@ -205,8 +206,21 @@ class Portfolio:
             async with con.transaction():
                 rows = await con.fetch(
                     """
-                        SELECT DISTINCT portfolio_id
-                        FROM portfolio
+                        SELECT
+                        portfolio_id , size, parameters ,assets, tstamp, broker, external_account_id
+                        FROM
+                        portfolio
                     """,
                 )
-                return DataFrame(data=rows, columns=["portfolio_id"])
+                return DataFrame(
+                    data=rows,
+                    columns=[
+                        "portfolio_id",
+                        "size",
+                        "parameters",
+                        "assets",
+                        "tstamp",
+                        "broker",
+                        "external_account_id",
+                    ],
+                )
