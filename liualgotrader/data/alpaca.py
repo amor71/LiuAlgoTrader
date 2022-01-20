@@ -32,16 +32,52 @@ class AlpacaData(DataAPI):
             raise AssertionError(
                 "Failed to authenticate Alpaca RESTful client"
             )
+        # for requesting market snapshots by chunk of symbols
+        self.symbol_chunk_size = 1000
 
     def get_symbols(self) -> List[str]:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        data = self.alpaca_rest_client.list_assets(asset_class='us_equity')
-        return [_d.symbol for _d in data]
+        symbols = [
+            asset.symbol for asset in self.alpaca_rest_client.list_assets(
+                status='active', asset_class='us_equity'
+            ) if asset.tradable
+        ]
+        return symbols
 
     def get_market_snapshot(self) -> List[Dict]:
-        return []
+        # parse market snapshots per chunk of symbols
+        symbols = self.get_symbols()
+        raw_snapshots_dict = {}
+        for i in range(0, len(symbols), self.symbol_chunk_size):
+            chunked_symbols = symbols[i:i+self.symbol_chunk_size]
+            raw_snapshots_dict.update(self.alpaca_rest_client.get_snapshots(chunked_symbols))
+
+        # convert snapshot object for each symbol to a dict
+        market_snapshots = []
+        for ticker, ticker_snapshots in raw_snapshots_dict.items():
+            if ticker_snapshots is None:
+                continue
+            try:
+                processed_snapshot = {
+                    'ticker': ticker,
+                    **{
+                        snapshot_type: snapshot_obj.__dict__['_raw']
+                        for snapshot_type, snapshot_obj
+                        in ticker_snapshots.__dict__.items()
+                    }
+                }
+                market_snapshots.append(processed_snapshot)
+            # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
+            except AttributeError:
+                pass
+            # capture failure by unknown reason
+            except Exception as e:
+                raise ValueError(
+                    f"[EXCEPTION] {e} failed to parse market snapshot for {ticker}."
+                )
+        return market_snapshots
 
     def _localize_start_end(self, start: date, end: date) -> Tuple[str, str]:
         return (
