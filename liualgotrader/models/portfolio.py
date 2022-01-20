@@ -1,12 +1,13 @@
 import json
 from typing import Dict, List, Optional, Tuple
+
 import tabulate
+from pandas import DataFrame
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.types import AssetType
 from liualgotrader.models.accounts import Accounts
-from pandas import DataFrame
 
 
 class Portfolio:
@@ -207,20 +208,26 @@ class Portfolio:
                 rows = await con.fetch(
                     """
                         SELECT
-                        portfolio_id , size, parameters ,assets, tstamp, broker, external_account_id
+                            portfolio_id , a.tstamp as last_transaction, size, parameters ,assets, p.tstamp 
                         FROM
-                        portfolio
+                            portfolio as p
+                        LEFT JOIN account_transactions as a
+                        ON
+                            p.account_id = a.account_id
+                        WHERE
+                            p.expire_tstamp is NULL
+                        ORDER BY 
+                            p.tstamp DESC
                     """,
                 )
                 return DataFrame(
                     data=rows,
                     columns=[
                         "portfolio_id",
+                        "last_transaction",
                         "size",
                         "parameters",
                         "assets",
                         "tstamp",
-                        "broker",
-                        "external_account_id",
                     ],
                 )

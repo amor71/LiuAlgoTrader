@@ -192,9 +192,11 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     # Make sure the order's not too old
     submitted_at = order.submitted_at.astimezone(market_clock.tzinfo)
     order_lifetime = market_clock - submitted_at
-    tlog(
-        f"should_cancel_order submitted_at:{submitted_at}, order_lifetime:{order_lifetime}"
-    )
+
+    if config.debug_enabled:
+        tlog(
+            f"should_cancel_order submitted_at:{submitted_at}, order_lifetime:{order_lifetime}"
+        )
     return (
         market_clock > submitted_at
         and order_lifetime.total_seconds() // 60 >= 1
@@ -327,6 +329,7 @@ async def update_filled_order(
 async def handle_trade_update_for_order(trade: Trade) -> bool:
     symbol = trade.symbol.lower()
     event = trade.event
+
     tlog(f"trade update for {symbol} with event {event}")
 
     if event == Order.EventType.partial_fill:
@@ -489,9 +492,10 @@ async def order_inflight(
     symbol = symbol.lower()
     try:
         if await should_cancel_order(existing_order, now):
-            tlog(
-                f"should_cancel_order - checking status w/ order-id {existing_order.order_id}"
-            )
+            if config.debug_enabled:
+                tlog(
+                    f"should_cancel_order - checking status w/ order-id {existing_order.order_id}"
+                )
             (
                 order_status,
                 filled_price,
@@ -710,7 +714,9 @@ async def handle_aggregate(
     carrier=None,
 ) -> bool:
     symbol = symbol.lower()
-    tlog(f"handle_aggregate {symbol}")
+
+    if config.debug_enabled:
+        tlog(f"handle_aggregate {symbol}")
     # Next, check for existing orders for the stock
     if symbol in trading_data.open_orders and await order_inflight(
         symbol, trading_data.open_orders[symbol.lower()], ts, trader
