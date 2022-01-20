@@ -88,6 +88,7 @@ class Momentum(Scanner):
                 market_snapshot = self.data_loader.data_api.get_market_snapshot()
                 tlog(f"loaded {len(market_snapshot)} tickers of market snapshots from Polygon")
                 if not len(market_snapshot):
+                    tlog("failed to load any market snapshots for any tickers from Polygon")
                     break
                 trade_able_symbols = await self._get_trade_able_symbols()
 
