@@ -1,10 +1,12 @@
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+import tabulate
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.types import AssetType
 from liualgotrader.models.accounts import Accounts
+from pandas import DataFrame
 
 
 class Portfolio:
@@ -191,3 +193,34 @@ class Portfolio:
             )
 
             return (r["external_account_id"], r["broker"])
+
+    @classmethod
+    async def list_portfolios(cls) -> List[str]:
+        try:
+            pool = config.db_conn_pool
+        except AttributeError:
+            await create_db_connection()
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT
+                        portfolio_id , size, parameters ,assets, tstamp, broker, external_account_id
+                        FROM
+                        portfolio
+                    """,
+                )
+                return DataFrame(
+                    data=rows,
+                    columns=[
+                        "portfolio_id",
+                        "size",
+                        "parameters",
+                        "assets",
+                        "tstamp",
+                        "broker",
+                        "external_account_id",
+                    ],
+                )
