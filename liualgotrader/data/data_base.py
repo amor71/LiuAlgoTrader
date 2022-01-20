@@ -20,12 +20,12 @@ class DataAPI(metaclass=ABCMeta):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        return pd.DataFrame()
+        ...
 
     @abstractmethod
     def get_market_snapshot(self) -> List[Dict]:
-        return []
+        ...
 
     @abstractmethod
     def get_symbols(self) -> List[str]:
-        return []
+        ...
