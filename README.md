@@ -65,6 +65,15 @@ LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experie
 
 Additional samples can we found in the [examples](examples) directory. 
 
+## Tutorials
+
+LiuAlgoTraders articles are published on [Medium](https://amor71.medium.com/):
+
+* [Walk thru of setup and backtesting (2 parts)](https://amor71.medium.com/liualgotrader-part-i-3334a27edd4b)
+* [How to use the optimizer app](https://amor71.medium.com/liu-optimizer-42b0d6805d77)
+* [How to setup a Trading Platform](https://amor71.medium.com/how-to-setup-your-trading-platform-part-i-64ea8ea828bb)
+
+
 ## Back-testing
 
 While Liu is first and foremost a trading platform, it comes equipped with full back-testing capabilities, providing command-line tool & jupyter notebook for analysis, and a browser-based UI covering both functionalities.
@@ -105,6 +114,7 @@ email me at  amor71@sgeltd.com
 
 Special thanks to the below individuals for their comments, reviews and suggestions:
 
+- [Jonathan Morland-Barrett](https://github.com/sigmantium)
 - [Alex Lau](https://github.com/riven314)
 - [Rokas Gegevicius](https://github.com/ksilo)
 - Shlomi Kushchi [shlomikushchi](https://github.com/shlomikushchi)

@@ -54,6 +54,7 @@ sessions w/ LiuAlgoTrader.
    What's New
    Quickstart
    Getting Started
+   Tutorials
    (Advanced) Setup
    Concepts
    Configuration

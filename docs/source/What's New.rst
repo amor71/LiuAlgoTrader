@@ -3,6 +3,11 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.12           | 1. improvements to Crypto data loading.      |
+|                  | 2. Adding `list` to portfolio CLI.           |
+|                  | 3. Bug fixes.                                |
+|                  | 4. Adding Tutorials links.                   |
++------------------+----------------------------------------------+
 | 0.4.10           | **Major Release**                            |
 |                  |                                              |
 |                  | 1. trader application runs until stopped,    |
