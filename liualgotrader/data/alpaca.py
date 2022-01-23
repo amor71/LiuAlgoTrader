@@ -40,12 +40,11 @@ class AlpacaData(DataAPI):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        symbols = [
+        return [
             asset.symbol for asset in self.alpaca_rest_client.list_assets(
                 status='active', asset_class='us_equity'
             ) if asset.tradable
         ]
-        return symbols
 
     def get_market_snapshot(self, filter_func: Optional[Callable]) -> List[Dict]:
         # parse market snapshots per chunk of symbols

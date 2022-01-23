@@ -36,7 +36,7 @@ class PolygonData(DataAPI):
         # parse symbols on the first page
         data = self.polygon_rest_client.reference_tickers_v3(limit=1000, active=True)
         # use set to deduplicate in case paginated response return duplicate symbols
-        symbols = set([d['ticker'] for d in data.results])
+        symbols = {d['ticker'] for d in data.results}
         next_url = f"{data.next_url}&apiKey={config.polygon_api_key}"
         # parse the pagination
         while next_url is not None:
