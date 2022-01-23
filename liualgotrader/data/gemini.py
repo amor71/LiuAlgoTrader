@@ -54,7 +54,7 @@ class GeminiData(DataAPI):
             f"HTTP ERROR {response.status_code} {response.text}"
         )
 
-    def get_market_snapshot(self) -> List[Dict]:
+    def get_market_snapshot(self, filter_func) -> List[Dict]:
         raise NotImplementedError
 
     async def aget_symbol_data(

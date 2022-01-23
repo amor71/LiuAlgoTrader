@@ -3,7 +3,7 @@ import queue
 import traceback
 from datetime import date, datetime, timedelta
 from random import randint
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Callable
 import concurrent.futures
 
 import numpy as np
@@ -47,52 +47,59 @@ class AlpacaData(DataAPI):
         ]
         return symbols
 
-    def get_market_snapshot(self) -> List[Dict]:
+    def get_market_snapshot(self, filter_func: Optional[Callable]) -> List[Dict]:
         # parse market snapshots per chunk of symbols
         symbols = self.get_symbols()
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.aget_market_snapshot(symbols))
+        return loop.run_until_complete(self.aget_market_snapshot(symbols, filter_func))
 
-    async def aget_market_snapshot(self, symbols: List[str]) -> List[Dict]:
+    async def aget_market_snapshot(self, symbols: List[str], filter_func: Optional[Callable]) -> List[Dict]:
+
+        def _parse_ticker_snapshot(_ticker: str, _ticket_snapshot: Optional[object]) -> Optional[Dict]:
+            if _ticket_snapshot is None:
+                return None
+            try:
+                parsed_ticker_snapshot = {
+                    'ticker': _ticker,
+                    **{
+                        sub_snapshot_type: _sub_snapshot_obj.__dict__['_raw']
+                        for sub_snapshot_type, _sub_snapshot_obj
+                        in _ticket_snapshot.__dict__.items()
+                    }
+                }
+            # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
+            except AttributeError:
+                parsed_ticker_snapshot = None
+            # capture failure by unknown reason
+            except Exception as e:
+                raise ValueError(f"[EXCEPTION] {e} failed to parse market snapshot for {_ticker}.")
+            return parsed_ticker_snapshot
+
+        def _parse_snapshot_and_filter(_symbols: List[str]) -> List[Dict]:
+            processed_tickers_snapshot = map(
+                lambda key_and_val: _parse_ticker_snapshot(*key_and_val),
+                self.alpaca_rest_client.get_snapshots(_symbols).items()
+            )
+            return list(filter(
+                lambda snapshot: ((snapshot is not None) and (filter_func(snapshot))),
+                processed_tickers_snapshot
+            )) if filter_func is not None else processed_tickers_snapshot
+
         # request snapshots per chunk of tickers by concurrency
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             loop = asyncio.get_event_loop()
             futures = [
                 loop.run_in_executor(
                     executor,
-                    self.alpaca_rest_client.get_snapshots,
+                    _parse_snapshot_and_filter,
                     symbols[symbol_idx:symbol_idx+self.symbol_chunk_size]
                 )
                 for symbol_idx in range(0, len(symbols), self.symbol_chunk_size)
             ]
 
-            raw_snapshots_dict = {}
+            market_snapshots = []
             for response in await asyncio.gather(*futures):
-                raw_snapshots_dict.update(response)
-
-        # convert snapshot object for each symbol to a dict
-        market_snapshots = []
-        for ticker, ticker_snapshots in raw_snapshots_dict.items():
-            if ticker_snapshots is None:
-                continue
-            try:
-                processed_snapshot = {
-                    'ticker': ticker,
-                    **{
-                        snapshot_type: snapshot_obj.__dict__['_raw']
-                        for snapshot_type, snapshot_obj
-                        in ticker_snapshots.__dict__.items()
-                    }
-                }
-                market_snapshots.append(processed_snapshot)
-            # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
-            except AttributeError:
-                pass
-            # capture failure by unknown reason
-            except Exception as e:
-                raise ValueError(
-                    f"[EXCEPTION] {e} failed to parse market snapshot for {ticker}."
-                )
+                market_snapshots.extend(response)
         return market_snapshots
 
     def _localize_start_end(self, start: date, end: date) -> Tuple[str, str]:

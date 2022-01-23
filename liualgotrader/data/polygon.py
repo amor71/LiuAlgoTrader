@@ -3,7 +3,7 @@ import queue
 import requests
 import traceback
 from datetime import date
-from typing import Dict, List
+from typing import Dict, List, Optional, Callable
 
 import pandas as pd
 from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient
@@ -23,12 +23,12 @@ class PolygonData(DataAPI):
                 "Failed to authenticate Polygon restful client"
             )
 
-    def get_market_snapshot(self) -> List[Dict]:
+    def get_market_snapshot(self, filter_func: Optional[Callable]) -> List[Dict]:
         if not self.polygon_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")
         # this API endpoint requires at least starter subscriptions from Polygon
         data = self.polygon_rest_client.stocks_equities_snapshot_all_tickers()
-        return data.tickers
+        return list(filter(filter_func, data.tickers)) if filter_func is not None else data.tickers
 
     def get_symbols(self) -> List[str]:
         if not self.polygon_rest_client:
