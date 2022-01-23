@@ -129,7 +129,53 @@ class Momentum(Scanner):
         return []
 
     async def run_alpaca(self) -> List[str]:
-        raise NotImplementedError
+        tlog(f"{self.name}: run_alpaca(): started")
+        try:
+            while True:
+                market_snapshot = self.data_loader.data_api.get_market_snapshot()
+                tlog(f"loaded {len(market_snapshot)} tickers of market snapshots from Alpaca")
+                if not len(market_snapshot):
+                    tlog("failed to load any market snapshots for any tickers from Alpaca")
+                    break
+                trade_able_symbols = await self._get_trade_able_symbols()
+
+                unsorted = [
+                    _ticket_snapshot
+                    for _ticket_snapshot in market_snapshot
+                    if (
+                        _ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
+                        and self.max_share_price
+                        >= _ticket_snapshot["latestTrade"]["p"]  # type: ignore
+                        >= self.min_share_price  # type: ignore
+                        and float(_ticket_snapshot["prevDailyBar"]["v"])  # type: ignore
+                        * float(_ticket_snapshot["latestTrade"]["p"])  # type: ignore
+                        > self.min_last_dv  # type: ignore
+                        # need to reconcile with "todaysChangePerc" from Polygon
+                        and ((_ticket_snapshot["dailyBar"]["o"] - _ticket_snapshot["prevDailyBar"]["c"])
+                             / _ticket_snapshot["prevDailyBar"]["c"])  # type: ignore
+                        >= self.today_change_percent  # type: ignore
+                        and (
+                            _ticket_snapshot["dailyBar"]["v"] > self.min_volume  # type: ignore
+                            or config.bypass_market_schedule
+                        )
+                    )
+                ]
+                if unsorted:
+                    ticker_by_volume = sorted(
+                        unsorted,
+                        key=lambda ticker: float(ticker["dailyBar"]["v"]),  # type: ignore
+                        reverse=True,
+                    )
+                    tlog(f"picked {len(ticker_by_volume)} symbols")
+                    return [x["ticker"] for x in ticker_by_volume][  # type: ignore
+                        : self.max_symbols
+                    ]
+
+                tlog("did not find gaping stock, retrying")
+                await asyncio.sleep(30)
+        except KeyboardInterrupt:
+            tlog("KeyboardInterrupt")
+        return []
 
     async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
         _minute_data = self.data_loader[symbol][
