@@ -1,5 +1,6 @@
 import json
 import queue
+import requests
 import traceback
 from datetime import date
 from typing import Dict, List
@@ -32,9 +33,20 @@ class PolygonData(DataAPI):
     def get_symbols(self) -> List[str]:
         if not self.polygon_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")
-        # this API endpoint is accessible from free plan
-        data = self.polygon_rest_client.reference_tickers_v3()
-        return [_d['ticker'] for _d in data.results]
+        # parse symbols on the first page
+        data = self.polygon_rest_client.reference_tickers_v3(limit=1000, active=True)
+        # use set to deduplicate in case paginated response return duplicate symbols
+        symbols = set([d['ticker'] for d in data.results])
+        next_url = f"{data.next_url}&apiKey={config.polygon_api_key}"
+        # parse the pagination
+        while next_url is not None:
+            response = requests.get(next_url).json()
+            if 'next_url' not in response:
+                next_url = None
+                continue
+            symbols.update([d['ticker'] for d in response['results']])
+            next_url = f"{response['next_url']}&apiKey={config.polygon_api_key}"
+        return list(symbols)
 
     def get_symbol_data(
         self,
