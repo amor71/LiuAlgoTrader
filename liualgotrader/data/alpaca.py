@@ -4,6 +4,7 @@ import traceback
 from datetime import date, datetime, timedelta
 from random import randint
 from typing import Dict, List, Tuple
+import concurrent.futures
 
 import numpy as np
 import pandas as pd
@@ -49,10 +50,25 @@ class AlpacaData(DataAPI):
     def get_market_snapshot(self) -> List[Dict]:
         # parse market snapshots per chunk of symbols
         symbols = self.get_symbols()
-        raw_snapshots_dict = {}
-        for i in range(0, len(symbols), self.symbol_chunk_size):
-            chunked_symbols = symbols[i:i+self.symbol_chunk_size]
-            raw_snapshots_dict.update(self.alpaca_rest_client.get_snapshots(chunked_symbols))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.aget_market_snapshot(symbols))
+
+    async def aget_market_snapshot(self, symbols: List[str]) -> List[Dict]:
+        # request snapshots per chunk of tickers by concurrency
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            loop = asyncio.get_event_loop()
+            futures = [
+                loop.run_in_executor(
+                    executor,
+                    self.alpaca_rest_client.get_snapshots,
+                    symbols[symbol_idx:symbol_idx+self.symbol_chunk_size]
+                )
+                for symbol_idx in range(0, len(symbols), self.symbol_chunk_size)
+            ]
+
+            raw_snapshots_dict = {}
+            for response in await asyncio.gather(*futures):
+                raw_snapshots_dict.update(response)
 
         # convert snapshot object for each symbol to a dict
         market_snapshots = []
