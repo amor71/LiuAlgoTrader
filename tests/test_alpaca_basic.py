@@ -10,10 +10,10 @@ from liualgotrader.data.alpaca import AlpacaData
 
 
 @pytest.mark.devtest
-def test_polygon_aapl_data_day() -> bool:
-    polygon = AlpacaData()
+def test_alpaca_aapl_data_day() -> bool:
+    alpaca = AlpacaData()
     print(
-        polygon.get_symbol_data(
+        alpaca.get_symbol_data(
             "AAPL",
             date(year=2021, month=2, day=1),
             date(year=2021, month=2, day=2),
@@ -24,13 +24,29 @@ def test_polygon_aapl_data_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_polygon_aapl_data_min() -> bool:
-    polygon = AlpacaData()
+def test_alpaca_aapl_data_min() -> bool:
+    alpaca = AlpacaData()
     print(
-        polygon.get_symbol_data(
+        alpaca.get_symbol_data(
             "AAPL",
             date(year=2021, month=2, day=1),
             date(year=2021, month=2, day=2),
         ).between_time("9:30", "16:00")
     )
+    return True
+
+
+@pytest.mark.devtest
+def test_alpaca_get_symbols() -> bool:
+    alpaca = AlpacaData()
+    symbols = alpaca.get_symbols()
+    print(f"{len(symbols)} symbols are retrieved from Alpaca")
+    return True
+
+
+@pytest.mark.devtest
+def test_alpaca_get_market_snapshot() -> bool:
+    alpaca = AlpacaData()
+    market_snapshots = alpaca.get_market_snapshot()
+    print(f"{len(market_snapshots)} tickers of market snapshots are retrieved from Alpaca")
     return True
