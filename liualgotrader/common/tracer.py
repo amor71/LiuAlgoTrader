@@ -13,17 +13,20 @@ from opentelemetry.trace.propagation.tracecontext import \
 
 
 def get_tracer():
-    tracer_provider = TracerProvider()
-    cloud_trace_exporter = CloudTraceSpanExporter()
-    tracer_provider.add_span_processor(
-        # BatchSpanProcessor buffers spans and sends them in batches in a
-        # background thread. The default parameters are sensible, but can be
-        # tweaked to optimize your performance
-        BatchSpanProcessor(cloud_trace_exporter)
-    )
-    trace.set_tracer_provider(tracer_provider)
+    try:
+        tracer_provider = TracerProvider()
+        cloud_trace_exporter = CloudTraceSpanExporter()
+        tracer_provider.add_span_processor(
+            # BatchSpanProcessor buffers spans and sends them in batches in a
+            # background thread. The default parameters are sensible, but can be
+            # tweaked to optimize your performance
+            BatchSpanProcessor(cloud_trace_exporter)
+        )
+        trace.set_tracer_provider(tracer_provider)
 
-    return trace.get_tracer(__name__)
+        return trace.get_tracer(__name__)
+    except Exception:
+        return None
 
 
 def create_elapsed_measure(metrics_name: str):

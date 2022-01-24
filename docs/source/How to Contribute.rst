@@ -17,10 +17,13 @@ Special thanks to the below individuals for their comments, reviews and suggesti
 
 .. _riven314: https://github.com/riven314
 
+- Rokas Gegevicius ksilo_
+
+.. _ksilo: https://github.com/ksilo
+
 - Shlomi Kushchi shlomikushchi_
 
 .. _shlomikushchi: https://github.com/shlomikushchi
-
 
 - Venkat Y vinmestmant_
 

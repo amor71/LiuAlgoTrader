@@ -66,6 +66,7 @@ class Order:
     remaining_amount: float
     avg_execution_price: float
     trade_fees: float
+    external_account_id: Optional[str] = None
 
 
 @dataclass

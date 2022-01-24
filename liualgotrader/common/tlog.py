@@ -4,9 +4,14 @@ import traceback
 from datetime import datetime
 
 try:
-    from google.cloud import logging
+    from liualgotrader.common.config import gcp_logger
 
-    logger = logging.Client().logger("trader")
+    if gcp_logger:
+        from google.cloud import logging
+
+        logger = logging.Client().logger("trader")
+    else:
+        logger = None
 except Exception:
     logger = None
 

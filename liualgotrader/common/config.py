@@ -19,28 +19,23 @@ env: str
 
 data_connector: DataConnectorType = DataConnectorType[os.getenv("DATA_CONNECTOR", "alpaca")]  # type: ignore
 
-# Performance & Debugging
+# Performance, Debugging & Logging
 trace_enabled = bool(int(os.getenv("LIU_TRACE_ENABLED", 0)))
 debug_enabled = bool(int(os.getenv("LIU_DEBUG_ENABLED", 0)))
+gcp_logger = bool(int(os.getenv("GCP_STACKDRIVER", 0)))
 
 #
 # Broker
 #
 broker: BrokerType = BrokerType[os.getenv("LIU_BROKER", "alpaca")]
-#
-# Market Schedule
-#
-bypass_market_schedule: bool
-market_open: datetime
-market_close: datetime
 
 # total number of tickers to follow
-total_tickers = 9000
+total_tickers = 000
 
 #
 # Shared data
 #
-build_label: str
+build_label: str = "xoxo"
 filename: str
 db_conn_pool: Pool
 batch_id: str

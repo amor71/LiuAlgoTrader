@@ -1,6 +1,8 @@
 # type: ignore
-from datetime import date, datetime, timedelta
-from typing import Dict, Tuple
+import asyncio
+import concurrent.futures
+from datetime import date, datetime, time, timedelta
+from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
 import nest_asyncio
@@ -19,6 +21,387 @@ nest_asyncio.apply()
 nyc = timezone("America/New_York")
 
 
+def _calc_data_to_fetch(s: slice, index: pd.Index) -> List[slice]:
+    if index.empty:
+        return [s]
+
+    slices = []
+
+    if s.start.date() < index[0].date():
+        slices.append(slice(s.start, index[0]))
+
+    if s.stop.date() > index[-1].date():
+        slices.append(slice(index[-1], s.stop))
+
+    return slices
+
+
+def convert_offset_to_datetime(
+    data_api: DataAPI,
+    symbol: str,
+    index: pd.Index,
+    scale: TimeScale,
+    offset: int,
+) -> datetime:
+    try:
+        return index[offset]
+    except IndexError:
+        last_trading_time = data_api.get_last_trading(symbol)
+        if scale == TimeScale.minute:
+            return last_trading_time.replace(
+                second=0, microsecond=0
+            ) + timedelta(minutes=1 + offset)
+
+        return data_api.get_trading_day(
+            symbol, last_trading_time.date(), 1 + offset
+        )
+
+
+def handle_slice_conversion(
+    data_api: DataAPI,
+    symbol: str,
+    key: slice,
+    scale: TimeScale,
+    index: pd.Index,
+) -> slice:
+    # handle slide start
+    if type(key.start) == str:
+        key = slice(nyc.localize(date_parser(key.start)), key.stop)
+    elif type(key.start) == int:
+        key = slice(
+            convert_offset_to_datetime(
+                data_api, symbol, index, scale, key.start
+            ),
+            key.stop,
+        )
+    elif type(key.start) == date:
+        key = slice(
+            nyc.localize(datetime.combine(key.start, datetime.min.time())),
+            key.stop,
+        )
+    elif type(key.start) == datetime and key.start.tzinfo is None:
+        key = slice(nyc.localize(key.start), key.stop)
+
+    # handle slice end
+    if type(key.stop) == str:
+        key = slice(
+            key.start,
+            nyc.localize(date_parser(key.stop)),
+        )
+    elif type(key.stop) == int:
+        key = slice(
+            key.start,
+            convert_offset_to_datetime(
+                data_api, symbol, index, scale, key.stop
+            ),
+        )
+    elif type(key.stop) == date:
+        key = slice(
+            key.start,
+            nyc.localize(
+                datetime.combine(
+                    key.stop + timedelta(days=1), datetime.min.time()
+                )
+            ),
+        )
+    elif type(key.stop) == datetime and key.stop.tzinfo is None:
+        key = slice(key.start, nyc.localize(key.stop))
+
+    return key
+
+
+def load_item_by_offset(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    offset: int,
+    concurrency: int,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    i = convert_offset_to_datetime(
+        data_api=data_api,
+        symbol=symbol,
+        index=symbol_data.index,
+        scale=scale,
+        offset=offset,
+    )
+    symbol_data = fetch_data_datetime(
+        data_api=data_api,
+        symbol_data=symbol_data,
+        symbol=symbol,
+        scale=scale,
+        d=i,
+        concurrency=concurrency,
+    )
+    return (
+        symbol_data,
+        symbol_data.iloc[symbol_data.index.get_loc(i, method="nearest")],
+    )
+
+
+def get_item_by_offset(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    offset: int,
+    concurrency: int,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    try:
+        return symbol_data, symbol_data.iloc[len(symbol_data.index) + offset]
+    except IndexError:
+        return load_item_by_offset(
+            data_api, symbol_data, symbol, scale, offset, concurrency
+        )
+
+
+def _data_fetch_executor(
+    data_api: DataAPI,
+    symbol: str,
+    scale: TimeScale,
+    start: datetime,
+    end: datetime,
+) -> pd.DataFrame:
+
+    df = data_api.get_symbol_data(
+        symbol,
+        start=(start.date() if isinstance(start, datetime) else start),
+        end=(end.date() if isinstance(end, datetime) else end)
+        + timedelta(days=1),
+        scale=scale,
+    )
+
+    return df.reindex(
+        columns=[
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "vwap",
+            "average",
+            "count",
+        ]
+    ).sort_index()
+
+
+def _concurrent_fetch_data(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    start: datetime,
+    end: datetime,
+):
+    ranges = data_api.data_concurrency_ranges(
+        symbol=symbol, start=start, end=end, scale=scale
+    )
+    if not len(ranges):
+        raise ValueError(f"can't load empty range list {ranges}")
+
+    ranges = list(zip(ranges, ranges[1:]))
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(
+                _data_fetch_executor,
+                data_api,
+                symbol,
+                scale,
+                range[0],
+                range[1],
+            ): range
+            for range in ranges
+        }
+        for future in concurrent.futures.as_completed(futures):
+            response = future.result()
+            symbol_data = pd.concat([symbol_data, response])
+            symbol_data = symbol_data[
+                ~symbol_data.index.duplicated(keep="first")
+            ].sort_index()
+
+    return symbol_data.reindex(
+        columns=[
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "vwap",
+            "average",
+            "count",
+        ]
+    ).sort_index()
+
+
+def _legacy_fetch_data_range(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    start: datetime,
+    end: datetime,
+) -> pd.DataFrame:
+    new_df = data_api.get_symbol_data(
+        symbol,
+        start=(start.date() if isinstance(start, datetime) else start),
+        end=(end.date() if isinstance(end, datetime) else end)
+        + timedelta(days=1),
+        scale=scale,
+    )
+    symbol_data = pd.concat([new_df, symbol_data], sort=True)
+    symbol_data = symbol_data[~symbol_data.index.duplicated(keep="first")]
+    return symbol_data.reindex(
+        columns=[
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "vwap",
+            "average",
+            "count",
+        ]
+    ).sort_index()
+
+
+def fetch_data_range(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    start: datetime,
+    end: datetime,
+    concurrency: int,
+) -> pd.DataFrame:
+    if concurrency:
+        return _concurrent_fetch_data(
+            data_api=data_api,
+            symbol_data=symbol_data,
+            symbol=symbol,
+            scale=scale,
+            start=start,
+            end=end,
+        )
+    else:
+        return _legacy_fetch_data_range(
+            data_api=data_api,
+            symbol_data=symbol_data,
+            symbol=symbol,
+            scale=scale,
+            start=start,
+            end=end,
+        )
+
+
+def fetch_data_datetime(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    d: datetime,
+    concurrency: int,
+) -> pd.DataFrame:
+    return fetch_data_range(
+        data_api=data_api,
+        symbol_data=symbol_data,
+        symbol=symbol,
+        scale=scale,
+        start=d,
+        end=d
+        + (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        ),
+        concurrency=concurrency,
+    )
+
+
+def getitem_slice(
+    data_api: DataAPI,
+    symbol: str,
+    symbol_data: pd.DataFrame,
+    scale: TimeScale,
+    key: slice,
+    concurrency: int,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    key = slice(key.start or 0, key.stop or -1)
+
+    # ensure key represents datetime
+    key = handle_slice_conversion(
+        data_api, symbol, key, scale, symbol_data.index
+    )
+
+    # load data if needed
+    for s in _calc_data_to_fetch(key, symbol_data.index):
+        symbol_data = fetch_data_range(
+            data_api=data_api,
+            symbol_data=symbol_data,
+            symbol=symbol,
+            scale=scale,
+            start=s.start,
+            end=s.stop,
+            concurrency=concurrency,
+        )
+
+    # return data range
+    return (
+        symbol_data,
+        symbol_data.iloc[
+            symbol_data.index.get_loc(
+                key.start, method="nearest"
+            ) : symbol_data.index.get_loc(key.stop, method="nearest")
+            + 1
+        ],
+    )
+
+
+def getitem(
+    data_api: DataAPI,
+    symbol_data: pd.DataFrame,
+    symbol: str,
+    scale: TimeScale,
+    key,
+    concurrency,
+):
+    if type(key) == str:
+        key = nyc.localize(date_parser(key))
+    elif type(key) == int:
+        symbol_data, rc = get_item_by_offset(
+            data_api=data_api,
+            symbol_data=symbol_data,
+            symbol=symbol,
+            scale=scale,
+            offset=key,
+            concurrency=concurrency,
+        )
+        return symbol_data, rc
+
+    elif type(key) == date:
+        key = nyc.localize(datetime.combine(key, datetime.min.time()))
+    elif type(key) == datetime and key.tzinfo is None:
+        key = nyc.localize(key)
+
+    for s in _calc_data_to_fetch(
+        slice(key, key + timedelta(days=1)), symbol_data.index
+    ):
+        symbol_data = fetch_data_range(
+            data_api=data_api,
+            symbol_data=symbol_data,
+            symbol=symbol,
+            scale=scale,
+            start=s.start,
+            end=s.stop,
+            concurrency=concurrency,
+        )
+
+    if symbol_data.empty:
+        raise ValueError(f"details for symbol {symbol} do not exist")
+
+    rc = symbol_data.iloc[symbol_data.index.get_loc(key, method="ffill")]
+    return symbol_data, rc
+
+
 class SymbolData:
     class _Column:
         def __init__(
@@ -26,66 +409,17 @@ class SymbolData:
             data_api: DataAPI,
             name: str,
             data: object,
+            scale: TimeScale,
+            concurrency: int,
         ):
             self.name = name
             self.data_api = data_api
             self.data = data
+            self.scale = scale
+            self.concurrency = concurrency
 
         def __repr__(self):
             return str(self.data.symbol_data[self.name])
-
-        def _convert_offset_to_datetime(self, offset: int) -> datetime:
-            if self.data.scale == TimeScale.minute:
-                if len(self.data.symbol_data):
-                    _rc = self.data.symbol_data.index[-1] + timedelta(
-                        minutes=1 + offset
-                    )
-                else:
-                    _rc = datetime.now(tz=nyc).replace(
-                        second=0, microsecond=0
-                    ) + timedelta(minutes=1 + offset)
-            elif self.data.scale == TimeScale.day:
-                _rc = datetime.now(tz=nyc).replace(
-                    second=0, microsecond=0
-                ) + timedelta(days=1 + offset)
-
-            return _rc
-
-        def _handle_slice_conversion(self, key: slice) -> slice:
-            # handle slide start
-            if type(key.start) == str:
-                key = slice(nyc.localize(date_parser(key.start)), key.stop)
-            elif type(key.start) == int:
-                key = slice(
-                    self._convert_offset_to_datetime(key.start), key.stop
-                )
-            elif type(key.start) == date:
-                key = slice(
-                    nyc.localize(
-                        datetime.combine(key.start, datetime.min.time())
-                    ),
-                    key.stop,
-                )
-
-            # handle slice end
-            if type(key.stop) == str:
-                key = slice(
-                    key.start,
-                    nyc.localize(date_parser(key.stop)) + timedelta(days=1),
-                )
-            elif type(key.stop) == int:
-                key = slice(
-                    key.start, self._convert_offset_to_datetime(key.stop)
-                )
-            elif type(key.stop) == date:
-                key = slice(
-                    key.start,
-                    nyc.localize(
-                        datetime.combine(key.stop, datetime.min.time())
-                    )
-                    + timedelta(days=1),
-                )
-            return key
 
         def _get_index(self, index: datetime, method: str = "ffill") -> int:
             try:
@@ -93,81 +427,40 @@ class SymbolData:
                     index, method=method
                 )
             except KeyError:
-                self.data.fetch_data_timestamp(index)
+                self.data.symbol_data = fetch_data_datetime(
+                    data_api=self.data_api,
+                    symbol_data=self.data.symbol_data,
+                    symbol=self.data.symbol,
+                    scale=self.scale,
+                    d=index,
+                    concurrency=self.concurrency,
+                )
                 return self.data.symbol_data.index.get_loc(
                     index, method="nearest"
-                )
-
-        def _getitem_slice(self, key):
-            if not key.start and not len(self.data.symbol_data):
-                raise ValueError(f"[:{key.stop}] is not a valid slice")
-            if not key.stop:
-                key = slice(key.start, -1)
-
-            # ensure key represents datetime
-            key = self._handle_slice_conversion(key)
-
-            # load data, if missing
-            if (
-                not len(self.data.symbol_data)
-                or key.stop > self.data.symbol_data.index[-1]
-            ):
-                self.data.fetch_data_timestamp(key.stop)
-
-            if key.start <= self.data.symbol_data.index[0]:
-                self.data.fetch_data_range(
-                    key.start, self.data.symbol_data.index[0]
-                )
-
-            # get start and end index
-            start_index = self._get_index(key.start, method="bfill")
-            stop_index = self._get_index(key.stop)
-
-            # return data range
-            return self.data.symbol_data.iloc[start_index : stop_index + 1][
-                self.name
-            ]
-
-        def _getitem(self, key):
-            if type(key) == str:
-                key = nyc.localize(date_parser(key))
-            elif type(key) == int:
-                key = self._convert_offset_to_datetime(key)
-            elif type(key) == date:
-                key = nyc.localize(datetime.combine(key, datetime.min.time()))
-
-            if (
-                not len(self.data.symbol_data)
-                or key > self.data.symbol_data.index[-1]
-            ):
-                self.data.fetch_data_timestamp(key)
-
-            if not len(self.data.symbol_data):
-                raise ValueError(
-                    f"details for symbol {self.data.symbol} do not exist"
-                )
-
-            try:
-                return self.data.symbol_data.iloc[
-                    self.data.symbol_data.index.get_loc(key, method="ffill")
-                ][self.name]
-
-            except ValueError:
-                tlog(
-                    f"[EXCEPTION] ValueError {key},{repr(key)},{type(key)} {self.data.symbol_data.index[-760:]}"
-                )
-                raise
-            except KeyError:
-                self.data.fetch_data_timestamp(key)
-                return self.data.symbol_data.index.get_loc(
-                    key, method="nearest"
                 )
 
         def __getitem__(self, key):
             try:
                 if type(key) == slice:
-                    return self._getitem_slice(key)
-                return self._getitem(key)
+                    self.data.symbol_data, rc = getitem_slice(
+                        data_api=self.data_api,
+                        symbol=self.data.symbol,
+                        symbol_data=self.data.symbol_data,
+                        scale=self.scale,
+                        key=key,
+                        concurrency=self.concurrency,
+                    )
+                    return rc[self.name]
+
+                self.data.symbol_data, rc = getitem(
+                    data_api=self.data_api,
+                    symbol=self.data.symbol,
+                    symbol_data=self.data.symbol_data,
+                    scale=self.scale,
+                    key=key,
+                    concurrency=self.concurrency,
+                )
+                return rc[self.name]
             except Exception:
                 if config.debug_enabled:
                     tlog_exception("__getitem__")
@@ -179,78 +472,48 @@ class SymbolData:
         def __call__(self):
             return self.data.symbol_data[self.name]
 
-    def __init__(self, data_api: tradeapi, symbol: str, scale: TimeScale):
+    def __init__(
+        self,
+        data_api: tradeapi,
+        symbol: str,
+        scale: TimeScale,
+        concurrency: int,
+        prefetched_data: Optional[pd.DataFrame] = None,
+    ):
         self.data_api = data_api
         self.symbol = symbol
         self.scale = scale
+        self.concurrency = concurrency
         self.columns: Dict[str, self._Column] = {}  # type: ignore
-        self.symbol_data = pd.DataFrame(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
+
+        self.symbol_data = (
+            prefetched_data
+            if prefetched_data is not None
+            else pd.DataFrame(
+                columns=[
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "vwap",
+                    "average",
+                    "count",
+                ]
+            )
         )
 
     #    def __setattr__(self, name, value):
     #        return self.symbol_data.__setattr__(name, value)
 
     def __getattr__(self, attr) -> _Column:
-        if attr[0:3] == "loc" or attr[0:4] == "iloc" or attr[0:5] == "apply":
+        if attr[:3] == "loc" or attr[:4] == "iloc" or attr[:5] == "apply":
             return self.symbol_data.__getattr__(attr)
         elif attr not in self.columns:
-            self.columns[attr] = self._Column(self.data_api, attr, self)
+            self.columns[attr] = self._Column(
+                self.data_api, attr, self, self.scale, self.concurrency
+            )
         return self.columns[attr]
-
-    def _convert_offset_to_datetime(self, offset: int) -> datetime:
-        if self.scale == TimeScale.minute:
-            if len(self.symbol_data):
-                _rc = self.symbol_data.index[-1] + timedelta(
-                    minutes=1 + offset
-                )
-            else:
-                _rc = datetime.now(tz=nyc).replace(
-                    second=0, microsecond=0
-                ) + timedelta(minutes=1 + offset)
-        elif self.scale == TimeScale.day:
-            _rc = datetime.now(tz=nyc).replace(
-                second=0, microsecond=0
-            ) + timedelta(days=1 + offset)
-
-        return _rc
-
-    def _handle_slice_conversion(self, key: slice) -> slice:
-        # handle slide start
-        if type(key.start) == str:
-            key = slice(nyc.localize(date_parser(key.start)), key.stop)
-        elif type(key.start) == int:
-            key = slice(self._convert_offset_to_datetime(key.start), key.stop)
-        elif type(key.start) == date:
-            key = slice(
-                nyc.localize(datetime.combine(key.start, datetime.min.time())),
-                key.stop,
-            )
-
-        # handle slice end
-        if type(key.stop) == str:
-            key = slice(
-                key.start,
-                nyc.localize(date_parser(key.stop)) + timedelta(days=1),
-            )
-        elif type(key.stop) == int:
-            key = slice(key.start, self._convert_offset_to_datetime(key.stop))
-        elif type(key.stop) == date:
-            key = slice(
-                key.start,
-                nyc.localize(datetime.combine(key.stop, datetime.min.time()))
-                + timedelta(days=1),
-            )
-        return key
 
     def _get_index(self, index: datetime, method: str = "ffill") -> int:
         try:
@@ -259,175 +522,42 @@ class SymbolData:
             tlog(f"[EXCEPTION] ValueError {index},{self.symbol_data.index}")
             raise
         except KeyError:
-            self.fetch_data_timestamp(index)
-            return self.symbol_data.index.get_loc(index, method="nearest")
-
-    def _getitem_slice(self, key):
-        if not key.start:
-            raise ValueError(f"[:{key.stop}] is not a valid slice")
-
-        if not key.stop:
-            key = slice(key.start, -1)
-
-        # handle slice conversations
-        key = self._handle_slice_conversion(key)
-
-        # load data
-        if not len(self.symbol_data) or key.stop > self.symbol_data.index[-1]:
-            self.fetch_data_timestamp(key.stop)
-
-        if not len(self.symbol_data) or key.start <= self.symbol_data.index[0]:
-            self.fetch_data_range(key.start, self.symbol_data.index[0])
-
-        # get index for start & end
-        start_index = self._get_index(key.start, method="bfill")
-        stop_index = self._get_index(key.stop)
-
-        return self.symbol_data.iloc[start_index : stop_index + 1]
+            self.symbol_data = fetch_data_datetime(
+                data_api=self.data_api,
+                symbol_data=self.symbol_data,
+                symbol=self.symbol,
+                scale=self.scale,
+                d=index,
+                concurrency=self.concurrency,
+            )
+            return self.data.symbol_data.index.get_loc(index, method="nearest")
 
     def __getitem__(self, key):
-        if type(key) == str and key in self.symbol_data.columns.tolist():
-            return self.symbol_data[key]
-
-        if type(key) == slice:
-            return self._getitem_slice(key)
-
-        if type(key) == str:
-            key = nyc.localize(date_parser(key))
-        elif type(key) == int:
-            key = self._convert_offset_to_datetime(key)
-        elif type(key) == date:
-            key = nyc.localize(datetime.combine(key, datetime.min.time()))
-
-        if not len(self.symbol_data) or key > self.symbol_data.index[-1]:
-            self.fetch_data_timestamp(key)
-
-        if type(key) == int:
-            return self.symbol_data.iloc[key]
-
-        return self.symbol_data.iloc[
-            self.symbol_data.index.get_loc(key, method="ffill")
-        ]
-
-    def _convert_timestamp(
-        self, timestamp: pd.Timestamp
-    ) -> Tuple[datetime, datetime]:
-        return (
-            timestamp.to_pydatetime()
-            - timedelta(days=6 if self.scale == TimeScale.minute else 10),
-            timestamp.to_pydatetime() + timedelta(days=1),
-        )
-
-    def _convert_int(
-        self, timestamp: pd.Timestamp
-    ) -> Tuple[datetime, datetime]:
-        if self.scale == TimeScale.minute:
-            if not len(self.symbol_data):
-                _end = datetime.now(tz=nyc).replace(
-                    second=0, microsecond=0
-                ) + timedelta(minutes=1 + timestamp)
-            else:
-                _end = self.symbol_data.index[-1] + timedelta(
-                    minutes=1 + timestamp
+        try:
+            if type(key) == slice:
+                self.symbol_data, rc = getitem_slice(
+                    data_api=self.data_api,
+                    symbol=self.symbol,
+                    symbol_data=self.symbol_data,
+                    scale=self.scale,
+                    key=key,
+                    concurrency=self.concurrency,
                 )
-        elif self.scale == TimeScale.day:
-            _end = datetime.now(tz=nyc).replace(
-                second=0, microsecond=0
-            ) + timedelta(days=1 + timestamp)
+                return rc
 
-        return (
-            _end - timedelta(days=6 if self.scale == TimeScale.minute else 10),
-            _end,
-        )
-
-    def _fetch_data_range(self, start, end):
-        _df = self.data_api.get_symbol_data(
-            self.symbol,
-            start=start.date() if type(start) != date else start,
-            end=end.date() if type(end) != date else end,
-            scale=self.scale,
-        )
-
-        self.symbol_data = pd.concat(
-            [self.symbol_data, _df], sort=True
-        ).drop_duplicates()
-
-        self.symbol_data = self.symbol_data.loc[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
-        self.symbol_data = self.symbol_data.reindex(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
-        ).sort_index()
-
-    def fetch_data_timestamp(self, timestamp: pd.Timestamp) -> None:
-        if type(timestamp) == pd.Timestamp:
-            _start, _end = self._convert_timestamp(timestamp)
-
-        elif type(timestamp) == int:
-            _start, _end = self._convert_int(timestamp)
-        else:
-            _start = timestamp - timedelta(
-                days=6 if self.scale == TimeScale.minute else 10
-            )
-            _end = timestamp + timedelta(days=1)
-
-        self._fetch_data_range(_start, _end)
-
-    def fetch_data_range(self, start: datetime, end: datetime) -> None:
-        new_df = pd.DataFrame()
-        while end >= start:
-            if type(end) == pd.Timestamp:
-                _start = (
-                    end
-                    - timedelta(
-                        days=7 if self.scale == TimeScale.minute else 10
-                    )
-                ).date()
-                _end = end.date()
-            else:
-                _start = end - timedelta(
-                    days=7 if self.scale == TimeScale.minute else 10
-                )
-                _end = end
-
-            _df = self.data_api.get_symbol_data(
-                self.symbol,
-                start=_start,
-                end=_end,
+            self.symbol_data, rc = getitem(
+                data_api=self.data_api,
+                symbol=self.symbol,
+                symbol_data=self.symbol_data,
                 scale=self.scale,
+                key=key,
+                concurrency=self.concurrency,
             )
-
-            new_df = pd.concat([_df, new_df], sort=True).drop_duplicates()
-
-            end -= timedelta(days=7 if self.scale == TimeScale.minute else 10)
-
-        self.symbol_data = pd.concat(
-            [new_df, self.symbol_data], sort=True
-        ).drop_duplicates()
-        self.symbol_data = self.symbol_data[
-            ~self.symbol_data.index.duplicated(keep="first")
-        ]
-        self.symbol_data = self.symbol_data.reindex(
-            columns=[
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "vwap",
-                "average",
-                "count",
-            ]
-        ).sort_index()
+            return rc
+        except Exception:
+            if config.debug_enabled:
+                tlog_exception("__getitem__")
+            raise
 
     def __repr__(self):
         return str(self.symbol_data)
@@ -438,16 +568,32 @@ class DataLoader:
         self,
         scale: TimeScale = TimeScale.minute,
         connector: DataConnectorType = config.data_connector,
+        concurrency: Optional[int] = 0,
     ):
         self.data_api = data_loader_factory(connector)
         self.data: Dict[str, SymbolData] = {}
+        self.scale = scale
+        self.concurrency = concurrency
         if not self.data_api:
             raise AssertionError("Failed to create data loader")
 
-        self.scale = scale
+    def keys(self) -> List[str]:
+        return list(self.data.keys())
+
+    def pre_fetch(self, symbols: List[str], start: date, end: date):
+        data = self.data_api.get_symbols_data(
+            symbols=symbols, start=start, end=end, scale=self.scale
+        )
+        for symbol, df in data.items():
+            self.data[symbol] = SymbolData(
+                self.data_api, symbol, self.scale, self.concurrency, df
+            )
 
     def exist(self, symbol: str) -> bool:
         return symbol in self.data
+
+    def __len__(self) -> int:
+        return len(self.data.keys())
 
     def __getattr__(self, attr):
         return self.__getitem__(attr)
@@ -457,6 +603,8 @@ class DataLoader:
             raise AssertionError("Must call a well constructed object")
 
         if symbol not in self.data:
-            self.data[symbol] = SymbolData(self.data_api, symbol, self.scale)
+            self.data[symbol] = SymbolData(
+                self.data_api, symbol, self.scale, self.concurrency
+            )
 
         return self.data[symbol]

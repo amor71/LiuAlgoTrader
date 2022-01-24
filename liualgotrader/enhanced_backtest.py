@@ -20,10 +20,12 @@ from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.scanners.base import Scanner  # type: ignore
 from liualgotrader.scanners_runner import create_momentum_scanner
 from liualgotrader.strategies.base import Strategy
+from liualgotrader.trading.base import Trader
+from liualgotrader.trading.trader_factory import trader_factory
 
 run_scanners: Dict[Scanner, datetime] = {}
 symbol_data: Dict[str, pd.DataFrame] = {}
-portfolio_value: float
+portfolio_value: float = 100000
 
 
 async def create_scanners(
@@ -33,7 +35,7 @@ async def create_scanners(
 ) -> List[Scanner]:
     scanners: List = []
     for scanner_name in scanners_conf:
-        if scanner_names and scanner_name not in scanner_name:
+        if scanner_names and scanner_name not in scanner_names:
             continue
         tlog(f"scanner {scanner_name} selected")
         if scanner_name == "momentum":
@@ -110,7 +112,6 @@ async def do_scanners(
 async def calculate_execution_price(
     symbol: str, data_loader: DataLoader, what: Dict, now: datetime
 ) -> float:
-
     if what["type"] == "market":
         return data_loader[symbol].close[now]
 
@@ -132,6 +133,7 @@ async def calculate_execution_price(
 
 
 async def do_strategy_result(
+    data_loader: DataLoader,
     strategy: Strategy,
     symbol: str,
     now: datetime,
@@ -155,9 +157,8 @@ async def do_strategy_result(
 
     try:
         price = await calculate_execution_price(
-            symbol=symbol, data_loader=strategy.data_loader, what=what, now=now
+            symbol=symbol, data_loader=data_loader, what=what, now=now
         )
-
         if what["side"] == "buy":
             fee = price * qty * buy_fee_percentage / 100.0
 
@@ -219,6 +220,7 @@ async def do_strategy_all(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
@@ -232,6 +234,7 @@ async def do_strategy_all(
             "portfolio_value": portfolio_value,
             "backtesting": True,
             "data_loader": data_loader,
+            "trader": trader,
         }
         if "fee_buy_percentage" in sig.parameters:
             param["fee_buy_percentage"] = buy_fee_percentage
@@ -242,6 +245,7 @@ async def do_strategy_all(
         items.sort(key=lambda x: int(x[1]["side"] == "buy"))
         for symbol, what in items:
             await do_strategy_result(
+                data_loader,
                 strategy,
                 symbol,
                 now,
@@ -262,9 +266,10 @@ async def do_strategy_by_symbol(
     strategy: Strategy,
     symbols: List[str],
 ):
+    global portfolio_value
     for symbol in symbols:
         try:
-            _ = data_loader[symbol][now - timedelta(days=30) : now]  # type: ignore
+            _ = data_loader[symbol][now - timedelta(days=1) : now]  # type: ignore
             do, what = await strategy.run(
                 symbol=symbol,
                 shortable=True,
@@ -276,11 +281,17 @@ async def do_strategy_by_symbol(
             )
 
             if do:
-                await do_strategy_result(strategy, symbol, now, what)
-
+                await do_strategy_result(
+                    data_loader, strategy, symbol, now, what
+                )
+        except ValueError:
+            tlog(
+                f"symbol {symbol} for now have data in the range {now - timedelta(days=1)}-{now}"
+            )
         except Exception as e:
-            tlog(f"[Exception] {now} {strategy}({symbol})->{e}")
-            traceback.print_exc()
+            tlog(f"[Exception] {now} {strategy}({symbol}):`{e}`")
+            if config.debug_enabled:
+                traceback.print_exc()
             raise
 
 
@@ -289,17 +300,17 @@ async def do_strategy(
     now: pd.Timestamp,
     strategy: Strategy,
     symbols: List[str],
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
-    global portfolio_value
-
     if await strategy.should_run_all():
         await do_strategy_all(
             data_loader,
             now,
             strategy,
             symbols,
+            trader,
             buy_fee_percentage,
             sell_fee_percentage,
         )
@@ -344,13 +355,12 @@ async def backtest_day(
     scale,
     data_loader,
     asset_type: AssetType,
+    trader: Trader,
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
     day_start, day_end = get_day_start_end(asset_type, day)
     print(day_start, day_end)
-    config.market_open = day_start
-    config.market_close = day_end
     current_time = day_start
     prefetched: List[str] = []
     while current_time < day_end:
@@ -368,9 +378,13 @@ async def backtest_day(
             if item not in prefetched
         ]
         for symbol in prefetch:
-            tlog(f"Prefetch data for {symbol} {day_start}-{day_end}")
+            tlog(f"Prefetch data for {symbol}@{day_start}-{day_end}")
+
+            # try:
             data_loader[symbol][day_start:day_end]
             prefetched.append(symbol)
+            # except ValueError:
+            #    tlog(f"no data for {symbol} on {day_start}")
 
         for strategy in strategies:
             try:
@@ -396,17 +410,57 @@ async def backtest_day(
                     set(symbols.get(strategy.name, []))
                 )
             )
-
             await do_strategy(
                 data_loader,
                 current_time,
                 strategy,
                 strategy_symbols,
+                trader,
                 buy_fee_percentage,
                 sell_fee_percentage,
             )
 
         current_time += timedelta(seconds=scale.value)
+
+
+async def backtest_time_range(
+    from_date: date,
+    to_date: date,
+    scale: TimeScale,
+    data_loader: DataLoader,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
+    asset_type: AssetType,
+    scanners: Optional[List] = None,
+    strategies: Optional[List] = None,
+):
+    trade_api = tradeapi.REST(
+        key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
+    )
+    if asset_type == AssetType.US_EQUITIES:
+        calendars = trade_api.get_calendar(str(from_date), str(to_date))
+    elif asset_type == AssetType.CRYPTO:
+        calendars = [
+            t.date() for t in pd.date_range(from_date, to_date).to_list()
+        ]
+    else:
+        raise AssertionError(f"Asset type {asset_type} not supported yet")
+
+    symbols: Dict = {}
+
+    for day in calendars:
+        await backtest_day(
+            day=day,
+            scanners=scanners,
+            symbols=symbols,
+            strategies=strategies,
+            scale=scale,
+            data_loader=data_loader,
+            asset_type=asset_type,
+            trader=trader_factory(),
+            buy_fee_percentage=buy_fee_percentage,
+            sell_fee_percentage=sell_fee_percentage,
+        )
 
 
 async def backtest_main(
@@ -429,49 +483,36 @@ async def backtest_main(
     if strategies:
         tlog(f"with strategies:{strategies}")
 
-    global portfolio_value
     if "portfolio_value" in tradeplan:
+        global portfolio_value
         portfolio_value = tradeplan["portfolio_value"]
-    else:
-        portfolio_value = 100000
 
     await create_db_connection()
 
-    data_loader = DataLoader()  # DataLoader(scale)
-    trade_api = tradeapi.REST(
-        key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
-    )
-    scanners = await create_scanners(
-        data_loader, tradeplan["scanners"], scanners
+    data_loader = DataLoader(scale)
+
+    scanners = (
+        await create_scanners(data_loader, tradeplan["scanners"], scanners)
+        if "scanners" in tradeplan
+        else []
     )
     tlog(f"instantiated {len(scanners)} scanners")
     strategies = await create_strategies(
         uid, tradeplan["strategies"], data_loader, strategies
     )
     tlog(f"instantiated {len(strategies)} strategies")
-    if asset_type == AssetType.US_EQUITIES:
-        calendars = trade_api.get_calendar(str(from_date), str(to_date))
-    elif asset_type == AssetType.CRYPTO:
-        calendars = [
-            t.date() for t in pd.date_range(from_date, to_date).to_list()
-        ]
-    else:
-        raise AssertionError(f"Asset type {asset_type} not supported yet")
 
-    symbols: Dict = {}
-
-    for day in calendars:
-        await backtest_day(
-            day,
-            scanners,
-            symbols,
-            strategies,
-            scale,
-            data_loader,
-            asset_type,
-            buy_fee_percentage,
-            sell_fee_percentage,
-        )
+    await backtest_time_range(
+        from_date=from_date,
+        to_date=to_date,
+        scale=scale,
+        data_loader=data_loader,
+        buy_fee_percentage=buy_fee_percentage,
+        sell_fee_percentage=sell_fee_percentage,
+        asset_type=asset_type,
+        scanners=scanners,
+        strategies=strategies,
+    )
 
 
 def backtest(

@@ -8,7 +8,7 @@ from liualgotrader.common import config
 config.debug_enabled = True
 
 from liualgotrader.common.decorators import trace
-from liualgotrader.common.tracer import get_tracer
+from liualgotrader.common.tracer import get_tracer  # type: ignore
 
 tracer = get_tracer()
 
@@ -135,8 +135,11 @@ async def test_trace_basic_no_trace():
 @pytest.mark.asyncio
 async def test_trace_from_task():
     print("start test_trace_from_task")
+
     config.trace_enabled = True
     for _ in range(10):
         asyncio.create_task(trace({})(part3_1)())
     await asyncio.sleep(1)
     print("end test_trace_from_task")
+
+    return True

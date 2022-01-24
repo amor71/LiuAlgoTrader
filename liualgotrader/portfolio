@@ -101,6 +101,37 @@ def trades(portfolio_id):
     print(f"Number of trades: {len(portfolio)}")
 
 
+def list():
+    """List active portfolios"""
+
+    data = []
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_db_connection())
+    print("Portfolio(s):")
+    data = loop.run_until_complete(Portfolio.list_portfolios())
+    data = data[
+        ["portfolio_id", "tstamp", "last_transaction", "size", "assets", "parameters"]
+    ]
+
+    print(
+        tabulate(
+            data,
+            headers=[
+                "Id",
+                "Created",
+                "Last Used",
+                "Size",
+                "Asset Type",
+                "Parameters",
+            ],
+            numalign="decimal",
+            tablefmt="pretty",
+            floatfmt=".2f",
+            showindex=False,
+        )
+    )
+
+
 def main():
     fire.Fire(
         {
@@ -109,6 +140,7 @@ def main():
             "recalc": recalc,
             "account": account,
             "trades": trades,
+            "list": list,
         },
         name="portfolio",
     )

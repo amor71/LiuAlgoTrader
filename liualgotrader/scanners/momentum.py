@@ -59,23 +59,6 @@ class Momentum(Scanner):
     def __str__(cls) -> str:
         return cls.name
 
-    async def _wait_time(self) -> None:
-        if not config.bypass_market_schedule and config.market_open:
-            nyc = timezone("America/New_York")
-            since_market_open = (
-                datetime.today().astimezone(nyc) - config.market_open
-            )
-
-            if since_market_open.seconds // 60 < self.from_market_open:
-                tlog(f"market open, wait {self.from_market_open} minutes")
-                while since_market_open.seconds // 60 < self.from_market_open:
-                    await asyncio.sleep(1)
-                    since_market_open = (
-                        datetime.today().astimezone(nyc) - config.market_open
-                    )
-
-        tlog(f"Scanner {self.name} ready to run")
-
     async def _get_trade_able_symbols(self) -> List[str]:
         symbols = await self.trading_api.get_tradeable_symbols()
         tlog(f"loaded list of {len(symbols)} trade-able symbols from Alpaca")
@@ -176,7 +159,6 @@ class Momentum(Scanner):
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
-            await self._wait_time()
             trade_able_symbols = await self._get_trade_able_symbols()
             if isinstance(self.data_loader.data_api, PolygonData):
                 filter_func = lambda ticket_snapshot: (
@@ -189,10 +171,7 @@ class Momentum(Scanner):
                     > self.min_last_dv  # type: ignore
                     and ticket_snapshot["todaysChangePerc"]  # type: ignore
                     >= self.today_change_percent  # type: ignore
-                    and (
-                        ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
-                        or config.bypass_market_schedule
-                    )
+                    and ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
                 )
                 sort_key = lambda ticker: float(ticker["day"]["v"])
                 tlog('applying momentum filter on market snapshots from Polygon API')
@@ -207,10 +186,7 @@ class Momentum(Scanner):
                     > self.min_last_dv  # type: ignore
                     and ((ticket_snapshot["dailyBar"]["o"] - ticket_snapshot["prevDailyBar"]["c"])
                          / ticket_snapshot["prevDailyBar"]["c"]) >= self.today_change_percent  # type: ignore
-                    and (
-                        _ticket_snapshot["dailyBar"]["v"] > self.min_volume  # type: ignore
-                        or config.bypass_market_schedule
-                    )
+                    and _ticket_snapshot["dailyBar"]["v"] > self.min_volume  # type: ignore
                 )
                 sort_key = lambda ticker: float(ticker["dailyBar"]["v"])
                 tlog('applying momentum filter on market snapshots from Alpaca API')
@@ -218,8 +194,7 @@ class Momentum(Scanner):
                 raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
             return await self.apply_filter_on_market_snapshot(sort_key, filter_func)
 
-        else:
-            rows = await self.load_from_db(back_time)
+        rows = await self.load_from_db(back_time)
 
-            tlog(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
-            return rows
+        tlog(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
+        return rows
