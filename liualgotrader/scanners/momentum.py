@@ -2,7 +2,7 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Callable
 
 import requests
 from alpaca_trade_api.rest import REST as tradeapi
@@ -12,6 +12,8 @@ from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import DataConnectorType
+from liualgotrader.data.alpaca import AlpacaData
+from liualgotrader.data.polygon import PolygonData
 from liualgotrader.models.ticker_data import StockOhlc
 from liualgotrader.trading.base import Trader
 
@@ -62,36 +64,19 @@ class Momentum(Scanner):
         tlog(f"loaded list of {len(symbols)} trade-able symbols from Alpaca")
         return symbols
 
-    async def run_polygon(self) -> List[str]:
-        tlog(f"{self.name}: run_polygon(): started")
+    async def apply_filter_on_market_snapshot(self, sort_key: Callable, filter_func: Optional[Callable]) -> List[str]:
         try:
             while True:
-                tickers = self.data_loader.data_api.get_symbols()
-                tlog(f"loaded {len(tickers)} tickers from Polygon")
-                if not len(tickers):
+                unsorted = self.data_loader.data_api.get_market_snapshot(filter_func)
+                tlog(f"loaded {len(unsorted)} tickers of market snapshots after momentum filtering")
+                if not len(unsorted):
+                    tlog("failed to load any market snapshots for any tickers")
                     break
-                trade_able_symbols = await self._get_trade_able_symbols()
-
-                unsorted = [
-                    ticker
-                    for ticker in tickers
-                    if (
-                        ticker["ticker"] in trade_able_symbols  # type: ignore
-                        and self.max_share_price
-                        >= ticker["lastTrade"]["p"]  # type: ignore
-                        >= self.min_share_price  # type: ignore
-                        and float(ticker["prevDay"]["v"])  # type: ignore
-                        * float(ticker["lastTrade"]["p"])  # type: ignore
-                        > self.min_last_dv  # type: ignore
-                        and ticker["todaysChangePerc"]  # type: ignore
-                        >= self.today_change_percent  # type: ignore
-                        and ticker["day"]["v"] > self.min_volume  # type: ignore
-                    )
-                ]
                 if unsorted:
+                    # sort ticker by trading volume
                     ticker_by_volume = sorted(
                         unsorted,
-                        key=lambda ticker: float(ticker["day"]["v"]),  # type: ignore
+                        key=sort_key,  # type: ignore
                         reverse=True,
                     )
                     tlog(f"picked {len(ticker_by_volume)} symbols")
@@ -170,17 +155,46 @@ class Momentum(Scanner):
             )
 
             print("load from db", start, end, len(rows))
-            if len(rows) > 0:
-                return [row[0] for row in rows]
-            else:
-                return []
+            return [row[0] for row in rows] if len(rows) > 0 else []
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
-            return await self.run_polygon()
+            trade_able_symbols = await self._get_trade_able_symbols()
+            if isinstance(self.data_loader.data_api, PolygonData):
+                filter_func = lambda ticket_snapshot: (
+                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
+                    and self.max_share_price
+                    >= ticket_snapshot["lastTrade"]["p"]  # type: ignore
+                    >= self.min_share_price  # type: ignore
+                    and float(ticket_snapshot["prevDay"]["v"])  # type: ignore
+                    * float(ticket_snapshot["lastTrade"]["p"])  # type: ignore
+                    > self.min_last_dv  # type: ignore
+                    and ticket_snapshot["todaysChangePerc"]  # type: ignore
+                    >= self.today_change_percent  # type: ignore
+                    and ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
+                )
+                sort_key = lambda ticker: float(ticker["day"]["v"])
+                tlog('applying momentum filter on market snapshots from Polygon API')
+            elif isinstance(self.data_loader.data_api, AlpacaData):
+                filter_func = lambda ticket_snapshot: (
+                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
+                    and self.max_share_price
+                    >= ticket_snapshot["latestTrade"]["p"]  # type: ignore
+                    >= self.min_share_price  # type: ignore
+                    and float(ticket_snapshot["prevDailyBar"]["v"])  # type: ignore
+                    * float(ticket_snapshot["latestTrade"]["p"])  # type: ignore
+                    > self.min_last_dv  # type: ignore
+                    and ((ticket_snapshot["dailyBar"]["o"] - ticket_snapshot["prevDailyBar"]["c"])
+                         / ticket_snapshot["prevDailyBar"]["c"]) >= self.today_change_percent  # type: ignore
+                    and _ticket_snapshot["dailyBar"]["v"] > self.min_volume  # type: ignore
+                )
+                sort_key = lambda ticker: float(ticker["dailyBar"]["v"])
+                tlog('applying momentum filter on market snapshots from Alpaca API')
+            else:
+                raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
+            return await self.apply_filter_on_market_snapshot(sort_key, filter_func)
+
         rows = await self.load_from_db(back_time)
 
-        print(
-            f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
-        )
+        tlog(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
         return rows

@@ -65,6 +65,9 @@ class GeminiData(DataAPI):
             f"HTTP ERROR {response.status_code} {response.text}"
         )
 
+    def get_market_snapshot(self, filter_func) -> List[Dict]:
+        raise NotImplementedError
+
     def _get_ranges(self, start, end):
         start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
         end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)

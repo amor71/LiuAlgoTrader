@@ -1,7 +1,7 @@
 import math
 from abc import ABCMeta, abstractmethod
 from datetime import date, datetime
-from typing import Awaitable, Dict, List, Optional, Tuple
+from typing import Awaitable, Dict, List, Optional, Callable, Tuple
 
 import pandas as pd
 
@@ -24,7 +24,11 @@ class DataAPI(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_symbols(self) -> List[Dict]:
+    def get_market_snapshot(self, filter_func: Optional[Callable]) -> List[Dict]:
+        ...
+
+    @abstractmethod
+    def get_symbols(self) -> List[str]:
         ...
 
     @abstractmethod
