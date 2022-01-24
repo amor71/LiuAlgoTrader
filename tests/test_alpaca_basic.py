@@ -47,7 +47,7 @@ def test_alpaca_get_symbols() -> bool:
 @pytest.mark.devtest
 def test_alpaca_get_market_snapshot() -> bool:
     alpaca = AlpacaData()
-    market_snapshots = alpaca.get_market_snapshot()
+    market_snapshots = alpaca.get_market_snapshot(filter_func=None)
     print(f"{len(market_snapshots)} tickers of market snapshots are retrieved from Alpaca")
     return True
 
