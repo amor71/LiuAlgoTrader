@@ -1,5 +1,8 @@
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+import tabulate
+from pandas import DataFrame
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
@@ -80,6 +83,8 @@ class Portfolio:
         credit: float,
         parameters: Dict,
         asset_type: AssetType = AssetType.US_EQUITIES,
+        external_account_id: Optional[str] = None,
+        broker: Optional[str] = None,
     ):
         pool = config.db_conn_pool
         async with pool.acquire() as con:
@@ -88,19 +93,20 @@ class Portfolio:
                     portfolio_size,
                     allow_negative=credit > 0.0,
                     credit_line=credit,
-                    db_connection=con,
                     details=parameters,
                 )
                 await con.execute(
                     """
-                        INSERT INTO portfolio (portfolio_id, size, account_id, assets, parameters)
-                        VALUES ($1, $2, $3, $4, $5)
+                        INSERT INTO portfolio (portfolio_id, size, account_id, assets, parameters, external_account_id, broker)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
                     """,
                     portfolio_id,
                     portfolio_size,
                     account_id,
                     asset_type.name,
                     json.dumps(parameters),
+                    external_account_id,
+                    broker,
                 )
 
     @classmethod
@@ -119,6 +125,23 @@ class Portfolio:
             )
 
     @classmethod
+    async def is_associated(cls, portfolio_id: str, batch_id: str) -> bool:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            result = await con.fetchval(
+                """
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM portfolio_batch_ids
+                        WHERE portfolio_id = $1 AND batch_id=$2
+                    )
+                """,
+                portfolio_id,
+                batch_id,
+            )
+            return result
+
+    @classmethod
     async def exists(cls, portfolio_id: str) -> bool:
         pool = config.db_conn_pool
         async with pool.acquire() as con:
@@ -133,3 +156,78 @@ class Portfolio:
                 portfolio_id,
             )
             return result
+
+    @classmethod
+    async def get_portfolio_account_balance(cls, portfolio_id: str) -> float:
+        pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            return await con.fetchval(
+                """
+                    SELECT
+                        balance
+                    FROM 
+                        accounts as a, portfolio as f 
+                    WHERE
+                        a.account_id = f.account_id
+                        AND portfolio_id = $1
+                """,
+                portfolio_id,
+            )
+
+    @classmethod
+    async def get_external_account_id(
+        cls, portfolio_id: str
+    ) -> Tuple[Optional[str], Optional[str]]:
+        pool = config.db_conn_pool
+        async with pool.acquire() as con:
+            r = await con.fetchrow(
+                """
+                    SELECT
+                        external_account_id, broker
+                    FROM 
+                        portfolio
+                    WHERE
+                        portfolio_id = $1
+                """,
+                portfolio_id,
+            )
+
+            return (r["external_account_id"], r["broker"])
+
+    @classmethod
+    async def list_portfolios(cls) -> List[str]:
+        try:
+            pool = config.db_conn_pool
+        except AttributeError:
+            await create_db_connection()
+            pool = config.db_conn_pool
+
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rows = await con.fetch(
+                    """
+                        SELECT
+                            portfolio_id , a.tstamp as last_transaction, size, parameters ,assets, p.tstamp 
+                        FROM
+                            portfolio as p
+                        LEFT JOIN account_transactions as a
+                        ON
+                            p.account_id = a.account_id
+                        WHERE
+                            p.expire_tstamp is NULL
+                        ORDER BY 
+                            p.tstamp DESC
+                    """,
+                )
+                return DataFrame(
+                    data=rows,
+                    columns=[
+                        "portfolio_id",
+                        "last_transaction",
+                        "size",
+                        "parameters",
+                        "assets",
+                        "tstamp",
+                    ],
+                )

@@ -10,22 +10,23 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from multiprocessing import Queue
-from queue import Empty
+from queue import Empty, Full
 from typing import Dict, List, Optional
 
 from mnqueues import MNQueue
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import QueueMapper, WSEventType
 from liualgotrader.data.data_factory import streaming_factory
+from liualgotrader.models.tradeplan import TradePlan
 from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.trading.trader_factory import trader_factory
 
 last_msg_tstamp: datetime = datetime.now()
-symbols: List[str]
-queue_id_hash: Dict[str, int]
+symbols: List[str] = []
+queue_id_hash: Dict[str, int] = {}
 symbol_strategy: Dict = {}
 
 
@@ -118,10 +119,67 @@ async def scanner_input(
 
 
 async def trade_run(qm: QueueMapper) -> None:
-    at = trader_factory()(qm)
+    at = trader_factory(qm)
     tlog(f"trade_run() starting using {at} trading")
     await at.run()
     tlog("trade_run() completed")
+
+
+async def dispense_strategies(
+    consumer_queues: List[MNQueue], tradeplan_entries: List[TradePlan]
+) -> None:
+    for tradeplan in tradeplan_entries:
+        happy_consumer = consumer_queues[
+            random.SystemRandom().randint(0, len(consumer_queues) - 1)
+        ]
+
+        payload = {
+            "EV": "new_strategy",
+            "parameters": tradeplan.parameters,
+            "portfolio_id": tradeplan.portfolio_id,
+        }
+
+        try:
+            happy_consumer.put(payload)
+        except Exception as e:
+            tlog(
+                f"Exception in dispense_strategies: exception of type {type(e).__name__} with args {e.args}"
+            )
+            if config.debug_enabled:
+                tlog_exception(str(e))
+
+
+async def tradeplan_scanner(
+    consumer_queues: List[MNQueue],
+) -> None:
+    tlog("tradeplan_scanner() task starting ")
+
+    last_scan: datetime = datetime.utcnow()
+    while True:
+        await asyncio.sleep(5 * 60)
+
+        tlog(
+            f"tradeplan_scanner(): check for new execution requests since {last_scan}"
+        )
+        try:
+            new_tradeplan_entries = await TradePlan.get_new_entries(
+                since=last_scan
+            )
+            last_scan = datetime.utcnow()
+
+            if new_tradeplan_entries:
+                tlog(
+                    f"found {len(new_tradeplan_entries)} new tradeplan entries for execution"
+                )
+                await dispense_strategies(
+                    consumer_queues, new_tradeplan_entries
+                )
+        except Exception as e:
+            tlog(f"[EXCEPTION] tradeplan_scanner() {e}")
+            if config.debug_enabled:
+                tlog_exception(str(e))
+
+    tlog("tradeplan_scanner() task completed")
 
 
 async def run(
@@ -140,55 +198,6 @@ async def run(
     )
 
 
-async def teardown_task(
-    to_market_close: Optional[timedelta], tasks: List[asyncio.Task]
-) -> None:
-    if not to_market_close:
-        return
-    tlog("producer teardown_task() starting")
-    if not config.market_close:
-        tlog(
-            "we're probably in market schedule by-pass mode, exiting poylgon_producer tear-down task"
-        )
-        return
-
-    tlog(
-        f"producer tear-down task waiting for market close: {to_market_close}"
-    )
-    try:
-        await asyncio.sleep(to_market_close.total_seconds() + 60 * 5)
-
-        tlog("closing Stream")
-        await streaming_factory().get_instance().close()
-        tlog("producer teardown closed streaming web-sockets")
-        await trader_factory().get_instance().close()
-        tlog("producer teardown closed trading web-sockets")
-
-        tlog("producer teardown closing tasks")
-        for task in tasks:
-            tlog(
-                f"teardown_task(): requesting task {task.get_name()} to cancel"
-            )
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                tlog("teardown_task(): task is cancelled now")
-
-        # asyncio.get_running_loop().stop()
-
-    except asyncio.CancelledError:
-        tlog("teardown_task() cancelled during sleep")
-
-    except Exception as e:
-        tlog(f"[ERROR] Exception {e}")
-        if config.debug_enabled:
-            traceback.print_exc()
-
-    finally:
-        tlog("teardown_task() done.")
-
-
 """
 process main
 """
@@ -203,30 +212,23 @@ async def producer_async_main(
     qm = QueueMapper(queue_list=queues)
     await run(queues=queues, qm=qm)
 
-    at = trader_factory()(qm)
-
-    if not at.get_time_market_close():
-        return
+    # TODO: Support multiple brokers
+    at = trader_factory(qm)
     trade_updates_task = await at.run()
 
     scanner_input_task = asyncio.create_task(
         scanner_input(scanner_queue, queues, num_consumer_processes),
         name="scanner_input",
     )
-    tear_down = asyncio.create_task(
-        teardown_task(
-            at.get_time_market_close(),
-            [scanner_input_task, trade_updates_task],
-        )
+
+    tradeplan_scanner_task = asyncio.create_task(
+        tradeplan_scanner(queues), name="tradeplan_scanner"
     )
 
-    async_tasks_to_gather = [
-        scanner_input_task,
-        tear_down,
-    ]
+    async_tasks_to_gather = [scanner_input_task, tradeplan_scanner_task]
 
     if inspect.iscoroutinefunction(trade_updates_task):
-        async_tasks_to_gather.append(trade_updates_task)
+        async_tasks_to_gather.append(trade_updates_task)  # type: ignore
 
     await asyncio.gather(
         *async_tasks_to_gather,
@@ -239,45 +241,16 @@ async def producer_async_main(
 def producer_main(
     unique_id: str,
     queues: List[MNQueue],
-    current_symbols: List[str],
-    current_queue_id_hash: Dict[str, int],
-    market_close: datetime,
     conf_dict: Dict,
     scanner_queue: Queue,
     num_consumer_processes: int,
 ) -> None:
     tlog(f"*** producer_main() starting w pid {os.getpid()} ***")
     try:
-        config.market_close = market_close
         config.batch_id = unique_id
-        events = conf_dict.get("events", None)
-
-        if not events:
-            config.WS_DATA_CHANNELS = ["A", "AM", "T", "Q"]
-        else:
-            config.WS_DATA_CHANNELS = []
-
-            if "second" in events:
-                config.WS_DATA_CHANNELS.append("AM")
-            if "minute" in events:
-                config.WS_DATA_CHANNELS.append("A")
-            if "trade" in events:
-                config.WS_DATA_CHANNELS.append("T")
-            if "quote" in events:
-                config.WS_DATA_CHANNELS.append("Q")
-
-        tlog(
-            f"producer_main(): listening for events {config.WS_DATA_CHANNELS}"
-        )
-        global symbols
-        global queue_id_hash
-
-        symbols = current_symbols
-        queue_id_hash = current_queue_id_hash
         asyncio.run(
             producer_async_main(queues, scanner_queue, num_consumer_processes)
         )
-
     except KeyboardInterrupt:
         tlog("producer_main() - Caught KeyboardInterrupt")
     except Exception as e:

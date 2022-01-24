@@ -57,17 +57,7 @@ class GeminiData(DataAPI):
     def get_market_snapshot(self, filter_func) -> List[Dict]:
         raise NotImplementedError
 
-    async def aget_symbol_data(
-        self,
-        symbol: str,
-        start: date,
-        end: date = date.today(),
-        scale: TimeScale = TimeScale.minute,
-    ) -> pd.DataFrame:
-        symbol = symbol.lower()
-        tlog(
-            f"GEMINI start loading {symbol} from {start} to {end} w scale {scale}"
-        )
+    def _get_ranges(self, start, end):
         start_t = datetime.combine(start, datetime.min.time(), tzinfo=utctz)
         end_t = datetime.combine(end, datetime.max.time(), tzinfo=utctz)
         start_ts, end_ts = (

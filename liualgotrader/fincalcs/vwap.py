@@ -11,9 +11,6 @@ from liualgotrader.common.tlog import tlog
 def add_daily_vwap(
     minute_data: df, debug=False, back_time=None, in_place=True
 ):
-    if not back_time:
-        back_time = ts(config.market_open)
-
     if debug:
         tlog(f"before vwap {minute_data}")
 

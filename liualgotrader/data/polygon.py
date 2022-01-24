@@ -1,8 +1,7 @@
 import json
 import queue
-import requests
 import traceback
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, List, Optional, Callable
 
 import pandas as pd
@@ -23,30 +22,12 @@ class PolygonData(DataAPI):
                 "Failed to authenticate Polygon restful client"
             )
 
-    def get_market_snapshot(self, filter_func: Optional[Callable]) -> List[Dict]:
+    def get_symbols(self) -> List[Dict]:
         if not self.polygon_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")
-        # this API endpoint requires at least starter subscriptions from Polygon
-        data = self.polygon_rest_client.stocks_equities_snapshot_all_tickers()
-        return list(filter(filter_func, data.tickers)) if filter_func is not None else data.tickers
 
-    def get_symbols(self) -> List[str]:
-        if not self.polygon_rest_client:
-            raise AssertionError("Must call w/ authenticated polygon client")
-        # parse symbols on the first page
-        data = self.polygon_rest_client.reference_tickers_v3(limit=1000, active=True)
-        # use set to deduplicate in case paginated response return duplicate symbols
-        symbols = {d['ticker'] for d in data.results}
-        next_url = f"{data.next_url}&apiKey={config.polygon_api_key}"
-        # parse the pagination
-        while next_url is not None:
-            response = requests.get(next_url).json()
-            if 'next_url' not in response:
-                next_url = None
-                continue
-            symbols.update([d['ticker'] for d in response['results']])
-            next_url = f"{response['next_url']}&apiKey={config.polygon_api_key}"
-        return list(symbols)
+        data = self.polygon_rest_client.stocks_equities_snapshot_all_tickers()
+        return data.tickers
 
     def get_symbol_data(
         self,

@@ -54,6 +54,7 @@ sessions w/ LiuAlgoTrader.
    What's New
    Quickstart
    Getting Started
+   Tutorials
    (Advanced) Setup
    Concepts
    Configuration
@@ -65,7 +66,6 @@ sessions w/ LiuAlgoTrader.
    Off-market
    Additional apps
    Analysis
-   Examples
    How to Contribute
    Troubleshooting
    

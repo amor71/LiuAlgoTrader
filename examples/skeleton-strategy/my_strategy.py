@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
-import alpaca_trade_api as tradeapi
 import pandas as pd
-from pandas import DataFrame as df
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -95,6 +93,7 @@ class MyStrategy(Strategy):
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
         current_second_data = minute_history.iloc[-1]
+        tlog(f"{symbol} position is {position}")
         tlog(f"{symbol} data: {current_second_data}")
 
         if await super().is_buy_time(now) and not position:
@@ -105,27 +104,34 @@ class MyStrategy(Strategy):
             #
             # Global, cross strategies passed via the framework
             #
-            target_prices[symbol] = 15.0
-            stop_prices[symbol] = 3.8
+            target_prices[symbol] = current_second_data.close * 1.02
+            stop_prices[symbol] = current_second_data.close * 0.99
 
             #
             # indicators *should* be filled
             #
             buy_indicators[symbol] = {"my_indicator": "random"}
 
+            tlog(
+                f"[{self.name}] Submitting buy 10 shares of {symbol} at {current_second_data.close}"
+            )
             return (
                 True,
                 {
                     "side": "buy",
                     "qty": str(10),
                     "type": "limit",
-                    "limit_price": "4.4",
+                    "limit_price": current_second_data.close,
                 },
             )
         elif (
             await super().is_sell_time(now)
             and position > 0
             and last_used_strategy[symbol].name == self.name  # important!
+            and (
+                current_second_data.close >= target_prices[symbol]
+                or current_second_data.close <= stop_prices[symbol]
+            )
         ):
             # check if we already have open order
             if open_orders.get(symbol) is not None:
@@ -133,18 +139,21 @@ class MyStrategy(Strategy):
                 return False, {}
 
             # Check for liquidation signals
-            sell_indicators[symbol] = {"my_indicator": "random"}
+            sell_indicators[symbol] = {
+                "my_indicator": "reached target"
+                if current_second_data.close >= target_prices[symbol]
+                else "reached stop"
+            }
 
             tlog(
-                f"[{self.name}] Submitting sell for {position} shares of {symbol} at {current_second_data.close}"
+                f"[{self.name}] Submitting sell for {position} shares of {symbol} at market w/ {sell_indicators}"
             )
             return (
                 True,
                 {
                     "side": "sell",
                     "qty": str(position),
-                    "type": "limit",
-                    "limit_price": str(current_second_data.close),
+                    "type": "market",
                 },
             )
 

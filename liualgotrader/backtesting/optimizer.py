@@ -9,7 +9,7 @@ from liualgotrader import enhanced_backtest
 from liualgotrader.common import config
 from liualgotrader.common.hyperparameter import Hyperparameters
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import TimeScale
+from liualgotrader.common.types import AssetType, TimeScale
 from liualgotrader.models.optimizer import OptimizerRun
 
 
@@ -39,7 +39,14 @@ def backtest_iteration(
         asyncio.set_event_loop(asyncio.new_event_loop())
         loop.run_until_complete(
             enhanced_backtest.backtest_main(
-                uid, start_date, end_date, TimeScale.day, conf_dict
+                uid,
+                start_date,
+                end_date,
+                TimeScale.day,
+                conf_dict,
+                0.0,
+                0.0,
+                AssetType.US_EQUITIES,
             )
         )
     except KeyboardInterrupt:

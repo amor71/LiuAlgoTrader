@@ -1,5 +1,5 @@
 # LiuAlgoTrader
-[![Build Status](https://travis-ci.com/amor71/LiuAlgoTrader.svg?branch=master)](https://travis-ci.com/amor71/LiuAlgoTrader)
+[![Upload Python Package](https://github.com/amor71/LiuAlgoTrader/actions/workflows/python-publish.yml/badge.svg)](https://github.com/amor71/LiuAlgoTrader/actions/workflows/python-publish.yml)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/liualgotrader)
 [![Python 3](https://pyup.io/repos/github/amor71/LiuAlgoTrader/python-3-shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
 [![Updates](https://pyup.io/repos/github/amor71/LiuAlgoTrader/shield.svg)](https://pyup.io/repos/github/amor71/LiuAlgoTrader/)
@@ -8,11 +8,10 @@
 [![Gitter](https://badges.gitter.im/LiuAlgoTrader/community.svg)](https://gitter.im/LiuAlgoTrader/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Sourcery](https://img.shields.io/badge/Sourcery-enabled-brightgreen)](https://sourcery.ai)
 [![codecov](https://codecov.io/gh/amor71/LiuAlgoTrader/branch/master/graph/badge.svg?token=RIDO1ODHNQ)](https://codecov.io/gh/amor71/LiuAlgoTrader)
+
 ## Introduction
 
-**LiuAlgoTrader** is a scalable, multi-process ML-ready framework
-for effective algorithmic trading. The framework simplify development, testing,
-deployment, analysis and training algo trading strategies. The framework **automatically analyzes** trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
+**LiuAlgoTrader** is a scalable, multi-process ML-ready framework for effective algorithmic trading. The framework simplifies development, testing, deployment, analysis, and training algo trading strategies. The framework automatically analyzes trading sessions, hyper-parameters optimization, and the analysis may be used to train predictive models.  
 
 The framework currently support trading and back-testing of US Equities, and Crypto strategies.
 
@@ -34,7 +33,7 @@ LiuAlgoTrader comes equipped with powerful & user-friendly back-testing tool.
 - [Make 30% trading pair volatility](https://amor71.github.io/LiuAlgoTrader/brandtreade_tearsheet.html) using LiuAlgoTrader.
 
 
-## Quickstart
+## Quick-start
 
 ### Prerequisite
 
@@ -65,6 +64,15 @@ dockerized PostgreSQL and pre-populate with test data.
 LiuAlgoTrader `quickstart` wizard installs samples allowing a first-time experience of the framework. Follow the post-installation instructions, and try to back-test a specific day.   
 
 Additional samples can we found in the [examples](examples) directory. 
+
+## Tutorials
+
+LiuAlgoTraders articles are published on [Medium](https://amor71.medium.com/):
+
+* [Walk thru of setup and backtesting (2 parts)](https://amor71.medium.com/liualgotrader-part-i-3334a27edd4b)
+* [How to use the optimizer app](https://amor71.medium.com/liu-optimizer-42b0d6805d77)
+* [How to setup a Trading Platform](https://amor71.medium.com/how-to-setup-your-trading-platform-part-i-64ea8ea828bb)
+
 
 ## Back-testing
 
@@ -106,9 +114,11 @@ email me at  amor71@sgeltd.com
 
 Special thanks to the below individuals for their comments, reviews and suggestions:
 
+- [Jonathan Morland-Barrett](https://github.com/sigmantium)
+- [Alex Lau](https://github.com/riven314)
+- [Rokas Gegevicius](https://github.com/ksilo)
 - Shlomi Kushchi [shlomikushchi](https://github.com/shlomikushchi)
 - Venkat Y [vinmestmant](https://github.com/vinmestmant)
 - Chris [crowforc3](https://github.com/crawforc3)
 - [TheSnoozer](https://github.com/TheSnoozer)
 - [Aditya Gupta](https://github.com/adi0x90)
-- [Alex Lau](https://github.com/riven314)
