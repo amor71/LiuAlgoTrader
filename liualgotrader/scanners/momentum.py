@@ -172,10 +172,7 @@ class Momentum(Scanner):
             )
 
             print("load from db", start, end, len(rows))
-            if len(rows) > 0:
-                return [row[0] for row in rows]
-            else:
-                return []
+            return [row[0] for row in rows] if len(rows) > 0 else []
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
@@ -198,7 +195,7 @@ class Momentum(Scanner):
                     )
                 )
                 sort_key = lambda ticker: float(ticker["day"]["v"])
-                tlog(f"applying momentum filter on market snapshots from Polygon API")
+                tlog('applying momentum filter on market snapshots from Polygon API')
             elif isinstance(self.data_loader.data_api, AlpacaData):
                 filter_func = lambda ticket_snapshot: (
                     ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
@@ -216,7 +213,7 @@ class Momentum(Scanner):
                     )
                 )
                 sort_key = lambda ticker: float(ticker["dailyBar"]["v"])
-                tlog(f"applying momentum filter on market snapshots from Alpaca API")
+                tlog('applying momentum filter on market snapshots from Alpaca API')
             else:
                 raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
             return await self.apply_filter_on_market_snapshot(sort_key, filter_func)
