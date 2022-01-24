@@ -89,7 +89,7 @@ class Momentum(Scanner):
                     break
                 trade_able_symbols = await self._get_trade_able_symbols()
 
-                unsorted = [
+                if unsorted := [
                     ticker
                     for ticker in tickers
                     if (
@@ -107,8 +107,7 @@ class Momentum(Scanner):
                             or config.bypass_market_schedule
                         )
                     )
-                ]
-                if unsorted:
+                ]:
                     ticker_by_volume = sorted(
                         unsorted,
                         key=lambda ticker: float(ticker["day"]["v"]),  # type: ignore
@@ -190,10 +189,7 @@ class Momentum(Scanner):
             )
 
             print("load from db", start, end, len(rows))
-            if len(rows) > 0:
-                return [row[0] for row in rows]
-            else:
-                return []
+            return [row[0] for row in rows] if len(rows) > 0 else []
 
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
