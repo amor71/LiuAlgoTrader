@@ -3,10 +3,10 @@ Concepts
 
 This section explains the concepts and architecture of `LiuAlgoTrader` framework.
 
-.. image:: /images/core-platform-components.png
+.. image:: images/core-platform-components.png
     :width: 1000
     :align: left
-    :alt: liu blcok diagram
+    :alt: liu block diagram
 
 
 
@@ -70,7 +70,7 @@ the algorithmic decision making and initiate trades via API calls.
 Below diagram visualizes the high-level call flow & system components
 
 
-.. image:: /images/liu-hld.png
+.. image:: images/liu-hld.png
     :width: 1000
     :align: left
     :alt: liu architecture
@@ -125,7 +125,6 @@ When you see such a message repetitively, it may mean that either:
 
 
 .. _WebSockets :
-
     https://en.wikipedia.org/wiki/WebSocket#:~:text=WebSocket%20is%20a%20computer%20communications,WebSocket%20is%20distinct%20from%20HTTP.
 
 .. _multi-process infrastructure :
@@ -234,7 +233,7 @@ The following diagram represents the conceptual models which constitute the fram
 It is important to understand different concepts, and their relations, when developing
 strategies using the platform.
 
-.. image:: /images/conceptual_model.png
+.. image:: images/conceptual_model.png
     :width: 1000
     :align: left
     :alt: liu architecture
