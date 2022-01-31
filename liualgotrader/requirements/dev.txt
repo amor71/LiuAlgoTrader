@@ -7,7 +7,7 @@ mypy==0.931
 black==22.1.0
 pylint==2.12.2
 flake8==4.0.1
-Cython==0.29.26
+Cython==0.29.27
 alpaca-trade-api==1.4.3
 google-cloud-logging==2.7.0
 therapist==2.2.0
