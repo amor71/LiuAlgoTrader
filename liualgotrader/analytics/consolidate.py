@@ -1,8 +1,10 @@
 import asyncio
 
+import pandas as pd
 from pandas import DataFrame, Timestamp
 
 from liualgotrader.analytics.analysis import aload_trades_by_batch_id
+from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
@@ -17,7 +19,6 @@ async def trades(batch_id: str) -> None:
         return
 
     await create_db_connection()
-    await asyncio.sleep(1)
     trades_data = await aload_trades_by_batch_id(batch_id=batch_id)
 
     if trades_data.empty:
@@ -65,24 +66,31 @@ async def trades(batch_id: str) -> None:
             & (trade_analysis.algo_run_id == row.algo_run_id)
             & (trade_analysis.status == "open")
         ].empty:
-            trade_analysis = trade_analysis.append(
-                {
-                    "symbol": row.symbol,
-                    "algo_run_id": row.algo_run_id,
-                    "gain_value": delta,
-                    "org_price": float(row.price * row.qty),
-                    "start_time": Timestamp(row.client_time),
-                    "qty": float(row.qty),
-                    "r_units": float(row.price - row.stop_price)
-                    if row.stop_price is not None
-                    else 0,
-                    "initial_price": float(row.price),
-                    "stop_price": float(row.stop_price)
-                    if row.stop_price is not None
-                    else None,
-                    "status": "open",
-                    "sold_price": None,
-                },
+            trade_analysis = pd.concat(
+                [
+                    trade_analysis,
+                    pd.DataFrame(
+                        data=[
+                            {
+                                "symbol": row.symbol,
+                                "algo_run_id": row.algo_run_id,
+                                "gain_value": delta,
+                                "org_price": float(row.price * row.qty),
+                                "start_time": Timestamp(row.client_time),
+                                "qty": float(row.qty),
+                                "r_units": float(row.price - row.stop_price)
+                                if row.stop_price is not None
+                                else 0,
+                                "initial_price": float(row.price),
+                                "stop_price": float(row.stop_price)
+                                if row.stop_price is not None
+                                else None,
+                                "status": "open",
+                                "sold_price": None,
+                            }
+                        ],
+                    ),
+                ],
                 ignore_index=True,
             )
         else:
@@ -120,24 +128,33 @@ async def trades(batch_id: str) -> None:
                     "r_units",
                 ] = (
                     round(
-                        (
-                            float(row.price)
-                            - trade_analysis.loc[
-                                (trade_analysis.symbol == row.symbol)
-                                & (
-                                    trade_analysis.algo_run_id
-                                    == row.algo_run_id
+                        float(
+                            (
+                                float(row.price)
+                                - float(
+                                    trade_analysis.loc[
+                                        (trade_analysis.symbol == row.symbol)
+                                        & (
+                                            trade_analysis.algo_run_id
+                                            == row.algo_run_id
+                                        )
+                                        & (trade_analysis.status == "open"),
+                                        "initial_price",
+                                    ]
                                 )
-                                & (trade_analysis.status == "open"),
-                                "initial_price",
-                            ]
-                        )
-                        / trade_analysis.loc[
-                            (trade_analysis.symbol == row.symbol)
-                            & (trade_analysis.algo_run_id == row.algo_run_id)
-                            & (trade_analysis.status == "open"),
-                            "r_units",
-                        ],
+                            )
+                            / float(
+                                trade_analysis.loc[
+                                    (trade_analysis.symbol == row.symbol)
+                                    & (
+                                        trade_analysis.algo_run_id
+                                        == row.algo_run_id
+                                    )
+                                    & (trade_analysis.status == "open"),
+                                    "r_units",
+                                ]
+                            )
+                        ),
                         2,
                     )
                     if trade_analysis.loc[
@@ -183,10 +200,13 @@ async def trades(batch_id: str) -> None:
             ] += delta
 
         gain_loss["gain_percentage"] = round(
-            100.0 * gain_loss["gain_value"] / gain_loss["org_price"], 2
+            100.0 * float(gain_loss["gain_value"] / gain_loss["org_price"]), 2
         )
         trade_analysis["gain_percentage"] = round(
-            100.0 * trade_analysis["gain_value"] / trade_analysis["org_price"],
+            100.0
+            * float(
+                trade_analysis["gain_value"] / trade_analysis["org_price"]
+            ),
             2,
         )
 

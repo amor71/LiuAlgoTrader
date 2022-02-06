@@ -1,3 +1,4 @@
+import time
 from datetime import date, datetime, timedelta
 
 import pandas as pd
@@ -39,16 +40,26 @@ def test_alpaca_aapl_data_min() -> bool:
 @pytest.mark.devtest
 def test_alpaca_get_symbols() -> bool:
     alpaca = AlpacaData()
+
+    t0 = time.time()
     symbols = alpaca.get_symbols()
-    print(f"{len(symbols)} symbols are retrieved from Alpaca")
+    t1 = time.time()
+    print(
+        f"{len(symbols)} symbols are retrieved from Alpaca in {t1-t0} seconds"
+    )
     return True
 
 
 @pytest.mark.devtest
 def test_alpaca_get_market_snapshot() -> bool:
     alpaca = AlpacaData()
-    market_snapshots = alpaca.get_market_snapshot(filter_func=None)
-    print(f"{len(market_snapshots)} tickers of market snapshots are retrieved from Alpaca")
+
+    t0 = time.time()
+    market_snapshots = alpaca.get_market_snapshot()
+    t1 = time.time()
+    print(
+        f"{len(market_snapshots)} tickers of market snapshots are retrieved from Alpaca in {t1-t0} seconds"
+    )
     return True
 
 
