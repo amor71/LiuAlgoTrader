@@ -14,7 +14,7 @@ therapist==2.2.0
 jupyter==1.0.0
 asyncpg==0.25.0
 pygit2==1.8.0
-pytest==6.2.5
+pytest==7.0.0
 pytest-asyncio==0.17.2
 pytest-cov==3.0.0
 nb-clean==2.0.2
