@@ -7,6 +7,51 @@ Contribution Document_ or email me at amichay@sgeltd.com.
 
 .. _Document: https://github.com/amor71/LiuAlgoTrader/blob/master/CONTRIBUTING.md
 
+How to setup a development environment
+--------------------------------------
+
+Below is a step-by-step mini-guide for setting up a local development environment.
+1. clone LiuAlgoTrader:
+
+.. code-block:: bash
+
+    git clone https://github.com/amor71/LiuAlgoTrader.git
+
+This would create a folder `LiuAlgoTrader` with the platform code, pointing to the `master` branch.
+2. create a `virtualenv`:
+
+.. code-block:: bash
+    
+    python3 -m venv liuenv
+
+This would create a folder `liuenv`.
+
+3. activate the `virtualenv`:
+
+.. code-block:: bash
+
+    source liuenv/bin/activate
+
+4. install the packages required for development:
+
+.. code-block:: bash
+
+    pip install -r LiuAlgoTrader/liualgotrader/requirements/dev.txt
+
+This step would download and install the latest packages required for the development. Note that `master` is the latest development branch. It may not be the most stable version. The latest stable version could be pulled from the latest tagged version.
+
+5. If you have not yet set up a local database:
+
+.. code-block:: bash
+
+    python LiuAlgoTrader/liualgotrader/liu quickstart
+
+Follow these_ instructions on using the quickstart wizard (note that `step 1` should be omitted).
+
+.. _these: https://liualgotrader.readthedocs.io/en/latest/Quickstart.html
+
+
+
 
 Contributors
 ------------
