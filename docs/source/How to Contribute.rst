@@ -58,6 +58,10 @@ Contributors
 
 Special thanks to the below individuals for their comments, reviews and suggestions:
 
+- Jonathan Morland-Barrett sigmantium_
+
+.. _sigmantium: https://github.com/sigmantium
+
 - Alex Lau riven314_
 
 .. _riven314: https://github.com/riven314
