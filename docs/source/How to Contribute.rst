@@ -24,15 +24,21 @@ This would create a folder `LiuAlgoTrader` with the platform code, pointing to t
     
     python3 -m venv liuenv
 
+3. update `pip` to latest version:
+
+.. code-block:: bash
+
+    pip install -U pip
+
 This would create a folder `liuenv`.
 
-3. activate the `virtualenv`:
+4. activate the `virtualenv`:
 
 .. code-block:: bash
 
     source liuenv/bin/activate
 
-4. install the packages required for development:
+5. install the packages required for development:
 
 .. code-block:: bash
 
@@ -40,7 +46,7 @@ This would create a folder `liuenv`.
 
 This step would download and install the latest packages required for the development. Note that `master` is the latest development branch. It may not be the most stable version. The latest stable version could be pulled from the latest tagged version.
 
-5. If you have not yet set up a local database:
+6. If you have not yet set up a local database:
 
 .. code-block:: bash
 
@@ -50,7 +56,7 @@ Follow these_ instructions on using the quickstart wizard (note that `step 1` sh
 
 .. _these: https://liualgotrader.readthedocs.io/en/latest/Quickstart.html
 
-
+7. You may with to add `LiuAlgoTrader` folder to your PYTHONPATH
 
 
 Contributors
