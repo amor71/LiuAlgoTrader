@@ -114,7 +114,7 @@ async def get_market_industries() -> List[str]:
         return [record[0] for record in records if record[0]]
 
 
-async def sp500_historical_constituents(date):
+async def sp500_historical_constituents(date: str):
     tlog(f"loading sp500 constituents for {date}")
     table = pd.read_html(
         "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
@@ -124,10 +124,23 @@ async def sp500_historical_constituents(date):
     changes["date"] = changes.Date.apply(
         lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
     )
+    adjusted_symbols = m_and_a_data.loc[date < m_and_a_data.index, "to_symbol"]
     changes = changes.loc[changes.date > date]
     added = changes.Added.dropna().Ticker.to_list()
     removed = changes.Removed.dropna().Ticker.to_list()
-    return list(set(symbols) - set(added)) + removed
+    unadusted = list(set(symbols) - set(added)) + removed
+
+    adjusted = []
+    for symbol in adjusted_symbols:
+        if symbol in unadusted:
+            adjusted.append(
+                m_and_a_data.loc[
+                    m_and_a_data.to_symbol == symbol, "from_symbol"
+                ].item()
+            )
+            unadusted.remove(symbol)
+
+    return adjusted + unadusted
 
 
 async def get_trading_holidays() -> List[str]:
