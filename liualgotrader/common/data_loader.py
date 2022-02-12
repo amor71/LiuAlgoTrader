@@ -42,11 +42,14 @@ def convert_offset_to_datetime(
     index: pd.Index,
     scale: TimeScale,
     offset: int,
+    start: Optional[datetime] = None,
 ) -> datetime:
     try:
         return index[offset]
     except IndexError:
-        last_trading_time = data_api.get_last_trading(symbol)
+        last_trading_time = (
+            data_api.get_last_trading(symbol) if not start else start
+        )
         if scale == TimeScale.minute:
             return last_trading_time.replace(
                 second=0, microsecond=0
@@ -64,24 +67,6 @@ def handle_slice_conversion(
     scale: TimeScale,
     index: pd.Index,
 ) -> slice:
-    # handle slide start
-    if type(key.start) == str:
-        key = slice(nyc.localize(date_parser(key.start)), key.stop)
-    elif type(key.start) == int:
-        key = slice(
-            convert_offset_to_datetime(
-                data_api, symbol, index, scale, key.start
-            ),
-            key.stop,
-        )
-    elif type(key.start) == date:
-        key = slice(
-            nyc.localize(datetime.combine(key.start, datetime.min.time())),
-            key.stop,
-        )
-    elif type(key.start) == datetime and key.start.tzinfo is None:
-        key = slice(nyc.localize(key.start), key.stop)
-
     # handle slice end
     if type(key.stop) == str:
         key = slice(
@@ -106,6 +91,24 @@ def handle_slice_conversion(
         )
     elif type(key.stop) == datetime and key.stop.tzinfo is None:
         key = slice(key.start, nyc.localize(key.stop))
+
+    # handle slide start
+    if type(key.start) == str:
+        key = slice(nyc.localize(date_parser(key.start)), key.stop)
+    elif type(key.start) == int:
+        key = slice(
+            convert_offset_to_datetime(
+                data_api, symbol, index, scale, key.start, key.stop
+            ),
+            key.stop,
+        )
+    elif type(key.start) == date:
+        key = slice(
+            nyc.localize(datetime.combine(key.start, datetime.min.time())),
+            key.stop,
+        )
+    elif type(key.start) == datetime and key.start.tzinfo is None:
+        key = slice(nyc.localize(key.start), key.stop)
 
     return key
 
@@ -133,9 +136,10 @@ def load_item_by_offset(
         d=i,
         concurrency=concurrency,
     )
+    index = symbol_data.index.get_indexer([i], method="nearest")[0]
     return (
         symbol_data,
-        symbol_data.iloc[symbol_data.index.get_loc(i, method="nearest")],
+        symbol_data.iloc[index],
     )
 
 
@@ -345,14 +349,12 @@ def getitem_slice(
         )
 
     # return data range
+    indexes = symbol_data.index.get_indexer(
+        [key.start, key.stop], method="nearest"
+    )
     return (
         symbol_data,
-        symbol_data.iloc[
-            symbol_data.index.get_loc(
-                key.start, method="nearest"
-            ) : symbol_data.index.get_loc(key.stop, method="nearest")
-            + 1
-        ],
+        symbol_data.iloc[indexes[0] : indexes[1] + 1],
     )
 
 
@@ -398,8 +400,8 @@ def getitem(
     if symbol_data.empty:
         raise ValueError(f"details for symbol {symbol} do not exist")
 
-    rc = symbol_data.iloc[symbol_data.index.get_loc(key, method="ffill")]
-    return symbol_data, rc
+    index = symbol_data.index.get_indexer([key], method="ffill")[0]
+    return symbol_data, symbol_data.iloc[index]
 
 
 class SymbolData:

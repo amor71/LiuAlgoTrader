@@ -65,6 +65,34 @@ def test_apple_stock_current_price_range_int_day() -> bool:
 
 
 @pytest.mark.devtest
+def test_day_num_data_points() -> bool:
+    print("test_day_num_data_points")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    data = dl["AAPL"].close[-90:]  # type:ignore
+
+    if len(data) != 90:
+        raise AssertionError(
+            f"expected 90 datapoints, received only {len(data)}"
+        )
+
+    return True
+
+
+@pytest.mark.devtest
+def test_day_num_data_points_w_date() -> bool:
+    print("test_day_num_data_points")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    data = dl["AAPL"].close[-90:"2021-09-10 09:30:00"]  # type:ignore
+
+    if len(data) != 90:
+        raise AssertionError(
+            f"expected 90 datapoints, received only {len(data)}"
+        )
+
+    return True
+
+
+@pytest.mark.devtest
 def no_test_apple_stock_daily_price() -> bool:
     print("test_apple_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.alpaca)

@@ -363,6 +363,9 @@ class AlpacaData(DataAPI):
         )
 
         try:
+            if config.detailed_dl_debug_enabled:
+                tlog(f"symbol={symbol}, timeframe={t}, range=({_start, _end})")
+
             data = (
                 self.alpaca_rest_client.get_bars(
                     symbol=symbol,
