@@ -325,7 +325,7 @@ def symbol_trade_analytics(
 
     for _, row in symbol_df.iterrows():
         plt.scatter(
-            row["client_time"],  # .tz_convert("US/Eastern"),
+            row["client_time"],
             row["price"],
             c="g" if row["operation"] == "buy" else "r",
             s=100,
