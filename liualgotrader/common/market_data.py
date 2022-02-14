@@ -1,8 +1,9 @@
 import io
 import time
 from datetime import date, datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Set
 
+import numpy as np
 import pandas as pd
 import pandas_market_calendars
 import requests
@@ -119,28 +120,32 @@ async def sp500_historical_constituents(date: str):
     table = pd.read_html(
         "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     )
-    symbols = table[0].Symbol.to_list()
+    symbols: List = table[0].Symbol.to_list()
     changes = table[1]
     changes["date"] = changes.Date.apply(
         lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
     )
     adjusted_symbols = m_and_a_data.loc[date < m_and_a_data.index, "to_symbol"]
     changes = changes.loc[changes.date > date]
-    added = changes.Added.dropna().Ticker.to_list()
-    removed = changes.Removed.dropna().Ticker.to_list()
-    unadusted = list(set(symbols) - set(added)) + removed
 
-    adjusted = []
+    unadusted: Set = set(symbols)
+    for idx, row in changes.iterrows():
+        if not row.Added.dropna().empty:
+            unadusted.remove(row.Added.Ticker)
+        if not row.Removed.dropna().empty:
+            unadusted.add(row.Removed.Ticker)
+
+    adjusted: Set = set()
     for symbol in adjusted_symbols:
         if symbol in unadusted:
-            adjusted.append(
+            adjusted.add(
                 m_and_a_data.loc[
                     m_and_a_data.to_symbol == symbol, "from_symbol"
                 ].item()
             )
             unadusted.remove(symbol)
 
-    return adjusted + unadusted
+    return list(adjusted | unadusted)
 
 
 async def get_trading_holidays() -> List[str]:
