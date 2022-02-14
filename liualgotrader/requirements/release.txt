@@ -16,7 +16,7 @@ nest_asyncio==1.5.4
 parsedatetime==2.6
 scipy==1.8.0
 polygon-api-client==0.1.11
-finnhub-python==2.4.8
+finnhub-python==2.4.9
 quantstats==0.0.48
 mnqueues==0.0.35
 tqdm==4.62.3
