@@ -126,23 +126,35 @@ async def sp500_historical_constituents(date: str):
     changes = changes.loc[changes.date > date]
 
     unadusted: Set = set(symbols)
-    for idx, row in changes.iterrows():
-        if not row.Added.dropna().empty:
-            unadusted.remove(row.Added.Ticker)
-        if not row.Removed.dropna().empty:
-            unadusted.add(row.Removed.Ticker)
+    while True:
+        no_changes = True
+        for _, row in changes.iterrows():
+            if not row.Added.dropna().empty:
+                unadusted.remove(row.Added.Ticker)
+                no_changes = False
+            if not row.Removed.dropna().empty:
+                unadusted.add(row.Removed.Ticker)
+                no_changes = False
 
-    adjusted: Set = set()
-    for symbol in adjusted_symbols:
-        if symbol in unadusted:
-            adjusted.add(
-                m_and_a_data.loc[
-                    m_and_a_data.to_symbol == symbol, "from_symbol"
-                ].item()
-            )
-            unadusted.remove(symbol)
+        if not no_changes:
+            break
 
-    return list(adjusted | unadusted)
+    while True:
+        no_changes = True
+        for symbol in adjusted_symbols:
+            if symbol in unadusted:
+                unadusted.add(
+                    m_and_a_data.loc[
+                        m_and_a_data.to_symbol == symbol, "from_symbol"
+                    ].item()
+                )
+                unadusted.remove(symbol)
+                no_changes = False
+
+        if no_changes:
+            break
+
+    return list(unadusted)
 
 
 async def get_trading_holidays() -> List[str]:

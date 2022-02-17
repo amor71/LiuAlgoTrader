@@ -250,13 +250,19 @@ def _legacy_fetch_data_range(
     end: datetime,
 ) -> pd.DataFrame:
 
-    adjusted_data = m_and_a_data.loc[
-        (str(end) > m_and_a_data.index)
-        & (m_and_a_data.index > str(start))
-        & (m_and_a_data.to_symbol == symbol)
-    ]
-    if not adjusted_data.empty:
-        adjusted_symbol = adjusted_data.from_symbol.item()
+    adjusted_symbol = symbol
+    while True:
+        adjusted_data = m_and_a_data.loc[
+            (str(end) > m_and_a_data.index)
+            & (m_and_a_data.index > str(start))
+            & (m_and_a_data.to_symbol == adjusted_symbol)
+        ]
+        if not adjusted_data.empty:
+            adjusted_symbol = adjusted_data.from_symbol.item()
+        else:
+            break
+
+    if adjusted_symbol != symbol:
         adjusted_df = data_api.get_symbol_data(
             adjusted_symbol,
             start=(start.date() if isinstance(start, datetime) else start),
@@ -264,7 +270,7 @@ def _legacy_fetch_data_range(
             + timedelta(days=1),
             scale=scale,
         )
-        print(adjusted_df)
+        print(symbol, adjusted_df)
     else:
         adjusted_df = pd.DataFrame()
 
