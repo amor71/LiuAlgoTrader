@@ -10,17 +10,14 @@ import requests
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import DataLoader  # type: ignore
+from liualgotrader.common.data_loader import (DataLoader,  # type: ignore
+                                              m_and_a_data)
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 
 volume_today: Dict[str, int] = {}
 quotes: Dict[str, df] = {}
-
-m_and_a_data = pd.read_csv(
-    "https://raw.githubusercontent.com/amor71/LiuAlgoTrader/master/database/market_m_a_data.csv"
-).set_index("date")
 
 
 def get_symbol_data(

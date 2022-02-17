@@ -20,6 +20,10 @@ nest_asyncio.apply()
 
 nyc = timezone("America/New_York")
 
+m_and_a_data = pd.read_csv(
+    "https://raw.githubusercontent.com/amor71/LiuAlgoTrader/master/database/market_m_a_data.csv"
+).set_index("date")
+
 
 def _calc_data_to_fetch(s: slice, index: pd.Index) -> List[slice]:
     if index.empty:
@@ -245,6 +249,25 @@ def _legacy_fetch_data_range(
     start: datetime,
     end: datetime,
 ) -> pd.DataFrame:
+
+    adjusted_data = m_and_a_data.loc[
+        (str(end) > m_and_a_data.index)
+        & (m_and_a_data.index > str(start))
+        & (m_and_a_data.to_symbol == symbol)
+    ]
+    if not adjusted_data.empty:
+        adjusted_symbol = adjusted_data.from_symbol.item()
+        adjusted_df = data_api.get_symbol_data(
+            adjusted_symbol,
+            start=(start.date() if isinstance(start, datetime) else start),
+            end=(end.date() if isinstance(end, datetime) else end)
+            + timedelta(days=1),
+            scale=scale,
+        )
+        print(adjusted_df)
+    else:
+        adjusted_df = pd.DataFrame()
+
     new_df = data_api.get_symbol_data(
         symbol,
         start=(start.date() if isinstance(start, datetime) else start),
@@ -252,7 +275,7 @@ def _legacy_fetch_data_range(
         + timedelta(days=1),
         scale=scale,
     )
-    symbol_data = pd.concat([new_df, symbol_data], sort=True)
+    symbol_data = pd.concat([adjusted_df, new_df, symbol_data], sort=True)
     symbol_data = symbol_data[~symbol_data.index.duplicated(keep="first")]
     return symbol_data.reindex(
         columns=[
