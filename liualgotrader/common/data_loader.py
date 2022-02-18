@@ -270,7 +270,6 @@ def _legacy_fetch_data_range(
             + timedelta(days=1),
             scale=scale,
         )
-        print(symbol, adjusted_df)
     else:
         adjusted_df = pd.DataFrame()
 
