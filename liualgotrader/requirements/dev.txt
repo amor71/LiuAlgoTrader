@@ -43,12 +43,12 @@ finnhub-python==2.4.9
 pandas==1.4.1
 quantstats==0.0.48
 tqdm==4.62.3
-mnqueues==0.0.35
+mnqueues==0.0.37
 toml==0.10.2
 sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml==1.1.5
 fire==0.4.0
-opentelemetry-exporter-gcp-trace==1.1.0
+opentelemetry-exporter-gcp-trace==1.0.0
 websocket-client==1.2.3
 types-requests==2.27.9
 types-pytz==2021.3.5

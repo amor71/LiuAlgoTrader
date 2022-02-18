@@ -18,10 +18,10 @@ scipy==1.8.0
 polygon-api-client==0.1.11
 finnhub-python==2.4.9
 quantstats==0.0.48
-mnqueues==0.0.35
+mnqueues==0.0.37
 tqdm==4.62.3
 toml==0.10.2
 fire==0.4.0
-opentelemetry-exporter-gcp-trace==1.1.0
+opentelemetry-exporter-gcp-trace==1.0.0
 pandas_market_calendars==3.3
 psutil==5.9.0

@@ -18,7 +18,7 @@ est = pytz.timezone("US/Eastern")
             elements=st.datetimes(
                 min_value=datetime(2000, 1, 1), max_value=datetime(2040, 1, 1)
             ),
-            dtype=pd.DatetimeIndex,
+            dtype=None,
         ),
         columns=columns(
             ["open", "close", "high", "low", "volume"], dtype=float

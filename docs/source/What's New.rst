@@ -3,6 +3,14 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.13           | 1. Momentum scanner supports both Alpaca and |
+|                  |    polygon.                                  |
+|                  | 2. `data_loader` takes into account symbol   |
+|                  |    name changes.                             |
+|                  | 3. Adding data for sp500 symbol changes      |
+|                  |    between 2019-2022.                        |
+|                  | 4. Bug fixes.                                |
++------------------+----------------------------------------------+
 | 0.4.12           | 1. improvements to Crypto data loading.      |
 |                  | 2. Adding `list` to portfolio CLI.           |
 |                  | 3. Bug fixes.                                |
