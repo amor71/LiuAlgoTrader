@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import contextvars
-import random
 symbol = 'AAPL'
 position = 175.60
 symbols_position = {'AAPL': 175.60}
@@ -24,8 +23,9 @@ def run(symbol, position):
 def set_context(bool_val):
     # setting context for contextvars
     if should_run_all(bool_val):
-        # call to set a new value for the context variable
-        # in the current context
+        ''' call to set a new value for the context variable
+        in the current context'''
+
         var1.set(symbols_position)
         var2.set(None)
         var3.set(dict())
@@ -38,4 +38,5 @@ def set_context(bool_val):
 def should_run_all(bool_val):
     '''The Platform decides which function to call,
     based on the value returned by should_run_all()'''
+
     return bool_val
