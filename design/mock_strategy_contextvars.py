@@ -20,12 +20,12 @@ def run(symbol, position):
     return var3.get()
 
 
+# setting context for contextvars
 def set_context(bool_val):
-    # setting context for contextvars
-    if should_run_all(bool_val):
-        ''' call to set a new value for the context variable
-        in the current context'''
+    ''' call to set a new value for the context variable
+    in the current context'''
 
+    if should_run_all(bool_val):
         var1.set(symbols_position)
         var2.set(None)
         var3.set(dict())
