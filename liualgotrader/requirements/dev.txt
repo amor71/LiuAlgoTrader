@@ -43,7 +43,7 @@ finnhub-python==2.4.10
 pandas==1.4.1
 quantstats==0.0.50
 tqdm==4.62.3
-mnqueues==0.0.35
+mnqueues==0.0.37
 toml==0.10.2
 sphinxcontrib-htmlhelp==2.0.0
 sphinxcontrib-serializinghtml==1.1.5
