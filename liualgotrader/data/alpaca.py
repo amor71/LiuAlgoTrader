@@ -79,7 +79,10 @@ class AlpacaData(DataAPI):
                 }
             # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
             except AttributeError:
-                parsed_ticker_snapshot = {}
+                #parsed_ticker_snapshot = {}
+                if config.debug_enabled:
+                    tlog(f"[EXCEPTION] failed to parse market snapshot for {_ticker}.")
+                return None
             # capture failure by unknown reason
             except Exception as e:
                 raise ValueError(

@@ -61,7 +61,7 @@ class Momentum(Scanner):
 
     async def _get_trade_able_symbols(self) -> List[str]:
         symbols = await self.trading_api.get_tradeable_symbols()
-        tlog(f"loaded list of {len(symbols)} trade-able symbols from Alpaca")
+        tlog(f"loaded list of {len(symbols)} trade-able symbols from {self.trading_api}")
         return symbols
 
     async def apply_filter_on_market_snapshot(self, sort_key: Callable, filter_func: Optional[Callable]) -> List[str]:
@@ -86,6 +86,8 @@ class Momentum(Scanner):
 
                 tlog("did not find gaping stock, retrying")
                 await asyncio.sleep(30)
+        except KeyError:
+            tlog("KeyError")
         except KeyboardInterrupt:
             tlog("KeyboardInterrupt")
         return []
@@ -179,16 +181,16 @@ class Momentum(Scanner):
                 filter_func = lambda ticket_snapshot: (
                     ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
                     and self.max_share_price
-                    >= ticket_snapshot["latestTrade"]["p"]  # type: ignore
+                    >= ticket_snapshot["latest_trade"]["p"]  # type: ignore
                     >= self.min_share_price  # type: ignore
-                    and float(ticket_snapshot["prevDailyBar"]["v"])  # type: ignore
-                    * float(ticket_snapshot["latestTrade"]["p"])  # type: ignore
+                    and float(ticket_snapshot["prev_daily_bar"]["v"])  # type: ignore
+                    * float(ticket_snapshot["latest_trade"]["p"])  # type: ignore
                     > self.min_last_dv  # type: ignore
-                    and ((ticket_snapshot["dailyBar"]["o"] - ticket_snapshot["prevDailyBar"]["c"])
-                         / ticket_snapshot["prevDailyBar"]["c"]) >= self.today_change_percent  # type: ignore
-                    and _ticket_snapshot["dailyBar"]["v"] > self.min_volume  # type: ignore
+                    and (((ticket_snapshot["daily_bar"]["o"] - ticket_snapshot["prev_daily_bar"]["c"])
+                         / ticket_snapshot["prev_daily_bar"]["c"])*100) >= self.today_change_percent  # type: ignore
+                    and ticket_snapshot["daily_bar"]["v"] > self.min_volume  # type: ignore
                 )
-                sort_key = lambda ticker: float(ticker["dailyBar"]["v"])
+                sort_key = lambda ticker: float(ticker["daily_bar"]["v"])
                 tlog('applying momentum filter on market snapshots from Alpaca API')
             else:
                 raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
