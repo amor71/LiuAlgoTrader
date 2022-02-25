@@ -54,7 +54,7 @@ class GeminiData(DataAPI):
         self.running_task: Optional[Thread] = None
         self.ws = None
 
-    def get_symbols(self) -> List[Dict]:
+    def get_symbols(self) -> List[str]:
         endpoint = "/v1/symbols"
         url = self.base_url + endpoint
         response = requests.get(url)

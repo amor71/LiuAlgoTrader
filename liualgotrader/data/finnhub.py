@@ -122,6 +122,9 @@ class FinnhubData(DataAPI):
     ) -> datetime:
         raise NotImplementedError("get_trading_day")
 
+    def get_market_snapshot(self, filter_func) -> List[Dict]:
+        raise NotImplementedError
+
     def trading_days_slice(self, symbol: str, slice) -> slice:
         raise NotImplementedError("trading_days_slice")
 
