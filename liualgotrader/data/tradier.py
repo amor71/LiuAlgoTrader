@@ -5,12 +5,17 @@ from datetime import date, datetime, timedelta
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
+import pandas_market_calendars
+import pytz
 import requests
 import websocket
 
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.data.data_base import DataAPI
+
+NY = "America/New_York"
+nytz = pytz.timezone(NY)
 
 
 class TradierData(DataAPI):
@@ -85,6 +90,8 @@ class TradierData(DataAPI):
         if scale == TimeScale.day:
             data = response.json()["history"]["day"]
             df = pd.DataFrame(data=data)
+
+            df.date = pd.to_datetime(df.date).dt.tz_localize("EST")
             df.set_index(
                 "date", drop=True, inplace=True, verify_integrity=True
             )
@@ -140,10 +147,18 @@ class TradierData(DataAPI):
 
         raise ValueError(f"get_last_trading({symbol}) failed w {response}")
 
+    def get_trading_holidays(self) -> List[str]:
+        nyse = pandas_market_calendars.get_calendar("NYSE")
+        return nyse.holidays().holidays
+
     def get_trading_day(
         self, symbol: str, now: datetime, offset: int
     ) -> datetime:
-        raise NotImplementedError("get_trading_day")
+        cbd_offset = pd.tseries.offsets.CustomBusinessDay(
+            n=offset, holidays=self.get_trading_holidays()
+        )
+
+        return nytz.localize(now + cbd_offset)
 
     def trading_days_slice(self, symbol: str, slice) -> slice:
         raise NotImplementedError("trading_days_slice")
