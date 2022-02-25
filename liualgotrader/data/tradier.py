@@ -139,11 +139,14 @@ class TradierData(DataAPI):
         )
         if response.status_code == 200:
             data = response.json()
-            return (
-                pd.Timestamp(data["quotes"]["quote"]["trade_date"], unit="ms")
-                .tz_localize("UTC")
-                .tz_convert("EST")
-            )
+            if "quotes" in data and "quote" in data["quotes"]:
+                return (
+                    pd.Timestamp(
+                        data["quotes"]["quote"]["trade_date"], unit="ms"
+                    )
+                    .tz_localize("UTC")
+                    .tz_convert("EST")
+                )
 
         raise ValueError(f"get_last_trading({symbol}) failed w {response}")
 
