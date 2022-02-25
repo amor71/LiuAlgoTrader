@@ -11,11 +11,13 @@ class DataConnectorType(Enum):
     alpaca = 2
     finnhub = 3
     gemini = 4
+    tradier = 5
 
 
 class BrokerType(Enum):
     alpaca = 1
     gemini = 2
+    tradier = 3
 
 
 class TimeScale(Enum):

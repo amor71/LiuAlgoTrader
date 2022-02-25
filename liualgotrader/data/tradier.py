@@ -49,6 +49,7 @@ class TradierData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
+        print(symbol, start, end, scale)
         if scale == TimeScale.day:
             url = f"{self.base_url}/markets/history"
             interval = "daily"
@@ -99,18 +100,18 @@ class TradierData(DataAPI):
             )
             df.drop(["timestamp"], axis=1, inplace=True)
             df["count"] = 0
-            df["vwap"] = 0.0
             df = df.rename(columns={"price": "average"})
 
+        print(df)
         return df
 
     def get_market_snapshot(
         self, filter_func: Optional[Callable]
     ) -> List[Dict]:
-        ...
+        raise NotImplementedError("get_market_snapshot")
 
     def get_symbols(self) -> List[str]:
-        ...
+        raise NotImplementedError("get_symbols")
 
     def get_symbols_data(
         self,
@@ -122,21 +123,36 @@ class TradierData(DataAPI):
         ...
 
     def get_last_trading(self, symbol: str) -> datetime:
-        ...
+        url = f"{self.base_url}/markets/quotes"
+        response = self._get(
+            url,
+            params={
+                "symbols": [symbol],
+            },
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return (
+                pd.Timestamp(data["quotes"]["quote"]["trade_date"], unit="ms")
+                .tz_localize("UTC")
+                .tz_convert("EST")
+            )
+
+        raise ValueError(f"get_last_trading({symbol}) failed w {response}")
 
     def get_trading_day(
         self, symbol: str, now: datetime, offset: int
     ) -> datetime:
-        ...
+        raise NotImplementedError("get_trading_day")
 
     def trading_days_slice(self, symbol: str, slice) -> slice:
-        ...
+        raise NotImplementedError("trading_days_slice")
 
     def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
-        ...
+        raise NotImplementedError("num_trading_minutes")
 
     def num_trading_days(self, symbol: str, start: date, end: date) -> int:
-        ...
+        raise NotImplementedError("num_trading_days")
 
     def get_max_data_points_per_load(self) -> int:
-        ...
+        raise NotImplementedError("get_max_data_points_per_load")
