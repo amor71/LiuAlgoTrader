@@ -22,7 +22,7 @@ matplotlib==3.5.1
 tabulate==0.8.9
 sphinx==4.4.0
 sphinx-autodoc-typehints==1.17.0
-setuptools==60.9.0
+setuptools==60.9.3
 wheel==0.37.1
 twine==3.8.0
 streamlit==1.5.1
