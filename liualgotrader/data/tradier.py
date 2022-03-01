@@ -30,7 +30,6 @@ class TradierData(DataAPI):
         ...
 
     def _get(self, url: str, params: Dict):
-        print(params)
         r = requests.get(
             url,
             params=params,
@@ -40,6 +39,7 @@ class TradierData(DataAPI):
             },
         )
 
+        print(r.url)
         if r.status_code in (429, 502):
             tlog(f"{url} return {r.status_code}, waiting and re-trying")
             time.sleep(10)
@@ -54,14 +54,13 @@ class TradierData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        print(symbol, start, end, scale)
         if scale == TimeScale.day:
-            url = f"{self.base_url}/markets/history"
+            url = f"{self.base_url}markets/history"
             interval = "daily"
             s = str(start)
             e = str(end)
         elif scale == TimeScale.minute:
-            url = f"{self.base_url}/markets/timesales"
+            url = f"{self.base_url}markets/timesales"
             interval = "1min"
             s = datetime.combine(start, datetime.min.time()).strftime(
                 "%Y-%m-%d %H:%M"

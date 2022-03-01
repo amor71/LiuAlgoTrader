@@ -17,8 +17,8 @@ def test_create_data_loader_default() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_latest_price() -> bool:
-    print("test_apple_stock_latest_price")
+def test_apple_stock_lano_test_price() -> bool:
+    print("test_apple_stock_lano_test_price")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
@@ -29,8 +29,8 @@ def test_apple_stock_latest_price() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_current_price() -> bool:
-    print("test_apple_stock_current_price")
+def no_test_apple_stock_current_price() -> bool:
+    print("no_test_apple_stock_current_price")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
@@ -45,8 +45,8 @@ def test_apple_stock_current_price() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_current_price_range_int_minute() -> bool:
-    print("test_apple_stock_current_price_range_int_minute")
+def no_test_apple_stock_current_price_range_int_minute() -> bool:
+    print("no_test_apple_stock_current_price_range_int_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"].close[-5:-1]  # type:ignore
 
@@ -55,8 +55,8 @@ def test_apple_stock_current_price_range_int_minute() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_current_price_range_int_day() -> bool:
-    print("test_apple_stock_current_price_range_int_day")
+def no_test_apple_stock_current_price_range_int_day() -> bool:
+    print("no_test_apple_stock_current_price_range_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"].close[-6:-1]  # type:ignore
     print(last_price_range)
@@ -65,8 +65,8 @@ def test_apple_stock_current_price_range_int_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_day_num_data_points() -> bool:
-    print("test_day_num_data_points")
+def no_test_day_num_data_points() -> bool:
+    print("no_test_day_num_data_points")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     data = dl["AAPL"].close[-90:]  # type:ignore
 
@@ -79,8 +79,8 @@ def test_day_num_data_points() -> bool:
 
 
 @pytest.mark.devtest
-def test_day_num_data_points_w_date() -> bool:
-    print("test_day_num_data_points")
+def no_test_day_num_data_points_w_date() -> bool:
+    print("no_test_day_num_data_points")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     data = dl["AAPL"].close[-90:"2021-09-10 09:30:00"]  # type:ignore
 
@@ -93,8 +93,8 @@ def test_day_num_data_points_w_date() -> bool:
 
 
 @pytest.mark.devtest
-def no_test_apple_stock_daily_price() -> bool:
-    print("test_apple_stock_daily_price")
+def no_no_test_apple_stock_daily_price() -> bool:
+    print("no_test_apple_stock_daily_price")
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.tradier)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
@@ -107,7 +107,7 @@ def no_test_apple_stock_daily_price() -> bool:
 
 
 @pytest.mark.devtest
-def test_negative_current_price() -> bool:
+def no_test_negative_current_price() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     try:
         dl["DFGDFGDFG"].close[-1]
@@ -118,8 +118,8 @@ def test_negative_current_price() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_close_price_range_str_day() -> bool:
-    print("test_apple_stock_close_price_range_int_day")
+def no_test_apple_stock_close_price_range_str_day() -> bool:
+    print("no_test_apple_stock_close_price_range_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"].close[
         "2021-01-01":"2021-01-05"  # type:ignore
@@ -130,8 +130,8 @@ def test_apple_stock_close_price_range_str_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_int_minute() -> bool:
-    print("test_apple_stock_price_range_int_minute")
+def no_test_apple_stock_price_range_int_minute() -> bool:
+    print("no_test_apple_stock_price_range_int_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"][-5:-1]  # type:ignore
     print(last_price_range)
@@ -140,8 +140,8 @@ def test_apple_stock_price_range_int_minute() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_int_day() -> bool:
-    print("test_apple_stock_price_range_int_day")
+def no_test_apple_stock_price_range_int_day() -> bool:
+    print("no_test_apple_stock_price_range_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"][-5:-1]  # type:ignore
     print(last_price_range)
@@ -150,8 +150,8 @@ def test_apple_stock_price_range_int_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_date_day() -> bool:
-    print("test_apple_stock_price_range_date_day")
+def no_test_apple_stock_price_range_date_day() -> bool:
+    print("no_test_apple_stock_price_range_date_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"]["2020-10-05":"2020-10-08"]  # type:ignore
     print(last_price_range)
@@ -160,8 +160,8 @@ def test_apple_stock_price_range_date_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_date_int_day() -> bool:
-    print("test_apple_stock_price_range_date_int_day")
+def no_test_apple_stock_price_range_date_int_day() -> bool:
+    print("no_test_apple_stock_price_range_date_int_day")
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.tradier)
     last_price_range = dl["AAPL"]["2020-10-05":-1]  # type:ignore
     print(last_price_range)
@@ -170,8 +170,8 @@ def test_apple_stock_price_range_date_int_day() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_range_date_min_open() -> bool:
-    print("test_apple_stock_price_range_date_min_open")
+def no_test_apple_stock_price_range_date_min_open() -> bool:
+    print("no_test_apple_stock_price_range_date_min_open")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     try:
         last_price_range = dl["AAPL"][:]  # type:ignore
@@ -182,8 +182,8 @@ def test_apple_stock_price_range_date_min_open() -> bool:
 
 
 @pytest.mark.devtest
-def test_apple_stock_price_open_range_date_min_open() -> bool:
-    print("test_apple_stock_price_open_range_date_min_open")
+def no_test_apple_stock_price_open_range_date_min_open() -> bool:
+    print("no_test_apple_stock_price_open_range_date_min_open")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     try:
         last_price_range = dl["AAPL"].open[:]  # type:ignore
