@@ -162,38 +162,20 @@ class Momentum(Scanner):
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
             trade_able_symbols = await self._get_trade_able_symbols()
-            if isinstance(self.data_loader.data_api, PolygonData):
-                filter_func = lambda ticket_snapshot: (
-                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
-                    and self.max_share_price
-                    >= ticket_snapshot["lastTrade"]["p"]  # type: ignore
-                    >= self.min_share_price  # type: ignore
-                    and float(ticket_snapshot["prevDay"]["v"])  # type: ignore
-                    * float(ticket_snapshot["lastTrade"]["p"])  # type: ignore
-                    > self.min_last_dv  # type: ignore
-                    and ticket_snapshot["todaysChangePerc"]  # type: ignore
-                    >= self.today_change_percent  # type: ignore
-                    and ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
-                )
-                sort_key = lambda ticker: float(ticker["day"]["v"])
-                tlog('applying momentum filter on market snapshots from Polygon API')
-            elif isinstance(self.data_loader.data_api, AlpacaData):
-                filter_func = lambda ticket_snapshot: (
-                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
-                    and self.max_share_price
-                    >= ticket_snapshot["latest_trade"]["p"]  # type: ignore
-                    >= self.min_share_price  # type: ignore
-                    and float(ticket_snapshot["prev_daily_bar"]["v"])  # type: ignore
-                    * float(ticket_snapshot["latest_trade"]["p"])  # type: ignore
-                    > self.min_last_dv  # type: ignore
-                    and (((ticket_snapshot["daily_bar"]["o"] - ticket_snapshot["prev_daily_bar"]["c"])
-                         / ticket_snapshot["prev_daily_bar"]["c"])*100) >= self.today_change_percent  # type: ignore
-                    and ticket_snapshot["daily_bar"]["v"] > self.min_volume  # type: ignore
-                )
-                sort_key = lambda ticker: float(ticker["daily_bar"]["v"])
-                tlog('applying momentum filter on market snapshots from Alpaca API')
-            else:
-                raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
+            filter_func = lambda ticket_snapshot: (
+                ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
+                and self.max_share_price
+                >= ticket_snapshot["lastTrade"]["p"]  # type: ignore
+                >= self.min_share_price  # type: ignore
+                and float(ticket_snapshot["prevDay"]["v"])  # type: ignore
+                * float(ticket_snapshot["lastTrade"]["p"])  # type: ignore
+                > self.min_last_dv  # type: ignore
+                and ticket_snapshot["todaysChangePerc"]  # type: ignore
+                >= self.today_change_percent  # type: ignore
+                and ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
+            )
+            sort_key = lambda ticker: float(ticker["day"]["v"])
+            tlog(f'applying momentum filter on market snapshots from {self.data_loader.data_api}')
             return await self.apply_filter_on_market_snapshot(sort_key, filter_func)
 
         rows = await self.load_from_db(back_time)
