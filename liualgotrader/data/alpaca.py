@@ -66,9 +66,7 @@ class AlpacaData(DataAPI):
     async def _get_symbols_snapshot(
         self, symbols: List[str], filter_func: Optional[Callable]
     ) -> List[Dict]:
-        def _parse_ticker_snapshot(
-            _ticker: str, _ticket_snapshot: object
-        ) -> Dict:
+        def _parse_ticker_snapshot(_ticker: str, _ticket_snapshot: object):
             try:
                 return {
                     "ticker": _ticker,
@@ -79,7 +77,7 @@ class AlpacaData(DataAPI):
                 }
             # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
             except AttributeError:
-                return {}
+                return None
 
         def _parse_snapshot_and_filter(_symbols: List[str]) -> List[Dict]:
             processed_tickers_snapshot = map(
