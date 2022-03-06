@@ -19,7 +19,7 @@ from dateutil.parser import parse as date_parser
 
 from liualgotrader.common import config
 from liualgotrader.common.list_utils import chunks
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import QueueMapper, TimeScale, WSEventType
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.streaming_base import StreamingAPI
@@ -70,7 +70,7 @@ class AlpacaData(DataAPI):
             _ticker: str, _ticket_snapshot: object
         ) -> Dict:
             try:
-                parsed_ticker_snapshot = {
+                return {
                     "ticker": _ticker,
                     **{
                         sub_snapshot_type: _sub_snapshot_obj.__dict__["_raw"]
@@ -79,29 +79,19 @@ class AlpacaData(DataAPI):
                 }
             # skip over if some snapshot type is missing (e.g. "prev_daily_bar": None)
             except AttributeError:
-                #parsed_ticker_snapshot = {}
-                if config.debug_enabled:
-                    tlog(f"[EXCEPTION] failed to parse market snapshot for {_ticker}.")
-                return None
-            # capture failure by unknown reason
-            except Exception as e:
-                raise ValueError(
-                    f"[EXCEPTION] {e} failed to parse market snapshot for {_ticker}."
-                )
-            return parsed_ticker_snapshot
+                return {}
 
         def _parse_snapshot_and_filter(_symbols: List[str]) -> List[Dict]:
             processed_tickers_snapshot = map(
                 lambda key_and_val: _parse_ticker_snapshot(*key_and_val),
                 self.alpaca_rest_client.get_snapshots(_symbols).items(),
             )
-
             return list(
                 filter(
                     lambda snapshot: (
                         (snapshot is not None) and (filter_func(snapshot))  # type: ignore
                     ),
-                    processed_tickers_snapshot,
+                    list(processed_tickers_snapshot),  # type : ignore
                 )
                 if filter_func is not None
                 else processed_tickers_snapshot

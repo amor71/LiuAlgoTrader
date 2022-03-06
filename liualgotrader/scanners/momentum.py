@@ -2,7 +2,7 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Callable
+from typing import Callable, List, Optional, Tuple
 
 import requests
 from alpaca_trade_api.rest import REST as tradeapi
@@ -61,36 +61,23 @@ class Momentum(Scanner):
 
     async def _get_trade_able_symbols(self) -> List[str]:
         symbols = await self.trading_api.get_tradeable_symbols()
-        tlog(f"loaded list of {len(symbols)} trade-able symbols from {self.trading_api}")
+        tlog(
+            f"loaded list of {len(symbols)} trade-able symbols from {self.trading_api}"
+        )
         return symbols
 
-    async def apply_filter_on_market_snapshot(self, sort_key: Callable, filter_func: Optional[Callable]) -> List[str]:
-        try:
-            while True:
-                unsorted = self.data_loader.data_api.get_market_snapshot(filter_func)
-                tlog(f"loaded {len(unsorted)} tickers of market snapshots after momentum filtering")
-                if not len(unsorted):
-                    tlog("failed to load any market snapshots for any tickers")
-                    break
-                if unsorted:
-                    # sort ticker by trading volume
-                    ticker_by_volume = sorted(
-                        unsorted,
-                        key=sort_key,  # type: ignore
-                        reverse=True,
-                    )
-                    tlog(f"picked {len(ticker_by_volume)} symbols")
-                    return [x["ticker"] for x in ticker_by_volume][  # type: ignore
-                        : self.max_symbols
-                    ]
+    async def apply_filter_on_market_snapshot(
+        self, filter_func: Optional[Callable]
+    ) -> List[str]:
+        filtered = self.data_loader.data_api.get_market_snapshot(filter_func)
+        tlog(
+            f"loaded {len(filtered)} tickers of market snapshots after momentum filtering"
+        )
+        if not len(filtered):
+            tlog("failed to load any market snapshots for any tickers")
+            return []
 
-                tlog("did not find gaping stock, retrying")
-                await asyncio.sleep(30)
-        except KeyError:
-            tlog("KeyError")
-        except KeyboardInterrupt:
-            tlog("KeyboardInterrupt")
-        return []
+        return [x["ticker"] for x in filtered]
 
     async def add_stock_data_for_date(self, symbol: str, when: date) -> None:
         _minute_data = self.data_loader[symbol][
@@ -159,44 +146,92 @@ class Momentum(Scanner):
             print("load from db", start, end, len(rows))
             return [row[0] for row in rows] if len(rows) > 0 else []
 
+    def momentum_filter(self, snapshot) -> bool:
+        if isinstance(self.data_loader.data_api, AlpacaData):
+            (
+                tradable,
+                last_trade_price,
+                prev_day_volume_price,
+                today_gap_up_pct,
+                today_volume,
+            ) = self.alpaca_snapshot_details(snapshot)
+        elif isinstance(self.data_loader.data_api, PolygonData):
+            (
+                tradable,
+                last_trade_price,
+                prev_day_volume_price,
+                today_gap_up_pct,
+                today_volume,
+            ) = self.polygon_snapshot_details(snapshot)
+        else:
+            raise ValueError(
+                f"Invalid data API: {type(self.data_loader.data_api)}"
+            )
+
+        in_price_range = (
+            self.max_share_price >= last_trade_price >= self.min_share_price
+        )
+        return (
+            tradable
+            and in_price_range
+            and prev_day_volume_price > self.min_last_dv
+            and today_gap_up_pct >= self.today_change_percent
+            and today_volume > self.min_volume
+        )
+
+    def polygon_snapshot_details(
+        self, snapshot
+    ) -> Tuple[bool, float, float, float, float]:
+        tradeable = snapshot["ticker"].lower() in self.trade_able_symbols
+        last_trade_price = float(snapshot["lastTrade"]["p"])
+        prev_day_volume_price = float(snapshot["prevDay"]["p"]) * float(
+            snapshot["prevDay"]["v"]
+        )
+        today_gap_up_pct = snapshot["todaysChangePerc"]
+        today_volume = snapshot["day"]["v"]
+
+        return (
+            tradeable,
+            last_trade_price,
+            prev_day_volume_price,
+            today_gap_up_pct,
+            today_volume,
+        )
+
+    def alpaca_snapshot_details(
+        self, snapshot
+    ) -> Tuple[bool, float, float, float, float]:
+        tradable = snapshot["ticker"].lower() in self.trade_able_symbols
+
+        last_trade_price = float(snapshot["latest_trade"]["p"])
+        prev_day_price_volume = float(snapshot["prev_daily_bar"]["v"]) * float(
+            snapshot["prev_daily_bar"]["c"]
+        )
+        today_gap_up_pct = (
+            100.0
+            * (snapshot["daily_bar"]["o"] - snapshot["prev_daily_bar"]["c"])
+            / snapshot["prev_daily_bar"]["c"]
+        )
+        today_volume = snapshot["daily_bar"]["v"]
+
+        return (
+            tradable,
+            last_trade_price,
+            prev_day_price_volume,
+            today_gap_up_pct,
+            today_volume,
+        )
+
     async def run(self, back_time: datetime = None) -> List[str]:
         if not back_time:
-            trade_able_symbols = await self._get_trade_able_symbols()
-            if isinstance(self.data_loader.data_api, PolygonData):
-                filter_func = lambda ticket_snapshot: (
-                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
-                    and self.max_share_price
-                    >= ticket_snapshot["lastTrade"]["p"]  # type: ignore
-                    >= self.min_share_price  # type: ignore
-                    and float(ticket_snapshot["prevDay"]["v"])  # type: ignore
-                    * float(ticket_snapshot["lastTrade"]["p"])  # type: ignore
-                    > self.min_last_dv  # type: ignore
-                    and ticket_snapshot["todaysChangePerc"]  # type: ignore
-                    >= self.today_change_percent  # type: ignore
-                    and ticket_snapshot["day"]["v"] > self.min_volume  # type: ignore
-                )
-                sort_key = lambda ticker: float(ticker["day"]["v"])
-                tlog('applying momentum filter on market snapshots from Polygon API')
-            elif isinstance(self.data_loader.data_api, AlpacaData):
-                filter_func = lambda ticket_snapshot: (
-                    ticket_snapshot["ticker"] in trade_able_symbols  # type: ignore
-                    and self.max_share_price
-                    >= ticket_snapshot["latest_trade"]["p"]  # type: ignore
-                    >= self.min_share_price  # type: ignore
-                    and float(ticket_snapshot["prev_daily_bar"]["v"])  # type: ignore
-                    * float(ticket_snapshot["latest_trade"]["p"])  # type: ignore
-                    > self.min_last_dv  # type: ignore
-                    and (((ticket_snapshot["daily_bar"]["o"] - ticket_snapshot["prev_daily_bar"]["c"])
-                         / ticket_snapshot["prev_daily_bar"]["c"])*100) >= self.today_change_percent  # type: ignore
-                    and ticket_snapshot["daily_bar"]["v"] > self.min_volume  # type: ignore
-                )
-                sort_key = lambda ticker: float(ticker["daily_bar"]["v"])
-                tlog('applying momentum filter on market snapshots from Alpaca API')
-            else:
-                raise ValueError(f"Invalid data API: {type(self.data_loader.data_api)}")
-            return await self.apply_filter_on_market_snapshot(sort_key, filter_func)
+            self.trade_able_symbols = await self._get_trade_able_symbols()
+            return await self.apply_filter_on_market_snapshot(
+                self.momentum_filter
+            )
 
         rows = await self.load_from_db(back_time)
 
-        tlog(f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}")
+        tlog(
+            f"Scanner {self.name} -> back_time={back_time} picked {len(rows)}"
+        )
         return rows
