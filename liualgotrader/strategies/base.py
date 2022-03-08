@@ -1,6 +1,7 @@
 """Base Class for Strategies"""
 import importlib
 import traceback
+import contextvars
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -21,7 +22,7 @@ class StrategyType(Enum):
     SWING = 2
 
 
-class Strategy(object):
+class Strategy():
     def __init__(
         self,
         name: str,
@@ -88,7 +89,24 @@ class Strategy(object):
         """
         return False
 
-    async def run_all(
+    async def setting_context_parameters(self, symbol, position):
+        self.symbol = contextvars.ContextVar('symbol_var', default=symbol)
+
+        if not await self.should_run_all():
+            self.symbol.set({symbol: position})
+
+        return self.symbol.get()
+
+    async def setting_context_return(self, actions, symbol=None):
+        self.return_val = contextvars.ContextVar('return_val', default=actions)
+
+        if not await self.should_run_all():
+            self.return_val.set((True, actions[symbol]) if symbol in actions else (False, {}))
+
+        return self.return_val.get()
+
+
+    '''async def run_all(
         self,
         symbols_position: Dict[str, float],
         data_loader: DataLoader,
@@ -117,7 +135,7 @@ class Strategy(object):
         Returns:
         Dictionary with symbol and 'actions' (see documentation for supported actions)
         """
-        return {}
+        return {}'''
 
     async def run(
         self,

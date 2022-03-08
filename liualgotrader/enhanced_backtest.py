@@ -215,6 +215,118 @@ async def do_strategy_result(
     return True
 
 
+async def do_strategy_unified(
+    data_loader: DataLoader,
+    now: pd.Timestamp,
+    strategy: Strategy,
+    symbols: List[str],
+    trader: Trader,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
+):
+    if not await strategy.should_run_all():
+        global portfolio_value
+        for symbol in symbols:
+            param = {
+                "symbol": symbol,
+                "now": now,
+                "position": trading_data.positions.get(symbol, 0.0),
+                "portfolio_value": portfolio_value,
+                "backtesting": True,
+                "minute_history": data_loader[symbol].symbol_data[:now],
+                "shortable": True
+            }
+            try:
+                _ = data_loader[symbol][now - timedelta(days=1) : now]  # type: ignore
+                do, what = await strategy.run(**param)
+
+                if do:
+                    await do_strategy_result(
+                        data_loader, strategy, symbol, now, what
+                    )
+            except ValueError:
+                tlog(
+                    f"symbol {symbol} for now have data in the range {now - timedelta(days=1)}-{now}"
+                )
+            except Exception as e:
+                tlog(f"[Exception] {now} {strategy}({symbol}):`{e}`")
+                if config.debug_enabled:
+                    traceback.print_exc()
+                raise
+
+    if await strategy.should_run_all():
+        try:
+            sig = inspect.signature(strategy.run)
+            param = {
+                "symbol": dict(
+                    {symbol: 0 for symbol in symbols}, **trading_data.positions
+                ),
+                "now": now.to_pydatetime(),
+                "portfolio_value": portfolio_value,
+                "backtesting": True,
+                "data_loader": data_loader,
+                "trader": trader,
+            }
+            if "fee_buy_percentage" in sig.parameters:
+                param["fee_buy_percentage"] = buy_fee_percentage
+            if "fee_sell_percentage" in sig.parameters:
+                param["fee_sell_percentage"] = sell_fee_percentage
+            do = await strategy.run(**param)
+            items = list(do.items())
+            items.sort(key=lambda x: int(x[1]["side"] == "buy"))
+            for symbol, what in items:
+                await do_strategy_result(
+                    data_loader,
+                    strategy,
+                    symbol,
+                    now,
+                    what,
+                    buy_fee_percentage,
+                    sell_fee_percentage,
+                )
+
+        except Exception as e:
+            tlog(f"[Exception] {now} {strategy}->{e}")
+            traceback.print_exc()
+            raise
+
+
+async def do_strategy(
+    data_loader: DataLoader,
+    now: pd.Timestamp,
+    strategy: Strategy,
+    symbols: List[str],
+    trader: Trader,
+    buy_fee_percentage: float,
+    sell_fee_percentage: float,
+):
+
+    await do_strategy_unified(
+        data_loader,
+        now,
+        strategy,
+        symbols,
+        trader,
+        buy_fee_percentage,
+        sell_fee_percentage,
+        )
+
+"""
+    if await strategy.should_run_all():
+        await do_strategy_all(
+            data_loader,
+            now,
+            strategy,
+            symbols,
+            trader,
+            buy_fee_percentage,
+            sell_fee_percentage,
+        )
+    else:
+        await do_strategy_by_symbol(data_loader, now, strategy, symbols)
+
+"""
+"""
 async def do_strategy_all(
     data_loader: DataLoader,
     now: pd.Timestamp,
@@ -316,6 +428,7 @@ async def do_strategy(
         )
     else:
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
+"""
 
 
 def get_day_start_end(asset_type, day):
