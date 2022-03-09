@@ -10,6 +10,7 @@ import pytz
 import requests
 import websocket
 
+from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.data.data_base import DataAPI
@@ -19,10 +20,6 @@ nytz = pytz.timezone(NY)
 
 
 class TradierData(DataAPI):
-    tradier_account_number: Optional[str] = os.getenv("TRADIER_ACCOUNT_NUMBER")
-    tradier_access_token: Optional[str] = os.getenv("TRADIER_ACCESS_TOKEN")
-    base_url = "https://sandbox.tradier.com/v1/"
-    base_websocket = "https://stream.tradier.com/v1/"
     datapoints_per_request = 500
     max_trades_per_minute = 10
 
@@ -34,7 +31,7 @@ class TradierData(DataAPI):
             url,
             params=params,
             headers={
-                "Authorization": f"Bearer {self.tradier_access_token}",
+                "Authorization": f"Bearer {config.tradier_access_token}",
                 "Accept": "application/json",
             },
         )
@@ -55,12 +52,12 @@ class TradierData(DataAPI):
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
         if scale == TimeScale.day:
-            url = f"{self.base_url}markets/history"
+            url = f"{config.tradier_base_url}markets/history"
             interval = "daily"
             s = str(start)
             e = str(end)
         elif scale == TimeScale.minute:
-            url = f"{self.base_url}markets/timesales"
+            url = f"{config.tradier_base_url}markets/timesales"
             interval = "1min"
             s = datetime.combine(start, datetime.min.time()).strftime(
                 "%Y-%m-%d %H:%M"
@@ -129,7 +126,7 @@ class TradierData(DataAPI):
         ...
 
     def get_last_trading(self, symbol: str) -> datetime:
-        url = f"{self.base_url}/markets/quotes"
+        url = f"{config.tradier_base_url}markets/quotes"
         response = self._get(
             url,
             params={

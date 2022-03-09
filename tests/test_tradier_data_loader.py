@@ -25,6 +25,11 @@ def test_apple_stock_lano_test_price() -> bool:
 
     print(f"apple {last_price} @ {last_price_time}")
 
+    dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
+    last_price = dl["AAPL"].close[-1]
+    last_price_time = dl["AAPL"].close.index[-1]
+
+    print(f"apple {last_price} @ {last_price_time}")
     return True
 
 
