@@ -151,7 +151,7 @@ class AlpacaData(DataAPI):
         except APIError:
             raise ValueError(f"{symbol} snapshot not found")
 
-        min_bar = snapshot_data.minute_bar
+        min_bar = snapshot_data.latest_trade
         if not min_bar:
             raise ValueError(f"Can't get snapshot for {symbol}")
 

@@ -21,7 +21,7 @@ def event_loop():
 @pytest.mark.asyncio
 @pytest.mark.devtest
 async def test_get_symbols():
-    global tradier_trader
+    print("test_get_symbols")
     assets = await tradier_trader.get_tradeable_symbols()
     print(assets)
     print(len(assets))
@@ -31,7 +31,7 @@ async def test_get_symbols():
 @pytest.mark.asyncio
 @pytest.mark.devtest
 async def test_get_shortable_symbols():
-    global tradier_trader
+    print("test_get_shortable_symbols")
     assets = await tradier_trader.get_shortable_symbols()
     print(assets)
     print(len(assets))
@@ -40,16 +40,35 @@ async def test_get_shortable_symbols():
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_is_fractionable():
-    global tradier_trader
-    apa_fractionable = await tradier_trader.is_fractionable("APA")
-    print("APA:", apa_fractionable)
+async def test_is_aapl_shortable():
+    print("test_is_aapl_shortable")
+    shortable = await tradier_trader.is_shortable("AAPL")
 
+    if not shortable:
+        raise AssertionError("expected AAPL to be shortable")
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_is_fractionable():
+    print("test_is_fractionable")
+    apa_fractionable = await tradier_trader.is_fractionable("APA")
     if not apa_fractionable:
         print("APA is not fractionable")
     aapl_fractionable = await tradier_trader.is_fractionable("AAPL")
-    print("AAPL:", aapl_fractionable)
     if not aapl_fractionable:
         print("AAPL is fractionable ")
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_get_market_schedule():
+    print("test_get_market_schedule")
+    open, close = await tradier_trader.get_market_schedule()
+    print(f"market open {open} close {close}")
 
     return True
