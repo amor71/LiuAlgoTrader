@@ -19,17 +19,28 @@ def test_create_data_loader_default() -> bool:
 @pytest.mark.devtest
 def test_apple_stock_lano_test_price() -> bool:
     print("test_apple_stock_lano_test_price")
+
+    print("**** TRADIER ****")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
 
     print(f"apple {last_price} @ {last_price_time}")
 
+    print("**** ALPACA ****")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
 
     print(f"apple {last_price} @ {last_price_time}")
+
+    print("**** POLYGON ****")
+    dl = DataLoader(TimeScale.minute, connector=DataConnectorType.polygon)
+    last_price = dl["AAPL"].close[-1]
+    last_price_time = dl["AAPL"].close.index[-1]
+
+    print(f"apple {last_price} @ {last_price_time}")
+
     return True
 
 
