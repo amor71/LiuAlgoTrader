@@ -103,9 +103,10 @@ class TradierData(DataAPI):
             )
             df.drop(["timestamp"], axis=1, inplace=True)
             df["count"] = 0
-            df = df.rename(columns={"price": "average"})
+            df = df.rename(columns={"price": "average"}).between_time(
+                "04:00", "19:59"
+            )
 
-        print(df)
         return df
 
     def get_market_snapshot(
@@ -126,6 +127,7 @@ class TradierData(DataAPI):
         ...
 
     def get_last_trading(self, symbol: str) -> datetime:
+        return datetime.now(tz=nytz)
         url = f"{config.tradier_base_url}markets/quotes"
         response = self._get(
             url,
@@ -135,14 +137,17 @@ class TradierData(DataAPI):
         )
         if response.status_code == 200:
             data = response.json()
+            print("data=", data)
             if "quotes" in data and "quote" in data["quotes"]:
-                return (
+                rc = (
                     pd.Timestamp(
                         data["quotes"]["quote"]["trade_date"], unit="ms"
                     )
                     .tz_localize("UTC")
                     .tz_convert("EST")
                 )
+                print(rc)
+                return rc
 
         raise ValueError(f"get_last_trading({symbol}) failed w {response}")
 
