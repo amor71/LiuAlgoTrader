@@ -122,9 +122,7 @@ async def sp500_historical_constituents(date: str):
     changes["date"] = changes.Date.apply(
         lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
     )
-    adjusted_symbols = m_and_a_data.loc[
-        str(date) < m_and_a_data.index, "to_symbol"
-    ]
+    adjusted_symbols = m_and_a_data.loc[date < m_and_a_data.index, "to_symbol"]
     print("adjusted_symbols", adjusted_symbols)
     changes = changes.loc[changes.date > date]
 

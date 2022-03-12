@@ -128,28 +128,6 @@ class TradierData(DataAPI):
 
     def get_last_trading(self, symbol: str) -> datetime:
         return datetime.now(tz=nytz)
-        url = f"{config.tradier_base_url}markets/quotes"
-        response = self._get(
-            url,
-            params={
-                "symbols": [symbol],
-            },
-        )
-        if response.status_code == 200:
-            data = response.json()
-            print("data=", data)
-            if "quotes" in data and "quote" in data["quotes"]:
-                rc = (
-                    pd.Timestamp(
-                        data["quotes"]["quote"]["trade_date"], unit="ms"
-                    )
-                    .tz_localize("UTC")
-                    .tz_convert("EST")
-                )
-                print(rc)
-                return rc
-
-        raise ValueError(f"get_last_trading({symbol}) failed w {response}")
 
     def get_trading_holidays(self) -> List[str]:
         nyse = pandas_market_calendars.get_calendar("NYSE")
