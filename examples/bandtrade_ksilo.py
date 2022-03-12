@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 from liualgotrader.common.data_loader import DataLoader
 from liualgotrader.common.tlog import tlog
+from liualgotrader.strategies.base import (symbol_var, position_var,
+                                           shortable_var, minute_history_var,
+                                           symbols_position_var, return_var)
 from liualgotrader.common.trading_data import (buy_indicators, buy_time,
                                                cool_down, last_used_strategy,
                                                latest_cost_basis,
@@ -288,29 +291,29 @@ class BandTrade(Strategy):
 
     async def should_run_all(self):
         return False
-    
+
     async def run(
         self,
-        symbol: str,
+        # symbol: str,
         now: datetime,
-        position: float = None,
+        # position: float = None,
         portfolio_value: float = None,
         debug: bool = False,
         backtesting: bool = False,
-        minute_history: pd.DataFrame = None,
-        shortable: bool = False,
+        # minute_history: pd.DataFrame = None,
+        # shortable: bool = False,
         data_loader=None,
         trader=None,
         fee_buy_percentage: float = 0.0,
         fee_sell_percentage: float = 0.0
     ) -> Tuple[bool, Dict]:
-        symbol_var = await self.setting_context_parameters(symbol, position)
-        symbols_position = symbol_var
+        symbols_position = symbols_position_var.get()
         actions = {}
+        await self.setting_context_return(actions, symbol_var.get())
         if await self.is_buy_time(now) and not open_orders:
             actions.update(
                 await self.handle_buy_side(
-                    symbols_position=symbol_var,
+                    symbols_position=symbols_position,
                     data_loader=self.data_loader,
                     now=now,
                     trade_fee_precentage=fee_buy_percentage / 100.0,
@@ -334,49 +337,4 @@ class BandTrade(Strategy):
                 )
             )
         # return (True, actions[symbol]) if symbol in actions else (False, {})
-        return await self.setting_context_return(actions, symbol)
-
-    """
-    async def run_all(
-        self,
-        symbols_position: Dict[str, float],
-        data_loader: DataLoader,
-        now: datetime,
-        portfolio_value: float = None,
-        trader: Trader = None,
-        debug: bool = False,
-        backtesting: bool = False,
-        fee_buy_percentage: float = 0.0,
-        fee_sell_percentage: float = 0.0,
-    ) -> Dict[str, Dict]:
-        tlog("run_all here!")
-        actions = {}
-        if await self.is_buy_time(now) and not open_orders:
-            actions.update(
-                await self.handle_buy_side(
-                    symbols_position=symbols_position,
-                    data_loader=data_loader,
-                    now=now,
-                    trade_fee_precentage=fee_buy_percentage / 100.0,
-                )
-            )
-
-        if (
-            await self.is_sell_time(now)
-            and (
-                len(symbols_position)
-                or any(symbols_position[x] for x in symbols_position)
-            )
-            and not open_orders
-        ):
-            actions.update(
-                await self.handle_sell_side(
-                    symbols_position=symbols_position,
-                    data_loader=data_loader,
-                    now=now,
-                    trade_fee_precentage=fee_sell_percentage / 100.0,
-                )
-            )
-
-        # return actions
-        return await self.setting_context_return(actions)"""
+        return return_var.get()

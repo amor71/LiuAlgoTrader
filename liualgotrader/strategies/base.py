@@ -17,6 +17,17 @@ from liualgotrader.models.keystore import KeyStore
 from liualgotrader.trading.base import Trader
 
 
+# setting parameters for run() as context variables
+symbol_var = contextvars.ContextVar('symbol')
+position_var = contextvars.ContextVar('position')
+symbols_position_var = contextvars.ContextVar('symbols_position')
+shortable_var = contextvars.ContextVar('shortable')
+minute_history_var = contextvars.ContextVar('minute_history')
+
+# setting return_values for run() as context variables
+return_var = contextvars.ContextVar('return')
+
+
 class StrategyType(Enum):
     DAY_TRADE = 1
     SWING = 2
@@ -89,73 +100,56 @@ class Strategy():
         """
         return False
 
-    async def setting_context_parameters(self, symbol, position):
-        self.symbol = contextvars.ContextVar('symbol_var', default=symbol)
-
-        if not await self.should_run_all():
-            self.symbol.set({symbol: position})
-
-        return self.symbol.get()
-
-    async def setting_context_return(self, actions, symbol=None):
-        self.return_val = contextvars.ContextVar('return_val', default=actions)
-
-        if not await self.should_run_all():
-            self.return_val.set((True, actions[symbol]) if symbol in actions else (False, {}))
-
-        return self.return_val.get()
-
-
-    '''async def run_all(
+    async def setting_context_parameters(
         self,
-        symbols_position: Dict[str, float],
-        data_loader: DataLoader,
+        symbol=None,
+        position=None,
+        shortable=None,
+        minute_history=None,
+        symbols_position=None
+    ):
+        symbol_var.set(symbol)
+        position_var.set(position)
+        symbols_position_var.set(symbols_position)
+        shortable_var.set(shortable)
+        minute_history_var.set(minute_history)
+
+        if not await self.should_run_all():
+            symbols_position_var.set({symbol: position})
+
+        return
+
+    async def setting_context_return(
+        self,
+        actions,
+        symbol=None
+    ):
+        return_var.set(actions)
+
+        if not await self.should_run_all():
+            return_var.set(
+                (True, actions[symbol_var.get()])
+                if symbol_var.get() in actions
+                else (False, {})
+            )
+
+        return
+
+    async def run(
+        self,
         now: datetime,
+        data_loader: DataLoader = None,
         portfolio_value: float = None,
         trader: Trader = None,
         debug: bool = False,
         backtesting: bool = False,
         fee_buy_percentage: float = 0.0,
-        fee_sell_percentage: float = 0.0,
-    ) -> Dict[str, Dict]:
-        """Called by the framework, periodically, if `should_run_all()` returns True. This function,
-        unlike `run()` is executed once, and not per symbol.
-
-        Keyword arguments:
-        symbols_position: Dictionary, with open position (quantity) per symbol,
-        data_loader: Send by the framework, DataFrame like object to accessing symbol data,
-        now: current timestamp (may be in the past, if called by backtester),
-        portfolio_value: Sent by the framework [TO BE DEPRECATED],
-        trading_api: Sent by the framework, provides access to the Trader [TO BE DEPRECATED],
-        debug: Debug flag, used mostly in backtesting,
-        backtesting: Flag indicating if calling during backtesting session, or real-time
-        fee_buy_percentage: fee to execute buy, presented as % (0-1),
-        fee_sell_percentage: fee to execute sell, presented as % (0-1),
-
-        Returns:
-        Dictionary with symbol and 'actions' (see documentation for supported actions)
-        """
-        return {}'''
-
-    async def run(
-        self,
-        symbol: str,
-        shortable: bool,
-        position: float,
-        now: datetime,
-        minute_history: df,
-        portfolio_value: float = None,
-        debug: bool = False,
-        backtesting: bool = False,
-    ) -> Tuple[bool, Dict]:
+        fee_sell_percentage: float  = 0.0
+    ) -> Tuple[bool, Dict] or Dict[str, Dict]:
         """Called by the framework, per symbol.
 
         Keyword arguments:
-        symbol: to act on,
-        shortable: [TO BE DEPRECATED],
-        position: current position (could be 0),
         now: current time w/ time zone (note can be in the past for backtesting),
-        minute_history: DataFrame holding data,
         portfolio_value: [TO BE DEPRECATED],
         debug: Debug flag, used mostly in backtesting,
         backtesting: Flag indicating if calling during backtesting session, or real-time
@@ -164,7 +158,7 @@ class Strategy():
         False, {} in case no action to be taken,
         True, {action - see documentation for supported actions}
         """
-        return False, {}
+        return return_var.get()
 
     async def is_sell_time(self, now: datetime):
         return True
