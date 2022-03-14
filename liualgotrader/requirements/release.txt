@@ -23,5 +23,5 @@ tqdm==4.63.0
 toml==0.10.2
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.1.0
-pandas_market_calendars==3.3
+pandas_market_calendars==3.4
 psutil==5.9.0
