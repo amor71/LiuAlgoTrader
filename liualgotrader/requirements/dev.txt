@@ -3,7 +3,7 @@ requests==2.27.1
 deprecated==1.2.13
 urllib3==1.26.8
 numpy==1.22.3
-mypy==0.931
+mypy==0.940
 black==22.1.0
 pylint==2.12.2
 flake8==4.0.1
