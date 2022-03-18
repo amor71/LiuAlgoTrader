@@ -1,23 +1,25 @@
-import io
-import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Dict, List, Set
 
 import numpy as np
 import pandas as pd
 import pandas_market_calendars
+import pytz
 import requests
 from pandas import DataFrame as df
 
 from liualgotrader.common import config
-from liualgotrader.common.data_loader import (DataLoader,  # type: ignore
-                                              m_and_a_data)
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
+from liualgotrader.common.data_loader import m_and_a_data  # type: ignore
 from liualgotrader.common.tlog import tlog
 from liualgotrader.common.types import TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 
 volume_today: Dict[str, int] = {}
 quotes: Dict[str, df] = {}
+
+NY = "America/New_York"
+nytz = pytz.timezone(NY)
 
 
 def get_symbol_data(
@@ -119,10 +121,14 @@ async def sp500_historical_constituents(date: str):
     )
     symbols: List = table[0].Symbol.to_list()
     changes = table[1]
+
     changes["date"] = changes.Date.apply(
         lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
     )
-    adjusted_symbols = m_and_a_data.loc[date < m_and_a_data.index, "to_symbol"]
+
+    adjusted_symbols = m_and_a_data.loc[
+        str(date) < m_and_a_data.index, "to_symbol"
+    ]
     print("adjusted_symbols", adjusted_symbols)
     changes = changes.loc[changes.date > date]
 

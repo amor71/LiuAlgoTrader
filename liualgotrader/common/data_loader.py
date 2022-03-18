@@ -1,7 +1,6 @@
 # type: ignore
-import asyncio
 import concurrent.futures
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
@@ -143,7 +142,7 @@ def load_item_by_offset(
     index = symbol_data.index.get_indexer([i], method="nearest")[0]
     return (
         symbol_data,
-        symbol_data.iloc[index],
+        symbol_data.iloc[offset],  # index
     )
 
 
@@ -360,12 +359,22 @@ def getitem_slice(
     key = slice(key.start or 0, key.stop or -1)
 
     # ensure key represents datetime
-    key = handle_slice_conversion(
+    converted_key = handle_slice_conversion(
         data_api, symbol, key, scale, symbol_data.index
     )
 
+    print(
+        "getitem_slice",
+        key,
+        converted_key,
+        type(key.start),
+        type(key.stop),
+        isinstance(key.start, int),
+        isinstance(key.stop, int),
+    )
+
     # load data if needed
-    for s in _calc_data_to_fetch(key, symbol_data.index):
+    for s in _calc_data_to_fetch(converted_key, symbol_data.index):
         symbol_data = fetch_data_range(
             data_api=data_api,
             symbol_data=symbol_data,
@@ -377,12 +386,27 @@ def getitem_slice(
         )
 
     # return data range
-    indexes = symbol_data.index.get_indexer(
-        [key.start, key.stop], method="nearest"
-    )
+    if not isinstance(key.start, int):
+        key_start_index = symbol_data.index.get_indexer(
+            [converted_key.start], method="nearest"
+        )[0]
+    elif key.start < 0:
+        key_start_index = len(symbol_data.index) + key.start
+    else:
+        key_start_index = key.start
+
+    if not isinstance(key.stop, int):
+        key_end_index = symbol_data.index.get_indexer(
+            [converted_key.stop], method="nearest"
+        )[0]
+    elif key.stop < 0:
+        key_end_index = len(symbol_data.index) + key.stop
+    else:
+        key_end_index = key.stop
+
     return (
         symbol_data,
-        symbol_data.iloc[indexes[0] : indexes[1] + 1],
+        symbol_data.iloc[key_start_index : key_end_index + 1],
     )
 
 

@@ -1,7 +1,6 @@
 import asyncio
 import concurrent.futures
 import queue
-import sys
 import time
 import traceback
 from datetime import date, datetime, timedelta
@@ -182,7 +181,10 @@ class AlpacaData(DataAPI):
         if type(end) == str:
             end = date_parser(end)  # type: ignore
 
-        return (end - start).days + 1 if self._is_crypto_symbol(symbol) else len(
+        return (
+            (end - start).days + 1
+            if self._is_crypto_symbol(symbol)
+            else len(
                 pd.date_range(
                     start,
                     end,
@@ -191,6 +193,7 @@ class AlpacaData(DataAPI):
                     ),
                 )
             )
+        )
 
     def get_max_data_points_per_load(self) -> int:
         # Alpaca suggests 10000 points
@@ -362,9 +365,12 @@ class AlpacaData(DataAPI):
             if config.detailed_dl_debug_enabled:
                 tlog(f"symbol={symbol}, timeframe={t}, range=({_start, _end})")
 
-            data = self.crypto_get_symbol_data(
+            data = (
+                self.crypto_get_symbol_data(
                     symbol=symbol, start=_start, end=_end, timeframe=t
-                ) if self._is_crypto_symbol(symbol) else self.alpaca_rest_client.get_bars(
+                )
+                if self._is_crypto_symbol(symbol)
+                else self.alpaca_rest_client.get_bars(
                     symbol=symbol,
                     timeframe=t,
                     start=_start,
@@ -372,6 +378,7 @@ class AlpacaData(DataAPI):
                     limit=1000000,
                     adjustment="all",
                 ).df
+            )
         except requests.exceptions.HTTPError as e:
             tlog(f"received HTTPError: {e}")
             if e.response.status_code in (500, 502, 504, 429):

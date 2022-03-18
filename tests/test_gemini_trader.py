@@ -93,7 +93,7 @@ async def test_order_negative():
         raise AssertionError("Can only run test in sandbox")
 
     try:
-        order_status = await gemini_trader.get_order("abccccasd")
+        await gemini_trader.get_order("abccccasd")
     except Exception:
         await asyncio.sleep(1.0)
         return True

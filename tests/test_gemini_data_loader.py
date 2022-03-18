@@ -315,7 +315,7 @@ def test_stock_price_open_str2() -> bool:
     print("test_stock_price_open_str2")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     d1 = date.today() - timedelta(days=20)
-    last_price_range = dl["BTCUSD"][-1]
+    dl["BTCUSD"][-1]
     print("after this")
     dl["BTCUSD"].loc[
         str(

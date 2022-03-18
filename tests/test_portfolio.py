@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from datetime import date
 
 import pandas as pd
 import pytest

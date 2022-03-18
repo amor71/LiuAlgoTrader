@@ -10,9 +10,8 @@ import ssl
 import time
 import traceback
 from datetime import date, datetime, timedelta, timezone
-from random import randint
 from threading import Thread
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd

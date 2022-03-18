@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pytest
 from hypothesis import example, given, settings
 from hypothesis.strategies import text

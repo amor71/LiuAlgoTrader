@@ -1,5 +1,3 @@
-from datetime import date, datetime
-
 import pandas as pd
 import pytest
 from pytz import timezone
@@ -22,11 +20,10 @@ def test_apple_stock_latest_price() -> bool:
 
     print("**** TRADIER ****")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.tradier)
-
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
 
-    print(dl["AAPL"])
+    # print(dl["AAPL"])
     print(f"apple {last_price} @ {last_price_time}")
 
     print("**** ALPACA ****")

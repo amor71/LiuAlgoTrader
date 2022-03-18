@@ -1,7 +1,7 @@
 import asyncio
 import concurrent.futures
 import time
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pandas as pd
 import pytest

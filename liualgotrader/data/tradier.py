@@ -1,14 +1,11 @@
-import math
-import os
-import time
-from datetime import date, datetime, timedelta
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+import time as time_action
+from datetime import date, datetime, time
+from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 import pandas_market_calendars
 import pytz
 import requests
-import websocket
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -26,7 +23,9 @@ class TradierData(DataAPI):
     def __init__(self):
         ...
 
-    def _get(self, url: str, params: Dict):
+    def _get(self, url: str, params: Dict = None):
+        if params is None:
+            params = {}
         r = requests.get(
             url,
             params=params,
@@ -35,11 +34,9 @@ class TradierData(DataAPI):
                 "Accept": "application/json",
             },
         )
-
-        print(r.url)
         if r.status_code in (429, 502):
             tlog(f"{url} return {r.status_code}, waiting and re-trying")
-            time.sleep(10)
+            time_action.sleep(10)
             return self._get(url, params)
 
         return r
@@ -83,6 +80,7 @@ class TradierData(DataAPI):
                 f"HTTP ERROR {response.status_code} {response.text}"
             )
 
+        df: pd.DataFrame = pd.DataFrame()
         if scale == TimeScale.day:
             data = response.json()["history"]["day"]
             df = pd.DataFrame(data=data)
@@ -95,17 +93,23 @@ class TradierData(DataAPI):
             df["average"] = 0.0
             df["vwap"] = 0.0
         elif scale == TimeScale.minute:
-            data = response.json()["series"]["data"]
-            df = pd.DataFrame.from_records(data)
-            df.time = pd.to_datetime(df.time).dt.tz_localize("EST")
-            df.set_index(
-                "time", drop=True, inplace=True, verify_integrity=True
-            )
-            df.drop(["timestamp"], axis=1, inplace=True)
-            df["count"] = 0
-            df = df.rename(columns={"price": "average"}).between_time(
-                "04:00", "19:59"
-            )
+            data = response.json()
+
+            try:
+                if data and data["series"]:
+                    data = data["series"]["data"]
+                    df = pd.DataFrame.from_records(data)
+                    df.time = pd.to_datetime(df.time).dt.tz_localize("EST")
+                    df.set_index(
+                        "time", drop=True, inplace=True, verify_integrity=True
+                    )
+                    df.drop(["timestamp"], axis=1, inplace=True)
+                    df["count"] = 0
+                    df = df.rename(columns={"price": "average"}).between_time(
+                        "04:00", "19:59"
+                    )
+            except Exception as exc:
+                raise ValueError(f"data={data}") from exc
 
         return df
 
@@ -126,8 +130,53 @@ class TradierData(DataAPI):
     ) -> Dict[str, pd.DataFrame]:
         ...
 
+    def _get_previous_month_last_trading(
+        self, month: int, year: int
+    ) -> datetime:
+        url = f"{config.tradier_base_url}markets/calendar"
+        response = self._get(url, params={"month": month})
+        data = response.json()
+        return self._get_previous_last_trading(
+            data, len(data["calendar"]["days"]["day"]) - 1, month, year
+        )
+
+    def _get_previous_last_trading(
+        self, data: Dict, index: int, month: int, year: int
+    ) -> datetime:
+        if index > 0:
+            if data["calendar"]["days"]["day"][index - 1]["status"] == "open":
+                date_str = data["calendar"]["days"]["day"][index - 1]["date"]
+                day = datetime.strptime(date_str, "%Y-%m-%d").date()
+                return nytz.localize(datetime.combine(day, time(hour=20)))
+            return self._get_previous_last_trading(
+                data, index - 1, month, year
+            )
+        return (
+            self._get_previous_month_last_trading(month=month - 1, year=year)
+            if month > 0
+            else self._get_previous_month_last_trading(month=12, year=year - 1)
+        )
+
     def get_last_trading(self, symbol: str) -> datetime:
-        return datetime.now(tz=nytz)
+        url = f"{config.tradier_base_url}markets/calendar"
+        response = self._get(
+            url,
+        )
+        data = response.json()
+        today = datetime.now(nytz).date()
+        for i, day in enumerate(data["calendar"]["days"]["day"]):
+            if day["date"] == str(today):
+                if day["status"] == "open":
+                    return datetime.now(tz=nytz)
+
+                return self._get_previous_last_trading(
+                    data, i, today.month, today.year
+                )
+            i += 1
+
+        raise AssertionError(
+            f"Could not find {today} in current trading month"
+        )
 
     def get_trading_holidays(self) -> List[str]:
         nyse = pandas_market_calendars.get_calendar("NYSE")
@@ -142,7 +191,7 @@ class TradierData(DataAPI):
 
         return nytz.localize(now + cbd_offset)
 
-    def trading_days_slice(self, symbol: str, slice) -> slice:
+    def trading_days_slice(self, symbol: str, time_slice) -> slice:
         raise NotImplementedError("trading_days_slice")
 
     def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:

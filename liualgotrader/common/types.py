@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Dict, List, Optional
 
@@ -52,6 +52,8 @@ class Order:
         rejected = auto()
         cancel_rejected = auto()
         pending = auto()
+        error = auto()
+        open = auto()
         other = auto()
 
     class FillSide(Enum):
@@ -61,13 +63,13 @@ class Order:
     order_id: str
     symbol: str
     event: EventType
-    filled_qty: float
-    price: float
-    side: FillSide
     submitted_at: pd.Timestamp
-    remaining_amount: float
-    avg_execution_price: float
-    trade_fees: float
+    price: Optional[float] = None
+    trade_fees: Optional[float] = None
+    filled_qty: Optional[float] = None
+    side: Optional[FillSide] = None
+    remaining_amount: Optional[float] = None
+    avg_execution_price: Optional[float] = None
     external_account_id: Optional[str] = None
 
 

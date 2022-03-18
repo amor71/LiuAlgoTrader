@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import hypothesis.strategies as st
+import numpy as np
 import pandas as pd
 import pytz
 from hypothesis import given, settings
@@ -18,7 +19,6 @@ est = pytz.timezone("US/Eastern")
             elements=st.datetimes(
                 min_value=datetime(2000, 1, 1), max_value=datetime(2040, 1, 1)
             ),
-            dtype=pd.DatetimeIndex,
         ),
         elements=st.floats(),
         dtype=float,

@@ -1,7 +1,5 @@
 import asyncio
-import math
 import uuid
-from abc import abstractmethod
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
@@ -69,7 +67,9 @@ class Trader:
 
     async def is_order_completed(
         self, order_id: str, external_order_id: Optional[str] = None
-    ) -> Tuple[Order.EventType, float, float, float]:
+    ) -> Tuple[
+        Order.EventType, Optional[float], Optional[float], Optional[float]
+    ]:
         """return filled order status, average filled price, filled quantity and trade fee"""
         ...
 

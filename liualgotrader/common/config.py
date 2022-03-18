@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Optional
 
 from asyncpg.pool import Pool
@@ -56,6 +55,9 @@ alpaca_stream_url = os.getenv("ALPACA_STREAM_URL")
 
 tradier_base_url = os.getenv(
     "TRADIER_BASE_URL", "https://sandbox.tradier.com/v1/"
+)
+tradier_websocket_base = os.getenv(
+    "TRADIER_WS_URL", "wss://ws.tradier.com/v1/"
 )
 tradier_account_number: Optional[str] = os.getenv("TRADIER_ACCOUNT_NUMBER")
 tradier_access_token: Optional[str] = os.getenv("TRADIER_ACCESS_TOKEN")

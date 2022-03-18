@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import hashlib
 import hmac
@@ -7,7 +6,6 @@ import os
 import queue
 import ssl
 import time
-import traceback
 from datetime import date, datetime, timedelta
 from threading import Thread
 from typing import Dict, List, Optional, Tuple
@@ -178,7 +176,9 @@ class GeminiTrader(Trader):
 
     async def is_order_completed(
         self, order_id: str, external_order_id: Optional[str] = None
-    ) -> Tuple[Order.EventType, float, float, float]:
+    ) -> Tuple[
+        Order.EventType, Optional[float], Optional[float], Optional[float]
+    ]:
         order = await self.get_order(order_id)
         return (
             order.event,
@@ -190,13 +190,10 @@ class GeminiTrader(Trader):
     def get_market_schedule(
         self,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        return (
-            datetime.today().replace(
-                hour=0, minute=0, second=0, microsecond=0, tzinfo=utctz
-            ),
-            datetime.today().replace(
-                hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
-            ),
+        return datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=utctz
+        ), datetime.now().replace(
+            hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
         )
 
     def get_trading_days(
@@ -218,11 +215,14 @@ class GeminiTrader(Trader):
         response = requests.post(url, data=None, headers=headers)
 
         if response.status_code == 200:
-            for b in response.json():
-                if b["currency"] == symbol:
-                    return float(b["amount"])
-
-            return 0.0
+            return next(
+                (
+                    float(b["amount"])
+                    for b in response.json()
+                    if b["currency"] == symbol
+                ),
+                0.0,
+            )
 
         raise AssertionError(
             f"HTTP ERROR {response.status_code} {response.text}"
@@ -256,7 +256,7 @@ class GeminiTrader(Trader):
         return True
 
     def get_time_market_close(self) -> Optional[timedelta]:
-        return datetime.today().replace(
+        return datetime.now().replace(
             hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
         ) - datetime.now().replace(tzinfo=utctz)
 
@@ -301,20 +301,20 @@ class GeminiTrader(Trader):
                 "rejected",
             ]:
                 trade = cls._trade_from_dict(msg)
+                symbol = trade.symbol.lower()
                 tlog(f"GEMINI TRADING UPDATE:{trade}")
                 to_send = {
                     "EV": "trade_update",
-                    "symbol": trade.symbol.lower(),
+                    "symbol": symbol,
                     "trade": trade.__dict__,
                 }
                 try:
-                    qs = cls.get_instance().queues
-                    if qs:
+                    if qs := cls.get_instance().queues:
                         for q in qs.get_allqueues():
                             q.put(to_send, timeout=1)
                 except queue.Full as f:
                     tlog(
-                        f"[EXCEPTION] process_message(): queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
+                        f"[EXCEPTION] : queue for {symbol} is FULL:{f}, sleeping for 2 seconds and re-trying."
                     )
                     raise
 
