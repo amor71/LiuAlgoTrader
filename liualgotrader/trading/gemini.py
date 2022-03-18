@@ -420,28 +420,25 @@ class GeminiTrader(Trader):
                 "GEMINI does not support market orders, use limit orders"
             )
 
-        if float(qty) < get_asset_min_qty(symbol):
+        if qty < get_asset_min_qty(symbol):
             raise AssertionError(
                 f"GEMINI requested quantity of {qty} is below minimum for {symbol}"
             )
 
         endpoint = "/v1/order/new"
         url = self.base_url + endpoint
-        qty = round_asset(symbol, float(qty))
+        qty = round_asset(symbol, qty)
         payload = {
             "request": endpoint,
             "symbol": symbol,
             "amount": str(qty),
-            "price": str(limit_price)
-            if order_type == "limit"
-            else str(60000.0 * qty),
+            "price": limit_price if order_type == "limit" else str(60000.0 * qty),
             "side": side,
             "type": "exchange limit",
             "client_order_id": client_order_id,
-            "options": ["immediate-or-cancel"]
-            if order_type == "market"
-            else [],
+            "options": ["immediate-or-cancel"] if order_type == "market" else [],
         }
+
         headers = self._generate_request_headers(payload)
         response = requests.post(url, data=None, headers=headers)
 

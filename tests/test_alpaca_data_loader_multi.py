@@ -18,26 +18,28 @@ def test_multi_date_performance() -> bool:
 
     t = time.time()
     dl["AAPL"][
-        datetime.today().date()  # type:ignore
-        - timedelta(days=20) : datetime.today().date()  # type:ignore
-        - timedelta(days=10)
+        (datetime.now().date() - timedelta(days=20)) : (
+            datetime.now().date() - timedelta(days=10)
+        )
     ]
+
     pref_single_apple = time.time() - t
     print(f"load apple time spent {pref_single_apple}")
 
     t = time.time()
     dl["IBM"][
-        datetime.today().date()  # type:ignore
-        - timedelta(days=20) : datetime.today().date()  # type:ignore
-        - timedelta(days=10)
+        (datetime.now().date() - timedelta(days=20)) : (
+            datetime.now().date() - timedelta(days=10)
+        )
     ]
+
     pref_single_ibm = time.time() - t
     print(f"load ibm time spent {pref_single_ibm}")
 
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.alpaca)
 
     symbols = ["AAPL", "IBM", "TSLA", "WWBI"]
-    end = datetime.today().date()
+    end = datetime.now().date()
     start = end - timedelta(days=200)
 
     t = time.time()
@@ -52,10 +54,11 @@ def test_multi_date_performance() -> bool:
 
     t = time.time()
     dl["AAPL"][
-        datetime.today().date()  # type:ignore
-        - timedelta(days=20) : datetime.today().date()  # type:ignore
-        - timedelta(days=10)
+        (datetime.now().date() - timedelta(days=20)) : (
+            datetime.now().date() - timedelta(days=10)
+        )
     ]
+
     pref_multi = time.time() - t
     print(f"multi 2 time spent {pref_multi}")
 

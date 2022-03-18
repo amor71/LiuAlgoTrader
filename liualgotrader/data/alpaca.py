@@ -200,7 +200,7 @@ class AlpacaData(DataAPI):
         return 10000
 
     def _is_crypto_symbol(self, symbol: str) -> bool:
-        return symbol.lower() in ["btcusd", "ethusd"]
+        return symbol.lower() in {"btcusd", "ethusd"}
 
     def trading_days_slice(self, symbol: str, s: slice) -> slice:
         if not self.alpaca_rest_client:
