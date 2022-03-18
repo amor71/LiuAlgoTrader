@@ -50,9 +50,7 @@ def convert_offset_to_datetime(
     try:
         return index[offset]
     except IndexError:
-        last_trading_time = (
-            data_api.get_last_trading(symbol) if not start else start
-        )
+        last_trading_time = start or data_api.get_last_trading(symbol)
         if scale == TimeScale.minute:
             return last_trading_time.replace(
                 second=0, microsecond=0

@@ -83,13 +83,12 @@ def test_apple_close_price_range_str_minute() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[
         str(
-            (datetime.today() - timedelta(days=20)).replace(hour=10, minute=5)
-        ) : str(  # type:ignore
-            (datetime.today() - timedelta(days=20)).replace(
-                hour=10, minute=5
-            )  # type:ignore
+            (datetime.now() - timedelta(days=20)).replace(hour=10, minute=5)
+        ) : str(
+            (datetime.now() - timedelta(days=20)).replace(hour=10, minute=5)
         )
     ]
+
     print(last_price_range)
 
     return True
@@ -101,9 +100,10 @@ def test_stock_close_price_range_str_minute_int() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[
         str(
-            (datetime.today() - timedelta(days=2)).replace(hour=10, minute=5)
-        ) : -1  # type:ignore
-    ]  # type:ignore
+            (datetime.now() - timedelta(days=2)).replace(hour=10, minute=5)
+        ) : -1
+    ]
+
     print(last_price_range)
 
     return True
@@ -278,12 +278,9 @@ def test_stock_price_open_str() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     d1 = date.today() - timedelta(days=20)
     last_price_range = dl["BTCUSD"].open[
-        str(
-            (datetime.today() - timedelta(days=20)).replace(  # type:ignore
-                hour=10, minute=5
-            )
-        )
+        str((datetime.now() - timedelta(days=20)).replace(hour=10, minute=5))
     ]
+
     print(last_price_range)
 
     return True
@@ -319,7 +316,7 @@ def test_stock_price_open_str2() -> bool:
     print("after this")
     dl["BTCUSD"].loc[
         str(
-            (datetime.today() - timedelta(days=20)).replace(  # type:ignore
+            (datetime.now() - timedelta(days=20)).replace(
                 hour=10, minute=5, microsecond=0
             )
         )
@@ -333,14 +330,16 @@ def test_stock_price_open_str2() -> bool:
         100.0,
         100.0,
     ]
+
     print(
         dl["BTCUSD"].loc[
             str(
-                (datetime.today() - timedelta(days=20)).replace(  # type:ignore
+                (datetime.now() - timedelta(days=20)).replace(
                     hour=10, minute=5, microsecond=0
                 )
             )
         ]
     )
+
 
     return True
