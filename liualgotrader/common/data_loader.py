@@ -137,7 +137,7 @@ def load_item_by_offset(
         d=i,
         concurrency=concurrency,
     )
-    index = symbol_data.index.get_indexer([i], method="nearest")[0]
+    # index = symbol_data.index.get_indexer([i], method="nearest")[0]
     return (
         symbol_data,
         symbol_data.iloc[offset],  # index
@@ -330,18 +330,32 @@ def fetch_data_datetime(
     d: datetime,
     concurrency: int,
 ) -> pd.DataFrame:
+    if not symbol_data.empty and d < symbol_data.index.min():
+        start = d
+        end = symbol_data.index.min()
+    elif not symbol_data.empty and d > symbol_data.index.max():
+        start = symbol_data.index.max()
+        end = d + (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
+    else:
+        start = d
+        end = d
+        +(
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
+
     return fetch_data_range(
         data_api=data_api,
         symbol_data=symbol_data,
         symbol=symbol,
         scale=scale,
-        start=d,
-        end=d
-        + (
-            timedelta(days=1)
-            if scale == TimeScale.day
-            else timedelta(minutes=1)
-        ),
+        start=start,
+        end=end,
         concurrency=concurrency,
     )
 
@@ -359,16 +373,6 @@ def getitem_slice(
     # ensure key represents datetime
     converted_key = handle_slice_conversion(
         data_api, symbol, key, scale, symbol_data.index
-    )
-
-    print(
-        "getitem_slice",
-        key,
-        converted_key,
-        type(key.start),
-        type(key.stop),
-        isinstance(key.start, int),
-        isinstance(key.stop, int),
     )
 
     # load data if needed

@@ -432,11 +432,15 @@ class GeminiTrader(Trader):
             "request": endpoint,
             "symbol": symbol,
             "amount": str(qty),
-            "price": limit_price if order_type == "limit" else str(60000.0 * qty),
+            "price": limit_price
+            if order_type == "limit"
+            else str(60000.0 * qty),
             "side": side,
             "type": "exchange limit",
             "client_order_id": client_order_id,
-            "options": ["immediate-or-cancel"] if order_type == "market" else [],
+            "options": ["immediate-or-cancel"]
+            if order_type == "market"
+            else [],
         }
 
         headers = self._generate_request_headers(payload)

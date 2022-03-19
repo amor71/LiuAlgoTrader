@@ -14,6 +14,24 @@ def test_create_data_loader_default() -> bool:
 
 
 @pytest.mark.devtest
+def test_ethusd_stock_daily_price() -> bool:
+    print("test_ethusd_stock_daily_price")
+    dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.gemini)
+    last_price = dl["ETHUSD"].close[-1]
+
+    last_price_time = dl["ETHUSD"].close.index[-1]
+    print(last_price, last_price_time)
+    before_price = dl["ETHUSD"].close[-10]
+
+    print(dl["ETHUSD"])
+    print(
+        f"ETHUSD {last_price} @ {last_price_time}, before was {before_price}"
+    )
+
+    return True
+
+
+@pytest.mark.devtest
 def test_btc_current_price() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price = dl["BTCUSD"].close[-1]
@@ -34,21 +52,6 @@ def test_stock_current_price_range_int_minute() -> bool:
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[-5:-1]  # type:ignore
     print(last_price_range)
-    return True
-
-
-@pytest.mark.devtest
-def test_ethusd_stock_daily_price() -> bool:
-    print("test_stock_daily_price")
-    dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.gemini)
-    last_price = dl["ETHUSD"].close[-1]
-    last_price_time = dl["ETHUSD"].close.index[-1]
-    print(last_price, last_price_time)
-    before_price = dl["ETHUSD"].close[-5]
-    print(
-        f"ETHUSD {last_price} @ {last_price_time}, before was {before_price}"
-    )
-
     return True
 
 
@@ -82,9 +85,9 @@ def test_apple_close_price_range_str_minute() -> bool:
     print("test_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[
-        str(
+        str(  # type: ignore
             (datetime.now() - timedelta(days=20)).replace(hour=10, minute=5)
-        ) : str(
+        ) : str(  # type:ignore
             (datetime.now() - timedelta(days=20)).replace(hour=10, minute=5)
         )
     ]
@@ -99,9 +102,7 @@ def test_stock_close_price_range_str_minute_int() -> bool:
     print("test_stock_close_price_range_str_minute")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.gemini)
     last_price_range = dl["BTCUSD"].close[
-        str(
-            (datetime.now() - timedelta(days=2)).replace(hour=10, minute=5)
-        ) : -1
+        str((datetime.now() - timedelta(days=2)).replace(hour=10, minute=5)) : -1  # type: ignore
     ]
 
     print(last_price_range)
@@ -340,6 +341,5 @@ def test_stock_price_open_str2() -> bool:
             )
         ]
     )
-
 
     return True
