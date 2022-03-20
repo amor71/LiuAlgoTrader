@@ -248,10 +248,15 @@ def _legacy_fetch_data_range(
 ) -> pd.DataFrame:
 
     adjusted_symbol = symbol
+    m_and_a_data.index = m_and_a_data.index.astype("datetime64[ns]", copy=True)
     while True:
         adjusted_data = m_and_a_data.loc[
-            (str(end) > m_and_a_data.index)
-            & (m_and_a_data.index > str(start))
+            (
+                end.replace(
+                    hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+                )
+                <= m_and_a_data.index
+            )
             & (m_and_a_data.to_symbol == adjusted_symbol)
         ]
         if not adjusted_data.empty:
@@ -386,7 +391,6 @@ def getitem_slice(
             end=s.stop,
             concurrency=concurrency,
         )
-
     # return data range
     if not isinstance(key.start, int):
         key_start_index = symbol_data.index.get_indexer(

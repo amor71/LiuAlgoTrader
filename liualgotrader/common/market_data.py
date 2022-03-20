@@ -125,6 +125,7 @@ async def sp500_historical_constituents(date: str):
     changes["date"] = changes.Date.apply(
         lambda x: datetime.strptime(x[0], "%B %d, %Y"), axis=1
     )
+    m_and_a_data.index = m_and_a_data.index.astype("datetime64[ns]", copy=True)
 
     adjusted_symbols = m_and_a_data.loc[date < m_and_a_data.index, "to_symbol"]
     print("adjusted_symbols", adjusted_symbols)
@@ -134,10 +135,13 @@ async def sp500_historical_constituents(date: str):
     while True:
         no_changes = True
         for _, row in changes.iterrows():
-            if not row.Added.dropna().empty:
+            if not row.Added.dropna().empty and row.Added.Ticker in unadusted:
                 unadusted.remove(row.Added.Ticker)
                 no_changes = False
-            if not row.Removed.dropna().empty:
+            if (
+                not row.Removed.dropna().empty
+                and row.Removed.Ticker in unadusted
+            ):
                 unadusted.add(row.Removed.Ticker)
                 no_changes = False
 

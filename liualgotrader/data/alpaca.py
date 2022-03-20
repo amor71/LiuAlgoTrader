@@ -167,7 +167,7 @@ class AlpacaData(DataAPI):
             cbd_offset = timedelta(days=offset)
         else:
             cbd_offset = pd.tseries.offsets.CustomBusinessDay(
-                n=offset, holidays=self.get_trading_holidays()
+                n=offset - 1, holidays=self.get_trading_holidays()
             )
 
         return nytz.localize(now + cbd_offset)

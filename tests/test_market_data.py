@@ -129,10 +129,32 @@ async def test_get_trading_day():
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
+async def test_load_basic_sp500():
+    today = datetime.today()
+    sp500_symbols = await sp500_historical_constituents(today)
+
+    print(sp500_symbols)
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
+async def test_load_sp500_data_w_adjustments():
+
+    sp500_symbols = await sp500_historical_constituents("2019-01-11")
+    print(sp500_symbols)
+
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.devtest
 async def test_load_sp500_data():
 
     today = datetime.today()
     sp500_symbols = await sp500_historical_constituents(today)
+    print(sp500_symbols)
     dl = DataLoader(scale=TimeScale.day)
     d1 = await get_trading_day(now=today.date(), offset=200)
 

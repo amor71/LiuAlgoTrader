@@ -17,6 +17,21 @@ def test_create_data_loader_default() -> bool:
 
 
 @pytest.mark.devtest
+def test_apple_test1() -> bool:
+    print("test_apple_test1")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    data = dl["AAPL"].close[-10 : datetime.now(nyc).date()]  # type: ignore
+
+    print(f"{str(datetime.now(nyc).date())}:{len(data)}")
+    print(data)
+
+    if len(data) != 10:
+        raise AssertionError("not enough data")
+
+    return True
+
+
+@pytest.mark.devtest
 def test_apple_stock_latest_price() -> bool:
     print("test_apple_stock_latest_price")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)

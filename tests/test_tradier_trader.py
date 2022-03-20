@@ -128,9 +128,14 @@ async def test_aapl_order_market_long():
 
     open_position = tradier_trader.get_position(symbol="AAPL")
     print(f"Open position in Apple is {open_position}")
-    order = await tradier_trader.submit_order(
-        symbol="AAPL", qty=10, side="buy", order_type="market"
-    )
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="AAPL", qty=10, side="buy", order_type="market"
+        )
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
+        return True
+
     print("submitted order:", order)
 
     for _ in range(5):
@@ -145,9 +150,14 @@ async def test_aapl_order_market_long():
 
     print(f"New position in Apple is {position}")
 
-    order = await tradier_trader.submit_order(
-        symbol="AAPL", qty=10, side="sell", order_type="market"
-    )
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="AAPL", qty=10, side="sell", order_type="market"
+        )
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
+        return True
+
     print("submitted order:", order)
 
     for _ in range(5):
@@ -182,13 +192,17 @@ async def test_aapl_order_limit_long():
 
     print("last_price=", last_price)
     print(dl["AAPL"].close)
-    order = await tradier_trader.submit_order(
-        symbol="AAPL",
-        qty=10,
-        side="buy",
-        order_type="limit",
-        limit_price=last_price,
-    )
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="AAPL",
+            qty=10,
+            side="buy",
+            order_type="limit",
+            limit_price=last_price,
+        )
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
+        return True
     print("submitted order:", order)
     success = False
     for _ in range(5):
@@ -208,13 +222,18 @@ async def test_aapl_order_limit_long():
 
         last_price = dl["AAPL"].close[-1]
         print("last_price=", last_price)
-        order = await tradier_trader.submit_order(
-            symbol="AAPL",
-            qty=10,
-            side="sell",
-            order_type="limit",
-            limit_price=last_price,
-        )
+        try:
+            order = await tradier_trader.submit_order(
+                symbol="AAPL",
+                qty=10,
+                side="sell",
+                order_type="limit",
+                limit_price=last_price,
+            )
+        except ValueError as e:
+            print(f"ValueError Exception : {e}")
+            return True
+
         print("submitted order:", order)
 
         for _ in range(5):
@@ -248,9 +267,13 @@ async def test_tsla_order_market_short():
     open_position = tradier_trader.get_position(symbol="TSLA")
     print(f"Open position in Tesla is {open_position}")
 
-    order = await tradier_trader.submit_order(
-        symbol="TSLA", qty=10, side="sell_short", order_type="market"
-    )
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="TSLA", qty=10, side="sell_short", order_type="market"
+        )
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
+        return True
     print("submitted order:", order)
 
     sold = False
@@ -273,9 +296,13 @@ async def test_tsla_order_market_short():
         position = tradier_trader.get_position(symbol="TSLA")
         print(f"New position in is {position}")
 
-        order = await tradier_trader.submit_order(
-            symbol="TSLA", qty=10, side="buy_to_cover", order_type="market"
-        )
+        try:
+            order = await tradier_trader.submit_order(
+                symbol="TSLA", qty=10, side="buy_to_cover", order_type="market"
+            )
+        except ValueError as e:
+            print(f"ValueError Exception : {e}")
+            return True
         print("submitted order:", order)
 
         for _ in range(5):
@@ -307,9 +334,13 @@ async def test_tsla_order_market_short():
 async def test_tsla_cancel_order():
     print("test_tsla_cancel_order")
 
-    order = await tradier_trader.submit_order(
-        symbol="AAPL", qty=10, side="buy", order_type="market"
-    )
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="AAPL", qty=10, side="buy", order_type="market"
+        )
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
+        return True
     print("submitted order:", order)
 
     try:
@@ -338,19 +369,22 @@ async def test_aapl_order_limit_long_websocket():
 
     print("last_price=", last_price)
     print(dl["AAPL"].close)
-    order = await tradier_trader.submit_order(
-        symbol="AAPL",
-        qty=10,
-        side="buy",
-        order_type="limit",
-        limit_price=last_price,
-    )
-    print("submitted order:", order)
+    try:
+        order = await tradier_trader.submit_order(
+            symbol="AAPL",
+            qty=10,
+            side="buy",
+            order_type="limit",
+            limit_price=last_price,
+        )
+
+        print("submitted order:", order)
+        order = await tradier_trader.get_order(order_id=order.order_id)
+        print("pulled order:", order)
+    except ValueError as e:
+        print(f"ValueError Exception : {e}")
 
     await asyncio.sleep(60.0)
     await tradier_trader.close()
-
-    order = await tradier_trader.get_order(order_id=order.order_id)
-    print("pulled order:", order)
 
     return True
