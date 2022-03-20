@@ -101,7 +101,7 @@ async def create_scanners(
             scanners.append(
                 await create_momentum_scanner(
                     trader,
-                    DataLoader(connector=DataConnectorType.polygon),
+                    DataLoader(connector=data_loader),
                     scanners_conf[scanner_name],
                 )
             )
@@ -181,8 +181,7 @@ def main(
 ) -> None:
     tlog(f"*** scanners_runner.main() starting w pid {os.getpid()} ***")
 
-    scanners_conf = conf_dict["scanners"]
-    if scanners_conf:
+    if scanners_conf := conf_dict["scanners"]:
         try:
             asyncio.run(async_main(scanners_conf, scanner_queue))
         except KeyboardInterrupt:
