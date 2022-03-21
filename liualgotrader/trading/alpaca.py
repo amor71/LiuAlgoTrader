@@ -143,11 +143,9 @@ class AlpacaTrader(Trader):
     async def is_order_completed(
         self, order_id: str, external_order_id: Optional[str] = None
     ) -> Tuple[Order.EventType, float, float, float]:
-        if not external_order_id:
-            return await self._is_personal_order_completed(order_id)
         return await self._is_brokerage_account_order_completed(
             order_id, external_order_id
-        )
+        ) if external_order_id else await self._is_personal_order_completed(order_id)
 
     def get_market_schedule(
         self,
