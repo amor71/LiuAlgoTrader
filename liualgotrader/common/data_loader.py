@@ -347,8 +347,7 @@ def fetch_data_datetime(
         )
     else:
         start = d
-        end = d
-        +(
+        end = d + (
             timedelta(days=1)
             if scale == TimeScale.day
             else timedelta(minutes=1)

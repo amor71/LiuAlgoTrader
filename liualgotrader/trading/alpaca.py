@@ -99,7 +99,10 @@ class AlpacaTrader(Trader):
         )
 
     async def is_fractionable(self, symbol: str) -> bool:
-        asset_details = self.alpaca_rest_client.get_asset(symbol)
+        try:
+            asset_details = self.alpaca_rest_client.get_asset(symbol)
+        except Exception:
+            return False
 
         return asset_details.fractionable
 
