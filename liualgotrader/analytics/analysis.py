@@ -285,7 +285,7 @@ def count_trades(symbol, trades: pd.DataFrame, batch_id: str) -> int:
 
 
 def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
-    day_to_analyze = min(trades["client_time"].tolist())
+    min(trades["client_time"].tolist())
     trades_analytics = pd.DataFrame()
     trades["client_time"] = pd.to_datetime(trades["client_time"], utc=True)
     trades_analytics["symbol"] = trades.symbol.unique()

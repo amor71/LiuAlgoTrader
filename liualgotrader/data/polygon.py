@@ -25,7 +25,8 @@ class PolygonData(DataAPI):
             )
 
     def get_market_snapshot(
-        self, filter_func: Optional[Callable]
+        self,
+        filter_func: Optional[Callable] = None,
     ) -> List[Dict]:
         if not self.polygon_rest_client:
             raise AssertionError("Must call w/ authenticated polygon client")

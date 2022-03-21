@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 import pandas as pd
 import pytest
@@ -315,7 +315,7 @@ def test_apple_update() -> bool:
     print("test_apple_stock_price_open_str")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.polygon)
     d1 = date(year=2021, month=2, day=1)
-    last_price_range = dl["AAPL"][-1]
+    dl["AAPL"][-1]
     print("after this")
     dl["AAPL"].loc["2021-02-02 09:46:00"] = [
         100.0,

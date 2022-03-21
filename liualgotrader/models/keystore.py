@@ -1,5 +1,3 @@
-import time
-
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
 

@@ -1,5 +1,3 @@
-import math
-
 import psutil
 
 from liualgotrader.common import config

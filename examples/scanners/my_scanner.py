@@ -1,6 +1,6 @@
 """my_scanner.py: custom scanner implementing the Scanner class"""
-from datetime import datetime, timedelta
-from typing import List, Optional
+from datetime import datetime
+from typing import List
 
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.scanners.base import Scanner

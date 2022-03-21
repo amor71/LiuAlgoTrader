@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 from datetime import datetime, timedelta
@@ -108,7 +107,7 @@ class MomentumLongV3(Strategy):
             ubound = lbound + timedelta(minutes=15)
             try:
                 high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
-            except Exception as e:
+            except Exception:
 
                 tlog(
                     f"{symbol}[{now}] failed to aggregate {lbound}:{ubound} {minute_history}"
@@ -355,7 +354,7 @@ class MomentumLongV3(Strategy):
                 if partial_sell:
                     qty = int(position / 2) if position > 1 else 1
                     tlog(
-                        f'[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}'
+                        f"[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}"
                     )
 
                     return (

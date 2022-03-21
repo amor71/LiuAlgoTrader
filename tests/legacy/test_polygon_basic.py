@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date
 
 import pandas as pd
 import pytest
@@ -49,5 +49,7 @@ def test_polygon_get_symbols() -> bool:
 def test_polygon_get_market_snapshot() -> bool:
     polygon = PolygonData()
     market_snapshots = polygon.get_market_snapshot()
-    print(f"{len(market_snapshots)} tickers of market snapshots are retrieved from Polygon")
+    print(
+        f"{len(market_snapshots)} tickers of market snapshots are retrieved from Polygon"
+    )
     return True
