@@ -330,18 +330,23 @@ def calc_symbol_trades_returns(
 
         if t1 is not None and t2 is not None:
             for i in range(t1, t2):
-                value = (
-                    qty
-                    * data_loader[symbol].close[
-                        eastern.localize(
-                            daily_returns.index[i].to_pydatetime()
-                        ).replace(hour=9, minute=30, second=0, microsecond=0)
-                    ]
-                )
-                daily_returns.loc[
-                    daily_returns.index[i],
-                    "equity",
-                ] += value
+                try:
+                    value = (
+                        qty
+                        * data_loader[symbol].close[
+                            eastern.localize(
+                                daily_returns.index[i].to_pydatetime()
+                            ).replace(
+                                hour=9, minute=30, second=0, microsecond=0
+                            )
+                        ]
+                    )
+                    daily_returns.loc[
+                        daily_returns.index[i],
+                        "equity",
+                    ] += value
+                except Exception as e:
+                    tlog(f"Error during calc_symbol_trades_returns(): {e}")
 
         if row.operation == "buy":
             qty += row.qty
@@ -512,9 +517,7 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
 
 def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(
-        Portfolio.load_by_portfolio_id(portfolio_id)
-    )
+    loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
 

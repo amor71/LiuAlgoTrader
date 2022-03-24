@@ -1,6 +1,5 @@
 from datetime import date
 
-import pandas as pd
 import pytest
 
 from liualgotrader.common.database import create_db_connection

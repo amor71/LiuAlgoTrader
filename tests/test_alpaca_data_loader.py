@@ -346,8 +346,7 @@ def test_get_symbols_alpaca() -> bool:
 def test_apple_update() -> bool:
     print("test_apple_stock_price_open_str")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
-    d1 = date(year=2021, month=2, day=1)
-    dl["AAPL"][-1]
+    _ = dl["AAPL"][-1]
     print("after this")
     dl["AAPL"].loc["2021-02-02 09:46:00"] = [
         100.0,

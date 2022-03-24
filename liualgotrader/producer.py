@@ -8,10 +8,10 @@ import os
 import random
 import sys
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from multiprocessing import Queue
-from queue import Empty, Full
-from typing import Dict, List, Optional
+from queue import Empty
+from typing import Dict, List
 
 from mnqueues import MNQueue
 

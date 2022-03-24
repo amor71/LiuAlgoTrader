@@ -3,7 +3,6 @@ from datetime import date, datetime, timedelta, timezone
 import pandas as pd
 import pytest
 
-from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.types import DataConnectorType, TimeScale
 
