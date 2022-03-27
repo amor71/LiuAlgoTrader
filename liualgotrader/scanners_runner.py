@@ -101,7 +101,7 @@ async def create_scanners(
             scanners.append(
                 await create_momentum_scanner(
                     trader,
-                    DataLoader(connector=DataConnectorType.polygon),
+                    DataLoader(connector=data_loader),
                     scanners_conf[scanner_name],
                 )
             )
