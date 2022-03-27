@@ -19,13 +19,18 @@ LiuAlgoTrader supports:
 
 .. _alpaca.markets: https://alpaca.markets/
 
-* (**BETA**) Gemini_ Crypto Exchange APIs for trading, data loading & streaming,
+* Gemini_ Crypto Exchange APIs for trading, data loading & streaming,
 
 .. _gemini : https://www.gemini.com/
 
 * Polygon.io_ APIs for data-loading, and streaming,
 
 .. _polygon.io : https://polygon.io/
+
+* (**BETA**) Tradier_ APIs for trading and data loadinng
+
+.. _Tradier : https://tradier.com/
+
 
 LiuAlgoTrader can run on a laptop and
 *hedge-on-the-go*, or run on a multi-core hosted Linux server
