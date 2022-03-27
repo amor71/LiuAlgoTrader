@@ -5,8 +5,7 @@ import pandas as pd
 import pytest
 
 from liualgotrader.common import config
-from liualgotrader.common.types import (QueueMapper, TimeScale, WSConnectState,
-                                        WSEventType)
+from liualgotrader.common.types import TimeScale, WSConnectState, WSEventType
 from liualgotrader.data.alpaca import AlpacaData
 
 

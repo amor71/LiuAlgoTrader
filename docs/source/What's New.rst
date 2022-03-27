@@ -3,6 +3,13 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.20           | **Major Release**                            |
+|                  |                                              |
+|                  | 1. Add support for Tradier.                  |
+|                  | 2. Refactor momentum.                        |
+|                  | 3. Added tests coverage.                     |
+|                  | 4. Bug fixes.                                |
++------------------+----------------------------------------------+
 | 0.4.13           | 1. Momentum scanner supports both Alpaca and |
 |                  |    polygon.                                  |
 |                  | 2. `data_loader` takes into account symbol   |

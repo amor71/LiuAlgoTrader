@@ -33,12 +33,12 @@ def test_apple_stock_latest_price() -> bool:
 
     print(f"apple {last_price} @ {last_price_time}")
 
-    print("**** POLYGON ****")
-    dl = DataLoader(TimeScale.minute, connector=DataConnectorType.polygon)
-    last_price = dl["AAPL"].close[-1]
-    last_price_time = dl["AAPL"].close.index[-1]
+    # print("**** POLYGON ****")
+    # dl = DataLoader(TimeScale.minute, connector=DataConnectorType.polygon)
+    # last_price = dl["AAPL"].close[-1]
+    # last_price_time = dl["AAPL"].close.index[-1]
 
-    print(f"apple {last_price} @ {last_price_time}")
+    # print(f"apple {last_price} @ {last_price_time}")
 
     return True
 
