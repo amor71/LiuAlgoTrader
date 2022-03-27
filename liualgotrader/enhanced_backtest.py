@@ -94,15 +94,13 @@ async def do_scanners(
         new_symbols = await scanner.run(back_time=now)
         target_strategy_name = scanner.target_strategy_name
 
-        target_strategy_name = (
-            "_all" if not target_strategy_name else target_strategy_name
-        )
+        target_strategy_name = target_strategy_name or "_all"
 
         symbols[target_strategy_name] = new_symbols
 
-        # list(
-        #    set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
-        # )
+            # list(
+            #    set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
+            # )
 
     return symbols
 

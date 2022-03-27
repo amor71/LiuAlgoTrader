@@ -220,17 +220,11 @@ async def save(
         indicators=indicators,
     )
 
-    await db_trade.save(
-        config.db_conn_pool,
-        str(now),
-        trading_data.stop_prices[symbol]
+    await db_trade.save(config.db_conn_pool, now, trading_data.stop_prices[symbol]
         if symbol in trading_data.stop_prices
-        else 0.0,
-        trading_data.target_prices[symbol]
+        else 0.0, trading_data.target_prices[symbol]
         if symbol in trading_data.target_prices
-        else 0.0,
-        trade_fee,
-    )
+        else 0.0, trade_fee)
 
 
 async def do_callbacks(
@@ -868,11 +862,7 @@ async def load_symbol_position(portfolio_id: str) -> Dict[str, float]:
     )
     new_df = new_df.loc[new_df.qty != 0]
 
-    rc_dict: Dict[str, float] = {}
-    for _, row in new_df.iterrows():
-        rc_dict[row.symbol] = float(row.qty)
-
-    return rc_dict
+    return {row.symbol: float(row.qty) for _, row in new_df.iterrows()}
 
 
 async def create_strategies_from_db(
