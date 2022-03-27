@@ -119,7 +119,6 @@ class PolygonData(DataAPI):
                 symbol
             )
         )
-
         return pd.Timestamp(
             snapshot_data.ticker.last_trade.timestamp_of_this_trade,
             unit="ns",
