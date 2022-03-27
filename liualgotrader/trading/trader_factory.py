@@ -5,6 +5,7 @@ from liualgotrader.common.types import BrokerType
 from liualgotrader.trading.alpaca import AlpacaTrader
 from liualgotrader.trading.base import Trader
 from liualgotrader.trading.gemini import GeminiTrader
+from liualgotrader.trading.tradier import TradierTrader
 
 traders: Dict[str, Trader] = {}
 
@@ -20,6 +21,10 @@ def trader_factory(*args, **kwargs) -> Trader:
         if "GEMINI" not in traders:
             traders["GEMINI"] = GeminiTrader(*args, **kwargs)
         return traders["GEMINI"]
+    elif config.broker == BrokerType.tradier:
+        if "TRADIER" not in traders:
+            traders["TRADIER"] = TradierTrader(*args, **kwargs)
+        return traders["TradierTrader"]
     else:
         raise Exception(f"unsupported broker  {config.broker}")
 

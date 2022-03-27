@@ -1,7 +1,6 @@
 # type: ignore
-import asyncio
 import concurrent.futures
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
@@ -51,9 +50,7 @@ def convert_offset_to_datetime(
     try:
         return index[offset]
     except IndexError:
-        last_trading_time = (
-            data_api.get_last_trading(symbol) if not start else start
-        )
+        last_trading_time = start or data_api.get_last_trading(symbol)
         if scale == TimeScale.minute:
             return last_trading_time.replace(
                 second=0, microsecond=0
@@ -140,10 +137,10 @@ def load_item_by_offset(
         d=i,
         concurrency=concurrency,
     )
-    index = symbol_data.index.get_indexer([i], method="nearest")[0]
+    # index = symbol_data.index.get_indexer([i], method="nearest")[0]
     return (
         symbol_data,
-        symbol_data.iloc[index],
+        symbol_data.iloc[offset],  # index
     )
 
 
@@ -251,10 +248,15 @@ def _legacy_fetch_data_range(
 ) -> pd.DataFrame:
 
     adjusted_symbol = symbol
+    m_and_a_data.index = m_and_a_data.index.astype("datetime64[ns]", copy=True)
     while True:
         adjusted_data = m_and_a_data.loc[
-            (str(end) > m_and_a_data.index)
-            & (m_and_a_data.index > str(start))
+            (
+                end.replace(
+                    hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+                )
+                <= m_and_a_data.index
+            )
             & (m_and_a_data.to_symbol == adjusted_symbol)
         ]
         if not adjusted_data.empty:
@@ -333,18 +335,31 @@ def fetch_data_datetime(
     d: datetime,
     concurrency: int,
 ) -> pd.DataFrame:
+    if not symbol_data.empty and d < symbol_data.index.min():
+        start = d
+        end = symbol_data.index.min()
+    elif not symbol_data.empty and d > symbol_data.index.max():
+        start = symbol_data.index.max()
+        end = d + (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
+    else:
+        start = d
+        end = d + (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
+
     return fetch_data_range(
         data_api=data_api,
         symbol_data=symbol_data,
         symbol=symbol,
         scale=scale,
-        start=d,
-        end=d
-        + (
-            timedelta(days=1)
-            if scale == TimeScale.day
-            else timedelta(minutes=1)
-        ),
+        start=start,
+        end=end,
         concurrency=concurrency,
     )
 
@@ -360,12 +375,12 @@ def getitem_slice(
     key = slice(key.start or 0, key.stop or -1)
 
     # ensure key represents datetime
-    key = handle_slice_conversion(
+    converted_key = handle_slice_conversion(
         data_api, symbol, key, scale, symbol_data.index
     )
 
     # load data if needed
-    for s in _calc_data_to_fetch(key, symbol_data.index):
+    for s in _calc_data_to_fetch(converted_key, symbol_data.index):
         symbol_data = fetch_data_range(
             data_api=data_api,
             symbol_data=symbol_data,
@@ -375,14 +390,28 @@ def getitem_slice(
             end=s.stop,
             concurrency=concurrency,
         )
-
     # return data range
-    indexes = symbol_data.index.get_indexer(
-        [key.start, key.stop], method="nearest"
-    )
+    if not isinstance(key.start, int):
+        key_start_index = symbol_data.index.get_indexer(
+            [converted_key.start], method="nearest"
+        )[0]
+    elif key.start < 0:
+        key_start_index = len(symbol_data.index) + key.start
+    else:
+        key_start_index = key.start
+
+    if not isinstance(key.stop, int):
+        key_end_index = symbol_data.index.get_indexer(
+            [converted_key.stop], method="nearest"
+        )[0]
+    elif key.stop < 0:
+        key_end_index = len(symbol_data.index) + key.stop
+    else:
+        key_end_index = key.stop
+
     return (
         symbol_data,
-        symbol_data.iloc[indexes[0] : indexes[1] + 1],
+        symbol_data.iloc[key_start_index : key_end_index + 1],
     )
 
 

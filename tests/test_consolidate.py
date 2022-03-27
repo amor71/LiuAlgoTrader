@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pytest
 from hypothesis import example, given, settings
 from hypothesis.strategies import text
@@ -13,9 +11,3 @@ from liualgotrader.analytics.consolidate import trades
 @pytest.mark.devtest
 async def test_trades(batch_id: str) -> None:
     await trades(batch_id)
-
-
-@pytest.mark.asyncio
-@pytest.mark.devtest
-async def test_trades_specific_batch() -> None:
-    await trades("89177ae2-a459-4614-a2bc-474f1e0b7c89")

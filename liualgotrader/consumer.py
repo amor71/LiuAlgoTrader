@@ -2,9 +2,7 @@
 Execute Strategies on streaming data received from the Producer
 """
 import asyncio
-import concurrent.futures
 import os
-import sys
 from datetime import datetime, timedelta
 from queue import Empty
 from random import randint
@@ -222,17 +220,11 @@ async def save(
         indicators=indicators,
     )
 
-    await db_trade.save(
-        config.db_conn_pool,
-        str(now),
-        trading_data.stop_prices[symbol]
+    await db_trade.save(config.db_conn_pool, now, trading_data.stop_prices[symbol]
         if symbol in trading_data.stop_prices
-        else 0.0,
-        trading_data.target_prices[symbol]
+        else 0.0, trading_data.target_prices[symbol]
         if symbol in trading_data.target_prices
-        else 0.0,
-        trade_fee,
-    )
+        else 0.0, trade_fee)
 
 
 async def do_callbacks(
@@ -364,8 +356,8 @@ async def handle_trade_update_for_order(trade: Trade) -> bool:
 
 
 async def handle_trade_update_wo_order(trade: Trade) -> bool:
-    symbol = trade.symbol.lower()
-    event = trade.event
+    trade.symbol.lower()
+    trade.event
     # tlog(f"trade update without order for {symbol} data={trade} with event {event}")
     return True
 
@@ -511,12 +503,12 @@ async def order_inflight(
                 )
                 await update_filled_order(
                     symbol=symbol,
-                    strategy=trading_data.open_order_strategy[symbol],
-                    filled_avg_price=filled_price,
-                    filled_qty=filled_qty,
-                    side=existing_order.side,
-                    updated_at=existing_order.submitted_at,
-                    trade_fee=trade_fee,
+                    strategy=trading_data.open_order_strategy[symbol],  # type: ignore
+                    filled_avg_price=filled_price,  # type: ignore
+                    filled_qty=filled_qty,  # type: ignore
+                    side=existing_order.side,  # type: ignore
+                    updated_at=existing_order.submitted_at,  # type: ignore
+                    trade_fee=trade_fee,  # type: ignore
                 )
             elif order_status == Order.EventType.partial_fill:
                 tlog(
@@ -525,11 +517,11 @@ async def order_inflight(
                 await update_partially_filled_order(
                     symbol=symbol,
                     strategy=trading_data.open_order_strategy[symbol],
-                    side=existing_order.side,
-                    filled_avg_price=filled_price,
-                    filled_qty=filled_qty,
+                    side=existing_order.side,  # type: ignore
+                    filled_avg_price=filled_price,  # type: ignore
+                    filled_qty=filled_qty,  # type: ignore
                     updated_at=existing_order.submitted_at,
-                    trade_fee=trade_fee,
+                    trade_fee=trade_fee,  # type: ignore
                 )
             else:
                 # Cancel it so we can try again for a fill
@@ -870,11 +862,7 @@ async def load_symbol_position(portfolio_id: str) -> Dict[str, float]:
     )
     new_df = new_df.loc[new_df.qty != 0]
 
-    rc_dict: Dict[str, float] = {}
-    for _, row in new_df.iterrows():
-        rc_dict[row.symbol] = float(row.qty)
-
-    return rc_dict
+    return {row.symbol: float(row.qty) for _, row in new_df.iterrows()}
 
 
 async def create_strategies_from_db(
@@ -931,6 +919,7 @@ async def consumer_async_main(
     queue: MNQueue,
     unique_id: str,
     strategies_conf: Dict,
+    file_only: bool,
 ):
     await create_db_connection(str(config.dsn))
     data_loader = DataLoader()
@@ -944,11 +933,12 @@ async def consumer_async_main(
         strategies_conf=strategies_conf,
     )
 
-    trading_data.strategies += await create_strategies_from_db(
-        batch_id=unique_id,
-        trader=trader,
-        data_loader=data_loader,
-    )
+    if not file_only:
+        trading_data.strategies += await create_strategies_from_db(
+            batch_id=unique_id,
+            trader=trader,
+            data_loader=data_loader,
+        )
 
     queue_consumer_task = asyncio.create_task(
         queue_consumer(unique_id, queue, data_loader, trader)
@@ -993,7 +983,14 @@ def consumer_main(
         config.risk = conf["risk"]
 
     try:
-        asyncio.run(consumer_async_main(queue, unique_id, conf["strategies"]))
+        asyncio.run(
+            consumer_async_main(
+                queue,
+                unique_id,
+                conf["strategies"],
+                conf.get("file_only", False),
+            ),
+        )
     except KeyboardInterrupt:
         tlog("consumer_main() - Caught KeyboardInterrupt")
 

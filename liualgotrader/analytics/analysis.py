@@ -95,33 +95,15 @@ def load_trades_for_period(
 
 
 def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
-    query = f"""
-    SELECT t.*, a.batch_id, a.algo_name
-    FROM 
-    new_trades as t, algo_run as a
-    WHERE 
-        t.algo_run_id = a.algo_run_id AND 
-        t.tstamp >= '{day}' AND 
-        t.tstamp < '{day + timedelta(days=1) if not end_date else end_date}' AND
-        t.expire_tstamp is null 
-    ORDER BY symbol, tstamp
-    """
+    query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
+
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(fetch_as_dataframe(query))
 
 
 def load_client_trades(day: date, end_date: date = None) -> pd.DataFrame:
-    query = f"""
-    SELECT t.*, a.batch_id, a.algo_name
-    FROM 
-    new_trades as t, algo_run as a
-    WHERE 
-        t.algo_run_id = a.algo_run_id AND 
-        t.tstamp >= '{day}' AND 
-        t.tstamp < '{day + timedelta(days=1) if not end_date else end_date}' AND
-        t.expire_tstamp is null 
-    ORDER BY symbol, tstamp
-    """
+    query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
+
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(fetch_as_dataframe(query))
 
@@ -187,15 +169,8 @@ def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
 
 
 def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
-    query = f"""
-     SELECT * 
-     FROM 
-     algo_run as t
-     WHERE 
-         start_time >= '{day}' AND 
-         start_time < '{day + timedelta(days=1) if not end_date else end_date}'
-     ORDER BY start_time
-     """
+    query = f"""\x1f     SELECT * \x1f     FROM \x1f     algo_run as t\x1f     WHERE \x1f         start_time >= '{day}' AND \x1f         start_time < '{end_date or day + timedelta(days=1)}'\x1f     ORDER BY start_time\x1f     """
+
     loop = asyncio.get_event_loop()
     df = loop.run_until_complete(fetch_as_dataframe(query))
     df.set_index("algo_run_id", inplace=True)
@@ -285,7 +260,7 @@ def count_trades(symbol, trades: pd.DataFrame, batch_id: str) -> int:
 
 
 def trades_analysis(trades: pd.DataFrame, batch_id: str) -> pd.DataFrame:
-    day_to_analyze = min(trades["client_time"].tolist())
+    min(trades["client_time"].tolist())
     trades_analytics = pd.DataFrame()
     trades["client_time"] = pd.to_datetime(trades["client_time"], utc=True)
     trades_analytics["symbol"] = trades.symbol.unique()
@@ -355,18 +330,23 @@ def calc_symbol_trades_returns(
 
         if t1 is not None and t2 is not None:
             for i in range(t1, t2):
-                value = (
-                    qty
-                    * data_loader[symbol].close[
-                        eastern.localize(
-                            daily_returns.index[i].to_pydatetime()
-                        ).replace(hour=9, minute=30, second=0, microsecond=0)
-                    ]
-                )
-                daily_returns.loc[
-                    daily_returns.index[i],
-                    "equity",
-                ] += value
+                try:
+                    value = (
+                        qty
+                        * data_loader[symbol].close[
+                            eastern.localize(
+                                daily_returns.index[i].to_pydatetime()
+                            ).replace(
+                                hour=9, minute=30, second=0, microsecond=0
+                            )
+                        ]
+                    )
+                    daily_returns.loc[
+                        daily_returns.index[i],
+                        "equity",
+                    ] += value
+                except Exception as e:
+                    tlog(f"Error during calc_symbol_trades_returns(): {e}")
 
         if row.operation == "buy":
             qty += row.qty
@@ -537,9 +517,7 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
 
 def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(
-        Portfolio.load_by_portfolio_id(portfolio_id)
-    )
+    loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
 

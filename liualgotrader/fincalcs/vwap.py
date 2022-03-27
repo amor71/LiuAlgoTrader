@@ -15,9 +15,9 @@ def add_daily_vwap(
         tlog(f"before vwap {minute_data}")
 
     try:
-        back_time_index = minute_data["close"].index.get_loc(
-            back_time, method="nearest"
-        )
+        back_time_index = minute_data["close"].index.get_indexer(
+            [back_time], method="nearest"
+        )[0]
     except Exception as e:
         if debug:
             tlog(
@@ -38,7 +38,9 @@ def add_daily_vwap(
     return (
         True
         if in_place
-        else df[df.close.index.get_loc(back_time, method="nearest") :].vwap
+        else df[
+            df.close.index.get_indexer([back_time], method="nearest")[0] :
+        ].vwap
     )
 
 

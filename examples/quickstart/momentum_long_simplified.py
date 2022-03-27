@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 from datetime import datetime, timedelta
@@ -108,7 +107,7 @@ class MomentumLongV3(Strategy):
             ubound = lbound + timedelta(minutes=15)
             try:
                 high_15m = minute_history[lbound:ubound]["high"].max()  # type: ignore
-            except Exception as e:
+            except Exception:
 
                 tlog(
                     f"{symbol}[{now}] failed to aggregate {lbound}:{ubound} {minute_history}"
@@ -179,11 +178,7 @@ class MomentumLongV3(Strategy):
 
                         return False, {}
 
-                    stop_price = find_stop(
-                        data.close if not data.vwap else data.vwap,
-                        minute_history,
-                        now,
-                    )
+                    stop_price = find_stop(data.vwap or data.close, minute_history, now)
                     target_price = 3 * (data.close - stop_price) + data.close
                     target_prices[symbol] = target_price
                     stop_prices[symbol] = stop_price
@@ -211,21 +206,16 @@ class MomentumLongV3(Strategy):
                             "avg": data.average,
                         }
 
-                        return (
-                            True,
-                            {
+                        return True, {
+                                "side": "buy",
+                                "qty": str(shares_to_buy),
+                                "type": "market",
+                            } if morning_rush else {
                                 "side": "buy",
                                 "qty": str(shares_to_buy),
                                 "type": "limit",
                                 "limit_price": str(buy_price),
                             }
-                            if not morning_rush
-                            else {
-                                "side": "buy",
-                                "qty": str(shares_to_buy),
-                                "type": "market",
-                            },
-                        )
             elif debug:
                 tlog(f"[{self.name}][{now}] {data.close} < 15min high ")
         if (
@@ -297,7 +287,7 @@ class MomentumLongV3(Strategy):
             scalp = movement > 0.04 or data.vwap > scalp_threshold
             below_cost_base = data.vwap < latest_cost_basis[symbol]
 
-            rsi_limit = 79 if not morning_rush else 85
+            rsi_limit = 85 if morning_rush else 79
             to_sell = False
             partial_sell = False
             limit_sell = False
@@ -355,7 +345,7 @@ class MomentumLongV3(Strategy):
                 if partial_sell:
                     qty = int(position / 2) if position > 1 else 1
                     tlog(
-                        f'[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}'
+                        f"[{self.name}][{now}] Submitting sell for {qty} shares of {symbol} at limit of {data.close}with reason:{sell_reasons}"
                     )
 
                     return (

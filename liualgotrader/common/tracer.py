@@ -1,5 +1,4 @@
 # type: ignore
-import traceback
 from datetime import timedelta
 
 from opencensus.ext.stackdriver import stats_exporter

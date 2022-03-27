@@ -18,9 +18,10 @@ The framework currently support trading and back-testing of US Equities, and Cry
 LiuAlgoTrader can run on a laptop and *hedge-on-the-go*, or run on a multi-core hosted Linux server and it will automatically optimize for best performance for either. LiuAlgoTrader is a full trading platform with a breath of tools to manage automated investment portfolios.
 
 LiuAlgoTrader supports:
-* [Alpaca.Markets](https://alpaca.markets/) APIs for trading, and data loading & streaming,
-* (**BETA**) [Gemini Crypto Exchange](https://www.gemini.com/) APIs for trading, data loading & streaming,
-* [Polygon.io](https://polygon.io/) APIs for data-loading, and streaming,
+* [Alpaca.Markets](https://alpaca.markets/) APIs for trading, and data loading & streaming.
+* [Gemini Crypto Exchange](https://www.gemini.com/) APIs for trading, data loading & streaming.
+* [Polygon.io](https://polygon.io/) APIs for data-loading, and streaming.
+* (**BETA**) [Tradier](https://tradier.com/) APIs for trading and data. 
 
 
 ## See LiuAlgoTrader in Action

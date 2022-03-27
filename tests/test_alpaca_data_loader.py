@@ -17,6 +17,21 @@ def test_create_data_loader_default() -> bool:
 
 
 @pytest.mark.devtest
+def test_apple_test1() -> bool:
+    print("test_apple_test1")
+    dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
+    data = dl["AAPL"].close[-10 : datetime.now(nyc).date()]  # type: ignore
+
+    print(f"{str(datetime.now(nyc).date())}:{len(data)}")
+    print(data)
+
+    if len(data) != 10:
+        raise AssertionError("not enough data")
+
+    return True
+
+
+@pytest.mark.devtest
 def test_apple_stock_latest_price() -> bool:
     print("test_apple_stock_latest_price")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
@@ -70,12 +85,10 @@ def test_day_num_data_points() -> bool:
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
     data = dl["AAPL"].close[-90:]  # type:ignore
 
-    if len(data) != 90:
-        raise AssertionError(
-            f"expected 90 datapoints, received only {len(data)}"
-        )
+    if 90 >= len(data) >= 89:
+        return True
 
-    return True
+    raise AssertionError(f"expected 90 datapoints, received only {len(data)}")
 
 
 @pytest.mark.devtest
@@ -333,8 +346,7 @@ def test_get_symbols_alpaca() -> bool:
 def test_apple_update() -> bool:
     print("test_apple_stock_price_open_str")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
-    d1 = date(year=2021, month=2, day=1)
-    last_price_range = dl["AAPL"][-1]
+    _ = dl["AAPL"][-1]
     print("after this")
     dl["AAPL"].loc["2021-02-02 09:46:00"] = [
         100.0,

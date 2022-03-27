@@ -4,6 +4,7 @@ import traceback
 from datetime import date, datetime
 from typing import Callable, Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 import requests
 from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient
@@ -47,7 +48,7 @@ class PolygonData(DataAPI):
         symbols = {d["ticker"] for d in data.results}
         next_url = f"{data.next_url}&apiKey={config.polygon_api_key}"
         # parse the pagination
-        while next_url is not None:
+        while True:
             response = requests.get(next_url).json()
             if "next_url" not in response:
                 break
@@ -87,7 +88,7 @@ class PolygonData(DataAPI):
             ]
             for result in data.results
         }
-        _df = pd.DataFrame.from_dict(
+        df = pd.DataFrame.from_dict(
             d,
             orient="index",
             columns=[
@@ -100,8 +101,8 @@ class PolygonData(DataAPI):
                 "count",
             ],
         )
-        _df["vwap"] = 0.0
-        return _df
+        df["vwap"] = np.NaN
+        return df
 
     def get_symbols_data(
         self,
@@ -113,7 +114,16 @@ class PolygonData(DataAPI):
         raise NotImplementedError("get_symbols_data")
 
     def get_last_trading(self, symbol: str) -> datetime:
-        raise NotImplementedError("get_last_trading")
+        snapshot_data = (
+            self.polygon_rest_client.stocks_equities_snapshot_single_ticker(
+                symbol
+            )
+        )
+        return pd.Timestamp(
+            snapshot_data.ticker.last_trade.timestamp_of_this_trade,
+            unit="ns",
+            tz="America/New_York",
+        )
 
     def get_trading_day(
         self, symbol: str, now: datetime, offset: int

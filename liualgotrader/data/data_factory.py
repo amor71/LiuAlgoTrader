@@ -5,6 +5,7 @@ from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.finnhub import FinnhubData
 from liualgotrader.data.gemini import GeminiData, GeminiStream
 from liualgotrader.data.polygon import PolygonData, PolygonStream
+from liualgotrader.data.tradier import TradierData
 
 
 def data_loader_factory(connector: DataConnectorType = None) -> DataAPI:
@@ -17,6 +18,8 @@ def data_loader_factory(connector: DataConnectorType = None) -> DataAPI:
         return FinnhubData()
     elif _connector == DataConnectorType.gemini:
         return GeminiData()
+    elif _connector == DataConnectorType.tradier:
+        return TradierData()
     else:
         raise Exception(f"unsupported data provider {_connector}")
 

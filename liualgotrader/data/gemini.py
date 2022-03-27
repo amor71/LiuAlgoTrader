@@ -10,9 +10,8 @@ import ssl
 import time
 import traceback
 from datetime import date, datetime, timedelta, timezone
-from random import randint
 from threading import Thread
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -54,7 +53,7 @@ class GeminiData(DataAPI):
         self.running_task: Optional[Thread] = None
         self.ws = None
 
-    def get_symbols(self) -> List[Dict]:
+    def get_symbols(self) -> List[str]:
         endpoint = "/v1/symbols"
         url = self.base_url + endpoint
         response = requests.get(url)

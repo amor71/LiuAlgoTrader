@@ -6,8 +6,8 @@ import json
 import multiprocessing as mp
 import os
 import traceback
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import timedelta
+from typing import Dict, List
 
 from pytz import timezone
 

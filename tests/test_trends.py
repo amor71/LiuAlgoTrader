@@ -17,7 +17,7 @@ from liualgotrader.fincalcs.trends import SeriesTrendType, get_series_trend
             elements=st.datetimes(
                 min_value=datetime(2000, 1, 1), max_value=datetime(2040, 1, 1)
             ),
-            dtype=pd.DatetimeIndex,
+            dtype=None,
         ),
         elements=st.floats(
             allow_nan=False,

@@ -2,7 +2,6 @@ import os
 
 os.environ["DATA_CONNECTOR"] = "alpaca"
 import asyncio
-from datetime import date
 
 import pandas as pd
 import pytest

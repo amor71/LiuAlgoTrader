@@ -1,7 +1,6 @@
 import asyncio
 import concurrent.futures
 import queue
-import sys
 import time
 import traceback
 from datetime import date, datetime, timedelta
@@ -142,7 +141,7 @@ class AlpacaData(DataAPI):
         except APIError:
             raise ValueError(f"{symbol} snapshot not found")
 
-        min_bar = snapshot_data.minute_bar
+        min_bar = snapshot_data.latest_trade
         if not min_bar:
             raise ValueError(f"Can't get snapshot for {symbol}")
 
@@ -159,7 +158,7 @@ class AlpacaData(DataAPI):
             cbd_offset = timedelta(days=offset)
         else:
             cbd_offset = pd.tseries.offsets.CustomBusinessDay(
-                n=offset, holidays=self.get_trading_holidays()
+                n=offset - 1, holidays=self.get_trading_holidays()
             )
 
         return nytz.localize(now + cbd_offset)
@@ -174,7 +173,9 @@ class AlpacaData(DataAPI):
             end = date_parser(end)  # type: ignore
 
         return (
-            len(
+            (end - start).days + 1
+            if self._is_crypto_symbol(symbol)
+            else len(
                 pd.date_range(
                     start,
                     end,
@@ -183,8 +184,6 @@ class AlpacaData(DataAPI):
                     ),
                 )
             )
-            if not self._is_crypto_symbol(symbol)
-            else (end - start).days + 1
         )
 
     def get_max_data_points_per_load(self) -> int:
@@ -192,7 +191,7 @@ class AlpacaData(DataAPI):
         return 10000
 
     def _is_crypto_symbol(self, symbol: str) -> bool:
-        return symbol.lower() in ["btcusd", "ethusd"]
+        return symbol.lower() in {"btcusd", "ethusd"}
 
     def trading_days_slice(self, symbol: str, s: slice) -> slice:
         if not self.alpaca_rest_client:
@@ -358,7 +357,11 @@ class AlpacaData(DataAPI):
                 tlog(f"symbol={symbol}, timeframe={t}, range=({_start, _end})")
 
             data = (
-                self.alpaca_rest_client.get_bars(
+                self.crypto_get_symbol_data(
+                    symbol=symbol, start=_start, end=_end, timeframe=t
+                )
+                if self._is_crypto_symbol(symbol)
+                else self.alpaca_rest_client.get_bars(
                     symbol=symbol,
                     timeframe=t,
                     start=_start,
@@ -366,10 +369,6 @@ class AlpacaData(DataAPI):
                     limit=1000000,
                     adjustment="all",
                 ).df
-                if not self._is_crypto_symbol(symbol)
-                else self.crypto_get_symbol_data(
-                    symbol=symbol, start=_start, end=_end, timeframe=t
-                )
             )
         except requests.exceptions.HTTPError as e:
             tlog(f"received HTTPError: {e}")
