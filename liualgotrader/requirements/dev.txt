@@ -93,7 +93,7 @@ matplotlib-inline==0.1.3
 mccabe==0.7.0
 mistune==2.0.2
 mnqueues==0.0.38
-msgpack==1.0.2
+msgpack==1.0.3
 multidict==6.0.2
 multitasking==0.0.10
 mypy==0.940
