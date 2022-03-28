@@ -87,7 +87,7 @@ kiwisolver==1.4.1
 korean-lunar-calendar==0.2.1
 lazy-object-proxy==1.7.1
 lxml==4.8.0
-MarkupSafe==2.0.1
+MarkupSafe==2.1.1
 matplotlib==3.5.1
 matplotlib-inline==0.1.3
 mccabe==0.6.1
