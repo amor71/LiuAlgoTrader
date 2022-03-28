@@ -25,7 +25,7 @@ cffi==1.15.0
 cfgv==3.3.1
 chardet==4.0.0
 charset-normalizer==2.0.12
-click==8.0.3
+click==8.0.4
 codecov==2.1.12
 colorama==0.4.4
 coverage==6.3.1
