@@ -165,7 +165,7 @@ pyzmq==22.3.0
 qtconsole==5.3.0
 QtPy==2.0.1
 QuantStats==0.0.50
-readme-renderer==32.0
+readme-renderer==34.0
 requests==2.27.1
 requests-toolbelt==0.9.1
 rfc3986==2.0.0
