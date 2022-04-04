@@ -216,7 +216,7 @@ types-urllib3==1.26.11
 typing_extensions==4.1.1
 tzdata==2022.1
 tzlocal==4.2
-urllib3==1.26.8
+urllib3==1.26.9
 validators==0.18.2
 virtualenv==20.13.1
 wcwidth==0.2.5
