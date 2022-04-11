@@ -1,6 +1,6 @@
 aiohttp==3.8.1
 alabaster==0.7.12
-alpaca-trade-api==1.5.1
+alpaca-trade-api==2.0.0
 altair==4.2.0
 appnope==0.1.2
 argon2-cffi==21.3.0
