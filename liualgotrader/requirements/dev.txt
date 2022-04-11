@@ -91,7 +91,7 @@ MarkupSafe==2.1.1
 matplotlib==3.5.1
 matplotlib-inline==0.1.3
 mccabe==0.7.0
-mistune==0.8.4
+mistune==2.0.2
 mnqueues==0.0.38
 msgpack==1.0.2
 multidict==6.0.2
