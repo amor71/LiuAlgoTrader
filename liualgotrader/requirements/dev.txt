@@ -133,7 +133,7 @@ pluggy==1.0.0
 polygon-api-client==0.1.11
 pre-commit==2.18.1
 prometheus-client==0.14.1
-prompt-toolkit==3.0.26
+prompt-toolkit==3.0.29
 proto-plus==1.19.9
 protobuf==3.19.4
 psutil==5.9.0
