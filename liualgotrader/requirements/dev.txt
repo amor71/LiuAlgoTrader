@@ -208,7 +208,7 @@ tornado==6.1
 tqdm==4.64.0
 traitlets==5.1.1
 twine==4.0.0
-types-python-dateutil==2.8.9
+types-python-dateutil==2.8.11
 types-pytz==2021.3.5
 types-requests==2.27.12
 types-tabulate==0.8.5
