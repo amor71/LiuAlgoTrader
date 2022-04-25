@@ -46,7 +46,7 @@ filelock==3.6.0
 finnhub-python==2.4.13
 fire==0.4.0
 flake8==4.0.1
-fonttools==4.29.1
+fonttools==4.33.2
 gitdb==4.0.9
 GitPython==3.1.26
 google-api-core==1.31.5
