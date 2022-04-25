@@ -110,7 +110,7 @@ numpy==1.22.3
 opencensus==0.9.0
 opencensus-context==0.1.2
 opencensus-ext-stackdriver==0.7.4
-opentelemetry-api==1.9.1
+opentelemetry-api==1.11.1
 opentelemetry-exporter-gcp-trace==1.0.0
 opentelemetry-sdk==1.9.1
 opentelemetry-semantic-conventions==0.28b1
