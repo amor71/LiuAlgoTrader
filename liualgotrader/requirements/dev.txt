@@ -195,7 +195,7 @@ streamlit==1.8.1
 tabulate==0.8.9
 tenacity==8.0.1
 termcolor==1.1.0
-terminado==0.13.1
+terminado==0.13.3
 testpath==0.5.0
 therapist==2.2.0
 threadpoolctl==3.1.0
