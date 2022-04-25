@@ -17,7 +17,7 @@ parsedatetime==2.6
 scipy==1.8.0
 polygon-api-client==0.1.11
 finnhub-python==2.4.13
-quantstats==0.0.50
+quantstats==0.0.52
 mnqueues==0.0.38
 tqdm==4.63.0
 toml==0.10.2
