@@ -213,7 +213,7 @@ types-pytz==2021.3.6
 types-requests==2.27.20
 types-tabulate==0.8.7
 types-urllib3==1.26.13
-typing_extensions==4.0.1
+typing_extensions==4.2.0
 tzdata==2021.5
 tzlocal==4.1
 urllib3==1.26.8
