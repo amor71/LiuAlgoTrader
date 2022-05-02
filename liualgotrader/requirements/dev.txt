@@ -8,7 +8,7 @@ argon2-cffi-bindings==21.2.0
 astor==0.8.1
 astroid==2.11.4
 asttokens==2.0.5
-async-timeout==3.0.1
+async-timeout==4.0.2
 asyncpg==0.25.0
 attrs==21.4.0
 autoflake==1.4
