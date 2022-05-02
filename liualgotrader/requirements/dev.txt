@@ -12,7 +12,7 @@ async-timeout==4.0.2
 asyncpg==0.25.0
 attrs==21.4.0
 autoflake==1.4
-Babel==2.9.1
+Babel==2.10.1
 backcall==0.2.0
 bandit==1.7.4
 base58==2.1.1
