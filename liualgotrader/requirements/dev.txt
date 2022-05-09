@@ -115,7 +115,7 @@ opentelemetry-exporter-gcp-trace==1.3.0
 opentelemetry-sdk==1.11.1
 opentelemetry-semantic-conventions==0.30b1
 packaging==21.3
-pandas==1.4.1
+pandas==1.4.2
 pandas-datareader==0.10.0
 pandas-market-calendars==3.4
 pandocfilters==1.5.0
