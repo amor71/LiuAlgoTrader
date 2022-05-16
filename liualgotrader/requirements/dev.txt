@@ -214,7 +214,7 @@ types-requests==2.27.25
 types-tabulate==0.8.9
 types-urllib3==1.26.14
 typing_extensions==4.2.0
-tzdata==2021.5
+tzdata==2022.1
 tzlocal==4.1
 urllib3==1.26.8
 validators==0.18.2
