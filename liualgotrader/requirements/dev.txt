@@ -132,7 +132,7 @@ plotly==5.8.0
 pluggy==1.0.0
 polygon-api-client==0.2.11
 pre-commit==2.19.0
-prometheus-client==0.13.1
+prometheus-client==0.14.1
 prompt-toolkit==3.0.26
 proto-plus==1.19.9
 protobuf==3.19.4
