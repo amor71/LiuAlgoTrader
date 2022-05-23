@@ -19,7 +19,7 @@ polygon-api-client==0.2.11
 finnhub-python==2.4.13
 quantstats==0.0.56
 mnqueues==0.0.38
-tqdm==4.63.0
+tqdm==4.64.0
 toml==0.10.2
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.3.0
