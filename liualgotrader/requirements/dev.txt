@@ -150,7 +150,7 @@ pyflakes==2.4.0
 pygit2==1.9.1
 Pygments==2.12.0
 pylint==2.13.9
-pyluach==1.3.0
+pyluach==1.4.2
 Pympler==1.0.1
 pyparsing==3.0.7
 pyrsistent==0.18.1
