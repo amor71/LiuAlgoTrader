@@ -210,7 +210,7 @@ traitlets==5.2.1.post0
 twine==4.0.0
 types-python-dateutil==2.8.16
 types-pytz==2021.3.8
-types-requests==2.27.12
+types-requests==2.27.27
 types-tabulate==0.8.5
 types-urllib3==1.26.9
 typing_extensions==4.0.1
