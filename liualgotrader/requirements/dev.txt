@@ -1,4 +1,4 @@
-aiohttp==3.7.4
+aiohttp==3.8.1
 alabaster==0.7.12
 alpaca-trade-api==1.5.1
 altair==4.2.0
