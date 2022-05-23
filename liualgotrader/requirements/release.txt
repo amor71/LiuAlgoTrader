@@ -24,4 +24,4 @@ toml==0.10.2
 fire==0.4.0
 opentelemetry-exporter-gcp-trace==1.3.0
 pandas_market_calendars==3.4
-psutil==5.9.0
+psutil==5.9.1
