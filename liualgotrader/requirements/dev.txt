@@ -161,7 +161,7 @@ python-dateutil==2.8.2
 pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
-pyzmq==22.3.0
+pyzmq==23.0.0
 qtconsole==5.2.2
 QtPy==2.0.1
 QuantStats==0.0.50
