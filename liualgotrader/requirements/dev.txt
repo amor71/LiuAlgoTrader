@@ -130,7 +130,7 @@ pkginfo==1.8.2
 platformdirs==2.5.2
 plotly==5.8.0
 pluggy==1.0.0
-polygon-api-client==0.1.11
+polygon-api-client==1.0.2
 pre-commit==2.17.0
 prometheus-client==0.13.1
 prompt-toolkit==3.0.26
