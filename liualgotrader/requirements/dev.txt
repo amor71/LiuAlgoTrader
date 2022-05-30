@@ -215,7 +215,7 @@ types-tabulate==0.8.9
 types-urllib3==1.26.15
 typing_extensions==4.2.0
 tzdata==2022.1
-tzlocal==4.1
+tzlocal==4.2
 urllib3==1.26.8
 validators==0.18.2
 virtualenv==20.13.1
