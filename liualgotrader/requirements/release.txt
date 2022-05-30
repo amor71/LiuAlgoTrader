@@ -15,7 +15,7 @@ empyrical==0.5.5
 nest_asyncio==1.5.4
 parsedatetime==2.6
 scipy==1.8.0
-polygon-api-client==0.1.11
+polygon-api-client==1.0.2
 finnhub-python==2.4.13
 quantstats==0.0.50
 mnqueues==0.0.38
