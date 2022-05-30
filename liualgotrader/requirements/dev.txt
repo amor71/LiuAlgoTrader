@@ -69,7 +69,7 @@ iniconfig==1.1.1
 ipykernel==6.13.0
 ipython==8.4.0
 ipython-genutils==0.2.0
-ipywidgets==7.6.5
+ipywidgets==7.7.0
 iso8601==1.0.2
 isort==5.10.1
 jedi==0.18.1
