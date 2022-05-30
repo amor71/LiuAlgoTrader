@@ -180,7 +180,7 @@ sklearn==0.0
 smmap==5.0.0
 snowballstemmer==2.2.0
 sortedcontainers==2.4.0
-Sphinx==4.4.0
+Sphinx==5.0.0
 sphinx-autodoc-typehints==1.17.0
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-devhelp==1.0.2
