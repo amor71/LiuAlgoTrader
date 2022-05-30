@@ -51,7 +51,7 @@ gitdb==4.0.9
 GitPython==3.1.27
 google-api-core==2.8.1
 google-auth==2.6.6
-google-cloud-appengine-logging==1.1.0
+google-cloud-appengine-logging==1.1.1
 google-cloud-audit-log==0.2.0
 google-cloud-core==1.7.2
 google-cloud-logging==3.0.0
