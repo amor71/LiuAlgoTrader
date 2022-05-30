@@ -7,7 +7,7 @@ alpaca-trade-api==2.1.0
 google-cloud-logging==3.1.1
 asyncpg==0.25.0
 pygit2==1.9.0
-matplotlib==3.5.1
+matplotlib==3.5.2
 tabulate==0.8.9
 streamlit==1.7.0
 stockstats==0.4.1
