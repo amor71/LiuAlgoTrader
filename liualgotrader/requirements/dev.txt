@@ -158,7 +158,7 @@ pytest==7.1.2
 pytest-asyncio==0.18.3
 pytest-cov==3.0.0
 python-dateutil==2.8.2
-pytz==2021.3
+pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
 pyzmq==22.3.0
