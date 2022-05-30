@@ -23,7 +23,7 @@ cachetools==5.2.0
 certifi==2022.5.18.1
 cffi==1.15.0
 cfgv==3.3.1
-chardet==3.0.4
+chardet==4.0.0
 charset-normalizer==2.0.11
 click==8.0.3
 codecov==2.1.12
