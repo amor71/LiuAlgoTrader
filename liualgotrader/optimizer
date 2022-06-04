@@ -109,7 +109,6 @@ def optimize(
     tlog("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
     processes = []
-
     for hyperparameter in iter(hyperparameters):
         parameters_values = (x() for x in parameters)
         p = mp.Process(

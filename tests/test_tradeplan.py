@@ -15,7 +15,7 @@ from liualgotrader.trading.trader_factory import trader_factory
 @pytest.fixture
 def event_loop():
     config.build_label = "pytest"
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
     yield loop
     loop.close()

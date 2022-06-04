@@ -15,7 +15,7 @@ tradier_trader: TradierTrader
 @pytest.fixture
 def event_loop():
     global tradier_trader
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     loop.run_until_complete(create_db_connection())
     tradier_trader = TradierTrader()
     yield loop

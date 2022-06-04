@@ -58,16 +58,13 @@ def recalc(portfolio_id):
 def create(account_size: float, credit_line: float, asset_type: str):
     """Create a new account"""
     portfolio_id = str(uuid.uuid4())
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(create_db_connection())
-
     try:
         asset = AssetType[asset_type]
     except KeyError:
         print(f"ASSET_TYPE {asset_type} not supported. aborting.")
         return
 
-    loop.run_until_complete(
+    asyncio.run(
         Portfolio.save(
             portfolio_id=portfolio_id,
             portfolio_size=account_size,

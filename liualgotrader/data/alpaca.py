@@ -57,10 +57,7 @@ class AlpacaData(DataAPI):
     ) -> List[Dict]:
         # parse market snapshots per chunk of symbols
         symbols = self.get_symbols()
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self._get_symbols_snapshot(symbols, filter_func)
-        )
+        return asyncio.run(self._get_symbols_snapshot(symbols, filter_func))
 
     async def _get_symbols_snapshot(
         self, symbols: List[str], filter_func: Optional[Callable]

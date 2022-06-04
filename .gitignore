@@ -2,7 +2,6 @@
 /.mypy_cache/
 /.ipynb_checkpoints/
 /.libgit2-master/
-/..hypothesis/
 /creds/
 /wip/
 /legacy/
@@ -16,6 +15,15 @@
 /liualgotrader/common/__pycache__/
 /docs/build/
 /analysis/notebooks/.ipynb_checkpoints
+/liu_data/
+/liu_samples/
+.hypothesis/
+/.vscode/
+/.coveragerc
+/analysis/notebooks/Labs/.ipynb_checkpoints/
+/design/.ipynb_checkpoints/
+*.toml
+*.toml.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

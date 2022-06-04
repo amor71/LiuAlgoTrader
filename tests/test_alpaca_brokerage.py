@@ -13,7 +13,7 @@ account_id: str = "f6c9596e-e7ce-4ecc-8ed8-fe6c9720e96a"
 @pytest.fixture
 def event_loop():
     global alpaca_trader
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
     alpaca_trader = AlpacaTrader()
     yield loop

@@ -11,7 +11,7 @@ from liualgotrader.models.portfolio import Portfolio
 
 @pytest.fixture
 def event_loop():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
     yield loop
     loop.close()

@@ -14,7 +14,7 @@ tracer = get_tracer()
 
 @pytest.fixture
 def event_loop():
-    yield asyncio.get_event_loop()
+    yield asyncio.new_event_loop()
 
 
 async def part1(duration=0.025, carrier=None):

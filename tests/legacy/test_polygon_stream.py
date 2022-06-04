@@ -16,7 +16,7 @@ polygon_stream: PolygonStream
 def event_loop():
     global polygon_stream
     global queues
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     queues = QueueMapper()
     polygon_stream = PolygonStream(queues)
     yield loop

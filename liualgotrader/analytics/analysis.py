@@ -17,8 +17,6 @@ from liualgotrader.models.optimizer import OptimizerRun
 from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.trading.trader_factory import trader_factory
 
-AssetType
-
 est = timezone("America/New_York")
 
 
@@ -90,22 +88,18 @@ def load_trades_for_period(
         a.algo_env = '{env}'
     ORDER BY symbol, tstamp
     """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
-
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 def load_client_trades(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
 
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
@@ -159,20 +153,17 @@ async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
 
 
 def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(aload_trades_by_batch_id(batch_id))
+    return asyncio.run(aload_trades_by_batch_id(batch_id))
 
 
 def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(aload_trades_by_portfolio_id(portfolio_id))
+    return asyncio.run(aload_trades_by_portfolio_id(portfolio_id))
 
 
 def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""\x1f     SELECT * \x1f     FROM \x1f     algo_run as t\x1f     WHERE \x1f         start_time >= '{day}' AND \x1f         start_time < '{end_date or day + timedelta(days=1)}'\x1f     ORDER BY start_time\x1f     """
 
-    loop = asyncio.get_event_loop()
-    df = loop.run_until_complete(fetch_as_dataframe(query))
+    df = asyncio.run(fetch_as_dataframe(query))
     df.set_index("algo_run_id", inplace=True)
     return df
 
@@ -188,8 +179,7 @@ def load_batch_list(day: date, env: str) -> pd.DataFrame:
             t.tstamp < '{day + timedelta(days=1)}'AND
             t.expire_tstamp is null 
         """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 def load_traded_symbols(batch_id: str) -> pd.DataFrame:
@@ -202,8 +192,7 @@ def load_traded_symbols(batch_id: str) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = '{batch_id}'
     """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 def load_batch_symbols(batch_id: str) -> pd.DataFrame:
@@ -215,8 +204,7 @@ def load_batch_symbols(batch_id: str) -> pd.DataFrame:
         WHERE 
             batch_id = '{batch_id}'
     """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(fetch_as_dataframe(query))
+    return asyncio.run(fetch_as_dataframe(query))
 
 
 def calc_batch_revenue(
@@ -392,8 +380,7 @@ def calc_symbol_state(
 
 
 def calc_batch_returns(batch_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(Portfolio.load_by_batch_id(batch_id))
+    portfolio = asyncio.run(Portfolio.load_by_batch_id(batch_id))
     data_loader = DataLoader()
     trades = load_trades_by_batch_id(batch_id)
 
@@ -441,8 +428,7 @@ def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
 
 
 def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    df = loop.run_until_complete(Accounts.get_transactions(account_id))
+    df = asyncio.run(Accounts.get_transactions(account_id))
     df = df.groupby(df.index.date).sum()
     df.iloc[0].amount += initial_cash
     r = pd.date_range(start=df.index.min(), end=df.index.max(), name="date")
@@ -453,10 +439,7 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
 
 
 def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(
-        Portfolio.load_by_portfolio_id(portfolio_id)
-    )
+    portfolio = asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
 
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
@@ -492,9 +475,7 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 
 
 def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-
-    portfolio_ids_parameters = loop.run_until_complete(
+    portfolio_ids_parameters = asyncio.run(
         OptimizerRun.get_portfolio_ids_parameters(optimizer_run_id)
     )
     portfolio_ids, hypers = list(map(list, zip(*portfolio_ids_parameters)))
@@ -516,8 +497,7 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
 
 
 def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(Portfolio.load_by_portfolio_id(portfolio_id))
+    asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
     data_loader = DataLoader()
     trades = load_trades_by_portfolio(portfolio_id)
 
@@ -551,11 +531,7 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
 
 
 def get_portfolio_cash(portfolio_id: str) -> pd.DataFrame:
-    loop = asyncio.get_event_loop()
-    portfolio = loop.run_until_complete(
-        Portfolio.load_by_portfolio_id(portfolio_id)
+    portfolio = asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
+    return asyncio.run(Accounts.get_transactions(portfolio.account_id)).round(
+        2
     )
-
-    return loop.run_until_complete(
-        Accounts.get_transactions(portfolio.account_id)
-    ).round(2)

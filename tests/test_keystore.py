@@ -12,7 +12,7 @@ context: str = str(uuid.uuid4())
 
 @pytest.fixture
 def event_loop():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
     yield loop
     loop.close()
@@ -36,7 +36,7 @@ async def test_insert() -> bool:
     data = await KeyStore.load("k1")
 
     if data != "v1":
-        raise AssertionError('failed to insert and load key')
+        raise AssertionError("failed to insert and load key")
 
     print(f"test_insert: {strategy_name} k1={data}")
     return True
@@ -49,12 +49,12 @@ async def test_update() -> bool:
     data = await KeyStore.load("k2")
 
     if data != "v21":
-        raise AssertionError('failed to insert and load key')
+        raise AssertionError("failed to insert and load key")
 
     await KeyStore.save("k2", "v22")
     data = await KeyStore.load("k2")
     if data != "v22":
-        raise AssertionError('failed to update and load key')
+        raise AssertionError("failed to update and load key")
 
     print(f"test_update: {strategy_name} k2={data}")
 

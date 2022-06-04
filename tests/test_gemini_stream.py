@@ -17,7 +17,7 @@ stop: bool = False
 def event_loop():
     global gemini_stream
     global queues
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     queues = QueueMapper()
     gemini_stream = GeminiStream(queues)
 

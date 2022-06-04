@@ -1,7 +1,6 @@
 import asyncio
 from datetime import date
 
-import nest_asyncio
 import pandas as pd
 import pytest
 
@@ -9,12 +8,10 @@ from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.trading.trader_factory import trader_factory
 
-nest_asyncio.apply()
-
 
 @pytest.fixture
 def event_loop():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(create_db_connection())
     yield loop
     loop.close()

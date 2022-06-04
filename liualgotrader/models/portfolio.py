@@ -86,6 +86,8 @@ class Portfolio:
         external_account_id: Optional[str] = None,
         broker: Optional[str] = None,
     ):
+        if not hasattr(config, "db_conn_pool"):
+            await create_db_connection()
         pool = config.db_conn_pool
         async with pool.acquire() as con:
             async with con.transaction():

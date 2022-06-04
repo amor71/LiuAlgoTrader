@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import alpaca_trade_api as tradeapi
-import nest_asyncio
 import pandas as pd
 from dateutil.parser import parse as date_parser
 from pytz import timezone
@@ -14,8 +13,6 @@ from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.common.types import DataConnectorType, TimeScale
 from liualgotrader.data.data_base import DataAPI
 from liualgotrader.data.data_factory import data_loader_factory
-
-nest_asyncio.apply()
 
 nyc = timezone("America/New_York")
 

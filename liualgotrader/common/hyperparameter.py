@@ -59,12 +59,16 @@ class Parameter:
         return (self.name, self.value)
 
     def __next__(self):
-        if hasattr(self, "last_value") and self.value == self.last_value:
+        if (
+            hasattr(self, "last_value")
+            and self.value
+            and self.value >= self.last_value
+        ):
             raise StopIteration
 
         if self.param_type in ("int", int):
             self.value = (
-                int(self.initial_value) if not self.value else self.value + 1
+                self.value + 1 if self.value else int(self.initial_value)
             )
         elif self.param_type in (float, "float"):
             if not hasattr(self, "delta"):
@@ -72,9 +76,7 @@ class Parameter:
                     f"midding `delta` parameter for hyper-parameter {self.name}"
                 )
             self.value = (
-                float(self.initial_value)
-                if not self.value
-                else self.value + self.delta
+                self.value + self.delta if self.value else float(self.initial_value)  # type: ignore
             )
         else:
             raise NotImplementedError(

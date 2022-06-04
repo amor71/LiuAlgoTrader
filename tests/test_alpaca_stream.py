@@ -14,7 +14,7 @@ queues: QueueMapper
 def event_loop():
     global alpaca_stream
     global queues
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     queues = QueueMapper()
     alpaca_stream = AlpacaStream(queues)
 
