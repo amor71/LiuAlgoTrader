@@ -431,7 +431,7 @@ async def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
 
     td["equity"] = 0.0
 
-    cash_df = get_cash(portfolio.account_id, portfolio.portfolio_size)
+    cash_df = await get_cash(portfolio.account_id, portfolio.portfolio_size)
 
     symbols = trades.symbol.unique().tolist()
     for i in tqdm(
