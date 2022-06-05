@@ -113,7 +113,7 @@ class TradierData(DataAPI):
 
         return df
 
-    def get_market_snapshot(
+    async def get_market_snapshot(
         self, filter_func: Optional[Callable]
     ) -> List[Dict]:
         raise NotImplementedError("get_market_snapshot")

@@ -64,7 +64,7 @@ class GeminiData(DataAPI):
             f"HTTP ERROR {response.status_code} {response.text}"
         )
 
-    def get_market_snapshot(self, filter_func) -> List[Dict]:
+    async def get_market_snapshot(self, filter_func) -> List[Dict]:
         raise NotImplementedError
 
     def _get_ranges(self, start, end):

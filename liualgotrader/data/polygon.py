@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 import requests
-from polygon import STOCKS_CLUSTER, RESTClient, WebSocketClient
+from polygon import RESTClient, WebSocketClient
 
 from liualgotrader.common import config
 from liualgotrader.common.tlog import tlog
@@ -24,7 +24,7 @@ class PolygonData(DataAPI):
                 "Failed to authenticate Polygon restful client"
             )
 
-    def get_market_snapshot(
+    async def get_market_snapshot(
         self, filter_func: Optional[Callable]
     ) -> List[Dict]:
         if not self.polygon_rest_client:
@@ -146,7 +146,6 @@ class PolygonData(DataAPI):
 class PolygonStream(StreamingAPI):
     def __init__(self, queues: QueueMapper):
         self.polygon_ws_client = WebSocketClient(
-            cluster=STOCKS_CLUSTER,
             auth_key=config.polygon_api_key,
             process_message=PolygonStream.process_message,
             on_close=PolygonStream.on_close,
@@ -156,7 +155,7 @@ class PolygonStream(StreamingAPI):
             raise AssertionError(
                 "Failed to authenticate Polygon web_socket client"
             )
-        self.polygon_ws_client.run_async()
+        self.polygon_ws_client.run()
         super().__init__(queues)
 
     async def subscribe(

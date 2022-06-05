@@ -49,12 +49,12 @@ def test_alpaca_get_symbols() -> bool:
     return True
 
 
-@pytest.mark.devtest
-def test_alpaca_get_market_snapshot() -> bool:
+@pytest.mark.asyncio
+async def test_alpaca_get_market_snapshot() -> bool:
     alpaca = AlpacaData()
 
     t0 = time.time()
-    market_snapshots = alpaca.get_market_snapshot()
+    market_snapshots = await alpaca.get_market_snapshot()
     t1 = time.time()
     print(
         f"{len(market_snapshots)} tickers of market snapshots are retrieved from Alpaca in {t1-t0} seconds"

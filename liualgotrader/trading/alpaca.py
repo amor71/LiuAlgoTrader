@@ -143,9 +143,13 @@ class AlpacaTrader(Trader):
     async def is_order_completed(
         self, order_id: str, external_order_id: Optional[str] = None
     ) -> Tuple[Order.EventType, float, float, float]:
-        return await self._is_brokerage_account_order_completed(
-            order_id, external_order_id
-        ) if external_order_id else await self._is_personal_order_completed(order_id)
+        return (
+            await self._is_brokerage_account_order_completed(
+                order_id, external_order_id
+            )
+            if external_order_id
+            else await self._is_personal_order_completed(order_id)
+        )
 
     def get_market_schedule(
         self,
@@ -366,7 +370,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
                 )
-                asyncio.sleep(
+                await asyncio.sleep(
                     int(time.time())
                     - int(response.headers["x-ratelimit-reset"])
                 )
@@ -375,7 +379,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
                 )
-                asyncio.sleep(10.0)
+                await asyncio.sleep(10.0)
 
             return await self._post_request(url, payload)
 
@@ -399,7 +403,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
                 )
-                asyncio.sleep(
+                await asyncio.sleep(
                     int(time.time())
                     - int(response.headers["x-ratelimit-reset"])
                 )
@@ -408,7 +412,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
                 )
-                asyncio.sleep(10.0)
+                await asyncio.sleep(10.0)
 
             return await self._get_request(url)
 
@@ -432,7 +436,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
                 )
-                asyncio.sleep(
+                await asyncio.sleep(
                     int(time.time())
                     - int(response.headers["x-ratelimit-reset"])
                 )
@@ -441,7 +445,7 @@ class AlpacaTrader(Trader):
                 tlog(
                     f"ALPACA BROKERAGE push-back w/ {response.status_code} and no x-ratelimit-reset header"
                 )
-                asyncio.sleep(10.0)
+                await asyncio.sleep(10.0)
 
             return await self._delete_request(url)
 

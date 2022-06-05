@@ -18,9 +18,7 @@ from liualgotrader.analytics.analysis import load_trades_by_portfolio
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.decorators import trace  # type: ignore
 from liualgotrader.common.tlog import tlog, tlog_exception
-from liualgotrader.common.tracer import trace_elapsed_metrics  # type: ignore
 from liualgotrader.common.types import Order, Trade
 from liualgotrader.fincalcs.data_conditions import QUOTE_SKIP_CONDITIONS
 from liualgotrader.models.new_trades import NewTrade
@@ -162,7 +160,7 @@ async def periodic_runner(data_loader: DataLoader, trader: Trader) -> None:
 
                 tasks.append(
                     asyncio.create_task(
-                        trace({})(do_strategy_all)(
+                        do_strategy_all(
                             trader=trader,
                             data_loader=data_loader,
                             strategy=s,
@@ -220,11 +218,17 @@ async def save(
         indicators=indicators,
     )
 
-    await db_trade.save(config.db_conn_pool, now, trading_data.stop_prices[symbol]
+    await db_trade.save(
+        config.db_conn_pool,
+        now,
+        trading_data.stop_prices[symbol]
         if symbol in trading_data.stop_prices
-        else 0.0, trading_data.target_prices[symbol]
+        else 0.0,
+        trading_data.target_prices[symbol]
         if symbol in trading_data.target_prices
-        else 0.0, trade_fee)
+        else 0.0,
+        trade_fee,
+    )
 
 
 async def do_callbacks(
@@ -673,7 +677,7 @@ async def do_strategies(
     strategies = await _filter_strategies(symbol)
     for s in strategies:
         try:
-            if not await trace(carrier)(do_strategy)(
+            if not await do_strategy(
                 strategy=s,
                 symbol=symbol,
                 shortable=shortable[symbol],
@@ -715,7 +719,7 @@ async def handle_aggregate(
     ):
         return True
 
-    await trace(carrier)(do_strategies)(
+    await do_strategies(
         trader=trader,
         data_loader=data_loader,
         symbol=symbol,
@@ -740,12 +744,8 @@ async def handle_data_queue_msg(
     symbol = data["symbol"].lower()
     shortable[symbol] = True  # TODO revisit collecting 'is shortable' data
 
-    await trace(carrier)(aggregate_bar_data)(data_loader, data, ts)
-
     # timezone("America/New_York")
     time_diff = datetime.now(tz=data["timestamp"].tz) - data["timestamp"]
-    if config.trace_enabled:
-        trace_elapsed_metrics("DL", time_diff)
 
     if data["EV"] != "AM" and time_diff > timedelta(seconds=15):
         if randint(1, 100) == 1:  # nosec
@@ -760,7 +760,7 @@ async def handle_data_queue_msg(
         return True
 
     time_tick[symbol] = data["timestamp"].replace(microsecond=0, nanosecond=0)
-    await trace(carrier)(handle_aggregate)(
+    await handle_aggregate(
         trader=trader,
         data_loader=data_loader,
         symbol=symbol,
@@ -792,9 +792,7 @@ async def queue_consumer(
                         parameters=data["parameters"],
                     )
                 else:
-                    await trace({})(handle_data_queue_msg)(
-                        data, trader, data_loader
-                    )
+                    await handle_data_queue_msg(data, trader, data_loader)
 
             except Empty:
                 await asyncio.sleep(0)
@@ -846,7 +844,7 @@ async def create_strategies_from_file(
 
 
 async def load_symbol_position(portfolio_id: str) -> Dict[str, float]:
-    trades = load_trades_by_portfolio(portfolio_id)
+    trades = await load_trades_by_portfolio(portfolio_id)
 
     if not len(trades):
         return {}

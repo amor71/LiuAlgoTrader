@@ -52,12 +52,12 @@ class AlpacaData(DataAPI):
             if asset.tradable
         ]
 
-    def get_market_snapshot(
+    async def get_market_snapshot(
         self, filter_func: Optional[Callable] = None
     ) -> List[Dict]:
         # parse market snapshots per chunk of symbols
         symbols = self.get_symbols()
-        return asyncio.run(self._get_symbols_snapshot(symbols, filter_func))
+        return await self._get_symbols_snapshot(symbols, filter_func)
 
     async def _get_symbols_snapshot(
         self, symbols: List[str], filter_func: Optional[Callable]
@@ -82,8 +82,8 @@ class AlpacaData(DataAPI):
             )
             return list(
                 filter(
-                    lambda snapshot: (
-                        (snapshot is not None) and (filter_func(snapshot))  # type: ignore
+                    lambda snapshot: (  # type: ignore
+                        (snapshot is not None) and (filter_func(snapshot))
                     ),
                     list(processed_tickers_snapshot),  # type : ignore
                 )
@@ -135,8 +135,8 @@ class AlpacaData(DataAPI):
             return datetime.now(tz=nytz)
         try:
             snapshot_data = self.alpaca_rest_client.get_snapshot(symbol)
-        except APIError:
-            raise ValueError(f"{symbol} snapshot not found")
+        except APIError as e:
+            raise ValueError(f"{symbol} snapshot not found") from e
 
         min_bar = snapshot_data.latest_trade
         if not min_bar:

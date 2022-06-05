@@ -24,7 +24,7 @@ class DataAPI(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def get_market_snapshot(
+    async def get_market_snapshot(
         self, filter_func: Optional[Callable]
     ) -> List[Dict]:
         ...

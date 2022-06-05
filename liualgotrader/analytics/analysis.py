@@ -1,4 +1,3 @@
-import asyncio
 import copy
 from datetime import date, timedelta
 from typing import Dict, Tuple
@@ -20,10 +19,28 @@ from liualgotrader.trading.trader_factory import trader_factory
 est = timezone("America/New_York")
 
 
-def portfolio_return(
+async def load_trades_for_period(
+    env: str, from_date: date, to_date: date
+) -> pd.DataFrame:
+    query = f"""
+    SELECT client_time, symbol, operation, qty, price, algo_name
+    FROM 
+        new_trades as t, algo_run as a
+    WHERE 
+        t.algo_run_id = a.algo_run_id AND 
+        t.tstamp >= '{from_date}' AND 
+        t.tstamp < '{to_date}' AND
+        t.expire_tstamp is null AND
+        a.algo_env = '{env}'
+    ORDER BY symbol, tstamp
+    """
+    return await fetch_as_dataframe(query)
+
+
+async def portfolio_return(
     env: str, start_date: date
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    df = load_trades_for_period(
+    df = await load_trades_for_period(
         env, start_date, date.today() + timedelta(days=1)
     )
 
@@ -31,7 +48,7 @@ def portfolio_return(
     table: Dict = {}
     invested_table: Dict = {}
     percentages_table: Dict = {}
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         d = pd.Timestamp(pd.to_datetime(row["client_time"]).date(), tz=est)
         if d not in table:
             table[d] = {}
@@ -73,36 +90,12 @@ def portfolio_return(
     )
 
 
-def load_trades_for_period(
-    env: str, from_date: date, to_date: date
-) -> pd.DataFrame:
-    query = f"""
-    SELECT client_time, symbol, operation, qty, price, algo_name
-    FROM 
-        new_trades as t, algo_run as a
-    WHERE 
-        t.algo_run_id = a.algo_run_id AND 
-        t.tstamp >= '{from_date}' AND 
-        t.tstamp < '{to_date}' AND
-        t.expire_tstamp is null AND
-        a.algo_env = '{env}'
-    ORDER BY symbol, tstamp
-    """
-    return asyncio.run(fetch_as_dataframe(query))
-
-
-def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
+async def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
-    return asyncio.run(fetch_as_dataframe(query))
+    return await fetch_as_dataframe(query)
 
 
-def load_client_trades(day: date, end_date: date = None) -> pd.DataFrame:
-    query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
-
-    return asyncio.run(fetch_as_dataframe(query))
-
-
-async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
+async def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
             t.*, a.batch_id, a.start_time, a.algo_name
@@ -121,12 +114,12 @@ async def aload_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
             df["client_time"] = pd.to_datetime(df["client_time"])
     except Exception:
         tlog(
-            f"[Error] aload_trades_by_batch_id({batch_id}) can't convert 'client_time' column to datetime"
+            f"[Error] load_trades_by_batch_id({batch_id}) can't convert 'client_time' column to datetime"
         )
     return df
 
 
-async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
+async def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
             t.*, a.batch_id, a.start_time, a.algo_name
@@ -147,28 +140,20 @@ async def aload_trades_by_portfolio_id(portfolio_id: str) -> pd.DataFrame:
             df["client_time"] = pd.to_datetime(df["client_time"])
     except Exception:
         tlog(
-            f"[Error] aload_trades_by_portfolio_id({portfolio_id}) can't convert 'client_time' column to datetime"
+            f"[Error] load_trades_by_portfolio({portfolio_id}) can't convert 'client_time' column to datetime"
         )
     return df
 
 
-def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
-    return asyncio.run(aload_trades_by_batch_id(batch_id))
-
-
-def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
-    return asyncio.run(aload_trades_by_portfolio_id(portfolio_id))
-
-
-def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
+async def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
     query = f"""\x1f     SELECT * \x1f     FROM \x1f     algo_run as t\x1f     WHERE \x1f         start_time >= '{day}' AND \x1f         start_time < '{end_date or day + timedelta(days=1)}'\x1f     ORDER BY start_time\x1f     """
 
-    df = asyncio.run(fetch_as_dataframe(query))
+    df = await fetch_as_dataframe(query)
     df.set_index("algo_run_id", inplace=True)
     return df
 
 
-def load_batch_list(day: date, env: str) -> pd.DataFrame:
+async def load_batch_list(day: date, env: str) -> pd.DataFrame:
     query = f"""
         SELECT DISTINCT a.batch_id, a.start_time
         FROM 
@@ -179,10 +164,10 @@ def load_batch_list(day: date, env: str) -> pd.DataFrame:
             t.tstamp < '{day + timedelta(days=1)}'AND
             t.expire_tstamp is null 
         """
-    return asyncio.run(fetch_as_dataframe(query))
+    return await fetch_as_dataframe(query)
 
 
-def load_traded_symbols(batch_id: str) -> pd.DataFrame:
+async def load_traded_symbols(batch_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
             DISTINCT t.symbol
@@ -192,19 +177,7 @@ def load_traded_symbols(batch_id: str) -> pd.DataFrame:
             t.algo_run_id = a.algo_run_id AND 
             a.batch_id = '{batch_id}'
     """
-    return asyncio.run(fetch_as_dataframe(query))
-
-
-def load_batch_symbols(batch_id: str) -> pd.DataFrame:
-    query = f"""
-        SELECT 
-            symbol
-        FROM 
-            trending_tickers
-        WHERE 
-            batch_id = '{batch_id}'
-    """
-    return asyncio.run(fetch_as_dataframe(query))
+    return await fetch_as_dataframe(query)
 
 
 def calc_batch_revenue(
@@ -379,10 +352,10 @@ def calc_symbol_state(
     return qty, data_loader[symbol].close[-1]
 
 
-def calc_batch_returns(batch_id: str) -> pd.DataFrame:
-    portfolio = asyncio.run(Portfolio.load_by_batch_id(batch_id))
+async def calc_batch_returns(batch_id: str) -> pd.DataFrame:
+    portfolio = await Portfolio.load_by_batch_id(batch_id)
     data_loader = DataLoader()
-    trades = load_trades_by_batch_id(batch_id)
+    trades = await load_trades_by_batch_id(batch_id)
 
     if trades.empty:
         return pd.DataFrame()
@@ -409,10 +382,11 @@ def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     return pd.DataFrame(td, columns=["equity", "cash", "totals"])
 
 
-def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
-
+async def compare_to_symbol_returns(
+    portfolio_id: str, symbol: str
+) -> pd.DataFrame:
     data_loader = DataLoader()
-    trades = load_trades_by_portfolio(portfolio_id)
+    trades = await load_trades_by_portfolio(portfolio_id)
     start_date = trades.client_time.min().date()
     end_date = trades.client_time.max().date()
     trader = trader_factory()
@@ -427,8 +401,8 @@ def compare_to_symbol_returns(portfolio_id: str, symbol: str) -> pd.DataFrame:
     return td[symbol]
 
 
-def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
-    df = asyncio.run(Accounts.get_transactions(account_id))
+async def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
+    df = await Accounts.get_transactions(account_id)
     df = df.groupby(df.index.date).sum()
     df.iloc[0].amount += initial_cash
     r = pd.date_range(start=df.index.min(), end=df.index.max(), name="date")
@@ -438,11 +412,11 @@ def get_cash(account_id: int, initial_cash: float) -> pd.DataFrame:
     return df
 
 
-def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
-    portfolio = asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
+async def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
+    portfolio = await Portfolio.load_by_portfolio_id(portfolio_id)
 
     data_loader = DataLoader()
-    trades = load_trades_by_portfolio(portfolio_id)
+    trades = await load_trades_by_portfolio(portfolio_id)
 
     if trades.empty:
         return pd.DataFrame()
@@ -474,15 +448,16 @@ def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     return pd.DataFrame(td, columns=["equity", "cash", "totals"])
 
 
-def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
-    portfolio_ids_parameters = asyncio.run(
-        OptimizerRun.get_portfolio_ids_parameters(optimizer_run_id)
+async def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
+    portfolio_ids_parameters = await OptimizerRun.get_portfolio_ids_parameters(
+        optimizer_run_id
     )
+
     portfolio_ids, hypers = list(map(list, zip(*portfolio_ids_parameters)))
     df = None
     if len(portfolio_ids):
         for i in tqdm(range(len(portfolio_ids)), desc="Loading Portfolios"):
-            _df = calc_portfolio_returns(portfolio_ids[i])
+            _df = await calc_portfolio_returns(portfolio_ids[i])
 
             if _df.empty:
                 continue
@@ -496,10 +471,10 @@ def calc_hyperparameters_analysis(optimizer_run_id: str) -> pd.DataFrame:
     return df
 
 
-def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
-    asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
+async def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
+    await Portfolio.load_by_portfolio_id(portfolio_id)
     data_loader = DataLoader()
-    trades = load_trades_by_portfolio(portfolio_id)
+    trades = await load_trades_by_portfolio(portfolio_id)
 
     symbols = trades.symbol.unique().tolist()
     rows = []
@@ -530,8 +505,6 @@ def get_portfolio_equity(portfolio_id: str) -> pd.DataFrame:
     return df.loc[df.qty > 0].round(2)
 
 
-def get_portfolio_cash(portfolio_id: str) -> pd.DataFrame:
-    portfolio = asyncio.run(Portfolio.load_by_portfolio_id(portfolio_id))
-    return asyncio.run(Accounts.get_transactions(portfolio.account_id)).round(
-        2
-    )
+async def get_portfolio_cash(portfolio_id: str) -> pd.DataFrame:
+    portfolio = await Portfolio.load_by_portfolio_id(portfolio_id)
+    return (await Accounts.get_transactions(portfolio.account_id)).round(2)

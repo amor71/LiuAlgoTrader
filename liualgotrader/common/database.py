@@ -23,7 +23,9 @@ async def fetch_as_dataframe(query: str, *args) -> pd.DataFrame:
     except (NameError, AttributeError):
         await create_db_connection()
 
+    print("db_conn_pool", config.db_conn_pool, id(config.db_conn_pool))
     async with config.db_conn_pool.acquire() as con:
+        print("connection object", con, id(con))
         stmt = await con.prepare(query)
         columns = [a.name for a in stmt.get_attributes()]
         data = await stmt.fetch(*args)

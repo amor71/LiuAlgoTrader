@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas import DataFrame, Timestamp
 
-from liualgotrader.analytics.analysis import aload_trades_by_batch_id
+from liualgotrader.analytics.analysis import load_trades_by_batch_id
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
@@ -17,7 +17,7 @@ async def trades(batch_id: str) -> None:
         return
 
     await create_db_connection()
-    trades_data = await aload_trades_by_batch_id(batch_id=batch_id)
+    trades_data = await load_trades_by_batch_id(batch_id=batch_id)
 
     if trades_data.empty:
         tlog(f"loaded empty data-set in {batch_id}. aborting.")

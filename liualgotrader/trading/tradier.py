@@ -170,7 +170,11 @@ class TradierTrader(Trader):
             df = pd.concat([df, df1])
             if d.month == end_date.month and d.year == end_date.year:
                 break
-            d = date(month=d.month + 1, day=d.day, year=d.year)
+
+            try:
+                d = date(month=d.month + 1, day=d.day, year=d.year)
+            except ValueError:
+                d = date(month=d.month + 1, day=d.day - 1, year=d.year)
 
         return df
 

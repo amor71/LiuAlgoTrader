@@ -67,7 +67,9 @@ class Momentum(Scanner):
     async def apply_filter_on_market_snapshot(
         self, filter_func: Optional[Callable]
     ) -> List[str]:
-        filtered = self.data_loader.data_api.get_market_snapshot(filter_func)
+        filtered = await self.data_loader.data_api.get_market_snapshot(
+            filter_func
+        )
         tlog(
             f"loaded {len(filtered)} tickers of market snapshots after momentum filtering"
         )
