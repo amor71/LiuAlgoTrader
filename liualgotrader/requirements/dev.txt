@@ -60,7 +60,7 @@ isort==5.10.1
 jedi==0.18.1
 Jinja2==3.1.2
 joblib==1.1.0
-jsonschema==4.5.1
+jsonschema==4.6.0
 keyring==23.5.1
 kiwisolver==1.4.2
 korean-lunar-calendar==0.2.1
