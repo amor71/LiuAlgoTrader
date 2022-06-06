@@ -30,8 +30,33 @@ from liualgotrader.models.trending_tickers import TrendingTickers
 from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
-from liualgotrader import backtester
 from liualgotrader import enhanced_backtest
+
+
+def show_usage():
+    print(
+        f"\n{sys.argv[0]} from <start_date> [--asset=equity(DEFAULT)|crypto][--scanners=<scanner-name,>] [--strats=<strategy-name,>] [--to=<end_date> DEFAULT is today] [--scale=day(DEFAULT)|minute [--buy-fee-percentage=0.(DEFAULT)] [--sell-fee-percentage=0.(DEFAULT)]",
+    )
+
+    print("\n\noptions:")
+    print(
+        "asset\t\t\tAsset type being traded. equity = US Equities, crypt = Crypto-currency. Asset type affects the market schedule for backtesting."
+    )
+    print(
+        "to\t\t\tdate string in the format YYYY-MM-DD, if not provided current day is selected"
+    )
+    print("scale\t\t\ttime-scale for loading past data for back-test-ing")
+    print(
+        "buy-fee-percentage\tBroker fees as percentage from transaction. Represented as 0-1."
+    )
+    print(
+        "sell-fee-percentage\tBroker fees as percentage from transaction. Represented as 0-1."
+    )
+
+
+def show_version(filename: str, version: str) -> None:
+    """Display welcome message"""
+    print(f"filename:{filename}\ngit version:{version}\n")
 
 
 def dateFromString(s: str) -> date:
@@ -68,7 +93,7 @@ if __name__ == "__main__":
         config.build_label = liualgotrader.__version__ if hasattr(liualgotrader, "__version__") else ""  # type: ignore
 
     if len(sys.argv) == 1:
-        backtester.show_usage()
+        show_usage()
         sys.exit(0)
 
     config.filename = os.path.basename(__file__)
@@ -90,53 +115,7 @@ if __name__ == "__main__":
     if "risk" in conf_dict:
         config.risk = conf_dict["risk"]
 
-    if sys.argv[1] == "batch":
-        try:
-            strict = False
-            opts, args = getopt.getopt(
-                sys.argv[2:],
-                "b:d:s",
-                ["batch-list", "debug=", "strict", "symbol=", "duration="],
-            )
-            debug_symbols = []
-            symbols = None
-            duration: int = None
-            for opt, arg in opts:
-                if opt in ("--batch-list", "-b"):
-                    backtester.get_batch_list()
-                    break
-                elif opt in ("--debug", "-d"):
-                    debug_symbols.append(arg)
-                elif opt in ("--strict", "-s"):
-                    strict = True
-                elif opt in ("--symbol"):
-                    if not symbols:
-                        symbols = [arg]
-                    else:
-                        symbols.append(arg)
-                elif opt in ("--duration"):
-                    try:
-                        duration = int(arg)
-                    except ValueError:
-                        print(
-                            f"Error, duration parameters must be positive and not {duration}"
-                        )
-                        sys.exit(0)
-                    if duration <= 0:
-                        print(
-                            f"Error, duration parameters must be positive and not {duration}"
-                        )
-                        sys.exit(0)
-
-            for arg in args:
-                backtester.backtest(
-                    arg, conf_dict, debug_symbols, strict, symbols, duration
-                )
-        except getopt.GetoptError as e:
-            print(f"Error parsing options:{e}\n")
-            backtester.show_usage()
-            sys.exit(0)
-    elif sys.argv[1] == "from":
+    if sys.argv[1] == "from":
         from_date = dateFromString(sys.argv[2])
         tlog(f"selected {sys.argv[2]} applied {from_date}")
         try:
@@ -189,7 +168,7 @@ if __name__ == "__main__":
                         sys.exit(0)
         except getopt.GetoptError as e:
             print(f"Error parsing options:{e}\n")
-            backtester.show_usage()
+            show_usage()
             sys.exit(0)
 
         enhanced_backtest.backtest(
@@ -205,7 +184,7 @@ if __name__ == "__main__":
         )
     else:
         print(f"Error parsing {sys.argv[1:]}\n")
-        backtester.show_usage()
+        show_usage()
         sys.exit(0)
 
     sys.exit(0)
