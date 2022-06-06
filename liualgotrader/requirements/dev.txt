@@ -65,7 +65,7 @@ keyring==23.5.1
 kiwisolver==1.4.2
 korean-lunar-calendar==0.2.1
 lazy-object-proxy==1.7.1
-lxml==4.8.0
+lxml==4.9.0
 MarkupSafe==2.1.1
 matplotlib==3.5.2
 matplotlib-inline==0.1.3
