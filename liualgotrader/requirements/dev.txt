@@ -39,7 +39,7 @@ distlib==0.3.4
 docutils==0.18.1
 empyrical==0.5.5
 entrypoints==0.4
-exchange-calendars==3.6.2
+exchange-calendars==3.6.3
 executing==0.8.3
 filelock==3.7.0
 finnhub-python==2.4.13
