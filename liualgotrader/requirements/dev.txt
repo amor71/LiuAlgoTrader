@@ -98,7 +98,7 @@ pickleshare==0.7.5
 Pillow==9.1.1
 pkginfo==1.8.3
 platformdirs==2.5.2
-plotly==5.8.0
+plotly==5.8.2
 pluggy==1.0.0
 polygon-api-client==1.0.2
 pre-commit==2.19.0
