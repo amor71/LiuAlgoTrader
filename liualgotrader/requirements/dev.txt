@@ -70,7 +70,7 @@ MarkupSafe==2.1.1
 matplotlib==3.5.2
 matplotlib-inline==0.1.3
 mnqueues==0.0.39
-msgpack==1.0.3
+msgpack==1.0.4
 multidict==6.0.2
 multitasking==0.0.10
 mypy==0.960
