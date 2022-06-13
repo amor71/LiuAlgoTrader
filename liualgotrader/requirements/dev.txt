@@ -133,7 +133,7 @@ PyYAML==6.0
 pyzmq==23.1.0
 qtconsole==5.3.1
 QtPy==2.1.0
-QuantStats==0.0.56
+QuantStats==0.0.57
 readme-renderer==35.0
 requests==2.27.1
 requests-toolbelt==0.9.1
