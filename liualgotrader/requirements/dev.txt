@@ -104,7 +104,7 @@ polygon-api-client==1.0.2
 pre-commit==2.19.0
 prometheus-client==0.14.1
 prompt-toolkit==3.0.29
-proto-plus==1.20.5
+proto-plus==1.20.6
 psutil==5.9.1
 ptyprocess==0.7.0
 pure-eval==0.2.2
