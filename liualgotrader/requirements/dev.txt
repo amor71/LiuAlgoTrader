@@ -27,7 +27,7 @@ chardet==4.0.0
 charset-normalizer==2.1.0
 codecov==2.1.12
 colorama==0.4.5
-coverage==6.4
+coverage==6.4.1
 cycler==0.11.0
 Cython==0.29.30
 debugpy==1.6.0
