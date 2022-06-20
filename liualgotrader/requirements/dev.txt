@@ -73,7 +73,7 @@ mnqueues==0.0.39
 msgpack==1.0.4
 multidict==6.0.2
 multitasking==0.0.10
-mypy==0.960
+mypy==0.961
 mypy-extensions==0.4.3
 nb-clean==2.0.2
 nbclient==0.6.3
