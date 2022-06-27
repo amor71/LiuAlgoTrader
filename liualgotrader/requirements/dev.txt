@@ -48,7 +48,7 @@ flake8==4.0.1
 fonttools==4.33.3
 gitdb==4.0.9
 GitPython==3.1.27
-google-cloud-logging==3.1.1
+google-cloud-logging==3.1.2
 grpcio==1.46.3
 hypothesis==6.46.9
 identify==2.5.1
