@@ -13,8 +13,6 @@ from multiprocessing import Queue
 from queue import Empty
 from typing import Dict, List
 
-from mnqueues import MNQueue
-
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.tlog import tlog, tlog_exception
@@ -31,7 +29,7 @@ symbol_strategy: Dict = {}
 
 
 def get_new_symbols_and_queues(
-    symbols_details: Dict, queues: List[MNQueue], num_consumer_processes: int
+    symbols_details: Dict, queues: List[Queue], num_consumer_processes: int
 ) -> List[str]:
     global symbol_strategy
     global symbols
@@ -62,7 +60,7 @@ async def subscribe_new_symbols(new_symbols: List[str]):
 
 async def scanners_iteration(
     scanner_queue: Queue,
-    queues: List[MNQueue],
+    queues: List[Queue],
     num_consumer_processes: int,
 ):
     global symbols
@@ -86,7 +84,7 @@ async def scanners_iteration(
 
 async def scanner_input(
     scanner_queue: Queue,
-    queues: List[MNQueue],
+    queues: List[Queue],
     num_consumer_processes: int,
 ) -> None:
     tlog("scanner_input() task starting ")
@@ -126,7 +124,7 @@ async def trade_run(qm: QueueMapper) -> None:
 
 
 async def dispense_strategies(
-    consumer_queues: List[MNQueue], tradeplan_entries: List[TradePlan]
+    consumer_queues: List[Queue], tradeplan_entries: List[TradePlan]
 ) -> None:
     for tradeplan in tradeplan_entries:
         happy_consumer = consumer_queues[
@@ -150,7 +148,7 @@ async def dispense_strategies(
 
 
 async def tradeplan_scanner(
-    consumer_queues: List[MNQueue],
+    consumer_queues: List[Queue],
 ) -> None:
     tlog("tradeplan_scanner() task starting ")
 
@@ -183,7 +181,7 @@ async def tradeplan_scanner(
 
 
 async def run(
-    queues: List[MNQueue],
+    queues: List[Queue],
     qm: QueueMapper,
 ) -> None:
     global queue_id_hash
@@ -204,7 +202,7 @@ process main
 
 
 async def producer_async_main(
-    queues: List[MNQueue],
+    queues: List[Queue],
     scanner_queue: Queue,
     num_consumer_processes: int,
 ):
@@ -240,7 +238,7 @@ async def producer_async_main(
 
 def producer_main(
     unique_id: str,
-    queues: List[MNQueue],
+    queues: List[Queue],
     conf_dict: Dict,
     scanner_queue: Queue,
     num_consumer_processes: int,

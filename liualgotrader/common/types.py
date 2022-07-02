@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from multiprocessing import Queue
 from typing import Dict, List, Optional
 
 import pandas as pd
-from mnqueues import MNQueue
 
 
 class DataConnectorType(Enum):
@@ -92,23 +92,23 @@ class Trade:
 
 
 class QueueMapper:
-    def __init__(self, queue_list: List[MNQueue] = None):
-        self.queues: Dict[str, MNQueue] = {}
-        self.queue_list: Optional[List[MNQueue]] = queue_list
+    def __init__(self, queue_list: List[Queue] = None):
+        self.queues: Dict[str, Queue] = {}
+        self.queue_list: Optional[List[Queue]] = queue_list
 
     def __repr__(self):
         return str(list(self.queues.keys()))
 
-    def __getitem__(self, key: str) -> MNQueue:
+    def __getitem__(self, key: str) -> Queue:
         try:
             return self.queues[key.lower()]
-        except KeyError:
-            raise AssertionError(f"No queue exists for symbol {key}")
+        except KeyError as e:
+            raise AssertionError(f"No queue exists for symbol {key}") from e
 
-    def __setitem__(self, key: str, newvalue: MNQueue):
+    def __setitem__(self, key: str, newvalue: Queue):
         if self.queue_list and newvalue not in self.queue_list:
             raise AssertionError(f"key {key} added to unknown Queue")
         self.queues[key.lower()] = newvalue
 
-    def get_allqueues(self) -> Optional[List[MNQueue]]:
+    def get_allqueues(self) -> Optional[List[Queue]]:
         return self.queue_list

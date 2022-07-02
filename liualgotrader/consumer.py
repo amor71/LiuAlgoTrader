@@ -4,13 +4,13 @@ Execute Strategies on streaming data received from the Producer
 import asyncio
 import os
 from datetime import datetime, timedelta
+from multiprocessing import Queue
 from queue import Empty
 from random import randint
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import pygit2
-from mnqueues import MNQueue
 from pandas import DataFrame as df
 from pytz import timezone
 
@@ -773,7 +773,7 @@ async def handle_data_queue_msg(
 
 
 async def queue_consumer(
-    batch_id: str, queue: MNQueue, data_loader: DataLoader, trader: Trader
+    batch_id: str, queue: Queue, data_loader: DataLoader, trader: Trader
 ) -> None:
     tlog("queue_consumer() starting")
     try:
@@ -914,7 +914,7 @@ async def handle_new_strategy(
 
 
 async def consumer_async_main(
-    queue: MNQueue,
+    queue: Queue,
     unique_id: str,
     strategies_conf: Dict,
     file_only: bool,
@@ -961,7 +961,7 @@ async def consumer_async_main(
 
 
 def consumer_main(
-    queue: MNQueue,
+    queue: Queue,
     unique_id: str,
     conf: Dict,
 ) -> None:

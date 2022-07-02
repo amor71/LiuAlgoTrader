@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import multiprocessing as mp
-import mnqueues as mnq
-from mnqueues.gcp_monitor import GCPMonitor
+from multiprocessing import Queue
+
 import os
 import sys
 import time
@@ -76,13 +76,7 @@ if __name__ == "__main__":
     # Consumers first
     num_consumer_processes = calc_num_consumer_processes()
     tlog(f"Starting {num_consumer_processes} consumer processes")
-
-    m = (
-        GCPMonitor(conf_dict["gcp_monitor_measure_prefix"])
-        if "gcp_monitor_measure_prefix" in conf_dict
-        else None
-    )
-    queues: List[mnq.MNQueue] = [mnq.MNQueue(m) for i in range(num_consumer_processes)]
+    queues: List[Queue] = [Queue() for _ in range(num_consumer_processes)]
     consumers = [
         mp.Process(
             target=consumer_main,

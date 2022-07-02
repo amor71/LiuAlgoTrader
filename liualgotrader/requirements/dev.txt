@@ -48,8 +48,6 @@ flake8==4.0.1
 fonttools==4.33.3
 gitdb==4.0.9
 GitPython==3.1.27
-google-cloud-logging==3.1.1
-grpcio==1.46.3
 hypothesis==6.46.9
 identify==2.5.1
 idna==3.3
@@ -69,8 +67,6 @@ lxml==4.8.0
 MarkupSafe==2.1.1
 matplotlib==3.5.2
 matplotlib-inline==0.1.3
-mnqueues==0.0.39
-msgpack==1.0.3
 multidict==6.0.2
 multitasking==0.0.10
 mypy==0.960
@@ -197,4 +193,4 @@ wrapt==1.14.1
 yarl==1.7.2
 yfinance==0.1.70
 zipp==3.8.0
-pandas_market_calendars
+

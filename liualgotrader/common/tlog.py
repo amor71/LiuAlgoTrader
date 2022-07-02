@@ -18,9 +18,7 @@ except Exception:
 
 def tlog(msg: str, origin: str = None) -> None:
     try:
-        calling_fn = (
-            f"[{sys._getframe(1).f_code.co_name}()]" if not origin else origin
-        )
+        calling_fn = origin or f"[{sys._getframe(1).f_code.co_name}()]"
     except Exception:
         calling_fn = ""
 
