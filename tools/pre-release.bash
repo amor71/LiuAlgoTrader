@@ -2,7 +2,7 @@
 set -e
 
 echo "Generate Coverage Report"
-coverage run -m pytest
+coverage run -m pytest --cov
 
 echo "Convert report to XML"
 coverage xml
