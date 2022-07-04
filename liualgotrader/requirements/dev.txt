@@ -17,7 +17,7 @@ backcall==0.2.0
 bandit==1.7.4
 base58==2.1.1
 black==22.6.0
-bleach==5.0.0
+bleach==5.0.1
 blinker==1.4
 cachetools==5.2.0
 certifi==2022.5.18.1
