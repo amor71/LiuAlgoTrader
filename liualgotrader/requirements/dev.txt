@@ -52,7 +52,7 @@ hypothesis==6.48.3
 identify==2.5.1
 idna==3.3
 imagesize==1.4.1
-importlib-metadata==4.11.4
+importlib-metadata==4.12.0
 iso8601==1.0.2
 isort==5.10.1
 jedi==0.18.1
