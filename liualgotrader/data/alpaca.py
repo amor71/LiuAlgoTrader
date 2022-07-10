@@ -253,14 +253,14 @@ class AlpacaData(DataAPI):
                     "h": "high",
                     "l": "low",
                     "v": "volume",
-                    "vw": "average",
+                    "vw": "vwap",
                     "t": "timestamp",
+                    "n": "trade_count",
                 },
                 inplace=True,
             )
             df["timestamp"] = pd.to_datetime(df.timestamp)
-            df["trade_count"] = np.NaN
-            df["vwap"] = np.NaN
+
             df = df.set_index(df.timestamp)
             df = df[~df.index.duplicated(keep="first")]
             return df
