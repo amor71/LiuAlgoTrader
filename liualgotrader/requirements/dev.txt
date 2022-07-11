@@ -36,7 +36,7 @@ defusedxml==0.7.1
 Deprecated==1.2.13
 deprecation==2.1.0
 distlib==0.3.4
-docutils==0.18.1
+docutils==0.19
 empyrical==0.5.5
 entrypoints==0.4
 exchange-calendars==4.1
