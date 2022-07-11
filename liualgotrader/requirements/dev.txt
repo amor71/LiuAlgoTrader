@@ -45,7 +45,7 @@ filelock==3.7.1
 finnhub-python==2.4.13
 fire==0.4.0
 flake8==4.0.1
-fonttools==4.33.3
+fonttools==4.34.4
 gitdb==4.0.9
 GitPython==3.1.27
 hypothesis==6.48.3
