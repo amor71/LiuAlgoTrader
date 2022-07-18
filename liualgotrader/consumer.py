@@ -2,6 +2,7 @@
 Execute Strategies on streaming data received from the Producer
 """
 import asyncio
+import math
 import os
 from datetime import datetime, timedelta
 from multiprocessing import Queue
@@ -432,6 +433,7 @@ async def handle_quote(data: Dict) -> bool:
 async def aggregate_bar_data(
     data_loader: DataLoader, data: Dict, ts: pd.Timestamp, carrier=None
 ) -> None:
+    ts = ts.replace(second=0)
     symbol = data["symbol"].lower()
 
     if not data_loader.exist(symbol):
@@ -452,7 +454,7 @@ async def aggregate_bar_data(
             data["volume"],
             data["vwap"],
             data["average"],
-            data["count"],
+            int(data["count"]),
         ]
     else:
         new_data = [
@@ -462,9 +464,12 @@ async def aggregate_bar_data(
             data["close"],
             current["volume"] + data["volume"],
             data["vwap"] or current["vwap"],
-            data["average"] or current["average"],
-            data["count"] + current["count"],
+            current["average"]
+            if math.isnan(data["average"])
+            else data["average"],
+            int(data["count"] + current["count"]),
         ]
+
     try:
         data_loader[symbol].loc[ts] = new_data
     except ValueError:
@@ -711,13 +716,16 @@ async def handle_aggregate(
 ) -> bool:
     symbol = symbol.lower()
 
-    if config.debug_enabled:
-        tlog(f"handle_aggregate {symbol}")
+    await aggregate_bar_data(data_loader, data, ts)
+
     # Next, check for existing orders for the stock
     if symbol in trading_data.open_orders and await order_inflight(
         symbol, trading_data.open_orders[symbol.lower()], ts, trader
     ):
         return True
+
+    if config.debug_enabled and data["EV"] == "AM":
+        tlog(f"{data_loader[symbol][-10:]}")
 
     await do_strategies(
         trader=trader,

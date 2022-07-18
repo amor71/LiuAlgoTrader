@@ -27,6 +27,10 @@ NY = "America/New_York"
 nytz = pytz.timezone(NY)
 
 
+def _is_crypto_symbol(symbol: str) -> bool:
+    return symbol.lower() in {"btcusd", "ethusd"}
+
+
 class AlpacaData(DataAPI):
     def __init__(self):
         self.alpaca_rest_client = REST(
@@ -131,7 +135,7 @@ class AlpacaData(DataAPI):
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        if self._is_crypto_symbol(symbol):
+        if _is_crypto_symbol(symbol):
             return datetime.now(tz=nytz)
         try:
             snapshot_data = self.alpaca_rest_client.get_snapshot(symbol)
@@ -151,7 +155,7 @@ class AlpacaData(DataAPI):
     def get_trading_day(
         self, symbol: str, now: datetime, offset: int
     ) -> datetime:
-        if self._is_crypto_symbol(symbol):
+        if _is_crypto_symbol(symbol):
             cbd_offset = timedelta(days=offset)
         else:
             cbd_offset = pd.tseries.offsets.CustomBusinessDay(
@@ -161,7 +165,7 @@ class AlpacaData(DataAPI):
         return nytz.localize(now + cbd_offset)
 
     def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
-        return (24 if self._is_crypto_symbol(symbol) else (20 - 4)) * 60
+        return (24 if _is_crypto_symbol(symbol) else (20 - 4)) * 60
 
     def num_trading_days(self, symbol: str, start: date, end: date) -> int:
         if type(start) == str:
@@ -171,7 +175,7 @@ class AlpacaData(DataAPI):
 
         return (
             (end - start).days + 1
-            if self._is_crypto_symbol(symbol)
+            if _is_crypto_symbol(symbol)
             else len(
                 pd.date_range(
                     start,
@@ -187,14 +191,11 @@ class AlpacaData(DataAPI):
         # Alpaca suggests 10000 points
         return 10000
 
-    def _is_crypto_symbol(self, symbol: str) -> bool:
-        return symbol.lower() in {"btcusd", "ethusd"}
-
     def trading_days_slice(self, symbol: str, s: slice) -> slice:
         if not self.alpaca_rest_client:
             raise AssertionError("Must call w/ authenticated Alpaca client")
 
-        if self._is_crypto_symbol(symbol):
+        if _is_crypto_symbol(symbol):
             return s
 
         if s.start in self.datetime_cache and s.stop in self.datetime_cache:
@@ -357,7 +358,7 @@ class AlpacaData(DataAPI):
                 self.crypto_get_symbol_data(
                     symbol=symbol, start=_start, end=_end, timeframe=t
                 )
-                if self._is_crypto_symbol(symbol)
+                if _is_crypto_symbol(symbol)
                 else self.alpaca_rest_client.get_bars(
                     symbol=symbol,
                     timeframe=t,
@@ -417,18 +418,19 @@ class AlpacaStream(StreamingAPI):
                 "Failed to authenticate Alpaca web_socket client"
             )
 
-        self.running = False
+        self.task: Optional[asyncio.Task] = None
         super().__init__(queues)
 
     async def run(self):
-        if not self.running:
-            if not self.queues:
+        if not self.task:
+            if self.queues:
+                self.task = asyncio.create_task(
+                    self.alpaca_ws_client._run_forever()
+                )
+            else:
                 raise AssertionError(
                     "can't call `AlpacaStream.run()` without queues"
                 )
-
-            asyncio.create_task(self.alpaca_ws_client._run_forever())
-            self.running = True
 
     @classmethod
     async def bar_handler(cls, msg):
@@ -443,8 +445,43 @@ class AlpacaStream(StreamingAPI):
                     msg.timestamp, utc=True
                 ).astimezone(nytz),
                 "volume": msg.volume,
-                "count": msg.trade_count,
-                "vwap": None,
+                "count": int(msg.trade_count),
+                "vwap": np.nan,
+                "average": msg.vwap,
+                "totalvolume": None,
+                "EV": "AM",
+            }
+            cls.get_instance().queues[msg.symbol].put(event, timeout=1)
+        except queue.Full as f:
+            tlog(
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
+            )
+            raise
+        except Exception as e:
+            tlog(
+                f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
+            )
+            if config.debug_enabled:
+                traceback.print_exc()
+
+    @classmethod
+    async def crypto_bar_handler(cls, msg):
+        try:
+            if msg.exchange != "CBSE":
+                return
+
+            event = {
+                "symbol": msg.symbol,
+                "open": msg.open,
+                "close": msg.close,
+                "high": msg.high,
+                "low": msg.low,
+                "timestamp": pd.to_datetime(
+                    msg.timestamp, utc=True
+                ).astimezone(nytz),
+                "volume": msg.volume,
+                "count": int(msg.trade_count),
+                "vwap": np.nan,
                 "average": msg.vwap,
                 "totalvolume": None,
                 "EV": "AM",
@@ -485,11 +522,63 @@ class AlpacaStream(StreamingAPI):
                 "timestamp": ts,
                 "volume": msg.size,
                 "exchange": msg.exchange,
-                "conditions": msg.conditions,
-                "tape": msg.tape,
-                "average": None,
+                "conditions": msg.conditions
+                if hasattr(msg, "conditions")
+                else None,
+                "tape": msg.tape if hasattr(msg, "tape") else None,
+                "average": np.nan,
                 "count": 1,
-                "vwap": None,
+                "vwap": np.nan,
+                "EV": "T",
+            }
+
+            cls.get_instance().queues[msg.symbol].put(event, block=False)
+
+        except queue.Full as f:
+            tlog(
+                f"[EXCEPTION] process_message(): queue for {event['sym']} is FULL:{f}"
+            )
+            raise
+        except Exception as e:
+            tlog(
+                f"[EXCEPTION] process_message(): exception of type {type(e).__name__} with args {e.args}"
+            )
+            if config.debug_enabled:
+                traceback.print_exc()
+
+    @classmethod
+    async def crypto_trades_handler(cls, msg):
+        try:
+            if msg.exchange != "CBSE":
+                return
+
+            ts = pd.to_datetime(msg.timestamp)
+            if (time_diff := (datetime.now(tz=nytz) - ts)) > timedelta(
+                seconds=10
+            ) and randint(  # nosec
+                1, 100
+            ) == 1:  # nosec
+                tlog(
+                    f"Received trade for {msg.symbol} too out of sync w {time_diff}"
+                )
+
+            event = {
+                "symbol": msg.symbol,
+                "price": msg.price,
+                "open": msg.price,
+                "close": msg.price,
+                "high": msg.price,
+                "low": msg.price,
+                "timestamp": ts,
+                "volume": msg.size,
+                "exchange": msg.exchange,
+                "conditions": msg.conditions
+                if hasattr(msg, "conditions")
+                else None,
+                "tape": msg.tape if hasattr(msg, "tape") else None,
+                "average": np.nan,
+                "count": 1,
+                "vwap": np.nan,
                 "EV": "T",
             }
 
@@ -509,7 +598,7 @@ class AlpacaStream(StreamingAPI):
 
     @classmethod
     async def quotes_handler(cls, msg):
-        print(f"quotes_handler:{msg}")
+        pass
 
     async def subscribe(
         self, symbols: List[str], events: List[WSEventType]
@@ -518,24 +607,59 @@ class AlpacaStream(StreamingAPI):
         upper_symbols = [symbol.upper() for symbol in symbols]
         for syms in chunks(upper_symbols, 1000):
             tlog(f"\tsubscribe {len(syms)}/{len(upper_symbols)}")
+
+            crypto_symbols = list(filter(_is_crypto_symbol, syms))
+            equity_symbols = [x for x in syms if x not in crypto_symbols]
+
             for event in events:
                 if event == WSEventType.SEC_AGG:
                     tlog(f"event {event} not implemented in Alpaca")
                 elif event == WSEventType.MIN_AGG:
                     self.alpaca_ws_client._data_ws._running = False
-                    self.alpaca_ws_client.subscribe_bars(
-                        AlpacaStream.bar_handler, *syms
-                    )
+
+                    if crypto_symbols:
+                        self.alpaca_ws_client.subscribe_crypto_bars(
+                            AlpacaStream.crypto_bar_handler,
+                            *crypto_symbols,
+                        )
+                    if equity_symbols:
+                        self.alpaca_ws_client.subscribe_bars(
+                            AlpacaStream.bar_handler,
+                            *equity_symbols,
+                        )
                 elif event == WSEventType.TRADE:
-                    self.alpaca_ws_client.subscribe_trades(
-                        AlpacaStream.trades_handler, *syms
-                    )
+                    if crypto_symbols:
+                        self.alpaca_ws_client.subscribe_crypto_trades(
+                            AlpacaStream.crypto_trades_handler, *crypto_symbols
+                        )
+                    if equity_symbols:
+                        self.alpaca_ws_client.subscribe_trades(
+                            AlpacaStream.trades_handler, *equity_symbols
+                        )
                 elif event == WSEventType.QUOTE:
-                    self.alpaca_ws_client.subscribe_quotes(
-                        AlpacaStream.quotes_handler, *syms
-                    )
+                    if crypto_symbols:
+                        self.alpaca_ws_client.subscribe_crypto_quotes(
+                            AlpacaStream.quotes_handler, *crypto_symbols
+                        )
+                    if equity_symbols:
+                        self.alpaca_ws_client.subscribe_quotes(
+                            AlpacaStream.quotes_handler, *equity_symbols
+                        )
 
             await asyncio.sleep(1)
 
         tlog(f"Completed subscription for {len(symbols)} symbols")
         return True
+
+    async def close(self) -> None:
+        tlog("Closing AlpacaStream")
+
+        if self.task:
+            # self.alpaca_ws_client.stop()
+
+            await self.alpaca_ws_client.stop_ws()
+
+            while not self.task.done():
+                await asyncio.sleep(1.0)
+
+            tlog("Task Done. Closed AlpacaStream")

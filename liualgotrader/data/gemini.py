@@ -197,10 +197,7 @@ class GeminiData(DataAPI):
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
         symbol = symbol.lower()
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.aget_symbol_data(symbol, start, end, scale)
-        )
+        return asyncio.run(self.aget_symbol_data(symbol, start, end, scale))
 
     def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
         raise NotImplementedError("num_trading_minutes")
