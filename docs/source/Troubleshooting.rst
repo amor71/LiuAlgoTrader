@@ -48,11 +48,25 @@ create a dedicated `virtual environment` for Liu:
     liu\Scripts\activate
     pip install liualgotrader
     python liu\Scripts\liu quickstart
-    
+
 Good Luck!
- 
 
+**Windows Note:** When quickstart says to run "env_vars.bat", the set command only works in standard windows terminal, manually set the DSN in your shell by
+using the appropriate command for your shell.
 
+**Example:**
+
+Use this for Gitbash:
+
+ .. code-block:: bash
+
+    export DSN=connectionString
+
+Use this for Windows PowerShell:
+
+ .. code-block:: bash
+
+    $env:VARIABLE_NAME=VALUE
 
 Q : How to install on Ubuntu?
 -----------------------------
