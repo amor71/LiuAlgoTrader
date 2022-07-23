@@ -6,7 +6,7 @@ appnope==0.1.3
 argon2-cffi==21.3.0
 argon2-cffi-bindings==21.2.0
 astor==0.8.1
-astroid==2.12.2
+astroid==2.11.7
 asttokens==2.0.5
 async-timeout==4.0.2
 asyncpg==0.26.0
@@ -36,7 +36,6 @@ defusedxml==0.7.1
 Deprecated==1.2.13
 deprecation==2.1.0
 distlib==0.3.5
-docutils==0.19
 empyrical==0.5.5
 entrypoints==0.4
 exchange-calendars==4.1.1
