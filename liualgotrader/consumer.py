@@ -634,10 +634,6 @@ async def do_strategy(
     portfolio_value: Optional[float],
     carrier=None,
 ) -> bool:
-    if not trader.is_market_open(datetime.now(nyc)):
-        tlog(f"market closed, can't execute {symbol} @ {strategy.name}")
-        return False
-
     do, what = await strategy.run(
         symbol=symbol,
         shortable=shortable,
@@ -723,9 +719,6 @@ async def handle_aggregate(
         symbol, trading_data.open_orders[symbol.lower()], ts, trader
     ):
         return True
-
-    if config.debug_enabled and data["EV"] == "AM":
-        tlog(f"{data_loader[symbol][-10:]}")
 
     await do_strategies(
         trader=trader,
@@ -938,7 +931,7 @@ async def consumer_async_main(
         data_loader=data_loader,
         strategies_conf=strategies_conf,
     )
-
+    tlog(f"loaded strategies: {trading_data.strategies}")
     if not file_only:
         trading_data.strategies += await create_strategies_from_db(
             batch_id=unique_id,

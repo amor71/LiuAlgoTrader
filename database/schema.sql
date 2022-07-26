@@ -392,3 +392,5 @@ CREATE TABLE IF NOT EXISTS keystore (
     value text NOT NULL,
     tstamp timestamp with time zone DEFAULT current_timestamp
 );
+
+alter table portfolio_batch_ids drop CONSTRAINT "portfolio_batch_ids_portfolio_id_batch_id_key";
