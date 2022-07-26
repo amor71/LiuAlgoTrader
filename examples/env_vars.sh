@@ -17,8 +17,8 @@ export ALPACA_STREAM_URL="wss://stream.data.alpaca.markets/v2/sip"
 export APCA_API_KEY_ID=""
 export APCA_API_SECRET_KEY=""
 
-# "sip" for PRO subscriptions, "iex" for free
-export alpaca_data_feed="sip" 
+# ALPACA market data subsciption flag, note use "iex" for free and "sip" for PRO
+export ALPACA_DATA_FEED="iex" 
 
 # Gemini 
 export GEMINI_API_KEY=
