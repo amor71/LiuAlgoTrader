@@ -189,11 +189,6 @@ async def should_cancel_order(order: Order, market_clock: datetime) -> bool:
     # Make sure the order's not too old
     submitted_at = order.submitted_at.astimezone(market_clock.tzinfo)
     order_lifetime = market_clock - submitted_at
-
-    if config.debug_enabled:
-        tlog(
-            f"should_cancel_order submitted_at:{submitted_at}, order_lifetime:{order_lifetime}"
-        )
     return (
         market_clock > submitted_at
         and order_lifetime.total_seconds() // 60 >= 1
@@ -289,7 +284,7 @@ async def update_partially_filled_order(
         side.name,
         filled_avg_price,
         indicators,
-        updated_at,
+        str(updated_at),
         trade_fee,
     )
 
@@ -361,9 +356,7 @@ async def handle_trade_update_for_order(trade: Trade) -> bool:
 
 
 async def handle_trade_update_wo_order(trade: Trade) -> bool:
-    trade.symbol.lower()
-    trade.event
-    # tlog(f"trade update without order for {symbol} data={trade} with event {event}")
+    tlog(f"trade update without order for {trade}")
     return True
 
 
@@ -783,7 +776,8 @@ async def queue_consumer(
                 data = queue.get(timeout=2)
                 if data["EV"] == "trade_update":
                     tlog(f"received trade_update: {data}")
-                    await handle_trade_update(Trade(**data["trade"]))
+                    t = Trade(**data["trade"])
+                    await handle_trade_update(t)
                 elif data["EV"] == "new_strategy":
                     tlog(f"received new_strategy: {data}")
                     await handle_new_strategy(
@@ -841,6 +835,16 @@ async def create_strategies_from_file(
         if s:
             strategy_list.append(s)
 
+        if "portfolio_id" in strategies_conf[strategy_name]:
+            positions = await load_symbol_position(
+                strategies_conf[strategy_name]["portfolio_id"]
+            )
+            for symbol, qty in positions.items():
+                trading_data.positions[symbol] = (
+                    trading_data.positions.get(symbol, 0.0) + qty
+                )
+            tlog(f"Loaded {positions} positions for {strategy_name}")
+
     return strategy_list
 
 
@@ -889,7 +893,7 @@ async def create_strategies_from_db(
             positions = await load_symbol_position(
                 trade_plan_entry.portfolio_id
             )
-            tlog(f"Loaded {len(positions)} positions for strategy_name")
+            tlog(f"Loaded {len(positions)} positions for {strategy_name}")
             for symbol, qty in positions.items():
                 trading_data.positions[symbol] = (
                     trading_data.positions.get(symbol, 0.0) + qty

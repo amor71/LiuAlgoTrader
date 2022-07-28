@@ -49,6 +49,6 @@ def test_btc_data_loader_min() -> bool:
 def test_eth_data_loader_day() -> bool:
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
 
-    data = dl["ETHUSD"]["2021-05-01":"2021-10-01"]  # type: ignore
+    data = dl["ETH/USD"]["2021-05-01":"2021-10-01"]  # type: ignore
     print(data)
     return True

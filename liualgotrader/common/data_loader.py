@@ -26,11 +26,12 @@ def _calc_data_to_fetch(s: slice, index: pd.Index) -> List[slice]:
         return [s]
 
     slices = []
-
     if s.start.date() < index[0].date():
+        # print("<", s.start.date(), index[0].date())
         slices.append(slice(s.start, index[0]))
 
     if s.stop.date() > index[-1].date():
+        # print(">", s.stop.date(), index[-1].date())
         slices.append(slice(index[-1], s.stop))
 
     return slices
@@ -438,9 +439,7 @@ def getitem(
     elif type(key) == datetime and key.tzinfo is None:
         key = nyc.localize(key)
 
-    for s in _calc_data_to_fetch(
-        slice(key, key + timedelta(days=1)), symbol_data.index
-    ):
+    for s in _calc_data_to_fetch(slice(key, key), symbol_data.index):
         symbol_data = fetch_data_range(
             data_api=data_api,
             symbol_data=symbol_data,

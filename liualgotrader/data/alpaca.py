@@ -28,7 +28,7 @@ nytz = pytz.timezone(NY)
 
 
 def _is_crypto_symbol(symbol: str) -> bool:
-    return symbol.lower() in {"btcusd", "ethusd"}
+    return symbol.lower() in {"eth/usd", "btc/usd", "ethusd", "btcusd"}
 
 
 class AlpacaData(DataAPI):
@@ -231,22 +231,38 @@ class AlpacaData(DataAPI):
         end: str,
         timeframe: TimeFrame,
     ) -> pd.DataFrame:
-        url = f"{config.alpaca_crypto_base_url}/{symbol}/bars"
-        response = requests.get(
-            url,
-            params={  # type:ignore
-                "start": start,
-                "end": end,
-                "limit": 10000,
-                "timeframe": "1Day" if timeframe == TimeFrame.Day else "1Min",
-            },
-            headers={
-                "APCA-API-KEY-ID": config.alpaca_api_key,
-                "APCA-API-SECRET-KEY": config.alpaca_api_secret,
-            },
-        )
-        if response.status_code == 200:
-            df = pd.DataFrame(response.json()["bars"])
+        if "/" not in symbol:
+            symbol = f"{symbol[:3]}/{symbol[3:]}"
+        symbol = symbol.upper()
+        url = f"{config.alpaca_crypto_base_url}/bars"
+        page_token = None
+
+        rc_df = pd.DataFrame()
+
+        while True:
+            response = requests.get(
+                url,
+                params={  # type:ignore
+                    "symbols": [symbol],
+                    "start": start,
+                    "end": end,
+                    "limit": self.get_max_data_points_per_load(),
+                    "timeframe": "1Day"
+                    if timeframe == TimeFrame.Day
+                    else "1Min",
+                    "page_token": page_token,
+                },
+                headers={
+                    "APCA-API-KEY-ID": config.alpaca_api_key,
+                    "APCA-API-SECRET-KEY": config.alpaca_api_secret,
+                },
+            )
+
+            response.raise_for_status()
+
+            json_data = response.json()
+
+            df = pd.DataFrame(json_data["bars"][symbol])
             df.rename(
                 columns={
                     "o": "open",
@@ -261,14 +277,14 @@ class AlpacaData(DataAPI):
                 inplace=True,
             )
             df["timestamp"] = pd.to_datetime(df.timestamp)
-
             df = df.set_index(df.timestamp)
-            df = df[~df.index.duplicated(keep="first")]
-            return df
 
-        raise ValueError(
-            f"ALPACA CRYPTO {response.status_code} {response.text}"
-        )
+            rc_df = pd.concat([rc_df, df], sort=True)
+            rc_df = rc_df[~rc_df.index.duplicated(keep="first")]
+
+            page_token = json_data["next_page_token"]
+            if page_token is None:
+                return rc_df
 
     def get_symbols_data(
         self,
@@ -612,9 +628,7 @@ class AlpacaStream(StreamingAPI):
             equity_symbols = [x for x in syms if x not in crypto_symbols]
 
             for event in events:
-                if event == WSEventType.SEC_AGG:
-                    tlog(f"event {event} not implemented in Alpaca")
-                elif event == WSEventType.MIN_AGG:
+                if event == WSEventType.MIN_AGG:
                     self.alpaca_ws_client._data_ws._running = False
 
                     if crypto_symbols:

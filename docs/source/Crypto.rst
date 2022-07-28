@@ -36,7 +36,7 @@ including live data stream and limited histrocial data.
 
 .. _here: https://exchange.sandbox.gemini.com/signin
 
-3. During BETA phase only `BTCUSD` (Bitcoin to USD) is supported.
+3. During BETA phase only `BTC/USD` (Bitcoin to USD) is supported.
 
 4. Backtesting and trading reamins same.
 
@@ -55,7 +55,7 @@ If you find any issues, please do not hesitate to report an issue or reach-out o
 
 Polygon Crypto Data
 -------------------
-Polygon has a good support for Crypto data. If you are using Polygon.io you should check which package you are using and if it support Crypto. Note that Polygon abbrevates "X." in the name of Crypto pairs - for example BTCUSD would be X.BTCUSD on Polygon. That may require small modifications if you decide to use Polygon w Gemini (or another exchange)
+Polygon has a good support for Crypto data. If you are using Polygon.io you should check which package you are using and if it support Crypto. Note that Polygon abbrevates "X." in the name of Crypto pairs - for example BTC/USD would be X.BTCUSD on Polygon. That may require small modifications if you decide to use Polygon w Gemini (or another exchange)
 
 
 
@@ -64,7 +64,7 @@ Alpaca Crypto
 
 Alpaca has a new and interesting Crypto offering, full support for it will be released in the future. Currently spported:
 
-1. data_loading of BTCUSD and ETHUSD via Alapca data bars (day and minute)
+1. data_loading of BTC/USD and ETH/USD via Alapca data bars (day and minute)
 
 
 

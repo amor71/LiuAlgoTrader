@@ -556,9 +556,10 @@ class AlpacaTrader(Trader):
         if trade_dict.event == "new":
             return None
 
+        symbol = trade_dict.order["symbol"].lower().replace("/", "")
         return Trade(
             order_id=trade_dict.order["id"],
-            symbol=trade_dict.order["symbol"].lower(),
+            symbol=symbol,
             event=Order.EventType.canceled
             if trade_dict.event
             in ["canceled", "suspended", "expired", "cancel_rejected"]
@@ -595,7 +596,7 @@ class AlpacaTrader(Trader):
 
             to_send = {
                 "EV": "trade_update",
-                "symbol": trade.symbol.lower(),
+                "symbol": trade.symbol,
                 "trade": trade.__dict__,
             }
             for q in cls.get_instance().queues.get_allqueues():

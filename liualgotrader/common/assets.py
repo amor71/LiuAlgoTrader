@@ -3,10 +3,20 @@ from typing import Dict
 from liualgotrader.common.types import AssetType
 
 assets_details: Dict[str, Dict] = {
+    "btc/usd": {
+        "type": AssetType.CRYPTO,
+        "min_order_size": 0.00001,
+        "tick_precision": 8,
+    },
     "btcusd": {
         "type": AssetType.CRYPTO,
         "min_order_size": 0.00001,
         "tick_precision": 8,
+    },
+    "eth/usd": {
+        "type": AssetType.CRYPTO,
+        "min_order_size": 0.001,
+        "tick_precision": 6,
     },
     "ethusd": {
         "type": AssetType.CRYPTO,

@@ -163,7 +163,6 @@ class Strategy(object):
         trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful buy (could be partial)"""
-        pass
 
     async def sell_callback(
         self,
@@ -174,7 +173,6 @@ class Strategy(object):
         trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful sell (could be partial)"""
-        pass
 
     async def get_global_var(self, key):
         """implementing key-store retrival"""
