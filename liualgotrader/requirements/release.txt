@@ -13,7 +13,7 @@ stockstats==0.4.1
 empyrical==0.5.5
 nest_asyncio==1.5.5
 parsedatetime==2.6
-scipy==1.8.1
+scipy==1.9.0
 polygon-api-client==1.1.1
 finnhub-python==2.4.13
 quantstats==0.0.59
