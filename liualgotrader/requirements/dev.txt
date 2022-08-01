@@ -10,7 +10,7 @@ astroid==2.12.2
 asttokens==2.0.5
 async-timeout==4.0.2
 asyncpg==0.26.0
-attrs==21.4.0
+attrs==22.1.0
 autoflake==1.4
 Babel==2.10.3
 backcall==0.2.0
