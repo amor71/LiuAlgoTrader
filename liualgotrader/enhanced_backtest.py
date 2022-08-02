@@ -98,9 +98,9 @@ async def do_scanners(
 
         symbols[target_strategy_name] = new_symbols
 
-            # list(
-            #    set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
-            # )
+        # list(
+        #    set(symbols.get(target_strategy_name, [])).union(set(new_symbols))
+        # )
 
     return symbols
 
@@ -376,22 +376,18 @@ async def backtest_day(
         for symbol in prefetch:
             tlog(f"Prefetch data for {symbol}@{day_start}-{day_end}")
 
-            # try:
             data_loader[symbol][day_start:day_end]
             prefetched.append(symbol)
-            # except ValueError:
-            #    tlog(f"no data for {symbol} on {day_start}")
 
         for strategy in strategies:
             try:
-                trading_data.positions.update(
-                    {
-                        symbol: 0
-                        for symbol in symbols.get(strategy.name, [])
-                        + symbols.get("_all", [])
-                        if symbol not in trading_data.positions
-                    }
-                )
+                trading_data.positions |= {
+                    symbol: 0
+                    for symbol in symbols.get(strategy.name, [])
+                    + symbols.get("_all", [])
+                    if symbol not in trading_data.positions
+                }
+
             except TypeError as e:
                 if config.debug_enabled:
                     tlog_exception("backtest_day")

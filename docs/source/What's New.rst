@@ -3,6 +3,8 @@ What's New
 +------------------+----------------------------------------------+
 | Release          | Notes                                        |
 +------------------+----------------------------------------------+
+| 0.4.29           | Fixes to backtester and trader               |
++------------------+----------------------------------------------+
 | 0.4.28           | 1. Improved documentation for Windows,       |
 |                  | 2. Change samples default to `iex`           |
 |                  | 3. Bug-fixes in `trader`                     |

@@ -10,7 +10,7 @@ import uuid
 import toml
 import pandas as pd
 import importlib.util
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, tzinfo
 from typing import List, Dict, Optional
 import pygit2
 import pytz
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         try:
             scanners: Optional[List] = None
             strategies: Optional[List] = None
-            to_date = date.today()
+            to_date = datetime.now(tz=pytz.timezone("US/Eastern")).date()
             scale = TimeScale["day"]
             buy_fee_percentage = 0.0
             sell_fee_percentage = 0.0

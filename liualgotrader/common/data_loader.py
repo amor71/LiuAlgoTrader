@@ -27,11 +27,9 @@ def _calc_data_to_fetch(s: slice, index: pd.Index) -> List[slice]:
 
     slices = []
     if s.start.date() < index[0].date():
-        # print("<", s.start.date(), index[0].date())
         slices.append(slice(s.start, index[0]))
 
-    if s.stop.date() > index[-1].date():
-        # print(">", s.stop.date(), index[-1].date())
+    if s.stop > index[-1]:
         slices.append(slice(index[-1], s.stop))
 
     return slices
@@ -54,9 +52,7 @@ def convert_offset_to_datetime(
                 second=0, microsecond=0
             ) + timedelta(minutes=1 + offset)
 
-        return data_api.get_trading_day(
-            symbol, last_trading_time.date(), 1 + offset
-        )
+        return data_api.get_trading_day(symbol, last_trading_time, 1 + offset)
 
 
 def handle_slice_conversion(
@@ -82,11 +78,7 @@ def handle_slice_conversion(
     elif type(key.stop) == date:
         key = slice(
             key.start,
-            nyc.localize(
-                datetime.combine(
-                    key.stop + timedelta(days=1), datetime.min.time()
-                )
-            ),
+            nyc.localize(datetime.combine(key.stop, datetime.min.time())),
         )
     elif type(key.stop) == datetime and key.stop.tzinfo is None:
         key = slice(key.start, nyc.localize(key.stop))
@@ -388,6 +380,7 @@ def getitem_slice(
             end=s.stop,
             concurrency=concurrency,
         )
+
     # return data range
     if not isinstance(key.start, int):
         key_start_index = symbol_data.index.get_indexer(
