@@ -189,7 +189,11 @@ class TradierData(DataAPI):
             n=offset, holidays=self.get_trading_holidays()
         )
 
-        return nytz.localize(now + cbd_offset)
+        return (
+            nytz.localize(now + cbd_offset)
+            if now.tzinfo is None
+            else now + cbd_offset
+        )
 
     def trading_days_slice(self, symbol: str, time_slice) -> slice:
         raise NotImplementedError("trading_days_slice")

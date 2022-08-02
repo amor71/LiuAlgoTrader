@@ -161,8 +161,11 @@ class AlpacaData(DataAPI):
             cbd_offset = pd.tseries.offsets.CustomBusinessDay(
                 n=offset - 1, holidays=self.get_trading_holidays()
             )
-
-        return nytz.localize(now + cbd_offset)
+        return (
+            nytz.localize(now + cbd_offset)
+            if now.tzinfo is None
+            else now + cbd_offset
+        )
 
     def num_trading_minutes(self, symbol: str, start: date, end: date) -> int:
         return (24 if _is_crypto_symbol(symbol) else (20 - 4)) * 60
@@ -261,7 +264,6 @@ class AlpacaData(DataAPI):
             response.raise_for_status()
 
             json_data = response.json()
-
             df = pd.DataFrame(json_data["bars"][symbol])
             df.rename(
                 columns={
