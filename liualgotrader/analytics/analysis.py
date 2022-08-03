@@ -122,7 +122,7 @@ async def load_trades_by_batch_id(batch_id: str) -> pd.DataFrame:
 async def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
     query = f"""
         SELECT 
-            t.*, a.batch_id, a.start_time, a.algo_name
+            distinct t.trade_id, t.algo_run_id, symbol, operation, qty, price, indicators, client_time, tstamp, stop_price, target_price, trade_fee, expire_tstamp, a.batch_id, a.start_time, a.algo_name
         FROM 
             new_trades as t, algo_run as a, portfolio_batch_ids as p
         WHERE 
