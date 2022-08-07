@@ -570,7 +570,9 @@ class AlpacaTrader(Trader):
             else Order.EventType.partial_fill
             if trade_dict.event == "partial_fill"
             else Order.EventType.other,
-            filled_qty=float(trade_dict.qty),
+            filled_qty=float(trade_dict.qty)
+            if trade_dict.event in ["fill", "partial_fill"]
+            else 0.0,
             trade_fee=0.0,
             filled_avg_price=float(
                 trade_dict.order["filled_avg_price"] or 0.0
