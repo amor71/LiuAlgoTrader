@@ -498,9 +498,9 @@ class AlpacaData(DataAPI):
 class AlpacaStream(StreamingAPI):
     def __init__(self, queues: QueueMapper):
         self.alpaca_ws_client = BaseStream(
-            key_id=config.alpaca_api_key,
+            endpoint=config.alpaca_base_url,
+            api_key=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
-            data_feed=config.alpaca_data_feed,
         )
 
         if not self.alpaca_ws_client:
