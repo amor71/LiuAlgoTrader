@@ -190,5 +190,5 @@ wrapt==1.14.1
 yarl==1.8.1
 yfinance==0.1.74
 zipp==3.8.1
-coverage
+coverage==6.4.3
 
