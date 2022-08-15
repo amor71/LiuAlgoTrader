@@ -3,7 +3,7 @@ requests==2.28.1
 deprecated==1.2.13
 urllib3==1.26.11
 numpy==1.23.1
-alpaca-trade-api==2.3.0
+alpaca-py
 asyncpg==0.26.0
 pygit2==1.9.2
 matplotlib==3.5.2

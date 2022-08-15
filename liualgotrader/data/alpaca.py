@@ -12,8 +12,16 @@ import pandas as pd
 import pandas_market_calendars
 import pytz
 import requests
-from alpaca_trade_api.rest import REST, URL, APIError, TimeFrame
-from alpaca_trade_api.stream import Stream
+from alpaca.common.exceptions import APIError
+from alpaca.common.websocket import BaseStream
+from alpaca.data.historical import (CryptoHistoricalDataClient,
+                                    StockHistoricalDataClient)
+from alpaca.data.requests import (CryptoBarsRequest, StockBarsRequest,
+                                  StockSnapshotRequest)
+from alpaca.data.timeframe import TimeFrame
+from alpaca.trading.client import TradingClient
+from alpaca.trading.enums import AssetClass, AssetStatus
+from alpaca.trading.requests import GetAssetsRequest
 from dateutil.parser import parse as date_parser
 
 from liualgotrader.common import config
@@ -25,6 +33,7 @@ from liualgotrader.data.streaming_base import StreamingAPI
 
 NY = "America/New_York"
 nytz = pytz.timezone(NY)
+utctz = pytz.utc
 
 
 def _is_crypto_symbol(symbol: str) -> bool:
@@ -33,25 +42,42 @@ def _is_crypto_symbol(symbol: str) -> bool:
 
 class AlpacaData(DataAPI):
     def __init__(self):
-        self.alpaca_rest_client = REST(
-            key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
+        self.stock_client = StockHistoricalDataClient(
+            config.alpaca_api_key, config.alpaca_api_secret
         )
-        if not self.alpaca_rest_client:
+        self.crypto_client = CryptoHistoricalDataClient(
+            config.alpaca_api_key, config.alpaca_api_secret
+        )
+
+        self.stock_trader = TradingClient(
+            config.alpaca_api_key, config.alpaca_api_secret
+        )
+
+        if not self.stock_client:
             raise AssertionError(
-                "Failed to authenticate Alpaca RESTful client"
+                "Failed to authenticate Alpaca Historical Data client"
             )
+        if not self.crypto_client:
+            raise AssertionError(
+                "Failed to authenticate Alpaca Crypto Data client"
+            )
+
         # for requesting market snapshots by chunk of symbols
-        self.symbol_chunk_size = 1000
+        self.symbol_chunk_size = 2000
         self.datetime_cache: Dict[datetime, datetime] = {}
 
     def get_symbols(self) -> List[str]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
+        if not self.stock_trader:
+            raise AssertionError(
+                "Must call w/ authenticated Alpaca trading client"
+            )
 
         return [
             asset.symbol
-            for asset in self.alpaca_rest_client.list_assets(
-                status="active", asset_class="us_equity"
+            for asset in self.stock_trader.get_all_assets(
+                GetAssetsRequest(
+                    status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY
+                )
             )
             if asset.tradable
         ]
@@ -79,11 +105,23 @@ class AlpacaData(DataAPI):
             except AttributeError:
                 return None
 
+        def _mapper(_symbols):
+            print("*")
+            snapshot = self.stock_client.get_stock_snapshot(
+                StockSnapshotRequest(symbol_or_symbols=_symbols)
+            )
+
+            if snapshot:
+                return snapshot.items()
+            else:
+                print("No snapshot for {}".format(_symbols))
+
         def _parse_snapshot_and_filter(_symbols: List[str]) -> List[Dict]:
             processed_tickers_snapshot = map(
                 lambda key_and_val: _parse_ticker_snapshot(*key_and_val),
-                self.alpaca_rest_client.get_snapshots(_symbols).items(),
+                _mapper(_symbols),
             )
+
             return list(
                 filter(
                     lambda snapshot: (  # type: ignore
@@ -131,22 +169,44 @@ class AlpacaData(DataAPI):
             ),
         )
 
-    def get_last_trading(self, symbol: str) -> datetime:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
+    def _tmp_localize_start_end(
+        self, start: date, end: date
+    ) -> Tuple[str, str]:
+        return (
+            str(
+                utctz.localize(
+                    datetime.combine(start, datetime.min.time())
+                ).replace(tzinfo=None)
+            ),
+            (
+                str(
+                    utctz.localize(
+                        datetime.now().replace(microsecond=0)
+                    ).replace(tzinfo=None)
+                )
+                if end >= date.today()
+                else str(
+                    utctz.localize(
+                        datetime.combine(end, datetime.min.time())
+                    ).replace(tzinfo=None)
+                )
+            ),
+        )
 
+    def get_last_trading(self, symbol: str) -> datetime:
+        if not self.stock_trader:
+            raise AssertionError(
+                "Must call w/ authenticated Alpaca trader client"
+            )
         if _is_crypto_symbol(symbol):
             return datetime.now(tz=nytz)
         try:
-            snapshot_data = self.alpaca_rest_client.get_snapshot(symbol)
+            snapshot_data = self.stock_trader.get_snapshot(symbol)
         except APIError as e:
             raise ValueError(f"{symbol} snapshot not found") from e
-
-        min_bar = snapshot_data.latest_trade
-        if not min_bar:
-            raise ValueError(f"Can't get snapshot for {symbol}")
-
-        return min_bar.t
+        if min_bar := snapshot_data.latest_trade:
+            return min_bar.t
+        raise ValueError(f"Can't get snapshot for {symbol}")
 
     def get_trading_holidays(self) -> List[str]:
         nyse = pandas_market_calendars.get_calendar("NYSE")
@@ -195,9 +255,8 @@ class AlpacaData(DataAPI):
         return 10000
 
     def trading_days_slice(self, symbol: str, s: slice) -> slice:
-        if not self.alpaca_rest_client:
+        if not self.stock_trader:
             raise AssertionError("Must call w/ authenticated Alpaca client")
-
         if _is_crypto_symbol(symbol):
             return s
 
@@ -206,7 +265,7 @@ class AlpacaData(DataAPI):
                 self.datetime_cache[s.start], self.datetime_cache[s.stop]
             )
 
-        trading_days = self.alpaca_rest_client.get_calendar(
+        trading_days = self.stock_trader.get_calendar(
             str(s.start.date()), str(s.stop.date())
         )
         new_slice = slice(
@@ -295,14 +354,17 @@ class AlpacaData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> Dict[str, pd.DataFrame]:
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
+        if not self.stock_client:
+            raise AssertionError(
+                "Must call w/ authenticated Alpaca Stock client"
+            )
+
         if not isinstance(symbols, list):
             raise AssertionError(f"{symbols} must be a list")
 
         if scale == TimeScale.minute:
             end += timedelta(days=1)
-        _start, _end = self._localize_start_end(start, end)
+        _start, _end = self._tmp_localize_start_end(start, end)
         dfs: Dict = {}
         t: TimeFrame = (
             TimeFrame.Minute
@@ -312,13 +374,15 @@ class AlpacaData(DataAPI):
             else None
         )
         try:
-            data = self.alpaca_rest_client.get_bars(
-                symbol=symbols,
-                timeframe=t,
-                start=_start,
-                end=_end,
-                limit=1000000000,
-                adjustment="all",
+            data = self.stock_client.get_stock_bars(
+                StockBarsRequest(
+                    symbol_or_symbols=symbols,
+                    timeframe=t,
+                    start=_start,
+                    end=_end,
+                    limit=1000000,
+                    adjustment="all",
+                )
             ).df
         except requests.exceptions.HTTPError as e:
             tlog(f"received HTTPError: {e}")
@@ -327,12 +391,12 @@ class AlpacaData(DataAPI):
                 time.sleep(10)
                 return self.get_symbols_data(symbols, start, end, scale)
 
-        data = data.tz_convert("America/New_York")
         data["average"] = data.vwap
         data["count"] = data.trade_count
         data["vwap"] = np.NaN
-        grouped = data.groupby(data.symbol)
-        for symbol in data.symbol.unique():
+        grouped = data.groupby(level=["symbol"])
+        print(grouped)
+        for symbol in data[0].unique():
             dfs[symbol] = grouped.get_group(symbol)[
                 [
                     "open",
@@ -344,7 +408,10 @@ class AlpacaData(DataAPI):
                     "average",
                     "vwap",
                 ]
-            ]
+            ].reset_index(level="symbol", inplace=True)
+            dfs[symbol].index = dfs[symbol].index.tz_convert(
+                "America/New_York"
+            )
 
         return dfs
 
@@ -355,10 +422,12 @@ class AlpacaData(DataAPI):
         end: date = date.today(),
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
-        _start, _end = self._localize_start_end(start, end)
+        _start, _end = self._tmp_localize_start_end(start, end)
 
-        if not self.alpaca_rest_client:
-            raise AssertionError("Must call w/ authenticated Alpaca client")
+        if not self.stock_client:
+            raise AssertionError(
+                "Must call w/ authenticated Alpaca Stock client"
+            )
 
         t: TimeFrame = (
             TimeFrame.Minute
@@ -377,15 +446,18 @@ class AlpacaData(DataAPI):
                     symbol=symbol, start=_start, end=_end, timeframe=t
                 )
                 if _is_crypto_symbol(symbol)
-                else self.alpaca_rest_client.get_bars(
-                    symbol=symbol,
-                    timeframe=t,
-                    start=_start,
-                    end=_end,
-                    limit=1000000,
-                    adjustment="all",
-                ).df
-            )
+                else self.stock_client.get_stock_bars(
+                    StockBarsRequest(
+                        symbol_or_symbols=symbol,
+                        timeframe=t,
+                        start=_start,
+                        end=_end,
+                        limit=1000000,
+                        adjustment="all",
+                    )
+                )
+            ).df
+
         except requests.exceptions.HTTPError as e:
             tlog(f"received HTTPError: {e}")
             if e.response.status_code in (500, 502, 504, 429):
@@ -403,6 +475,7 @@ class AlpacaData(DataAPI):
                     f"[ERROR] {symbol} has no data for {_start} to {_end} w {scale.name}"
                 )
 
+        data.reset_index(level="symbol", inplace=True)
         data.index = data.index.tz_convert("America/New_York")
         data["average"] = data.vwap
         data["count"] = data.trade_count
@@ -424,8 +497,7 @@ class AlpacaData(DataAPI):
 
 class AlpacaStream(StreamingAPI):
     def __init__(self, queues: QueueMapper):
-        self.alpaca_ws_client = Stream(
-            base_url=URL(config.alpaca_base_url),
+        self.alpaca_ws_client = BaseStream(
             key_id=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
             data_feed=config.alpaca_data_feed,
