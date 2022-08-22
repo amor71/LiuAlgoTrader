@@ -39,7 +39,7 @@ entrypoints==0.4
 exchange-calendars==4.2
 executing==0.10.0
 filelock==3.8.0
-finnhub-python==2.4.13
+finnhub-python==2.4.14
 fire==0.4.0
 flake8==5.0.2
 fonttools==4.34.4
