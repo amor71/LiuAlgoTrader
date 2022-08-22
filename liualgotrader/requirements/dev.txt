@@ -76,7 +76,7 @@ nbqa==1.4.0
 nest-asyncio==1.5.5
 nodeenv==1.7.0
 notebook==6.4.12
-numpy==1.23.1
+numpy==1.23.2
 packaging==21.3
 pandas==1.4.3
 pandas-datareader==0.10.0
