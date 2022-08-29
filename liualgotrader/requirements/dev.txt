@@ -38,7 +38,7 @@ empyrical==0.5.5
 entrypoints==0.4
 exchange-calendars==4.2
 executing==1.0.0
-filelock==3.7.1
+filelock==3.8.0
 finnhub-python==2.4.13
 fire==0.4.0
 flake8==5.0.2
