@@ -185,7 +185,7 @@ wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.0
 websockets==10.3
-widgetsnbextension==3.6.1
+widgetsnbextension==4.0.2
 wrapt==1.14.1
 yarl==1.7.2
 yfinance==0.1.74
