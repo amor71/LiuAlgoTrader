@@ -187,7 +187,7 @@ websocket-client==1.4.0
 websockets==10.3
 widgetsnbextension==4.0.2
 wrapt==1.14.1
-yarl==1.7.2
+yarl==1.8.1
 yfinance==0.1.74
 zipp==3.8.1
 coverage
