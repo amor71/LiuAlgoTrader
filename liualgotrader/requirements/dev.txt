@@ -110,7 +110,7 @@ pycparser==2.21
 pydeck==0.7.1
 pyflakes==2.5.0
 pygit2==1.10.1
-Pygments==2.12.0
+Pygments==2.13.0
 pylint==2.14.5
 pyluach==2.0.0
 Pympler==1.0.1
