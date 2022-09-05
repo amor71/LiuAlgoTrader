@@ -167,7 +167,7 @@ tomli==2.0.1
 toolz==0.12.0
 torch==1.12.1
 tornado==6.2
-tqdm==4.64.0
+tqdm==4.64.1
 traitlets==5.3.0
 twine==4.0.1
 types-python-dateutil==2.8.19
