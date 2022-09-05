@@ -80,7 +80,7 @@ numpy==1.23.2
 packaging==21.3
 pandas==1.4.4
 pandas-datareader==0.10.0
-pandas-market-calendars==3.5
+pandas-market-calendars==4.0
 pandocfilters==1.5.0
 parsedatetime==2.6
 parso==0.8.3
