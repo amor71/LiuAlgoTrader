@@ -191,4 +191,5 @@ yarl==1.7.2
 yfinance==0.1.74
 zipp==3.8.1
 coverage
+solana
 

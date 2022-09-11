@@ -92,8 +92,6 @@ if __name__ == "__main__":
         sys.exit(0)
 
     try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
         asyncio.run(main(conf_dict))
     except KeyboardInterrupt:
         tlog("market_miner.main() - Caught KeyboardInterrupt")
