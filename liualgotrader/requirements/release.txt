@@ -17,7 +17,7 @@ scipy==1.9.1
 polygon-api-client==1.3.0
 finnhub-python==2.4.14
 quantstats==0.0.59
-tqdm==4.64.0
+tqdm==4.64.1
 toml==0.10.2
 fire==0.4.0
 pandas_market_calendars==3.5
