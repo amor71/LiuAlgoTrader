@@ -156,7 +156,7 @@ stockstats==0.4.1
 streamlit==1.12.2
 tabulate==0.8.10
 tenacity==8.0.1
-termcolor==1.1.0
+termcolor==2.0.1
 terminado==0.15.0
 testpath==0.6.0
 therapist==2.2.0
