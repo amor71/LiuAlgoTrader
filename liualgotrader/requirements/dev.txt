@@ -123,7 +123,7 @@ python-dateutil==2.8.2
 pytz==2022.2.1
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
-pyzmq==23.2.1
+pyzmq==24.0.0
 qtconsole==5.3.2
 QtPy==2.2.0
 QuantStats==0.0.59
