@@ -18,7 +18,7 @@ black==22.8.0
 bleach==5.0.1
 blinker==1.5
 cachetools==5.2.0
-certifi==2022.6.15.1
+certifi==2022.9.14
 cffi==1.15.1
 cfgv==3.3.1
 chardet==5.0.0
