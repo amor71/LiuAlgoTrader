@@ -72,7 +72,7 @@ nb-clean==2.3.0
 nbclient==0.6.8
 nbconvert==7.0.0
 nbformat==5.6.1
-nbqa==1.4.0
+nbqa==1.5.2
 nest-asyncio==1.5.5
 nodeenv==1.7.0
 notebook==6.4.12
