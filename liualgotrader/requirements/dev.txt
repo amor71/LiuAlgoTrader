@@ -68,7 +68,7 @@ multidict==6.0.2
 multitasking==0.0.11
 mypy==0.981
 mypy-extensions==0.4.3
-nb-clean==2.2.0
+nb-clean==2.3.0
 nbclient==0.6.8
 nbconvert==7.0.0
 nbformat==5.4.0
