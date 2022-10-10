@@ -9,7 +9,7 @@ asttokens==2.0.8
 async-timeout==4.0.2
 asyncpg==0.26.0
 attrs==22.1.0
-autoflake==1.5.3
+autoflake==1.7.1
 Babel==2.10.3
 backcall==0.2.0
 bandit==1.7.4
