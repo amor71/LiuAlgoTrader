@@ -98,7 +98,7 @@ pre-commit==2.20.0
 prometheus-client==0.15.0
 prompt-toolkit==3.0.31
 proto-plus==1.22.1
-psutil==5.9.2
+psutil==5.9.3
 ptyprocess==0.7.0
 pure-eval==0.2.2
 py==1.11.0
