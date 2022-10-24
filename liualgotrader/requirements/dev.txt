@@ -25,7 +25,7 @@ chardet==5.0.0
 charset-normalizer==3.0.0
 codecov==2.1.12
 colorama==0.4.5
-coverage==6.4.4
+coverage==6.5.0
 cycler==0.11.0
 Cython==0.29.32
 debugpy==1.6.3
@@ -190,5 +190,5 @@ wrapt==1.14.1
 yarl==1.8.1
 yfinance==0.1.74
 zipp==3.8.1
-coverage==6.4.4
+coverage==6.5.0
 
