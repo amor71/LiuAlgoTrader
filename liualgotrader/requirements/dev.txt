@@ -134,7 +134,7 @@ rfc3986==2.0.0
 rsa==4.9
 scikit-learn==1.1.2
 scipy==1.9.3
-seaborn==0.12.0
+seaborn==0.12.1
 semver==2.13.0
 Send2Trash==1.8.0
 six==1.16.0
