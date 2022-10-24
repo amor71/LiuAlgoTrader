@@ -73,7 +73,7 @@ nbclient==0.7.0
 nbconvert==7.2.2
 nbformat==5.7.0
 nbqa==1.5.3
-nest-asyncio==1.5.5
+nest-asyncio==1.5.6
 nodeenv==1.7.0
 notebook==6.4.12
 numpy==1.23.3
