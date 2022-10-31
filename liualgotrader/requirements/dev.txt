@@ -118,7 +118,7 @@ pyparsing==3.0.9
 pyrsistent==0.19.1
 pytest==7.2.0
 pytest-asyncio==0.20.1
-pytest-cov==3.0.0
+pytest-cov==4.0.0
 python-dateutil==2.8.2
 pytz==2022.2.1
 pytz-deprecation-shim==0.1.0.post0
