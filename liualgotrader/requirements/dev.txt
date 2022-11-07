@@ -88,7 +88,7 @@ pathspec==0.10.1
 pbr==5.11.0
 pexpect==4.8.0
 pickleshare==0.7.5
-Pillow==9.2.0
+Pillow==9.3.0
 pkginfo==1.8.3
 platformdirs==2.5.2
 plotly==5.10.0
