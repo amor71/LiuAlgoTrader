@@ -46,7 +46,7 @@ fonttools==4.38.0
 gitdb==4.0.9
 GitPython==3.1.29
 hypothesis==6.56.4
-identify==2.5.5
+identify==2.5.8
 idna==3.3
 imagesize==1.4.1
 importlib-metadata==4.12.0
