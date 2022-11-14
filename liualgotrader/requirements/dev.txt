@@ -70,7 +70,7 @@ mypy==0.990
 mypy-extensions==0.4.3
 nb-clean==2.4.0
 nbclient==0.7.0
-nbconvert==7.0.0
+nbconvert==7.2.5
 nbformat==5.4.0
 nbqa==1.4.0
 nest-asyncio==1.5.5
