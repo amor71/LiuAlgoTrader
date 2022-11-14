@@ -124,7 +124,7 @@ pytz==2022.6
 pytz-deprecation-shim==0.1.0.post0
 PyYAML==6.0
 pyzmq==24.0.1
-qtconsole==5.3.2
+qtconsole==5.4.0
 QtPy==2.2.0
 QuantStats==0.0.59
 readme-renderer==37.1
