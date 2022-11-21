@@ -36,7 +36,7 @@ deprecation==2.1.0
 distlib==0.3.6
 empyrical==0.5.5
 entrypoints==0.4
-exchange-calendars==4.2
+exchange-calendars==4.2.4
 executing==1.0.0
 filelock==3.8.0
 finnhub-python==2.4.14
