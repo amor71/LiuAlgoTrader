@@ -58,7 +58,7 @@ joblib==1.2.0
 jsonschema==4.17.0
 keyring==23.11.0
 kiwisolver==1.4.4
-korean-lunar-calendar==0.2.1
+korean-lunar-calendar==0.3.1
 lazy-object-proxy==1.7.1
 lxml==4.9.1
 MarkupSafe==2.1.1
