@@ -111,7 +111,7 @@ pydeck==0.8.0
 pyflakes==2.5.0
 pygit2==1.11.1
 Pygments==2.13.0
-pylint==2.15.2
+pylint==2.15.6
 pyluach==2.0.1
 Pympler==1.0.1
 pyparsing==3.0.9
