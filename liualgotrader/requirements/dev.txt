@@ -161,7 +161,7 @@ terminado==0.17.0
 testpath==0.6.0
 therapist==2.2.0
 threadpoolctl==3.1.0
-tokenize-rt==4.2.1
+tokenize-rt==5.0.0
 toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
