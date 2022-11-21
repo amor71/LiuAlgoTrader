@@ -62,7 +62,7 @@ korean-lunar-calendar==0.3.1
 lazy-object-proxy==1.8.0
 lxml==4.9.1
 MarkupSafe==2.1.1
-matplotlib==3.5.3
+matplotlib==3.6.2
 matplotlib-inline==0.1.6
 multidict==6.0.2
 multitasking==0.0.11
