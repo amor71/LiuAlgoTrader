@@ -116,7 +116,7 @@ if __name__ == "__main__":
         config.risk = conf_dict["risk"]
 
     if sys.argv[1] == "from":
-        from_date = dateFromString(sys.argv[2])
+        from_date = dateFromString("2021-01-01")#sys.argv[2])
         tlog(f"selected {sys.argv[2]} applied {from_date}")
         try:
             scanners: Optional[List] = None
