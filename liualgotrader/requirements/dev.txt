@@ -138,7 +138,7 @@ seaborn==0.12.1
 semver==2.13.0
 Send2Trash==1.8.0
 six==1.16.0
-sklearn==0.0
+sklearn==0.0.post1
 smmap==5.0.0
 snowballstemmer==2.2.0
 sortedcontainers==2.4.0
