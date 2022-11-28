@@ -2,7 +2,7 @@ iso8601==1.1.0
 requests==2.28.1
 deprecated==1.2.13
 urllib3==1.26.12
-numpy==1.23.3
+numpy==1.23.5
 alpaca-trade-api==2.3.0
 asyncpg==0.27.0
 pygit2==1.10.1
