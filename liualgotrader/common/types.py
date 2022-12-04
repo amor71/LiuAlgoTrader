@@ -92,7 +92,7 @@ class Trade:
 
 
 class QueueMapper:
-    def __init__(self, queue_list: List[Queue] = None):
+    def __init__(self, queue_list: Optional[List[Queue]] = None):
         self.queues: Dict[str, Queue] = {}
         self.queue_list: Optional[List[Queue]] = queue_list
 

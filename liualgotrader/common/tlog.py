@@ -2,6 +2,7 @@ import os
 import sys
 import traceback
 from datetime import datetime
+from typing import Optional
 
 try:
     from liualgotrader.common.config import gcp_logger
@@ -16,7 +17,7 @@ except Exception:
     logger = None
 
 
-def tlog(msg: str, origin: str = None) -> None:
+def tlog(msg: str, origin: Optional[str] = None) -> None:
     try:
         calling_fn = origin or f"[{sys._getframe(1).f_code.co_name}()]"
     except Exception:

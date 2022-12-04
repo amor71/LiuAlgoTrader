@@ -39,7 +39,7 @@ async def _retry(coro, *args):
 async def set_response_account(
     client: AsyncClient, payer: Keypair, program_publicKey: PublicKey
 ) -> PublicKey:
-    response_size = 4 * 3
+    response_size = 4 * 2
     rent_lamports = (
         await _retry(
             client.get_minimum_balance_for_rent_exemption, response_size
@@ -47,7 +47,7 @@ async def set_response_account(
     )["result"]
 
     response_key = PublicKey.create_with_seed(
-        payer.public_key, "hello8", program_publicKey
+        payer.public_key, "hello9", program_publicKey
     )
 
     instruction = create_account_with_seed(
@@ -55,7 +55,7 @@ async def set_response_account(
             from_pubkey=payer.public_key,
             new_account_pubkey=response_key,
             base_pubkey=payer.public_key,
-            seed="hello8",
+            seed="hello9",
             lamports=rent_lamports,
             space=response_size,
             program_id=program_publicKey,
@@ -104,7 +104,7 @@ async def _parse_response(
         "result"
     ]["value"]["data"]
     return struct.unpack(
-        "fff", base64.b64decode(base64_result[0])
+        "ff", base64.b64decode(base64_result[0])
     )  # type ignore
 
 
