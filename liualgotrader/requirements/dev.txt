@@ -64,7 +64,7 @@ lxml==4.9.1
 MarkupSafe==2.1.1
 matplotlib==3.6.2
 matplotlib-inline==0.1.6
-multidict==6.0.2
+multidict==6.0.3
 multitasking==0.0.11
 mypy==0.991
 mypy-extensions==0.4.3
