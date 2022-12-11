@@ -1,0 +1,45 @@
+[tool.pdm]
+
+[project]
+authors = [
+  {name = "AMOR71", email = "amor71@sgeltd.com"},
+]
+dependencies = []
+description = "a Pythonic all-batteries-included framework for effective algorithmic trading. The framework is intended to simplify development, testing, deployment and evaluating algo trading strategies."
+license = {text = "MIT"}
+name = "liualgotrader"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "0.4.30"
+[project.optional-dependencies]
+dev = [
+    "iso8601",
+    "requests",
+    "deprecated",
+    "urllib3",
+    "numpy",
+    "alpaca-trade-api",
+    "asyncpg",
+    "pygit2",
+    "matplotlib",
+    "tabulate",
+    "streamlit",
+    "stockstats",
+    "empyrical",
+    "nest-asyncio",
+    "parsedatetime",
+    "scipy",
+    "polygon-api-client",
+    "finnhub-python",
+    "quantstats",
+    "tqdm",
+    "toml",
+    "fire",
+    "pandas-market-calendars",
+    "psutil",
+    "therapist>=2.2.0",
+]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61", "wheel"]

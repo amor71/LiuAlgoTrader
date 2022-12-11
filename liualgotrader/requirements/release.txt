@@ -22,4 +22,3 @@ toml==0.10.2
 fire==0.4.0
 pandas_market_calendars==4.1.1
 psutil==5.9.4
-
