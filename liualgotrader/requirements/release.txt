@@ -20,6 +20,6 @@ quantstats==0.0.59
 tqdm==4.64.1
 toml==0.10.2
 fire==0.4.0
-pandas_market_calendars==4.1.1
+pandas_market_calendars==4.1.2
 psutil==5.9.4
 
