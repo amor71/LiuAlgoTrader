@@ -188,7 +188,7 @@ websockets==10.4
 widgetsnbextension==4.0.4
 wrapt==1.14.1
 yarl==1.8.2
-yfinance==0.1.87
+yfinance==0.1.94
 zipp==3.11.0
 coverage==7.0.0
 
