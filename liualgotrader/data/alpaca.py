@@ -392,6 +392,10 @@ class AlpacaData(DataAPI):
                 tlog("retrying")
                 time.sleep(10)
                 return self.get_symbol_data(symbol, start, end, scale)
+            else:
+                raise ValueError(
+                    f"[EXCEPTION] {e} for {symbol} could not obtain data for {_start} to {_end} w {scale.name}"
+                )
 
         except Exception as e:
             raise ValueError(
