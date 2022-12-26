@@ -14,7 +14,7 @@ Babel==2.11.0
 backcall==0.2.0
 bandit==1.7.4
 base58==2.1.1
-black==22.10.0
+black==22.12.0
 bleach==5.0.1
 blinker==1.5
 cachetools==5.2.0
