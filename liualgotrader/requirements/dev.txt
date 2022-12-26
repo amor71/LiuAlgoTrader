@@ -94,7 +94,7 @@ platformdirs==2.6.0
 plotly==5.11.0
 pluggy==1.0.0
 polygon-api-client==1.5.0
-pre-commit==2.20.0
+pre-commit==2.21.0
 prometheus-client==0.15.0
 prompt-toolkit==3.0.33
 proto-plus==1.22.1
