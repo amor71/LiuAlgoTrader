@@ -19,7 +19,7 @@ finnhub-python==2.4.15
 quantstats==0.0.59
 tqdm==4.64.1
 toml==0.10.2
-fire==0.4.0
+fire==0.5.0
 pandas_market_calendars==4.1.1
 psutil==5.9.4
 
