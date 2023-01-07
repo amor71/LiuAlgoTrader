@@ -37,6 +37,7 @@ name = "liualgotrader"
 readme = "README.md"
 requires-python = ">=3.10"
 version = "0.4.30"
+
 [project.optional-dependencies]
 dev = [
   "therapist>=2.2.0",
@@ -51,6 +52,14 @@ dev = [
   "types-pytz>=2022.7.0.0",
   "types-requests>=2.28.11.7",
 ]
+
+[tool.pdm.version]
+source = "scm" 
+write_template = "__version__ = '{}'" # optional, default to "{}"
+write_to = "liualgotrader/__version__.py" 
+
+[tool.pdm.build]
+excludes = ["tests"]
 
 [build-system]
 build-backend = "pdm.pep517.api"
