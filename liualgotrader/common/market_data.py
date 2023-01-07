@@ -132,6 +132,9 @@ async def sp500_historical_constituents(date: str):
     changes = changes.loc[changes.date > date]
 
     unadusted: Set = set(symbols)
+
+    print(f"changes:{changes}")
+    print(unadusted)
     while True:
         no_changes = True
         for _, row in changes.iterrows():

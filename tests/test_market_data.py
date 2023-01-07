@@ -68,7 +68,7 @@ async def test_get_market_industries_symbols():
 @pytest.mark.asyncio
 @pytest.mark.devtest
 async def test_sp500_historical_constituents():
-    sp500_symbols = await sp500_historical_constituents(datetime.today())
+    sp500_symbols = await sp500_historical_constituents(datetime.now())
     print(sp500_symbols)
 
     return True
