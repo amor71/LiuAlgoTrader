@@ -4,8 +4,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from liualgotrader.common import config
-from liualgotrader.common.types import TimeScale, WSConnectState, WSEventType
+from liualgotrader.common.types import TimeScale
 from liualgotrader.data.alpaca import AlpacaData
 
 
