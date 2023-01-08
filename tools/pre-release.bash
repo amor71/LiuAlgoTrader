@@ -2,10 +2,7 @@
 set -e
 
 echo "Generate Coverage Report"
-coverage run -m pytest --cov
-
-echo "Convert report to XML"
-coverage xml
+python3 -m pytest -s --cov --cov-report xml
 
 echo "upload coverage report"
 codecov -vt $CODECOV_TOKEN

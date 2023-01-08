@@ -4,6 +4,12 @@
 authors = [
   {name = "AMOR71", email = "amor71@sgeltd.com"},
 ]
+classifiers = [
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: OS Independent",
+]
 dependencies = [
   "iso8601",
   "requests",
@@ -36,24 +42,29 @@ license = {text = "MIT"}
 name = "liualgotrader"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.4.33"
-
+version = "0.4.35"
 [project.optional-dependencies]
 dev = [
-  "therapist>=2.2.0",
-  "pytest>=7.2.0",
-  "pytest-asyncio>=0.20.3",
-  "hypothesis>=6.60.0",
-  "mypy>=0.991",
-  "black>=22.12.0",
-  "autoflake>=2.0.0",
-  "bandit>=1.7.4",
-  "isort>=5.11.4",
-  "types-pytz>=2022.7.0.0",
-  "types-requests>=2.28.11.7",
-  "types-tabulate>=0.9.0.0",
-  "types-toml>=0.10.8.1",
+    "therapist>=2.2.0",
+    "pytest>=7.2.0",
+    "pytest-asyncio>=0.20.3",
+    "hypothesis>=6.60.0",
+    "mypy>=0.991",
+    "black>=22.12.0",
+    "autoflake>=2.0.0",
+    "bandit>=1.7.4",
+    "isort>=5.11.4",
+    "types-pytz>=2022.7.0.0",
+    "types-requests>=2.28.11.7",
+    "types-tabulate>=0.9.0.0",
+    "types-toml>=0.10.8.1",
+    "sphinx>=6.1.2",
+    "coverage>=7.0.4",
+    "pytest-codecov>=0.5.1",
+    "codecov>=2.1.12",
 ]
+[tool.pdm.scripts]
+codecov = "tools/pre-release.bash"
 
 [project.scripts]
 backtester = "liualgotrader.scripts.backtester:main_cli"
