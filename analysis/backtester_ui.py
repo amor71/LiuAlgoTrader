@@ -12,7 +12,7 @@ import pytz
 import requests
 import streamlit as st
 import toml
-from streamlit.uploaded_file_manager import UploadedFile
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
                                               load_batch_list, load_trades,
