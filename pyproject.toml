@@ -36,7 +36,7 @@ license = {text = "MIT"}
 name = "liualgotrader"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.4.30"
+version = "0.4.31"
 
 [project.optional-dependencies]
 dev = [
@@ -52,6 +52,9 @@ dev = [
   "types-pytz>=2022.7.0.0",
   "types-requests>=2.28.11.7",
 ]
+
+[project.scripts]
+liu = "liualgotrader.scripts.liu:main_cli"
 
 [tool.pdm.version]
 source = "scm" 
