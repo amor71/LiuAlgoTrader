@@ -1,19 +1,19 @@
-#!/usr/bin/env python
-import fire
-import uuid
 import asyncio
+import uuid
+
+import fire
 from tabulate import tabulate
 
 from liualgotrader.analytics import analysis
-from liualgotrader.reprocess.portfolio import account_transactions
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.models.portfolio import Portfolio
 from liualgotrader.common.types import AssetType
+from liualgotrader.models.portfolio import Portfolio
+from liualgotrader.reprocess.portfolio import account_transactions
 
 
 def equity(portfolio_id: str):
     """Show current equity breakdown"""
-    portfolio = analysis.get_portfolio_equity(portfolio_id)
+    portfolio = asyncio.run(analysis.get_portfolio_equity(portfolio_id))
     if portfolio.empty:
         print("Empty portfolio")
         return
@@ -33,7 +33,7 @@ def equity(portfolio_id: str):
 
 def account(portfolio_id: str):
     """Show account transactions for portfolio"""
-    portfolio = analysis.get_portfolio_cash(portfolio_id)
+    portfolio = asyncio.run(analysis.get_portfolio_cash(portfolio_id))
     if portfolio.empty:
         print("Empty portfolio transactions")
         return
@@ -107,7 +107,14 @@ def list():
     print("Portfolio(s):")
     data = loop.run_until_complete(Portfolio.list_portfolios())
     data = data[
-        ["portfolio_id", "tstamp", "last_transaction", "size", "assets", "parameters"]
+        [
+            "portfolio_id",
+            "tstamp",
+            "last_transaction",
+            "size",
+            "assets",
+            "parameters",
+        ]
     ]
 
     print(
@@ -129,7 +136,7 @@ def list():
     )
 
 
-def main():
+def main_cli() -> None:
     fire.Fire(
         {
             "create": create,
@@ -141,7 +148,3 @@ def main():
         },
         name="portfolio",
     )
-
-
-if __name__ == "__main__":
-    main()

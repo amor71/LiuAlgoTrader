@@ -1,22 +1,19 @@
-#!/usr/bin/env python
-
+import copy
 import getopt
+import multiprocessing as mp
 import os
 import sys
 import uuid
+from datetime import date, datetime
+from typing import Dict, List
 
-import copy
-from datetime import datetime, date
-from typing import List, Dict
-import pygit2
-import multiprocessing as mp
 import parsedatetime.parsedatetime as pdt
+import pygit2
 
-
-from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
-from liualgotrader.common.hyperparameter import Parameter, Hyperparameters
 from liualgotrader.backtesting.optimizer import backtest_iteration
+from liualgotrader.common import config
+from liualgotrader.common.hyperparameter import Hyperparameters, Parameter
+from liualgotrader.common.tlog import tlog
 
 
 def motd(filename: str, version: str) -> None:
@@ -145,7 +142,7 @@ def load_configuration(filename: str):
     return conf_dict
 
 
-if __name__ == "__main__":
+def main_cli() -> None:
     mp.set_start_method("spawn")
 
     if len(sys.argv) > 2:

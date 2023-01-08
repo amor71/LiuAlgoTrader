@@ -1,16 +1,18 @@
-import os
-import sys
-import pygit2
-import pathlib
-import requests
-import time
-import getopt
 import asyncio
+import getopt
+import os
+import pathlib
+import sys
+import time
 import uuid
+
+import pygit2
+import requests
+
 from liualgotrader.common import config
+from liualgotrader.common.database import create_db_connection
 from liualgotrader.models.accounts import Accounts
 from liualgotrader.models.portfolio import Portfolio
-from liualgotrader.common.database import create_db_connection
 
 
 def show_version():
@@ -70,7 +72,9 @@ def setup_db(
             f.write(resolved)
             f.write("\n")
 
-        base_url = "https://raw.github.com/amor71/LiuAlgoTrader/master/database/"
+        base_url = (
+            "https://raw.github.com/amor71/LiuAlgoTrader/master/database/"
+        )
         files = ["schema.sql", "postgres.conf"]
         if restore_sample_db:
             files.append("liu_dump.sql")
@@ -104,7 +108,9 @@ def setup_db(
     print("check deployment using `\psql -h localhost -p 5400 -U liu`")
 
 
-def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> None:
+def setup_samples(
+    samples_location: str, user: str, passwd: str, db: str
+) -> None:
     try:
         print()
         print("+--------------------+")
@@ -117,10 +123,12 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
         if samples_location[-1] != "/":
             samples_location += "/"
 
-        base_url = (
-            "https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/"
-        )
-        files = ["tradeplan.toml", "vwap_short.py", "momentum_long_simplified.py"]
+        base_url = "https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/"
+        files = [
+            "tradeplan.toml",
+            "vwap_short.py",
+            "momentum_long_simplified.py",
+        ]
 
         for file in files:
             print(f"Downloading {base_url}{file} to {samples_location}...")
@@ -134,7 +142,9 @@ def setup_samples(samples_location: str, user: str, passwd: str, db: str) -> Non
 
         if os.name == "nt":
             with open(f"{samples_location}env_vars.bat", "w") as f:
-                f.write(f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n")
+                f.write(
+                    f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
+                )
         else:
             with open(f"{samples_location}env_vars.sh", "w") as f:
                 f.write(
@@ -158,7 +168,9 @@ def quickstart():
     print("| Step #1 - Alpaca & Polygon credentials |")
     print("+----------------------------------------+")
     print()
-    print("To use Liu Algo Trading Framework you need an account with Alpaca Markets,")
+    print(
+        "To use Liu Algo Trading Framework you need an account with Alpaca Markets,"
+    )
     print("do you already have an account [Y]/n:")
     i = input()
     have_funded = len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
@@ -169,13 +181,21 @@ def quickstart():
 
     to_exit = False
     if not config.alpaca_api_key or not config.alpaca_api_secret:
-        print("Liu Algo Trading Framework uses Alpaca for both LIVE and PAPER trading.")
+        print(
+            "Liu Algo Trading Framework uses Alpaca for both LIVE and PAPER trading."
+        )
         print()
         print("The Framework expects three environment variables to be set:")
-        print("`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`: reflecting the funded")
+        print(
+            "`APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`: reflecting the funded"
+        )
         print("account's API key and secret respectively.")
-        print("And `APCA_API_BASE_URL` reflecting the base URL for your account.")
-        print("Please set the three environment variables and re-run the wizard.")
+        print(
+            "And `APCA_API_BASE_URL` reflecting the base URL for your account."
+        )
+        print(
+            "Please set the three environment variables and re-run the wizard."
+        )
         to_exit = True
 
     if to_exit:
@@ -188,7 +208,9 @@ def quickstart():
     print()
     print("Do you already have a PostgreSQL instance configured [N]/y:")
     i = input()
-    already_have_db = len(i) > 0 and (i == "y" or i == "Y" or i.lower() == "yes")
+    already_have_db = len(i) > 0 and (
+        i == "y" or i == "Y" or i.lower() == "yes"
+    )
 
     if already_have_db:
         print(
@@ -200,31 +222,53 @@ def quickstart():
         print(
             "Liu Algo Trading Framework uses `docker-compose` to run a local database."
         )
-        print("The installation will download the docker-compose.yml, database schema")
-        print("and prepare the database for first time usage. You can stop and re-run")
-        print("the database using `docker-compose up -d ` and `docker-compose down`")
-        print("respectively. Your data will not be deleted. For more details RTFM.")
+        print(
+            "The installation will download the docker-compose.yml, database schema"
+        )
+        print(
+            "and prepare the database for first time usage. You can stop and re-run"
+        )
+        print(
+            "the database using `docker-compose up -d ` and `docker-compose down`"
+        )
+        print(
+            "respectively. Your data will not be deleted. For more details RTFM."
+        )
         print()
         print(f"Select location for database files [{pwd}/liu_data/]:")
         db_location = input()
-        db_location = f"{pwd}/liu_data/" if not len(db_location) else db_location
+        db_location = (
+            f"{pwd}/liu_data/" if not len(db_location) else db_location
+        )
 
         print()
         print("** IMPORTANT NOTE**")
-        print("The installation wizard, aside from installing PostgreSQL in a docker")
-        print("may also download a sample database, with existing data to help you")
+        print(
+            "The installation wizard, aside from installing PostgreSQL in a docker"
+        )
+        print(
+            "may also download a sample database, with existing data to help you"
+        )
         print("take your first steps with Liu Algo Trading Framework.")
-        print("However, in order to restore the sample data, you need to select")
+        print(
+            "However, in order to restore the sample data, you need to select"
+        )
         print(
             "the default username ('liu') password ('liu)', and database name ('liu')."
         )
-        print("after you try out the sample, you can delete data and re-run this")
+        print(
+            "after you try out the sample, you can delete data and re-run this"
+        )
         print("wizard to install a fresh copy of the database.")
         print()
         print("Would you like to download the sample database? [Y]/n")
         i = input()
-        restore_sample_db = len(i) == 0 or (i == "y" or i == "Y" or i.lower() == "yes")
-        print("Select the database name for keeping track of your trading [liu]:")
+        restore_sample_db = len(i) == 0 or (
+            i == "y" or i == "Y" or i.lower() == "yes"
+        )
+        print(
+            "Select the database name for keeping track of your trading [liu]:"
+        )
         db_name = input()
         db_name = "liu" if not len(db_name) else db_name
         print("Select the database user-name [liu]:")
@@ -248,7 +292,9 @@ def quickstart():
         print(f"Select location for sample files [{pwd}/liu_samples]:")
         sample_location = input()
         sample_location = (
-            f"{pwd}/liu_samples" if not len(sample_location) else sample_location
+            f"{pwd}/liu_samples"
+            if not len(sample_location)
+            else sample_location
         )
 
     print()
@@ -267,14 +313,20 @@ def quickstart():
     print("+---------------+")
     print()
     print("Congratulations, Liu Algo Trader is ready to go!")
-    print("From here, you can either run the back-testing UI, or read the docs.")
-    print("The full documentation is available here: `https://liualgotrader.rtfd.io`.")
+    print(
+        "From here, you can either run the back-testing UI, or read the docs."
+    )
+    print(
+        "The full documentation is available here: `https://liualgotrader.rtfd.io`."
+    )
     if restore_sample_db:
         print()
         print(
             "The restored database includes data for the first week and half of Oct 2020."
         )
-        print("You may now run a back-testing sessions for these days, as well as ")
+        print(
+            "You may now run a back-testing sessions for these days, as well as "
+        )
         print("analyze an existing trading session.")
     print()
 
@@ -325,7 +377,7 @@ def create_portfolio(amount: float, credit: float):
     print(f"Portfolio ID {portfolio_id} created")
 
 
-def main_cli():
+def main_cli() -> None:
     config.filename = os.path.basename(__file__)
 
     try:

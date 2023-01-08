@@ -1,16 +1,17 @@
-#!/usr/bin/env python
-
 """off-hours calculations, and data collections"""
 import asyncio
-import os, sys
-import toml
-import pygit2
-from typing import Dict, List, Optional
+import importlib.util
+import os
+import sys
 import traceback
-import importlib
+from typing import Dict, List, Optional
+
+import pygit2
+import toml
+
 from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
 from liualgotrader.common.database import create_db_connection
+from liualgotrader.common.tlog import tlog
 from liualgotrader.miners.base import Miner
 
 # rom liualgotrader.miners.stock_cluster import StockCluster
@@ -27,7 +28,7 @@ def motd(filename: str, version: str) -> None:
 
 
 async def main(conf_dict: Dict):
-    task_list: List[Optional[asyncio.tasks]] = []
+    task_list: List[Optional[asyncio.Task]] = []
 
     await create_db_connection()
     for miner in conf_dict["miners"]:
@@ -36,10 +37,16 @@ async def main(conf_dict: Dict):
                 spec = importlib.util.spec_from_file_location(
                     "module.name", conf_dict["miners"][miner]["filename"]
                 )
+                if not spec:
+                    raise AssertionError(
+                        f"could not load module {conf_dict['miners'][miner]['filename']}"
+                    )
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)  # type: ignore
             else:
-                module = importlib.import_module(f"liualgotrader.miners.{miner}")
+                module = importlib.import_module(
+                    f"liualgotrader.miners.{miner}"
+                )
             class_name = f"{miner[0].upper()}{miner[1:]}"
             miner_class = getattr(module, class_name)
 
@@ -48,22 +55,9 @@ async def main(conf_dict: Dict):
                 exit(0)
         except Exception as e:
             tlog(f"[ERROR] miner {miner} resulted in exception:`{e}`")
-        else:
-            try:
-                debug = conf_dict["miners"][miner].get("debug", False)
-                miner = miner_class(debug=debug, data=conf_dict["miners"][miner])
-                task_list.append(asyncio.create_task(miner.run()))
-
-                await asyncio.gather(*task_list)
-            except Exception as e:
-                tlog(f"[ERROR] aborted w/ exception {e}")
-                exc_info = sys.exc_info()
-                traceback.print_exception(*exc_info)
-                del exc_info
-                raise
 
 
-if __name__ == "__main__":
+def main_cli() -> None:
     """
     starting
     """

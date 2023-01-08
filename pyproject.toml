@@ -36,7 +36,7 @@ license = {text = "MIT"}
 name = "liualgotrader"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.4.31"
+version = "0.4.33"
 
 [project.optional-dependencies]
 dev = [
@@ -51,10 +51,17 @@ dev = [
   "isort>=5.11.4",
   "types-pytz>=2022.7.0.0",
   "types-requests>=2.28.11.7",
+  "types-tabulate>=0.9.0.0",
+  "types-toml>=0.10.8.1",
 ]
 
 [project.scripts]
+backtester = "liualgotrader.scripts.backtester:main_cli"
 liu = "liualgotrader.scripts.liu:main_cli"
+market_miner = "liualgotrader.scripts.market_miner:main_cli"
+optimizer = "liualgotrader.scripts.optimizer:main_cli"
+portfolio = "liualgotrader.scripts.portfolio:main_cli"
+trader = "liualgotrader.scripts.trader:main_cli"
 
 [tool.pdm.version]
 source = "scm" 

@@ -881,6 +881,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "types-tabulate"
+version = "0.9.0.0"
+summary = "Typing stubs for tabulate"
+
+[[package]]
+name = "types-toml"
+version = "0.10.8.1"
+summary = "Typing stubs for toml"
+
+[[package]]
 name = "types-urllib3"
 version = "1.26.25.4"
 summary = "Typing stubs for urllib3"
@@ -987,7 +997,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "4.1"
-content_hash = "sha256:5754c2efd64a5fcd6d64ca7c35739ab650a9bb9a453c4d38787483b64e77a144"
+content_hash = "sha256:98a6fc9f235ee7876c8a454e39b64060635e864faacd5d16406445f7d4a24745"
 
 [metadata.files]
 "aiohttp 3.8.3" = [
@@ -2427,6 +2437,14 @@ content_hash = "sha256:5754c2efd64a5fcd6d64ca7c35739ab650a9bb9a453c4d38787483b64
 "types-requests 2.28.11.7" = [
     {url = "https://files.pythonhosted.org/packages/9c/95/ad745e140031199bfecb81526189034bcca0b8b71e9db446c86f181ba2ca/types_requests-2.28.11.7-py3-none-any.whl", hash = "sha256:b6a2fca8109f4fdba33052f11ed86102bddb2338519e1827387137fefc66a98b"},
     {url = "https://files.pythonhosted.org/packages/f4/2c/72cb8c5bbadc61eee2d28b696700dc8ae6ed70784681d6dad46b518487ba/types-requests-2.28.11.7.tar.gz", hash = "sha256:0ae38633734990d019b80f5463dfa164ebd3581998ac8435f526da6fe4d598c3"},
+]
+"types-tabulate 0.9.0.0" = [
+    {url = "https://files.pythonhosted.org/packages/bf/7b/3c760cfc4624c18edb72ef0ff4da7914c6f374328722372a0467a38cd7d1/types-tabulate-0.9.0.0.tar.gz", hash = "sha256:4a79474714cea156bcd2185bb9bddd8fb9d3d5227c8d0a7f21bf21caf5f60e67"},
+    {url = "https://files.pythonhosted.org/packages/d7/43/34e2ebc7f395a488db53d310b972cdfa62c4bb9cdc31ef59cce7f3a56213/types_tabulate-0.9.0.0-py3-none-any.whl", hash = "sha256:a1cc2aa52d2a9abfe0acbb361ccd49e3400794086a41626ce8784ed2e1ec0b0d"},
+]
+"types-toml 0.10.8.1" = [
+    {url = "https://files.pythonhosted.org/packages/84/e9/9569cdc5c54b7d36d36b2bacefeb01a1b2feb90c9fd18ee15797ad4fa67b/types_toml-0.10.8.1-py3-none-any.whl", hash = "sha256:b7b5c4977f96ab7b5ac06d8a6590d17c0bf252a96efc03b109c2711fb3e0eafd"},
+    {url = "https://files.pythonhosted.org/packages/c6/8b/a8544990966e9b475c1767f21272cbbdc2b470d4e690e04b5510b129b311/types-toml-0.10.8.1.tar.gz", hash = "sha256:171bdb3163d79a520560f24ba916a9fc9bff81659c5448a9fea89240923722be"},
 ]
 "types-urllib3 1.26.25.4" = [
     {url = "https://files.pythonhosted.org/packages/37/67/c0751b0f672b0822b11ece210b211bdd1e08d6e21aa62e6d297b054127d7/types-urllib3-1.26.25.4.tar.gz", hash = "sha256:eec5556428eec862b1ac578fb69aab3877995a99ffec9e5a12cf7fbd0cc9daee"},

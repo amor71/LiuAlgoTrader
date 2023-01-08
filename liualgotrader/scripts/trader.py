@@ -1,23 +1,18 @@
-#!/usr/bin/env python
+import copy
 import multiprocessing as mp
-from multiprocessing import Queue
-
 import os
 import sys
-import time
 import uuid
-import random
-import asyncio
-from datetime import datetime
-from math import ceil
+from multiprocessing import Queue
 from typing import List
+
 import pygit2
 import toml
-import copy
 from pytz import timezone
+
 from liualgotrader.common import config
-from liualgotrader.common.tlog import tlog
 from liualgotrader.common.concurrency import calc_num_consumer_processes
+from liualgotrader.common.tlog import tlog
 from liualgotrader.consumer import consumer_main
 from liualgotrader.producer import producer_main
 from liualgotrader.scanners_runner import main
@@ -34,15 +29,7 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog("----------------------------------------------------------")
 
 
-"""
-process main
-"""
-
-
-"""
-starting
-"""
-if __name__ == "__main__":
+def main_cli():
     config.filename = os.path.basename(__file__)
     mp.set_start_method("spawn")
 

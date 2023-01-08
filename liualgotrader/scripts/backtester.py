@@ -1,36 +1,29 @@
-#!/usr/bin/env python
-
-import asyncio
 import getopt
 import os
-import pprint
 import sys
-import traceback
-import uuid
-import toml
+from datetime import date, datetime
+from typing import List, Optional
+
 import pandas as pd
-import importlib.util
-from datetime import datetime, timedelta, date, tzinfo
-from typing import List, Dict, Optional
+import parsedatetime.parsedatetime as pdt
 import pygit2
 import pytz
+import toml
 from requests.exceptions import HTTPError
-import parsedatetime.parsedatetime as pdt
 
+from liualgotrader import enhanced_backtest
 from liualgotrader.common import config, market_data, trading_data
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.common.decorators import timeit
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.data_loader import TimeScale
-from liualgotrader.common.types import AssetType
+from liualgotrader.common.types import AssetType, TimeScale
 from liualgotrader.fincalcs.vwap import add_daily_vwap
 from liualgotrader.models.algo_run import AlgoRun
 from liualgotrader.models.new_trades import NewTrade
 from liualgotrader.models.trending_tickers import TrendingTickers
-from liualgotrader.strategies.base import Strategy, StrategyType
 from liualgotrader.scanners.base import Scanner
 from liualgotrader.scanners.momentum import Momentum
-from liualgotrader import enhanced_backtest
+from liualgotrader.strategies.base import Strategy, StrategyType
 
 
 def show_usage():
@@ -77,12 +70,12 @@ def dateFromString(s: str) -> date:
         dt = result.date()
 
     if dt is None:
-        raise ValueError("Don't understand date '" + s + "'")
+        raise ValueError(f"Don't understand date '{s}'")
 
     return dt
 
 
-if __name__ == "__main__":
+def main_cli() -> None:
     try:
         config.build_label = pygit2.Repository("../").describe(
             describe_strategy=pygit2.GIT_DESCRIBE_TAGS
@@ -128,7 +121,7 @@ if __name__ == "__main__":
             asset_type = AssetType.US_EQUITIES
             opts, args = getopt.getopt(
                 sys.argv[3:],
-                shortopts=[],
+                shortopts="",
                 longopts=[
                     "to=",
                     "scale=",
@@ -156,7 +149,9 @@ if __name__ == "__main__":
                     elif arg.lower() == "equity":
                         asset_type = AssetType.US_EQUITIES
                     else:
-                        print(f"ERROR: value {arg} not supported for parameter 'asset'")
+                        print(
+                            f"ERROR: value {arg} not supported for parameter 'asset'"
+                        )
                         sys.exit(0)
                 elif opt in ("--scale"):
                     if arg in ("day", "minute"):
