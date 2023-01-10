@@ -30,8 +30,6 @@ def test_fix_num_consumer_processes():
                 f"calc_num_consumer_processes() - {result} returned, while expected {num_consumers}"
             )
 
-    return True
-
 
 def test_calc_num_consumer_processes():
     print("test_calc_num_consumer_processes")
@@ -46,5 +44,3 @@ def test_calc_num_consumer_processes():
             )
 
         time.sleep(10)
-
-    return True
