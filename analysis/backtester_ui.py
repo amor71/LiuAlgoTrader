@@ -21,7 +21,7 @@ from liualgotrader.common import config, database
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 
 loop.run_until_complete(database.create_db_connection())
-st.title(f"LiuAlgoTrading Framework")
+st.title("LiuAlgoTrading Framework")
 st.markdown("## **Visual Analysis tools**")
 
 app = st.sidebar.selectbox("select app", ["analyzer"])
@@ -132,9 +132,9 @@ if app == "analyzer":
             stop_price = []
             daily_change = []
             precent_vwap = []
+            resistance = None
+            support = None
             for index, row in symbol_df.iterrows():
-                resistance = None
-                support = None
                 delta = (
                     row["price"]
                     * row["qty"]
