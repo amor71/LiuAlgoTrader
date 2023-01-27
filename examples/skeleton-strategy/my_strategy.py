@@ -1,9 +1,8 @@
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
 #
@@ -32,7 +31,7 @@ class MyStrategy(Strategy):
         schedule: List[Dict],
         data_loader: DataLoader = None,
         fractional: bool = False,
-        ref_run_id: int = None,
+        ref_run_id: Optional[int] = None,
         my_arg1: int = 0,
         my_arg2: bool = False,
     ):
@@ -52,7 +51,7 @@ class MyStrategy(Strategy):
         symbol: str,
         price: float,
         qty: float,
-        now: datetime = None,
+        now: Optional[datetime] = None,
         trade_fee: float = 0.0,
     ) -> None:
         ...
@@ -62,7 +61,7 @@ class MyStrategy(Strategy):
         symbol: str,
         price: float,
         qty: float,
-        now: datetime = None,
+        now: Optional[datetime] = None,
         trade_fee: float = 0.0,
     ) -> None:
         ...
@@ -88,13 +87,12 @@ class MyStrategy(Strategy):
         position: float,
         now: datetime,
         minute_history: pd.DataFrame,
-        portfolio_value: float = None,
+        portfolio_value: Optional[float] = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
         current_second_data = minute_history.iloc[-1]
         tlog(f"{symbol} position is {position}")
-        tlog(f"{symbol} data: {current_second_data}")
 
         if await super().is_buy_time(now) and not position:
             #

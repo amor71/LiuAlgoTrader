@@ -24,7 +24,7 @@ async def reconnect_trader():
 
 @timeit
 async def get_trading_days(trader, start_date):
-    return trader.get_trading_days(start_date)
+    return trader.get_equity_trading_days(start_date)
 
 
 @pytest.mark.devtest

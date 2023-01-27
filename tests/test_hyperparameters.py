@@ -10,15 +10,11 @@ def test_hyper_param_1():
     _ = next(p1)
     _ = next(p1)
 
-    return True
-
 
 def test_hyper_param_single():
     p1 = Parameter("p1", int, 5, 5)
 
     print("single", next(p1))
-
-    return True
 
 
 def test_hyper_param_1_ex():
@@ -29,7 +25,7 @@ def test_hyper_param_1_ex():
     try:
         a3 = next(p1)
     except StopIteration:
-        return True
+        return
 
     raise AssertionError(f"Expected Exception StopIteration, but got {a3}")
 
@@ -42,8 +38,6 @@ def test_hyper_params_int():
     for i in iter(h):
         print(i)
 
-    return True
-
 
 def test_hyper_params_two_int():
     print("test_hyper_params_two_int")
@@ -54,8 +48,6 @@ def test_hyper_params_two_int():
 
     for i in iter(h):
         print(i)
-
-    return True
 
 
 def test_hyper_params_int_float():
@@ -68,8 +60,6 @@ def test_hyper_params_int_float():
     for i in iter(h):
         print(i)
 
-    return True
-
 
 def test_hyper_params_float_missing():
     print("test_hyper_params_int_float")
@@ -81,7 +71,7 @@ def test_hyper_params_float_missing():
         for i in iter(h):
             print(i)
     except AttributeError:
-        return True
+        return
 
     raise AssertionError(
         "Expected AttributeError in test_hyper_params_float_missing"

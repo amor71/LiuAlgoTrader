@@ -1,6 +1,6 @@
 import copy
 from datetime import date, timedelta
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 from pytz import timezone
@@ -90,7 +90,9 @@ async def portfolio_return(
     )
 
 
-async def load_trades(day: date, end_date: date = None) -> pd.DataFrame:
+async def load_trades(
+    day: date, end_date: Optional[date] = None
+) -> pd.DataFrame:
     query = f"""\x1f    SELECT t.*, a.batch_id, a.algo_name\x1f    FROM \x1f    new_trades as t, algo_run as a\x1f    WHERE \x1f        t.algo_run_id = a.algo_run_id AND \x1f        t.tstamp >= '{day}' AND \x1f        t.tstamp < '{end_date or day + timedelta(days=1)}' AND\x1f        t.expire_tstamp is null \x1f    ORDER BY symbol, tstamp\x1f    """
     return await fetch_as_dataframe(query)
 
@@ -145,7 +147,9 @@ async def load_trades_by_portfolio(portfolio_id: str) -> pd.DataFrame:
     return df
 
 
-async def load_runs(day: date, end_date: date = None) -> pd.DataFrame:
+async def load_runs(
+    day: date, end_date: Optional[date] = None
+) -> pd.DataFrame:
     query = f"""\x1f     SELECT * \x1f     FROM \x1f     algo_run as t\x1f     WHERE \x1f         start_time >= '{day}' AND \x1f         start_time < '{end_date or day + timedelta(days=1)}'\x1f     ORDER BY start_time\x1f     """
 
     df = await fetch_as_dataframe(query)
@@ -181,7 +185,7 @@ async def load_traded_symbols(batch_id: str) -> pd.DataFrame:
 
 
 def calc_batch_revenue(
-    symbol: str, trades: pd.DataFrame, batch_id: str = None
+    symbol: str, trades: pd.DataFrame, batch_id: Optional[str] = None
 ) -> float:
     symbol_df = trades[
         (trades["symbol"] == symbol)
@@ -363,7 +367,9 @@ async def calc_batch_returns(batch_id: str) -> pd.DataFrame:
     end_date = trades.client_time.max().date()
     trader = trader_factory()
 
-    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+    td = trader.get_equity_trading_days(
+        start_date=start_date, end_date=end_date
+    )
 
     td["equity"] = 0.0
     td["cash"] = portfolio.portfolio_size
@@ -391,7 +397,9 @@ async def compare_to_symbol_returns(
     end_date = trades.client_time.max().date()
     trader = trader_factory()
 
-    td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+    td = trader.get_equity_trading_days(
+        start_date=start_date, end_date=end_date
+    )
     td[symbol] = td.apply(
         lambda row: data_loader[symbol].close[
             row.name.to_pydatetime().replace(tzinfo=est)
@@ -425,7 +433,9 @@ async def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
     trader = trader_factory()
 
     if portfolio.asset_type == AssetType.US_EQUITIES:
-        td = trader.get_trading_days(start_date=start_date, end_date=end_date)
+        td = trader.get_equity_trading_days(
+            start_date=start_date, end_date=end_date
+        )
     else:
         td = pd.DataFrame(index=pd.date_range(start_date, end_date))
 

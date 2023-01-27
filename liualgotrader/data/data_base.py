@@ -17,28 +17,24 @@ class DataAPI(metaclass=ABCMeta):
     def get_symbol_data(
         self,
         symbol: str,
-        start: date,
-        end: date = date.today(),
+        start: datetime,
+        end: datetime,
         scale: TimeScale = TimeScale.minute,
     ) -> pd.DataFrame:
         ...
 
     @abstractmethod
     async def get_market_snapshot(
-        self, filter_func: Optional[Callable]
+        self, symbols: List[str], filter_func: Optional[Callable]
     ) -> List[Dict]:
-        ...
-
-    @abstractmethod
-    def get_symbols(self) -> List[str]:
         ...
 
     @abstractmethod
     def get_symbols_data(
         self,
         symbols: List[str],
-        start: date,
-        end: date = date.today(),
+        start: datetime,
+        end: datetime,
         scale: TimeScale = TimeScale.minute,
     ) -> Dict[str, pd.DataFrame]:
         ...
@@ -70,7 +66,7 @@ class DataAPI(metaclass=ABCMeta):
         ...
 
     def data_concurrency_ranges(
-        self, symbol: str, start: date, end: date, scale: TimeScale
+        self, symbol: str, start: datetime, end: datetime, scale: TimeScale
     ) -> List[Optional[pd.DatetimeIndex]]:
         scale_factor_minutes = self.num_trading_minutes(symbol, start, end)
         data_points = (
@@ -78,6 +74,7 @@ class DataAPI(metaclass=ABCMeta):
             if scale == TimeScale.day
             else scale_factor_minutes
         )
+        print(start, end)
         total_data_points = (
             self.num_trading_days(symbol, start, end) * data_points
         )

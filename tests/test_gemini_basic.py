@@ -8,7 +8,7 @@ from liualgotrader.data.gemini import GeminiData
 
 
 @pytest.mark.devtest
-def test_gemini_data_day() -> bool:
+def test_gemini_data_day():
     gemini = GeminiData()
     from_date = datetime.now().date() - timedelta(days=25)
     to_date = from_date + timedelta(days=1)
@@ -20,11 +20,10 @@ def test_gemini_data_day() -> bool:
             scale=TimeScale.day,
         )
     )
-    return True
 
 
 @pytest.mark.devtest
-def test_gemini_data_min() -> bool:
+def test_gemini_data_min():
     gemini = GeminiData()
     from_date = datetime.now().date() - timedelta(days=25)
     to_date = from_date + timedelta(days=1)
@@ -36,4 +35,3 @@ def test_gemini_data_min() -> bool:
             scale=TimeScale.minute,
         )
     )
-    return True

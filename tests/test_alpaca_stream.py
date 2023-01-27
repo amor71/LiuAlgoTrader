@@ -18,7 +18,7 @@ def listener(q: Queue):
             d = q.get(timeout=2)
             print("got in q:", d)
         except Exception as e:
-            print(e, "timeout...")
+            print(type(e), "timeout...")
             time.sleep(1)
 
     print("end listen")
@@ -32,10 +32,10 @@ async def test_crypto_stream():
     await alpaca_stream.run()
 
     print("going to subscribe")
-    queues["BTCUSD"] = Queue()
+    queues["BTC/USD"] = Queue()
     running_task = Thread(
         target=listener,
-        args=(queues["BTCUSD"],),
+        args=(queues["BTC/USD"],),
     )
     print("start listen thread")
     running_task.start()
@@ -43,7 +43,7 @@ async def test_crypto_stream():
 
     await asyncio.sleep(2)
     status = await alpaca_stream.subscribe(
-        ["BTCUSD"],
+        ["BTC/USD"],
         [WSEventType.MIN_AGG, WSEventType.TRADE, WSEventType.QUOTE],
     )
     print(f"subscribe result: {status}")

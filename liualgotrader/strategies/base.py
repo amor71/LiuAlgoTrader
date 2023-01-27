@@ -28,7 +28,7 @@ class Strategy(object):
         type: StrategyType,
         batch_id: str,
         schedule: List[Dict],
-        ref_run_id: int = None,
+        ref_run_id: Optional[int] = None,
         data_loader: DataLoader = None,
         fractional: bool = False,
     ):
@@ -78,7 +78,7 @@ class Strategy(object):
         would like to execute a single copy only.
         """
         await self.algo_run.save(
-            pool=config.db_conn_pool, ref_algo_run_id=self.ref_run_id
+            pool=config.db_conn_pool, ref_algo_run_id=self.ref_run_id  # type: ignore
         )
         return True
 
@@ -93,8 +93,8 @@ class Strategy(object):
         symbols_position: Dict[str, float],
         data_loader: DataLoader,
         now: datetime,
-        portfolio_value: float = None,
-        trader: Trader = None,
+        portfolio_value: Optional[float] = None,
+        trader: Optional[Trader] = None,
         debug: bool = False,
         backtesting: bool = False,
         fee_buy_percentage: float = 0.0,
@@ -126,7 +126,7 @@ class Strategy(object):
         position: float,
         now: datetime,
         minute_history: df,
-        portfolio_value: float = None,
+        portfolio_value: Optional[float] = None,
         debug: bool = False,
         backtesting: bool = False,
     ) -> Tuple[bool, Dict]:
@@ -148,10 +148,10 @@ class Strategy(object):
         """
         return False, {}
 
-    async def is_sell_time(self, now: datetime):
+    async def is_sell_time(self, now: datetime) -> bool:
         return True
 
-    async def is_buy_time(self, now: datetime):
+    async def is_buy_time(self, now: datetime) -> bool:
         return True
 
     async def buy_callback(
@@ -159,7 +159,7 @@ class Strategy(object):
         symbol: str,
         price: float,
         qty: float,
-        now: datetime = None,
+        now: Optional[datetime] = None,
         trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful buy (could be partial)"""
@@ -169,7 +169,7 @@ class Strategy(object):
         symbol: str,
         price: float,
         qty: float,
-        now: datetime = None,
+        now: Optional[datetime] = None,
         trade_fee: float = 0.0,
     ) -> None:
         """Called by Framework, upon successful sell (could be partial)"""
@@ -193,7 +193,7 @@ class Strategy(object):
         batch_id: str,
         strategy_name: str,
         strategy_details: Dict,
-        data_loader: DataLoader = None,
+        data_loader: DataLoader,
         ref_run_id: Optional[int] = None,
     ):
         """Internal, called by the Platform."""

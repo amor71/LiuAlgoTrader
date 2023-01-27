@@ -174,7 +174,7 @@ async def get_trading_holidays() -> List[str]:
     return nyse.holidays().holidays
 
 
-async def get_trading_day(now: date, offset: int) -> date:
+async def get_trading_day(now: datetime, offset: int) -> date:
     cbd_offset = pd.tseries.offsets.CustomBusinessDay(
         n=-offset, holidays=await get_trading_holidays()
     )

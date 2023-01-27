@@ -7,9 +7,10 @@ from liualgotrader.trading.trader_factory import trader_factory
 
 
 @pytest.mark.devtest
-def test_trader_calendar() -> bool:
+def test_trader_calendar():
     trader = trader_factory()
 
-    td = trader.get_trading_days(start_date=date(year=2021, month=1, day=1))
+    td = trader.get_equity_trading_days(
+        start_date=date(year=2021, month=1, day=1)
+    )
     print(td)
-    return True

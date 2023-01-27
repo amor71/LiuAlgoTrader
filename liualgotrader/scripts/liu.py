@@ -421,7 +421,7 @@ def main_cli() -> None:
                         credit = float(arg)
                         if credit <= 0.0:
                             print(
-                                "Oops.. creditamount must be positive. Always think positive w/ Liu"
+                                "Oops.. credit amount must be positive. Always think positive w/ Liu"
                             )
                             exit(0)
 

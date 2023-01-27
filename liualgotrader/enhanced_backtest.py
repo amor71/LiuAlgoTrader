@@ -3,11 +3,10 @@ import inspect
 import traceback
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
-import alpaca_trade_api as tradeapi
 import pandas as pd
-from pytz import timezone
 
 from liualgotrader.common import config, trading_data
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
@@ -116,14 +115,14 @@ async def calculate_execution_price(
         if data_loader[symbol].close[now] <= price_limit:
             return data_loader[symbol].close[now]
         else:
-            raise Exception(
+            raise ValueError(
                 f"can not buy: limit price {price_limit} below market price {data_loader[symbol].close[now]}"
             )
 
     if data_loader[symbol].close[now] >= price_limit:
         return price_limit
     else:
-        raise Exception(
+        raise ValueError(
             f"can not sell: limit price {price_limit} above market price {data_loader[symbol].close[now]}"
         )
 
@@ -314,33 +313,10 @@ async def do_strategy(
         await do_strategy_by_symbol(data_loader, now, strategy, symbols)
 
 
-def get_day_start_end(asset_type, day):
-    if asset_type == AssetType.US_EQUITIES:
-        day_start = day.date.replace(
-            hour=day.open.hour,
-            minute=day.open.minute,
-            tzinfo=timezone("America/New_York"),
-        )
-        day_end = day.date.replace(
-            hour=day.close.hour,
-            minute=day.close.minute,
-            tzinfo=timezone("America/New_York"),
-        )
-    elif asset_type == AssetType.CRYPTO:
-        day_start = pd.Timestamp(
-            datetime.combine(day, datetime.min.time()),
-            tzinfo=timezone("America/New_York"),
-        )
-        day_end = pd.Timestamp(
-            datetime.combine(day, datetime.max.time()),
-            tzinfo=timezone("America/New_York"),
-        )
-    else:
-        raise AssertionError(
-            f"get_day_start_end(): asset type {asset_type} not yet supported"
-        )
-
-    return day_start, day_end
+def get_day_start_end(day) -> Tuple[datetime, datetime]:
+    start = datetime.combine(day.name, day.open, tzinfo=ZoneInfo("US/Eastern"))
+    end = datetime.combine(day.name, day.close, tzinfo=ZoneInfo("US/Eastern"))
+    return start, end
 
 
 async def backtest_day(
@@ -355,8 +331,7 @@ async def backtest_day(
     buy_fee_percentage: float,
     sell_fee_percentage: float,
 ):
-    day_start, day_end = get_day_start_end(asset_type, day)
-    print(day_start, day_end)
+    day_start, day_end = get_day_start_end(day)
     current_time = day_start
     prefetched: List[str] = []
     while current_time < day_end:
@@ -376,7 +351,7 @@ async def backtest_day(
         for symbol in prefetch:
             tlog(f"Prefetch data for {symbol}@{day_start}-{day_end}")
 
-            data_loader[symbol][day_start:day_end]
+            data_loader[symbol][day_start:day_end]  # type:ignore
             prefetched.append(symbol)
 
         for strategy in strategies:
@@ -426,30 +401,26 @@ async def backtest_time_range(
     scanners: Optional[List] = None,
     strategies: Optional[List] = None,
 ):
-    trade_api = tradeapi.REST(
-        key_id=config.alpaca_api_key, secret_key=config.alpaca_api_secret
-    )
+    trader: Trader = trader_factory()
+
     if asset_type == AssetType.US_EQUITIES:
-        calendars = trade_api.get_calendar(str(from_date), str(to_date))
+        calendars = trader.get_equity_trading_days(from_date, to_date)
     elif asset_type == AssetType.CRYPTO:
-        calendars = [
-            t.date() for t in pd.date_range(from_date, to_date).to_list()
-        ]
+        calendars = trader.get_crypto_trading_days(from_date, to_date)
     else:
         raise AssertionError(f"Asset type {asset_type} not supported yet")
 
     symbols: Dict = {}
-
-    for day in calendars:
+    for _, row in calendars.iterrows():
         await backtest_day(
-            day=day,
+            day=row,
             scanners=scanners,
             symbols=symbols,
             strategies=strategies,
             scale=scale,
             data_loader=data_loader,
             asset_type=asset_type,
-            trader=trader_factory(),
+            trader=trader,
             buy_fee_percentage=buy_fee_percentage,
             sell_fee_percentage=sell_fee_percentage,
         )

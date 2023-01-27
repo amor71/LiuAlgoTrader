@@ -54,11 +54,11 @@ def test_alpaca_num_trading_day():
 
     if (
         alpaca_dl.num_trading_days(
-            symbol="BTCUSD", start="2021-07-01", end="2021-07-07"
+            symbol="BTC/USD", start="2021-07-01", end="2021-07-07"
         )
         != 7
     ):
-        raise AssertionError("BTCUSD - expected 7")
+        raise AssertionError("BTC/USD - expected 7")
 
     if (
         alpaca_dl.num_trading_days(
@@ -68,44 +68,39 @@ def test_alpaca_num_trading_day():
     ):
         raise AssertionError("expected 0")
 
-    return True
-
 
 def test_alpaca_concurrency_ranges_min():
     print("test_alpaca_concurrency_ranges_min")
     alpaca_dl = data_loader_factory(DataConnectorType.alpaca)
 
-    t = time.time()
+    t = _extracted_from_test_alpaca_concurrency_ranges_min_5(
+        alpaca_dl, "2021-11-10", 5, "expected 5"
+    )
+    t = _extracted_from_test_alpaca_concurrency_ranges_min_5(
+        alpaca_dl, "2022-01-01", 2, "expected 2"
+    )
+
+
+# TODO Rename this here and in `test_alpaca_concurrency_ranges_min`
+def _extracted_from_test_alpaca_concurrency_ranges_min_5(
+    alpaca_dl, start, arg2, arg3
+):
+    result = time.time()
     if (
         len(
             alpaca_dl.data_concurrency_ranges(
                 symbol="AAPL",
-                start="2021-11-10",
+                start=start,
                 end="2022-01-07",
                 scale=TimeScale.minute,
             )
         )
-        != 5
+        != arg2
     ):
-        raise AssertionError("expected 5")
-    print(time.time() - t)
+        raise AssertionError(arg3)
+    print(time.time() - result)
 
-    t = time.time()
-    if (
-        len(
-            alpaca_dl.data_concurrency_ranges(
-                symbol="AAPL",
-                start="2022-01-01",
-                end="2022-01-07",
-                scale=TimeScale.minute,
-            )
-        )
-        != 2
-    ):
-        raise AssertionError("expected 2")
-    print(time.time() - t)
-
-    return True
+    return result
 
 
 @settings(deadline=None, max_examples=100)
@@ -118,7 +113,10 @@ def test_hpy_alpaca_concurrency_ranges_min(start: date, end: date):
 
     t = time.time()
     r = alpaca_dl.data_concurrency_ranges(
-        symbol="AAPL", start=start, end=end, scale=TimeScale.minute
+        symbol="AAPL",
+        start=start,  # type:ignore
+        end=end,  # type:ignore
+        scale=TimeScale.minute,  # type:ignore
     )
     duration = time.time() - t
 

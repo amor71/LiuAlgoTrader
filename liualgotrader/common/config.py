@@ -52,6 +52,17 @@ alpaca_api_key: str = os.getenv("APCA_API_KEY_ID", "")
 alpaca_api_secret: str = os.getenv("APCA_API_SECRET_KEY", "")
 alpaca_data_feed = os.getenv("ALPACA_DATA_FEED", "sip")
 alpaca_stream_url = os.getenv("ALPACA_STREAM_URL")
+alpaca_live_trading: bool = os.getenv("ALPACA_LIVE", "False") in [
+    "true",
+    "True",
+]
+
+gemini_base_url = os.getenv(
+    "GEMINI_BASE_URL", "https://api.sandbox.gemini.com"
+)
+gemini_websocket_base = os.getenv(
+    "GEMINI_WS_URL", "wss://api.sandbox.gemini.com"
+)
 
 tradier_base_url = os.getenv(
     "TRADIER_BASE_URL", "https://sandbox.tradier.com/v1/"

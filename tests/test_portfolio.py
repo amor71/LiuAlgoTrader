@@ -19,110 +19,107 @@ def event_loop():
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_exists_negative() -> bool:
+async def test_exists_negative() -> None:
     result = await Portfolio.exists("1234")
     if result == True:
         raise AssertionError("result should be False")
     print(result)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_exists_positive() -> bool:
-    id: str = str(uuid.uuid4())
+async def test_exists_positive() -> None:
+    new_id: str = str(uuid.uuid4())
     await Portfolio.save(
-        id,
+        new_id,
         5000,
         10,
         {},
     )
-    result = await Portfolio.exists(id)
+    result = await Portfolio.exists(new_id)
     if result == False:
-        raise AssertionError(f"result should be True for {id}")
+        raise AssertionError(f"result should be True for {new_id}")
 
     print(result)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_balance_positive() -> bool:
-    id: str = str(uuid.uuid4())
+async def test_balance_positive() -> None:
+    new_id: str = str(uuid.uuid4())
     await Portfolio.save(
-        id,
+        new_id,
         5000,
         10,
         {},
     )
-    result = await Portfolio.get_portfolio_account_balance(id)
+    result = await Portfolio.get_portfolio_account_balance(new_id)
     if result != 5000:
         raise AssertionError("result should be 5000")
 
     print(result)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_get_get_external_account_id_positive() -> bool:
-    id: str = str(uuid.uuid4())
+async def test_get_get_external_account_id_positive() -> None:
+    new_id: str = str(uuid.uuid4())
     x_id: str = str(uuid.uuid4())
-    await Portfolio.save(id, 5000, 10, {}, AssetType.CRYPTO, x_id, "ALPACA")
-    external_account_id, broker = await Portfolio.get_external_account_id(id)
+    await Portfolio.save(
+        new_id, 5000, 10, {}, AssetType.CRYPTO, x_id, "ALPACA"
+    )
+    external_account_id, broker = await Portfolio.get_external_account_id(
+        new_id
+    )
     if external_account_id != x_id or broker != "ALPACA":
         raise AssertionError("failed to load external_account_id details")
 
     print(external_account_id, broker)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_get_get_external_account_id_positive2() -> bool:
-    id: str = str(uuid.uuid4())
-    x_id: str = str(uuid.uuid4())
+async def test_get_get_external_account_id_positive2() -> None:
+    new_id: str = str(uuid.uuid4())
     await Portfolio.save(
-        id,
+        new_id,
         5000,
         10,
         {},
     )
-    external_account_id, broker = await Portfolio.get_external_account_id(id)
+    external_account_id, broker = await Portfolio.get_external_account_id(
+        new_id
+    )
     if external_account_id or broker:
         raise AssertionError("failed to load external_account_id details")
 
     print(external_account_id, broker)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_crypto_1() -> bool:
-    id: str = str(uuid.uuid4())
-    await Portfolio.save(id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
-    result = await Portfolio.exists(id)
+async def test_crypto_1() -> None:
+    new_id: str = str(uuid.uuid4())
+    await Portfolio.save(new_id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
+    result = await Portfolio.exists(new_id)
     if result == False:
-        raise AssertionError(f"result should be True for {id}")
+        raise AssertionError(f"result should be True for {new_id}")
 
     print(result)
-    return True
 
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
-async def test_crypto_2() -> bool:
-    id: str = str(uuid.uuid4())
-    await Portfolio.save(id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
-    result = await Portfolio.exists(id)
+async def test_crypto_2() -> None:
+    new_id: str = str(uuid.uuid4())
+    await Portfolio.save(new_id, 5000, 10, {}, asset_type=AssetType.CRYPTO)
+    result = await Portfolio.exists(new_id)
     if result == False:
-        raise AssertionError(f"result should be True for {id}")
+        raise AssertionError(f"result should be True for {new_id}")
 
-    p = await Portfolio.load_by_portfolio_id(id)
+    p = await Portfolio.load_by_portfolio_id(new_id)
     print(p)
     if p.asset_type != AssetType.CRYPTO:
         raise AssertionError("wrong asset-type")
     if p.portfolio_size != 5000:
         raise AssertionError("wrong size")
-
-    return True

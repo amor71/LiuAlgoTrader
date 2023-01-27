@@ -30,11 +30,11 @@ async def test_scanner_alpaca() -> bool:
         target_strategy_name=None,
         data_loader=dl,
         trading_api=trader,
-        max_share_price=500,
-        min_share_price=0,
+        max_share_price=100,
+        min_share_price=5,
         min_last_dv=3,
-        today_change_percent=5,
-        min_volume=50000,
+        today_change_percent=7,
+        min_volume=500000,
         from_market_open=0,
     )
 

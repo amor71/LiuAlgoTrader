@@ -8,7 +8,7 @@ from liualgotrader.fincalcs.vwap import add_daily_vwap, anchored_vwap
 
 
 @pytest.mark.devtest
-def test_add_daily_vwap_single_line() -> bool:
+def test_add_daily_vwap_single_line():
     print("test_add_daily_vwap_single_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start
@@ -33,11 +33,9 @@ def test_add_daily_vwap_single_line() -> bool:
     if not success:
         raise AssertionError("Why exception?")
 
-    return True
-
 
 @pytest.mark.devtest
-def test_add_daily_vwap_two_line() -> bool:
+def test_add_daily_vwap_two_line():
     print("test_add_daily_vwap_two_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=1)
@@ -63,11 +61,9 @@ def test_add_daily_vwap_two_line() -> bool:
     if not success:
         raise AssertionError("Why exception?")
 
-    return True
-
 
 @pytest.mark.devtest
-def test_add_daily_vwap_three_line() -> bool:
+def test_add_daily_vwap_three_line():
     print("test_add_daily_vwap_three_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=2)
@@ -92,11 +88,9 @@ def test_add_daily_vwap_three_line() -> bool:
     if not success:
         raise AssertionError("Why exception?")
 
-    return True
-
 
 @pytest.mark.devtest
-def test_anchored_vwap_three_line() -> bool:
+def test_anchored_vwap_three_line():
     print("test_anchored_vwap_three_line")
     start = datetime.utcnow().replace(second=0, microsecond=0)
     end = start + timedelta(minutes=2)
@@ -117,5 +111,3 @@ def test_anchored_vwap_three_line() -> bool:
     print(s)
     if s[-1] != 25.0:
         raise AssertionError(f"Unexpected VWAP {s[-1]}")
-
-    return True

@@ -29,8 +29,6 @@ async def test_load_trade_plan_from_db():
     for plan in trade_plan:
         print(plan)
 
-    return True
-
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
@@ -48,8 +46,6 @@ async def test_load_testplan_from_db():
 
     print(strategy_list)
 
-    return True
-
 
 @pytest.mark.asyncio
 @pytest.mark.devtest
@@ -60,5 +56,3 @@ async def test_get_new_entries():
 
     for plan in trade_plan:
         print(plan)
-
-    return True

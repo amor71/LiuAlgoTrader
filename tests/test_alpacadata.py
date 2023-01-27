@@ -7,7 +7,7 @@ from liualgotrader.data.alpaca import AlpacaData
 def test_get_trading_day():
     alpaca_data = AlpacaData()
 
-    symbol = "BTCUSD"
+    symbol = "BTC/USD"
     last_trading_time = alpaca_data.get_last_trading(symbol)
 
     print(f"{symbol} last trading time: {last_trading_time}")

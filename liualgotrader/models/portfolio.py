@@ -1,7 +1,6 @@
 import json
 from typing import Dict, List, Optional, Tuple
 
-import tabulate
 from pandas import DataFrame
 
 from liualgotrader.common import config

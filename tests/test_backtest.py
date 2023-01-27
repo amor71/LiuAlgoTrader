@@ -66,8 +66,6 @@ async def test_backtest_day():
         scanners=[c],
     )
 
-    return True
-
 
 @pytest.mark.asyncio
 async def test_backtest_min():
@@ -113,5 +111,3 @@ async def test_backtest_min():
         strategies=[s],
         scanners=[c],
     )
-
-    return True

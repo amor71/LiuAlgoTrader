@@ -3,13 +3,11 @@ from datetime import date, datetime, timedelta
 from typing import Callable, List, Optional, Tuple
 
 import requests
-from alpaca_trade_api.rest import REST as tradeapi
 from pytz import timezone
 
 from liualgotrader.common import config
 from liualgotrader.common.data_loader import DataLoader  # type: ignore
 from liualgotrader.common.tlog import tlog
-from liualgotrader.common.types import DataConnectorType
 from liualgotrader.data.alpaca import AlpacaData
 from liualgotrader.data.polygon import PolygonData
 from liualgotrader.models.ticker_data import StockOhlc
@@ -68,7 +66,7 @@ class Momentum(Scanner):
         self, filter_func: Optional[Callable]
     ) -> List[str]:
         filtered = await self.data_loader.data_api.get_market_snapshot(
-            filter_func
+            self.trading_api.get_symbols(), filter_func
         )
         tlog(
             f"loaded {len(filtered)} tickers of market snapshots after momentum filtering"
@@ -148,13 +146,17 @@ class Momentum(Scanner):
 
     def momentum_filter(self, snapshot) -> bool:
         if isinstance(self.data_loader.data_api, AlpacaData):
-            (
-                tradable,
-                last_trade_price,
-                prev_day_volume_price,
-                today_gap_up_pct,
-                today_volume,
-            ) = self.alpaca_snapshot_details(snapshot)
+            try:
+                (
+                    tradable,
+                    last_trade_price,
+                    prev_day_volume_price,
+                    today_gap_up_pct,
+                    today_volume,
+                ) = self.alpaca_snapshot_details(snapshot)
+            except Exception as e:
+                tlog(f"failed with {e} in {snapshot}")
+                return False
         elif isinstance(self.data_loader.data_api, PolygonData):
             (
                 tradable,
@@ -201,28 +203,26 @@ class Momentum(Scanner):
     def alpaca_snapshot_details(
         self, snapshot
     ) -> Tuple[bool, float, float, float, float]:
-        tradable = snapshot["ticker"].lower() in self.trade_able_symbols
-
-        last_trade_price = float(snapshot["latest_trade"]["p"])
-        prev_day_price_volume = float(snapshot["prev_daily_bar"]["v"]) * float(
-            snapshot["prev_daily_bar"]["c"]
+        last_trade_price = float(snapshot["latestTrade"]["p"])
+        prev_day_price_volume = float(snapshot["prevDailyBar"]["v"]) * float(
+            snapshot["prevDailyBar"]["c"]
         )
         today_gap_up_pct = (
             100.0
-            * (snapshot["daily_bar"]["o"] - snapshot["prev_daily_bar"]["c"])
-            / snapshot["prev_daily_bar"]["c"]
+            * (snapshot["dailyBar"]["o"] - snapshot["prevDailyBar"]["c"])
+            / snapshot["prevDailyBar"]["c"]
         )
-        today_volume = snapshot["daily_bar"]["v"]
+        today_volume = snapshot["dailyBar"]["v"]
 
         return (
-            tradable,
+            True,
             last_trade_price,
             prev_day_price_volume,
             today_gap_up_pct,
             today_volume,
         )
 
-    async def run(self, back_time: datetime = None) -> List[str]:
+    async def run(self, back_time: Optional[datetime] = None) -> List[str]:
         if not back_time:
             self.trade_able_symbols = await self._get_trade_able_symbols()
             return await self.apply_filter_on_market_snapshot(

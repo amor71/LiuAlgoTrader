@@ -30,5 +30,3 @@ async def test_get_scanner():
         raise AssertionError("Failed to instantiate scanner")
 
     print(f"Loaded scanner {s.name}")
-
-    return True

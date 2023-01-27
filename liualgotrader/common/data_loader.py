@@ -3,7 +3,6 @@ import concurrent.futures
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-import alpaca_trade_api as tradeapi
 import pandas as pd
 from dateutil.parser import parse as date_parser
 from pytz import timezone
@@ -48,9 +47,10 @@ def convert_offset_to_datetime(
     except IndexError:
         last_trading_time = start or data_api.get_last_trading(symbol)
         if scale == TimeScale.minute:
+
             return last_trading_time.replace(
                 second=0, microsecond=0
-            ) + timedelta(minutes=1 + offset)
+            ) + timedelta(minutes=offset)
 
         return data_api.get_trading_day(symbol, last_trading_time, 1 + offset)
 
@@ -160,9 +160,12 @@ def _data_fetch_executor(
 
     df = data_api.get_symbol_data(
         symbol,
-        start=(start.date() if isinstance(start, datetime) else start),
-        end=(end.date() if isinstance(end, datetime) else end)
-        + timedelta(days=1),
+        start=start
+        if isinstance(start, datetime)
+        else datetime.combine(start, datetime.time.min),
+        end=end
+        if isinstance(end, datetime)
+        else datetime.combine(end, datetime.time.max),
         scale=scale,
     )
 
@@ -195,7 +198,7 @@ def _concurrent_fetch_data(
         raise ValueError(f"can't load empty range list {ranges}")
 
     ranges = list(zip(ranges, ranges[1:]))
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = {
             executor.submit(
                 _data_fetch_executor,
@@ -257,9 +260,12 @@ def _legacy_fetch_data_range(
     if adjusted_symbol != symbol:
         adjusted_df = data_api.get_symbol_data(
             adjusted_symbol,
-            start=(start.date() if isinstance(start, datetime) else start),
-            end=(end.date() if isinstance(end, datetime) else end)
-            + timedelta(days=1),
+            start=start
+            if isinstance(start, datetime)
+            else datetime.combine(start, datetime.time.min),
+            end=end
+            if isinstance(end, datetime)
+            else datetime.combine(end, datetime.time.max),
             scale=scale,
         )
     else:
@@ -267,9 +273,12 @@ def _legacy_fetch_data_range(
 
     new_df = data_api.get_symbol_data(
         symbol,
-        start=(start.date() if isinstance(start, datetime) else start),
-        end=(end.date() if isinstance(end, datetime) else end)
-        + timedelta(days=1),
+        start=start
+        if isinstance(start, datetime)
+        else datetime.combine(start, datetime.time.min),
+        end=end
+        if isinstance(end, datetime)
+        else datetime.combine(end, datetime.time.max),
         scale=scale,
     )
     symbol_data = pd.concat([adjusted_df, new_df, symbol_data], sort=True)
@@ -326,17 +335,29 @@ def fetch_data_datetime(
     concurrency: int,
 ) -> pd.DataFrame:
     if not symbol_data.empty and d < symbol_data.index.min():
-        start = d
+        start = d - (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
         end = symbol_data.index.min()
     elif not symbol_data.empty and d > symbol_data.index.max():
-        start = symbol_data.index.max()
+        start = symbol_data.index.max() - (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
         end = d + (
             timedelta(days=1)
             if scale == TimeScale.day
             else timedelta(minutes=1)
         )
     else:
-        start = d
+        start = d - (
+            timedelta(days=1)
+            if scale == TimeScale.day
+            else timedelta(minutes=1)
+        )
         end = d + (
             timedelta(days=1)
             if scale == TimeScale.day
@@ -522,7 +543,7 @@ class SymbolData:
 
     def __init__(
         self,
-        data_api: tradeapi,
+        data_api: DataAPI,
         symbol: str,
         scale: TimeScale,
         concurrency: int,
@@ -628,7 +649,7 @@ class DataLoader:
     def keys(self) -> List[str]:
         return list(self.data.keys())
 
-    def pre_fetch(self, symbols: List[str], start: date, end: date):
+    def pre_fetch(self, symbols: List[str], start: datetime, end: datetime):
         data = self.data_api.get_symbols_data(
             symbols=symbols, start=start, end=end, scale=self.scale
         )

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -27,11 +28,11 @@ utctz = timezone("UTC")
 class GeminiTrader(Trader):
     gemini_api_key: Optional[str] = os.getenv("GEMINI_API_KEY")
     gemini_api_secret: Optional[str] = os.getenv("GEMINI_API_SECRET")
-    base_url = "https://api.sandbox.gemini.com"
-    base_websocket = "wss://api.sandbox.gemini.com"
+    base_url = config.gemini_base_url
+    base_websocket = config.gemini_websocket_base
     last_nonce = None
 
-    def __init__(self, qm: QueueMapper = None):
+    def __init__(self, qm: Optional[QueueMapper] = None):
         self.running_task: Optional[Thread] = None
         self.hb_task: Optional[Thread] = None
         self.send_hb = True
@@ -196,12 +197,22 @@ class GeminiTrader(Trader):
             hour=23, minute=59, second=59, microsecond=0, tzinfo=utctz
         )
 
-    def get_trading_days(
+    def get_equity_trading_days(
+        self, start_date: date, end_date: date = date.today()
+    ) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def get_crypto_trading_days(
         self, start_date: date, end_date: date = date.today()
     ) -> pd.DataFrame:
         return pd.DataFrame(
             index=pd.date_range(start=start_date, end=end_date)
         )
+
+    async def get_account_order(
+        self, external_account_id: str, order_id: str
+    ) -> Order:
+        raise NotImplementedError("get_account_order not implemented yet")
 
     def get_position(self, symbol: str) -> float:
         symbol = symbol.lower()
@@ -363,6 +374,9 @@ class GeminiTrader(Trader):
             self.hb_task = None
             self.flags = None
 
+    def get_symbols(self) -> List[str]:
+        return asyncio.run(self.get_tradeable_symbols())
+
     async def get_tradeable_symbols(self) -> List[str]:
         endpoint = "/v1/symbols"
         url = self.base_url + endpoint
@@ -402,17 +416,10 @@ class GeminiTrader(Trader):
         qty: float,
         side: str,
         order_type: str,
-        time_in_force: str = None,
-        limit_price: str = None,
-        stop_price: str = None,
-        client_order_id: str = None,
-        extended_hours: bool = None,
-        order_class: str = None,
-        take_profit: dict = None,
-        stop_loss: dict = None,
-        trail_price: str = None,
-        trail_percent: str = None,
-        on_behalf_of: str = None,
+        time_in_force: Optional[str] = None,
+        limit_price: Optional[float] = None,
+        client_order_id: Optional[str] = None,
+        on_behalf_of: Optional[str] = None,
     ) -> Order:
         symbol = symbol.lower()
         if order_type == "market":
@@ -456,6 +463,6 @@ class GeminiTrader(Trader):
 
         await self.close()
 
-        raise AssertionError(
-            f"HTTP ERROR {response.status_code} {response.text}"
-        )
+        response.raise_for_status()
+
+        raise
