@@ -42,17 +42,18 @@ def convert_offset_to_datetime(
     offset: int,
     start: Optional[datetime] = None,
 ) -> datetime:
-    try:
+    if 0 < len(index) >= abs(offset):
         return index[offset]
-    except IndexError:
-        last_trading_time = start or data_api.get_last_trading(symbol)
-        if scale == TimeScale.minute:
 
-            return last_trading_time.replace(
-                second=0, microsecond=0
-            ) + timedelta(minutes=offset)
+    last_trading_time = start or data_api.get_last_trading(symbol)
+    if scale == TimeScale.minute:
+        return last_trading_time.replace(second=0, microsecond=0) + timedelta(
+            minutes=offset
+        )
 
-        return data_api.get_trading_day(symbol, last_trading_time, 1 + offset)
+    return data_api.get_trading_day(
+        symbol, last_trading_time, 1 + offset
+    ).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def handle_slice_conversion(
@@ -127,10 +128,9 @@ def load_item_by_offset(
         d=i,
         concurrency=concurrency,
     )
-    # index = symbol_data.index.get_indexer([i], method="nearest")[0]
     return (
         symbol_data,
-        symbol_data.iloc[offset],  # index
+        symbol_data.loc[i],
     )
 
 
@@ -142,12 +142,12 @@ def get_item_by_offset(
     offset: int,
     concurrency: int,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    try:
+    if len(symbol_data.index) >= abs(offset):
         return symbol_data, symbol_data.iloc[len(symbol_data.index) + offset]
-    except IndexError:
-        return load_item_by_offset(
-            data_api, symbol_data, symbol, scale, offset, concurrency
-        )
+
+    return load_item_by_offset(
+        data_api, symbol_data, symbol, scale, offset, concurrency
+    )
 
 
 def _data_fetch_executor(
@@ -363,7 +363,6 @@ def fetch_data_datetime(
             if scale == TimeScale.day
             else timedelta(minutes=1)
         )
-
     return fetch_data_range(
         data_api=data_api,
         symbol_data=symbol_data,

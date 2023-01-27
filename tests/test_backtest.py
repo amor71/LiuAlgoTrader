@@ -47,6 +47,7 @@ async def test_backtest_day():
             "filename": "./examples/skeleton-strategy/my_strategy.py",
             "schedule": [],
         },
+        data_loader=dl,
     )
 
     if not s:
@@ -93,6 +94,7 @@ async def test_backtest_min():
             "filename": "./examples/skeleton-strategy/my_strategy.py",
             "schedule": [],
         },
+        data_loader=dl,
     )
 
     if not s:

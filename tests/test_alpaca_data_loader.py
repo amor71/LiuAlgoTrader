@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from time import time
 from zoneinfo import ZoneInfo
 
@@ -25,14 +25,20 @@ def test_apple_stock_daily_price():
     dl = DataLoader(scale=TimeScale.day, connector=DataConnectorType.alpaca)
     last_price = dl["AAPL"].close[-1]
     last_price_time = dl["AAPL"].close.index[-1]
-    print(last_price, last_price_time)
-    before_price = dl["AAPL"].close[-5]
-    print(f"before_price {before_price}")
-    print(f"apple {last_price} @ {last_price_time}, before was {before_price}")
-
+    before_price = dl["AAPL"][-5].close
+    print(dl["AAPL"][-5], dl["AAPL"][-5].close, before_price)
+    before_time = dl["AAPL"][-5].name
+    print(dl["AAPL"][-5], dl["AAPL"][-5].close)
+    print(
+        f"apple {last_price} @ {last_price_time}, before was {before_price} @{before_time} "
+    )
     df = dl["AAPL"]
-    print(list(df.columns))
     print(df)
+
+    assert df.empty, "did not expect empty DataFrame"
+    assert last_price_time - before_time == timedelta(
+        days=4
+    ), f"{last_price_time} - {before_time} : unexpected date different {last_price_time - before_time}"
 
 
 @pytest.mark.devtest
@@ -59,7 +65,7 @@ def testapple_test2():
     data = dl["AAPL"].close[start:end]  # type: ignore
 
     print(data)
-    assert 0 < len(data) <= 2, f"not enough data {len(data)}"
+    assert len(data) == 2, f"not enough data {len(data)}"
 
 
 @pytest.mark.devtest
@@ -80,7 +86,7 @@ def test_apple_stock_latestprice():
     print("test_apple_stock_latestprice")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
     last_price = dl["AAPL"].close[-1]
-    last_price_time = dl["AAPL"].close.index[-1]
+    last_price_time = dl["AAPL"][-1].name
 
     print(f"apple {last_price} @ {last_price_time}")
 
@@ -90,9 +96,9 @@ def test_apple_stock_current_price():
     print("test_apple_stock_current_price")
     dl = DataLoader(TimeScale.minute, connector=DataConnectorType.alpaca)
     last_price = dl["AAPL"].close[-1]
-    last_price_time = dl["AAPL"].close.index[-1]
+    last_price_time = dl["AAPL"][-1].name
     before_price = dl["AAPL"].close[-5]
-    before_price_time = dl["AAPL"].close.index[-5]
+    before_price_time = dl["AAPL"][-5].name
 
     print(
         f"apple {last_price} @ {last_price_time}, before was {before_price}@{before_price_time}"
@@ -107,8 +113,7 @@ def test_apple_stock_current_price_range_int_minute():
 
     print(last_price_range)
 
-    if len(last_price_range) != 5:
-        raise AssertionError("incorrect amount of data")
+    assert len(last_price_range) == 5, "incorrect amount of data"
 
 
 @pytest.mark.devtest
@@ -117,6 +122,8 @@ def test_apple_stock_current_price_range_int_day():
     dl = DataLoader(TimeScale.day, connector=DataConnectorType.alpaca)
     last_price_range = dl["AAPL"].close[-6:-1]  # type:ignore
     print(last_price_range)
+
+    assert len(last_price_range) == 6, "incorrect amount of data"
 
 
 @pytest.mark.devtest

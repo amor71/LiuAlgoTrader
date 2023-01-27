@@ -3,6 +3,7 @@ import uuid
 
 import pytest
 
+from liualgotrader.common.data_loader import DataLoader  # type:ignore
 from liualgotrader.common.database import create_db_connection
 from liualgotrader.strategies.base import Strategy
 
@@ -24,6 +25,7 @@ async def test_get_strategy():
             "filename": "./examples/skeleton-strategy/my_strategy.py",
             "schedule": [],
         },
+        data_loader=DataLoader(),
     )
 
     if not s:
