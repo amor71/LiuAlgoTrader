@@ -172,6 +172,7 @@ class AlpacaTrader(Trader):
         )
 
     def get_symbols(self) -> List[str]:
+        self.trading_client._use_raw_data = False
         assets: List[Asset] = self.trading_client.get_all_assets(  # type: ignore
             GetAssetsRequest(
                 status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY
