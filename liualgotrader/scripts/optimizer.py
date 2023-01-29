@@ -36,14 +36,13 @@ def create_parameters(parameters: Dict) -> List[Parameter]:
     params = []
 
     for strategy in parameters["strategies"]:
-        for name in parameters["strategies"][strategy]:
-            params.append(
-                Parameter(
-                    f"strategies.{strategy}.{name}",
-                    **parameters["strategies"][strategy][name],
-                )
+        params.extend(
+            Parameter(
+                f"strategies.{strategy}.{name}",
+                **parameters["strategies"][strategy][name],
             )
-
+            for name in parameters["strategies"][strategy]
+        )
     tlog(f"created {len(params)} parameters")
     return params
 
@@ -73,7 +72,7 @@ def dateFromString(s: str) -> date:
         dt = result.date()
 
     if dt is None:
-        raise ValueError("Don't understand date '" + s + "'")
+        raise ValueError(f"Don't understand date '{s}'")
 
     return dt
 

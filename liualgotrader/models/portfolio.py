@@ -160,7 +160,7 @@ class Portfolio:
     async def exists(cls, portfolio_id: str) -> bool:
         pool = config.db_conn_pool
         async with pool.acquire() as con:
-            result = await con.fetchval(
+            return await con.fetchval(
                 """
                     SELECT EXISTS (
                         SELECT 1 
@@ -170,7 +170,6 @@ class Portfolio:
                 """,
                 portfolio_id,
             )
-            return result
 
     @classmethod
     async def get_portfolio_account_balance(cls, portfolio_id: str) -> float:

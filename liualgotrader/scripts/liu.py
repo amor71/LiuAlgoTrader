@@ -237,9 +237,7 @@ def quickstart():
         print()
         print(f"Select location for database files [{pwd}/liu_data/]:")
         db_location = input()
-        db_location = (
-            f"{pwd}/liu_data/" if not len(db_location) else db_location
-        )
+        db_location = db_location if len(db_location) else f"{pwd}/liu_data/"
 
         print()
         print("** IMPORTANT NOTE**")
@@ -270,13 +268,13 @@ def quickstart():
             "Select the database name for keeping track of your trading [liu]:"
         )
         db_name = input()
-        db_name = "liu" if not len(db_name) else db_name
+        db_name = db_name if len(db_name) else "liu"
         print("Select the database user-name [liu]:")
         user_name = input()
-        user_name = "liu" if not len(user_name) else user_name
+        user_name = user_name if len(user_name) else "liu"
         print("Select the database password [liu]:")
         password = input()
-        password = "liu" if not len(password) else password
+        password = password if len(password) else "liu"
 
     print()
     print("+--------------------+")
@@ -292,9 +290,7 @@ def quickstart():
         print(f"Select location for sample files [{pwd}/liu_samples]:")
         sample_location = input()
         sample_location = (
-            f"{pwd}/liu_samples"
-            if not len(sample_location)
-            else sample_location
+            sample_location if len(sample_location) else f"{pwd}/liu_samples"
         )
 
     print()
