@@ -4,14 +4,14 @@ import importlib.util
 import os
 import sys
 import traceback
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import pygit2
 import toml
 
 from liualgotrader.common import config
 from liualgotrader.common.database import create_db_connection
-from liualgotrader.common.tlog import tlog
+from liualgotrader.common.tlog import tlog, tlog_exception
 from liualgotrader.miners.base import Miner
 
 # rom liualgotrader.miners.stock_cluster import StockCluster
@@ -28,7 +28,7 @@ def motd(filename: str, version: str) -> None:
 
 
 async def main(conf_dict: Dict):
-    task_list: List[Optional[asyncio.Task]] = []
+    task_list: List[asyncio.Task] = []
 
     await create_db_connection()
     for miner in conf_dict["miners"]:
@@ -53,8 +53,15 @@ async def main(conf_dict: Dict):
             if not issubclass(miner_class, Miner):
                 tlog(f"Miner must inherit from class {Miner.__name__}")
                 exit(0)
+
+            debug = conf_dict["miners"][miner].get("debug", False)
+            miner = miner_class(debug=debug, data=conf_dict["miners"][miner])
+            task_list.append(asyncio.create_task(miner.run()))
+            await asyncio.gather(*task_list)
         except Exception as e:
-            tlog(f"[ERROR] miner {miner} resulted in exception:`{e}`")
+            tlog_exception(
+                f"[ERROR] miner {miner} resulted in exception:`{e}`"
+            )
 
 
 def main_cli() -> None:
@@ -86,8 +93,6 @@ def main_cli() -> None:
         sys.exit(0)
 
     try:
-        if not asyncio.get_event_loop().is_closed():
-            asyncio.get_event_loop().close()
         asyncio.run(main(conf_dict))
     except KeyboardInterrupt:
         tlog("market_miner.main() - Caught KeyboardInterrupt")
@@ -100,3 +105,7 @@ def main_cli() -> None:
         del exc_info
 
     tlog("*** market_miner completed ***")
+
+
+if __name__ == "__main__":
+    main_cli()

@@ -148,3 +148,7 @@ def main_cli() -> None:
         },
         name="portfolio",
     )
+
+
+if __name__ == "__main__":
+    main_cli()

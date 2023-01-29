@@ -269,6 +269,7 @@ class AlpacaData(DataAPI):
             )
         ).df
 
+        print(len(data))
         data = data.tz_convert("America/New_York", level=1)
         return self._extracted_from_get_symbols_data_14(data)
 

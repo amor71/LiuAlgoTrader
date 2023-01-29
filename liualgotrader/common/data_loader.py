@@ -554,6 +554,7 @@ class SymbolData:
         self.concurrency = concurrency
         self.columns: Dict[str, self._Column] = {}  # type: ignore
 
+        print(symbol, prefetched_data)
         self.symbol_data = (
             prefetched_data
             if prefetched_data is not None
@@ -652,7 +653,9 @@ class DataLoader:
         data = self.data_api.get_symbols_data(
             symbols=symbols, start=start, end=end, scale=self.scale
         )
-        for symbol, df in data.items():
+        data_symbols = list(set(data.index.droplevel(1)))
+        for symbol in data_symbols:
+            df = data.loc[symbol]
             self.data[symbol] = SymbolData(
                 self.data_api, symbol, self.scale, self.concurrency, df
             )
