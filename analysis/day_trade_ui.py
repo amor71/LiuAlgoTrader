@@ -1,9 +1,8 @@
 import asyncio
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Dict
 
-import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import nest_asyncio
 import pandas as pd
@@ -14,6 +13,8 @@ import streamlit as st
 from liualgotrader.analytics.analysis import (calc_batch_revenue, count_trades,
                                               load_runs, load_trades)
 from liualgotrader.common import database
+from liualgotrader.common.data_loader import DataLoader  # type: ignore
+from liualgotrader.common.types import TimeScale
 
 st.title("Day-trade Session Analysis")
 st.markdown(
@@ -31,11 +32,11 @@ loop.run_until_complete(database.create_db_connection())
 
 with st.spinner(f"loading {day_to_analyze} data.."):
     # Create DB connection & load data
-    trades = load_trades(day_to_analyze, env)
+    trades = asyncio.run(load_trades(day_to_analyze, env))  # type:ignore
     if trades.empty:
         st.stop()
 
-    algo_runs = load_runs(day_to_analyze, env)
+    algo_runs = asyncio.run(load_runs(day_to_analyze, env))  # type:ignore
     if algo_runs.empty:
         st.stop()
 
@@ -116,7 +117,7 @@ for element in how_was_my_day:
 
 if st.sidebar.checkbox("Show details"):
     session = requests.session()
-    api = tradeapi.REST(base_url="https://api.alpaca.markets")
+    dl = DataLoader(scale=TimeScale.minute)
 
     minute_history = {}
 
@@ -129,13 +130,12 @@ if st.sidebar.checkbox("Show details"):
                 ].value_counts()
                 for symbol, count in symbols.items():
                     if symbol not in minute_history:
-                        minute_history[symbol] = api.polygon.historic_agg_v2(
-                            symbol,
-                            1,
-                            "minute",
-                            _from=day_to_analyze - timedelta(days=7),
-                            to=day_to_analyze + timedelta(days=1),
-                        ).df.tz_convert("US/Eastern")
+                        minute_history[symbol] = dl[symbol][
+                            day_to_analyze  # type: ignore
+                            - timedelta(days=7) : day_to_analyze  # type: ignore
+                            + timedelta(days=1)
+                        ]
+
                         c += 1
     st.success(f"LOADED {c} symbols' data!")
 

@@ -433,3 +433,7 @@ def main_cli() -> None:
         show_usage()
 
     exit(0)
+
+
+if __name__ == "__main__":
+    main_cli()

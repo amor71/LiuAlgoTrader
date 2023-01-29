@@ -29,7 +29,7 @@ def motd(filename: str, version: str, unique_id: str) -> None:
     tlog("----------------------------------------------------------")
 
 
-def main_cli():
+def main_cli() -> None:
     config.filename = os.path.basename(__file__)
     mp.set_start_method("spawn")
 
@@ -119,3 +119,7 @@ def main_cli():
             p.terminate()
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main_cli()

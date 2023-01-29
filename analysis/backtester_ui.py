@@ -5,7 +5,6 @@ asyncio.set_event_loop(loop)
 import json
 import traceback
 
-import alpaca_trade_api as tradeapi
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
@@ -69,8 +68,6 @@ if app == "analyzer":
             st.stop()
 
         session = requests.session()
-        api = tradeapi.REST(base_url="https://api.alpaca.markets")
-
         minute_history = {}
 
         c = 0

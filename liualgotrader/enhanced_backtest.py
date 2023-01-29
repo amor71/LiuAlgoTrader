@@ -225,7 +225,7 @@ async def do_strategy_all(
             "symbols_position": dict(
                 {symbol: 0 for symbol in symbols}, **trading_data.positions
             ),
-            "now": now.to_pydatetime(),
+            "now": now,
             "portfolio_value": portfolio_value,
             "backtesting": True,
             "data_loader": data_loader,
