@@ -1069,7 +1069,7 @@ summary = "plugin and hook calling mechanisms for python"
 
 [[package]]
 name = "polygon-api-client"
-version = "1.6.2"
+version = "1.6.3"
 requires_python = ">=3.8,<4.0"
 summary = "Official Polygon.io REST and Websocket client."
 dependencies = [
@@ -3228,9 +3228,9 @@ content_hash = "sha256:a337a376a2bec267cd172af2f004ae9be3e27401fd10030a8abb15ab3
     {url = "https://files.pythonhosted.org/packages/9e/01/f38e2ff29715251cf25532b9082a1589ab7e4f571ced434f98d0139336dc/pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
     {url = "https://files.pythonhosted.org/packages/a1/16/db2d7de3474b6e37cbb9c008965ee63835bba517e22cdb8c35b5116b5ce1/pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
-"polygon-api-client 1.6.2" = [
-    {url = "https://files.pythonhosted.org/packages/32/e0/14f5262dff01b647e7edb37cfe6929648add86c4f00ebf039d50a7ed6890/polygon_api_client-1.6.2-py3-none-any.whl", hash = "sha256:c4642dfdecbeaf119fc3e521d42a6b9f2303f1d9131f3e2888272c396e2fb106"},
-    {url = "https://files.pythonhosted.org/packages/f1/d2/5f7252125ad5d027474084ef1821c72d7cf28cbf581443676097df060983/polygon-api-client-1.6.2.tar.gz", hash = "sha256:01e18df219555607b70c8847abf43da5e6bbacc570d40f83e7062242d54c16a3"},
+"polygon-api-client 1.6.3" = [
+    {url = "https://files.pythonhosted.org/packages/74/92/65f9ba1e034cae42ad1d26d657060bb4e9594ce8adfba2a90fa583eb3d28/polygon_api_client-1.6.3-py3-none-any.whl", hash = "sha256:0a7d7ca25ac1231f9905fab2c961024614477d2153c855075526c1185e95cffd"},
+    {url = "https://files.pythonhosted.org/packages/c6/bc/f9e58bc5ea83447d7fcc9dab20c3ba24f81a5486e12b900ed6762f60b241/polygon-api-client-1.6.3.tar.gz", hash = "sha256:286e373428855da8e559e343f740eebb86de99af8d3d01c04434a173588625ab"},
 ]
 "prometheus-client 0.15.0" = [
     {url = "https://files.pythonhosted.org/packages/2e/5e/4225463cdac1098aac718b1d8adf8f9dc3d6aaea55f4f85a2f7d572b4f7c/prometheus_client-0.15.0-py3-none-any.whl", hash = "sha256:db7c05cbd13a0f79975592d112320f2605a325969b270a94b71dcabc47b931d2"},

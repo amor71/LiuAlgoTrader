@@ -93,70 +93,77 @@ def setup_db(
 
     print("files loaded successfully.")
     print(f"running docker-compose from within {db_location}:")
-    to_run = f"cd {db_location} && docker-compose up -d"
-    print("> ", to_run)
-    os.system(to_run)
-
+    _extracted_from_setup_db_69(db_location, " && docker-compose up -d")
     if restore_sample_db:
         print("waiting for database to complete setup. 2 minutes")
         time.sleep(120)
         print("restoring sample database")
-        to_run = f"cd {db_location} && docker exec -i pg-docker psql -q -U liu -W liu liu < liu_dump.sql"
-        print("> ", to_run)
-        os.system(to_run)
+        _extracted_from_setup_db_69(
+            db_location,
+            " && docker exec -i pg-docker psql -q -U liu -W liu liu < liu_dump.sql",
+        )
     print()
     print("check deployment using `\psql -h localhost -p 5400 -U liu`")
+
+
+# TODO Rename this here and in `setup_db`
+def _extracted_from_setup_db_69(db_location, arg1):
+    to_run = f"cd {db_location}{arg1}"
+    print("> ", to_run)
+    os.system(to_run)
 
 
 def setup_samples(
     samples_location: str, user: str, passwd: str, db: str
 ) -> None:
     try:
-        print()
-        print("+--------------------+")
-        print("| setting up samples |")
-        print("+--------------------+")
-
-        p = pathlib.Path(samples_location)
-        if not p.exists():
-            p.mkdir()
-        if samples_location[-1] != "/":
-            samples_location += "/"
-
-        base_url = "https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/"
-        files = [
-            "tradeplan.toml",
-            "vwap_short.py",
-            "momentum_long_simplified.py",
-        ]
-
-        for file in files:
-            print(f"Downloading {base_url}{file} to {samples_location}...")
-            r = requests.get(f"{base_url}{file}")
-            with open(f"{samples_location}{file}", "w") as f:
-                f.write(r.text)
-                f.write("")
-
-        print()
-        print("creating environment variables script")
-
-        if os.name == "nt":
-            with open(f"{samples_location}env_vars.bat", "w") as f:
-                f.write(
-                    f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
-                )
-        else:
-            with open(f"{samples_location}env_vars.sh", "w") as f:
-                f.write(
-                    f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
-                )
-
+        _extracted_from_setup_samples_5(samples_location, user, passwd, db)
     except Exception as e:
         print(f"Something went wrong:{e}")
         print(
             "Pls open a new issue w/ details 'https://github.com/amor71/LiuAlgoTrader/issues/new'"
         )
         exit(0)
+
+
+# TODO Rename this here and in `setup_samples`
+def _extracted_from_setup_samples_5(samples_location, user, passwd, db):
+    print()
+    print("+--------------------+")
+    print("| setting up samples |")
+    print("+--------------------+")
+
+    p = pathlib.Path(samples_location)
+    if not p.exists():
+        p.mkdir()
+    if samples_location[-1] != "/":
+        samples_location += "/"
+
+    base_url = "https://raw.github.com/amor71/LiuAlgoTrader/master/examples/quickstart/"
+    files = [
+        "tradeplan.toml",
+        "vwap_short.py",
+        "momentum_long_simplified.py",
+    ]
+
+    for file in files:
+        print(f"Downloading {base_url}{file} to {samples_location}...")
+        r = requests.get(f"{base_url}{file}")
+        with open(f"{samples_location}{file}", "w") as f:
+            f.write(r.text)
+            f.write("")
+
+    print()
+    print("creating environment variables script")
+
+    if os.name == "nt":
+        with open(f"{samples_location}env_vars.bat", "w") as f:
+            f.write(
+                f"set DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
+            )
+    else:
+        with open(f"{samples_location}env_vars.sh", "w") as f:
+            f.write(f"export DSN=postgresql://{user}@localhost:5400/{db}\n")
 
 
 def quickstart():
