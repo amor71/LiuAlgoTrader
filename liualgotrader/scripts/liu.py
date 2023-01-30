@@ -163,7 +163,9 @@ def _extracted_from_setup_samples_5(samples_location, user, passwd, db):
             )
     else:
         with open(f"{samples_location}env_vars.sh", "w") as f:
-            f.write(f"export DSN=postgresql://{user}@localhost:5400/{db}\n")
+            f.write(
+                f"export DSN=postgresql://{user}:{passwd}@localhost:5400/{db}\n"
+            )
 
 
 def quickstart():

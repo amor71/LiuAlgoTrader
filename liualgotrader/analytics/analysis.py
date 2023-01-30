@@ -437,7 +437,11 @@ async def calc_portfolio_returns(portfolio_id: str) -> pd.DataFrame:
             start_date=start_date, end_date=end_date
         )
     else:
-        td = pd.DataFrame(index=pd.date_range(start_date, end_date))
+        td = pd.DataFrame(
+            index=pd.date_range(
+                trades.client_time.min(), trades.client_time.max()
+            )
+        )
 
     td["equity"] = 0.0
 
