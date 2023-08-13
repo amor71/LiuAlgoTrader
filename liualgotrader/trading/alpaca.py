@@ -63,29 +63,35 @@ class AlpacaTrader(Trader):
         self.running_task: Optional[asyncio.Task] = None
 
         now = datetime.now(nyc)
-        calendar: Calendar = self.trading_client.get_calendar(
-            GetCalendarRequest(
-                start=now.strftime("%Y-%m-%d"), end=now.strftime("%Y-%m-%d")
-            )
-        )[
-            0  # type: ignore
-        ]
 
-        if now.date() >= calendar.date:
-            self.market_open = now.replace(
-                hour=calendar.open.hour,
-                minute=calendar.open.minute,
-                second=0,
-                microsecond=0,
-            )
-            self.market_close = now.replace(
-                hour=calendar.close.hour,
-                minute=calendar.close.minute,
-                second=0,
-                microsecond=0,
-            )
-        else:
+        try:
+            calendar: Calendar = self.trading_client.get_calendar(
+                GetCalendarRequest(
+                    start=now.date(),
+                    end=now.date(),
+                )
+            )[
+                0  # type: ignore
+            ]
+        except IndexError:
             self.market_open = self.market_close = None
+        else:
+            if now.date() >= calendar.date:
+                self.market_open = now.replace(
+                    hour=calendar.open.hour,
+                    minute=calendar.open.minute,
+                    second=0,
+                    microsecond=0,
+                )
+                self.market_close = now.replace(
+                    hour=calendar.close.hour,
+                    minute=calendar.close.minute,
+                    second=0,
+                    microsecond=0,
+                )
+            else:
+                self.market_open = self.market_close = None
+
         super().__init__(qm)
 
     async def _is_personal_order_completed(
@@ -173,9 +179,9 @@ class AlpacaTrader(Trader):
 
     def get_symbols(self) -> List[str]:
         self.trading_client._use_raw_data = False
-        assets: List[Asset] = self.trading_client.get_all_assets(  # type: ignore
+        assets: List[Asset] = self.trading_client.get_all_assets(
             GetAssetsRequest(
-                status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY
+                status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY  # type: ignore
             )
         )
         return [asset.symbol for asset in assets if asset.tradable and asset.exchange != AssetExchange.OTC]  # type: ignore
@@ -192,7 +198,7 @@ class AlpacaTrader(Trader):
         calendars: List[
             Dict
         ] = self.trading_client.get_calendar(  # type:ignore
-            GetCalendarRequest(start=str(start_date), end=str(end_date))
+            GetCalendarRequest(start=start_date, end=end_date)
         )
 
         df = pd.DataFrame.from_dict(calendars)
@@ -332,9 +338,9 @@ class AlpacaTrader(Trader):
         return self.get_symbols()
 
     async def get_shortable_symbols(self) -> List[str]:
-        assets: List[Asset] = self.trading_client.get_all_assets(  # type: ignore
+        assets: List[Asset] = self.trading_client.get_all_assets(
             GetAssetsRequest(
-                status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY
+                status=AssetStatus.ACTIVE, asset_class=AssetClass.US_EQUITY  # type: ignore
             )
         )
         return [
@@ -390,7 +396,6 @@ class AlpacaTrader(Trader):
         time_in_force: str,
         limit_price: Optional[float] = None,
     ) -> Order:
-
         order_type = order_type.lower()
         if order_type == "limit":
             order_request: LimitOrderRequest = LimitOrderRequest(  # type: ignore
@@ -428,7 +433,7 @@ class AlpacaTrader(Trader):
             ),
         )
 
-        if response.status_code in (429, 504):
+        if response.status_code in {429, 504}:
             if "x-ratelimit-reset" in response.headers:
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
@@ -446,7 +451,7 @@ class AlpacaTrader(Trader):
 
             return await self._post_request(url, payload)
 
-        if response.status_code in (200, 201, 204):
+        if response.status_code in {200, 201, 204}:
             return response.json()
 
         raise AssertionError(
@@ -461,7 +466,7 @@ class AlpacaTrader(Trader):
             ),
         )
 
-        if response.status_code in (429, 504):
+        if response.status_code in {429, 504}:
             if "x-ratelimit-reset" in response.headers:
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"
@@ -479,7 +484,7 @@ class AlpacaTrader(Trader):
 
             return await self._get_request(url)
 
-        if response.status_code in (200, 201, 204):
+        if response.status_code in {200, 201, 204}:
             return response.json()
 
         raise AssertionError(
@@ -494,7 +499,7 @@ class AlpacaTrader(Trader):
             ),
         )
         # TODO: create a decorator the the re-try / push-backs from server instead of copying.
-        if response.status_code in (429, 504):
+        if response.status_code in {429, 504}:
             if "x-ratelimit-reset" in response.headers:
                 tlog(
                     f"ALPACA BROKERAGE rate-limit till {response.headers['x-ratelimit-reset']}"

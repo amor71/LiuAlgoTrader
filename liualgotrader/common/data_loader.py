@@ -51,9 +51,9 @@ def convert_offset_to_datetime(
             minutes=offset
         )
 
-    return data_api.get_trading_day(
-        symbol, last_trading_time, 1 + offset
-    ).replace(hour=0, minute=0, second=0, microsecond=0)
+    return data_api.get_trading_day(symbol, last_trading_time, offset).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
 
 
 def handle_slice_conversion(
@@ -157,7 +157,6 @@ def _data_fetch_executor(
     start: datetime,
     end: datetime,
 ) -> pd.DataFrame:
-
     df = data_api.get_symbol_data(
         symbol,
         start=start
@@ -239,7 +238,6 @@ def _legacy_fetch_data_range(
     start: datetime,
     end: datetime,
 ) -> pd.DataFrame:
-
     adjusted_symbol = symbol
     m_and_a_data.index = m_and_a_data.index.astype("datetime64[ns]", copy=True)
     while True:

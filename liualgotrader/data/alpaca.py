@@ -16,7 +16,7 @@ from alpaca.common.exceptions import APIError
 from alpaca.data import (CryptoBarsRequest, CryptoHistoricalDataClient,
                          StockBarsRequest, StockHistoricalDataClient,
                          StockSnapshotRequest)
-from alpaca.data.enums import Adjustment, DataFeed
+from alpaca.data.enums import Adjustment, CryptoFeed, DataFeed
 from alpaca.data.live import CryptoDataStream, StockDataStream
 from alpaca.data.models import Bar, Trade
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
@@ -37,12 +37,11 @@ nytz = pytz.timezone(NY)
 
 
 def _is_crypto_symbol(symbol: str) -> bool:
-    return symbol.lower() in {"eth/usd", "btc/usd"}
+    return symbol.lower() in {"eth/usd", "btc/usd", "btcusd", "ethusd"}
 
 
 class AlpacaData(DataAPI):
     def __init__(self) -> None:
-
         self._ready = False
         self.alpaca_stock_data = StockHistoricalDataClient(
             api_key=config.alpaca_api_key, secret_key=config.alpaca_api_secret
@@ -91,10 +90,15 @@ class AlpacaData(DataAPI):
             _ticket_snapshot["ticker"] = _ticker
             return _ticket_snapshot
 
-        def _parse_snapshot_and_filter(_symbols: List[str]) -> List[Dict]:
+        def _parse_snapshot_and_filter(
+            self, _symbols: List[str]
+        ) -> List[Dict]:
             self.alpaca_stock_data._use_raw_data = True
             snapshots = self.alpaca_stock_data.get_stock_snapshot(
-                StockSnapshotRequest(symbol_or_symbols=_symbols)
+                StockSnapshotRequest(
+                    symbol_or_symbols=_symbols,
+                    feed=DataFeed(config.alpaca_data_feed),
+                )
             )
             # self.alpaca_stock_data._use_raw_data = False
             processed_tickers_snapshot = map(
@@ -138,7 +142,10 @@ class AlpacaData(DataAPI):
 
         try:
             snapshot_data = self.alpaca_stock_data.get_stock_snapshot(
-                StockSnapshotRequest(symbol_or_symbols=symbol)
+                StockSnapshotRequest(
+                    symbol_or_symbols=symbol,
+                    feed=DataFeed(config.alpaca_data_feed),
+                )
             )
         except APIError as e:
             raise ValueError(
@@ -234,7 +241,9 @@ class AlpacaData(DataAPI):
                 start=start,
                 end=end,
                 timeframe=timeframe,
-            )
+                limit=None,
+            ),
+            feed=CryptoFeed("us"),
         ).df
 
         data = data.reset_index(level=0, drop=True)
@@ -266,6 +275,8 @@ class AlpacaData(DataAPI):
                 timeframe=t,
                 symbol_or_symbols=symbols,
                 adjustment=Adjustment.ALL,
+                limit=None,
+                feed=DataFeed(config.alpaca_data_feed),
             )
         ).df
 
@@ -315,6 +326,8 @@ class AlpacaData(DataAPI):
                     timeframe=t,
                     symbol_or_symbols=symbol,
                     adjustment=Adjustment.ALL,
+                    limit=None,
+                    feed=DataFeed(config.alpaca_data_feed),
                 )
             ).df
         except requests.exceptions.HTTPError as e:
@@ -350,6 +363,7 @@ class AlpacaStream(StreamingAPI):
         self.crypto_data_stream = CryptoDataStream(
             api_key=config.alpaca_api_key,
             secret_key=config.alpaca_api_secret,
+            feed=CryptoFeed("us"),
         )
         assert (
             self.stock_data_stream

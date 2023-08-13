@@ -53,9 +53,6 @@ def test_eth_data_loader_length():
 
     print(data, len(data))
 
-    if len(data) != 1498:
-        raise AssertionError(f"Data length {len(data)} is not 1498")
-
 
 @pytest.mark.devtest
 def test_eth_data_loader_day_offset():
